@@ -4,7 +4,7 @@ CRISP (Cyber Risk Information Sharing Platform) is a secure threat intelligence 
 
 ## 📋 Project Links
 
-- **[Functional Requirements (SRS) Document](link-to-srs-document)** - Detailed system requirements and specifications
+- **[Functional Requirements (SRS) Document](https://github.com/COS301-SE-2025/CRISP/blob/documents/SRS.md)** - Detailed system requirements and specifications
 - **[GitHub Project Board](https://github.com/orgs/COS301-SE-2025/projects/205)** - Track our development progress and sprint planning
 
 ## 🎯 Project Overview
