@@ -132,10 +132,6 @@ We follow an **Agile Scrum Framework**:
 
 ### Installation
 ```bash
-# Clone the repository
-git clone https://github.com/your-org/crisp.git
-cd crisp
-
 # Start with Docker Compose
 docker-compose up -d
 
