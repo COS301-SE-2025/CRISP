@@ -1,7 +1,7 @@
 # Software Requirements Specification (SRS)
 ## CRISP - Cyber Risk Information Sharing Platform
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Date:** May 26, 2025  
 **Prepared by:** Data Defenders  
 **Client:** BlueVision ITM
@@ -11,28 +11,32 @@
 ## Table of Contents
 
 1. [Introduction](#1-introduction)
-2. [Overall Description](#2-overall-description)
-3. [Functional Requirements](#3-functional-requirements)
-4. [Non-Functional Requirements](#4-non-functional-requirements)
-5. [System Architecture](#5-system-architecture)
-6. [User Interface Requirements](#6-user-interface-requirements)
-7. [Security Requirements](#7-security-requirements)
-8. [Appendices](#8-appendices)
+2. [User Stories / User Characteristics](#2-user-stories--user-characteristics)
+3. [Domain Model](#3-domain-model)
+4. [Use Cases](#4-use-cases)
+5. [Functional Requirements](#5-functional-requirements)
+6. [Service Contracts](#6-service-contracts)
+7. [Architectural Requirements](#7-architectural-requirements)
+8. [Technology Requirements](#8-technology-requirements)
+9. [Appendices](#9-appendices)
 
 ---
 
 ## 1. Introduction
 
-### 1.1 Purpose
-This Software Requirements Specification (SRS) document describes the functional and non-functional requirements for the Cyber Risk Information Sharing Platform (CRISP). CRISP is designed to facilitate secure threat intelligence sharing among organizations, particularly targeting educational institutions vulnerable to cyber attacks.
+### 1.1 Business Need
+Educational institutions face increasing cyber threats with limited resources for threat intelligence sharing. Recent months have shown a disturbing trend where once an educational organization is attacked, similar institutions often become subsequent targets. CRISP addresses the critical need for timely and effective information sharing regarding cyber security incidents among educational institutions, enabling proactive defense against emerging threats.
 
-### 1.2 Scope
-CRISP will provide a web-based platform for:
+### 1.2 Project Scope
+CRISP will provide a web-based platform for BlueVision ITM to serve their clients with:
 - Secure threat intelligence sharing using industry standards (STIX/TAXII)
-- Anonymization of sensitive organizational data
+- Anonymization of sensitive organizational data while preserving analytical value
 - Integration with external threat intelligence sources
 - Real-time threat alerting and notification systems
-- Trust-based access control and data sharing
+- Trust-based access control and data sharing between organizations
+- Autonomous sharing between distributed CRISP instances
+
+The platform will facilitate both consumption of external threat feeds and publication of anonymized threat data, ensuring confidentiality while maximizing the benefit of shared intelligence.
 
 ### 1.3 Definitions and Abbreviations
 - **CRISP**: Cyber Risk Information Sharing Platform
@@ -41,270 +45,651 @@ CRISP will provide a web-based platform for:
 - **IoC**: Indicators of Compromise
 - **TTP**: Tactics, Techniques, and Procedures
 - **CTI**: Cyber Threat Intelligence
-- **MISP**: Malware Information Sharing Platform
 
 ### 1.4 Team Members
-- **Armand van der Colf** - u22574982 (Team Lead & Security Specialist)
-- **Jadyn Stoltz** - u22609653 (AI/ML Systems Engineer)
+- **Armand van der Colf** - u22574982 (Full Stack Developer & Security)
+- **Jadyn Stoltz** - u22609653 (Team Lead & AI/ML Systems Engineer)
 - **Diaan Botes** - u22598538 (Full Stack Developer & Data Scientist)
 - **Liam van Kasterop** - u22539761 (Backend Developer)
 - **Dreas Vermaak** - u22497618 (Backend Developer)
 
 ---
 
-## 2. Overall Description
+## 2. User Stories / User Characteristics
 
-### 2.1 Product Perspective
-CRISP is a standalone web application that integrates with external threat intelligence sources and provides standardized threat sharing capabilities. The system will support both manual threat intelligence entry and automated feed consumption.
+### 2.1 User Hierarchy and Roles
 
-### 2.2 Product Functions
-- User authentication and authorization
-- Threat intelligence publication and consumption
-- Data anonymization and privacy protection
-- Trust relationship management
-- Real-time alerting and notifications
-- System administration and monitoring
+#### BlueVision ITM System Administrator
+- **Role**: Platform administrator with full system access
+- **Purpose**: Manage the entire CRISP platform, onboard new client organizations, and maintain system health
 
-### 2.3 User Classes
-- **System Administrators**: Manage users, organizations, and system configuration
-- **Security Analysts**: Publish and consume threat intelligence
-- **Organization Administrators**: Manage organization-specific settings and users
-- **API Users**: External systems consuming threat intelligence via API
+#### Organization Publisher (Client Organizations)
+- **Role**: BlueVision ITM clients who have publishing rights
+- **Purpose**: Represent educational institutions that can both publish and consume threat intelligence
+
+#### Organization Users (Viewers)
+- **Role**: Users within client organizations with viewing rights only
+- **Purpose**: Security analysts and IT staff who need access to threat intelligence but cannot publish
+
+### 2.2 User Stories
+
+#### BlueVision ITM System Administrator Stories
+- As a System Administrator, I want to register new client organizations so that they can join the threat sharing community
+- As a System Administrator, I want to manage organization accounts and their settings so that I can control platform access and configurations
+- As a System Administrator, I want to monitor system health and usage statistics so that I can ensure platform reliability and optimize performance
+- As a System Administrator, I want to configure global anonymization policies so that sensitive data is properly protected across all organizations
+- As a System Administrator, I want to manage trust relationships between organizations so that I can control data sharing permissions
+- As a System Administrator, I want to access comprehensive audit logs so that I can track system usage and investigate security incidents
+
+#### Organization Publisher (Client) Stories
+- As an Organization Publisher, I want to publish threat intelligence about attacks on my institution so that I can help protect other educational organizations
+- As an Organization Publisher, I want to add users from my organization via email invitation so that my team can access relevant threat intelligence
+- As an Organization Publisher, I want to configure what types of threats my organization shares so that I can control our data sharing policies
+- As an Organization Publisher, I want to set anonymization levels for different types of data so that I can protect sensitive institutional information
+- As an Organization Publisher, I want to consume threat feeds from other organizations so that I can stay informed about relevant threats
+- As an Organization Publisher, I want to receive alerts about threats targeting educational institutions so that I can proactively defend my organization
+- As an Organization Publisher, I want to manage my organization's users and their permissions so that I can control who has access to what information
+- As an Organization Publisher, I want to upload threat intelligence in bulk via CSV/JSON so that I can efficiently share large datasets
+
+#### Organization User (Viewer) Stories
+- As an Organization User, I want to view threat intelligence relevant to my institution so that I can understand current threat landscape
+- As an Organization User, I want to receive real-time alerts about high-priority threats so that I can respond quickly to emerging risks
+- As an Organization User, I want to search and filter threat intelligence by type, date, and severity so that I can find relevant information quickly
+- As an Organization User, I want to export threat data for integration with our security tools so that I can enhance our defensive capabilities
+- As an Organization User, I want to view threat trends and analytics so that I can understand attack patterns targeting educational institutions
+- As an Organization User, I want to access threat intelligence via API so that I can integrate with existing security systems
+
+#### External API User Stories
+- As an External System, I want to consume threat intelligence via TAXII-compliant endpoints so that I can integrate with existing security tools
+- As an External System, I want to authenticate securely via JWT tokens so that I can access authorized threat data programmatically
+- As an External System, I want to receive standardized STIX-formatted data so that I can easily process threat intelligence
 
 ---
 
-## 3. Functional Requirements
+## 3. Domain Model
+
+### 3.1 UML Class Diagram
+*[PNG IMAGE REQUIRED: UML class diagram showing relationships between User, Organization, ThreatIntelligence, Feed, Alert, TrustRelationship, and other core entities]*
+
+### 3.2 Core Domain Entities Description
+- **User**: System users with different roles (Admin, Publisher, Viewer) and authentication details
+- **Organization**: Client institutions with publishing capabilities and user management
+- **ThreatIntelligence**: Core threat data including IoCs, TTPs, with anonymization metadata
+- **Feed**: External and internal threat intelligence sources and subscriptions
+- **Alert**: Notifications for high-priority threats with customizable criteria
+- **TrustRelationship**: Defines sharing permissions and anonymization levels between organizations
+- **AnonymizationPolicy**: Rules for protecting sensitive data while preserving analytical value
+
+---
+
+## 4. Use Cases
+
+### 4.1 High-Level Use Case Diagram
+*[PNG IMAGE REQUIRED: Use case diagram showing actors (System Admin, Organization Publisher, Organization User, External API) and their primary use cases]*
+
+### 4.2 Primary Use Cases
+- **UC1**: Manage Organizations (System Admin)
+- **UC2**: Publish Threat Intelligence (Organization Publisher)
+- **UC3**: Consume Threat Feeds (Organization Publisher/User)
+- **UC4**: Configure Trust Relationships (System Admin/Organization Publisher)
+- **UC5**: Manage Organization Users (Organization Publisher)
+- **UC6**: Generate and Receive Alerts (All Users)
+- **UC7**: Export Threat Data (Organization Publisher/User)
+- **UC8**: API Access for External Systems (External API User)
+
+---
+
+## 5. Functional Requirements
 
 ### R1. Authentication and User Management
 
 #### R1.1 User Authentication
-- **R1.1.1** CRISP shall provide secure username and password authentication
-- **R1.1.2** CRISP shall enforce password policies (minimum 8 characters, mixed case, numbers)
-- **R1.1.3** CRISP shall provide password reset functionality via email
-- **R1.1.4** CRISP shall implement account lockout after 5 failed login attempts
+- **R1.1.1** CRISP shall provide secure username and password authentication for all user types
+- **R1.1.2** CRISP shall enforce password policies (minimum 8 characters, mixed case, numbers, special characters)
+- **R1.1.3** CRISP shall provide password reset functionality via email verification
+- **R1.1.4** CRISP shall implement account lockout after 5 failed login attempts within 15 minutes
 - **R1.1.5** CRISP shall log all authentication activities for audit purposes
+- **R1.1.6** CRISP shall implement session timeout after 60 minutes of inactivity
 
 #### R1.2 User Management
-- **R1.2.1** CRISP shall allow administrators to create new user accounts
-- **R1.2.2** CRISP shall allow administrators to deactivate user accounts
-- **R1.2.3** CRISP shall support role-based access control (Admin, Analyst, Viewer)
-- **R1.2.4** CRISP shall verify user credentials and enforce authorization
+- **R1.2.1** CRISP shall allow System Administrators to create and manage organization accounts
+- **R1.2.2** CRISP shall allow Organization Publishers to invite users via email to their organization
+- **R1.2.3** CRISP shall support three user roles: System Admin, Organization Publisher, Organization User
+- **R1.2.4** CRISP shall allow Organization Publishers to manage their organization's user permissions
+- **R1.2.5** CRISP shall allow System Administrators to deactivate user accounts across all organizations
 
 #### R1.3 Organization Management
-- **R1.3.1** CRISP shall allow system administrators to register new organizations
-- **R1.3.2** CRISP shall allow administrators to manage organization details
-- **R1.3.3** CRISP shall associate users with their respective organizations
+- **R1.3.1** CRISP shall allow System Administrators to register new client organizations
+- **R1.3.2** CRISP shall associate each organization with a primary Organization Publisher account
+- **R1.3.3** CRISP shall allow organizations to manage their profile information and settings
 
 ### R2. Threat Intelligence Publication
 
 #### R2.1 Data Publication
-- **R2.1.1** CRISP shall support manual entry of threat intelligence through web forms
-- **R2.1.2** CRISP shall support bulk import via CSV and JSON file uploads
-- **R2.1.3** CRISP shall validate threat intelligence data for completeness and format
-- **R2.1.4** CRISP shall automatically tag threat intelligence with metadata (timestamp, source, type)
+- **R2.1.1** CRISP shall support manual entry of threat intelligence through web forms by Organization Publishers
+- **R2.1.2** CRISP shall support bulk import via CSV and JSON file uploads for Organization Publishers
+- **R2.1.3** CRISP shall validate threat intelligence data for completeness, format, and STIX compliance
+- **R2.1.4** CRISP shall automatically tag threat intelligence with metadata (timestamp, source organization, threat type)
+- **R2.1.5** CRISP shall require Organization Publishers to categorize threats by type (Malware, IP, Domain, Hash, Email, etc.)
 
 #### R2.2 Data Anonymization
-- **R2.2.1** CRISP shall mask IP addresses (e.g., 192.168.1.x becomes 192.168.1.XXX)
-- **R2.2.2** CRISP shall mask email addresses (e.g., user@domain.com becomes user@XXX.com)
-- **R2.2.3** CRISP shall remove or redact organization-specific identifiers
-- **R2.2.4** CRISP shall apply configurable anonymization levels based on sharing policies
-- **R2.2.5** CRISP shall preserve the analytical value of threat intelligence after anonymization
+- **R2.2.1** CRISP shall mask IP addresses (e.g., 192.168.1.x becomes 192.168.1.XXX) in shared data
+- **R2.2.2** CRISP shall mask email addresses (e.g., user@domain.com becomes user@XXX.com) in shared data
+- **R2.2.3** CRISP shall remove or redact organization-specific identifiers before sharing
+- **R2.2.4** CRISP shall apply configurable anonymization levels based on trust relationships
+- **R2.2.5** CRISP shall preserve the analytical value of threat intelligence after anonymization (95% effectiveness target)
+- **R2.2.6** CRISP shall allow Organization Publishers to preview anonymized data before publication
 
 #### R2.3 Intelligence Distribution
-- **R2.3.1** CRISP shall export threat intelligence in STIX 2.1 format
-- **R2.3.2** CRISP shall provide TAXII 2.1 compliant API endpoints
-- **R2.3.3** CRISP shall support selective sharing based on trust relationships
-- **R2.3.4** CRISP shall send notifications when new intelligence is published
+- **R2.3.1** CRISP shall export threat intelligence in STIX 2.1 format for standards compliance
+- **R2.3.2** CRISP shall provide TAXII 2.1 compliant API endpoints for threat sharing
+- **R2.3.3** CRISP shall support selective sharing based on trust relationships between organizations
+- **R2.3.4** CRISP shall notify subscribed organizations when new relevant intelligence is published
 
 ### R3. Threat Feed Consumption
 
 #### R3.1 External Feed Integration
-- **R3.1.1** CRISP shall consume STIX/TAXII feeds from external sources
-- **R3.1.2** CRISP shall support integration with MISP instances via PyMISP
-- **R3.1.3** CRISP shall validate incoming threat data for format compliance
-- **R3.1.4** CRISP shall normalize external data to internal schema
+- **R3.1.1** CRISP shall consume STIX/TAXII feeds from external threat intelligence sources
+- **R3.1.2** CRISP shall validate incoming threat data for format compliance and authenticity
+- **R3.1.3** CRISP shall normalize external data to internal schema for consistent processing
+- **R3.1.4** CRISP shall support automated polling of external feeds at configurable intervals
 
 #### R3.2 Data Processing
-- **R3.2.1** CRISP shall categorize threat data by type (Malware, IP, Domain, Hash, etc.)
-- **R3.2.2** CRISP shall tag threat data with industry sectors and attack vectors
-- **R3.2.3** CRISP shall detect and handle duplicate threat intelligence entries
+- **R3.2.1** CRISP shall categorize threat data by type (Malware, IP, Domain, Hash, Email, etc.)
+- **R3.2.2** CRISP shall tag threat data with education sector relevance indicators
+- **R3.2.3** CRISP shall detect and handle duplicate threat intelligence entries across sources
 - **R3.2.4** CRISP shall maintain version history of threat intelligence updates
 
 #### R3.3 Alerting System
-- **R3.3.1** CRISP shall generate alerts for high-priority threat intelligence
-- **R3.3.2** CRISP shall support customizable alert thresholds and criteria
+- **R3.3.1** CRISP shall generate alerts for high-priority threat intelligence based on configurable criteria
+- **R3.3.2** CRISP shall support customizable alert thresholds per organization and threat type
 - **R3.3.3** CRISP shall deliver alerts via email and web interface notifications
-- **R3.3.4** CRISP shall allow users to subscribe to specific threat categories or sources
+- **R3.3.4** CRISP shall allow users to subscribe to specific threat categories, sources, or severity levels
+- **R3.3.5** CRISP shall generate alerts within 60 seconds of triggering conditions
 
 ### R4. Trust Relationship Management
 
 #### R4.1 Trust Configuration
 - **R4.1.1** CRISP shall support three trust levels: Public, Trusted, Restricted
-- **R4.1.2** CRISP shall allow administrators to configure organization trust relationships
+- **R4.1.2** CRISP shall allow System Administrators to configure organization trust relationships
 - **R4.1.3** CRISP shall support community groups for multi-organization trust relationships
-- **R4.1.4** CRISP shall enable mutual trust agreements between organizations
+- **R4.1.4** CRISP shall enable bilateral trust agreements between organizations
 
 #### R4.2 Access Control
-- **R4.2.1** CRISP shall filter shared intelligence based on trust relationships
-- **R4.2.2** CRISP shall apply appropriate anonymization based on trust level
-- **R4.2.3** CRISP shall log all access to shared intelligence for audit
-- **R4.2.4** CRISP shall support immediate trust relationship revocation
+- **R4.2.1** CRISP shall filter shared intelligence based on established trust relationships
+- **R4.2.2** CRISP shall apply appropriate anonymization levels based on trust level
+- **R4.2.3** CRISP shall log all access to shared intelligence for audit purposes
+- **R4.2.4** CRISP shall support immediate trust relationship revocation with effect on data sharing
 
 ### R5. System Administration
 
 #### R5.1 Monitoring and Statistics
-- **R5.1.1** CRISP shall provide system health monitoring dashboard
-- **R5.1.2** CRISP shall generate usage reports (users, data volume, API calls)
+- **R5.1.1** CRISP shall provide system health monitoring dashboard for administrators
+- **R5.1.2** CRISP shall generate usage reports (users, organizations, data volume, API calls)
 - **R5.1.3** CRISP shall implement API rate limiting (100 requests/minute per user)
-- **R5.1.4** CRISP shall maintain comprehensive audit logs
+- **R5.1.4** CRISP shall maintain comprehensive audit logs for 12 months
+- **R5.1.5** CRISP shall provide real-time system performance metrics
 
 #### R5.2 System Management
-- **R5.2.1** CRISP shall support Docker containerized deployment
-- **R5.2.2** CRISP shall provide database backup and restore functionality
+- **R5.2.1** CRISP shall support Docker containerized deployment for easy installation
+- **R5.2.2** CRISP shall provide automated database backup and restore functionality
 - **R5.2.3** CRISP shall support configuration via environment variables
-- **R5.2.4** CRISP shall include system health check endpoints
+- **R5.2.4** CRISP shall include system health check endpoints for monitoring
 
 ---
 
-## 4. Non-Functional Requirements
+## 6. Service Contracts
 
-### 4.1 Performance Requirements
+### 6.1 REST API Contracts
 
-#### 4.1.1 Response Time
-- **P1.1** API endpoints shall respond within 2 seconds for 95% of requests
+#### 6.1.1 Authentication Service
+```
+POST /api/auth/login
+Request: { 
+  "username": string, 
+  "password": string 
+}
+Response: { 
+  "token": string, 
+  "user": {
+    "id": string,
+    "username": string,
+    "role": string,
+    "organization_id": string
+  },
+  "expires_in": number
+}
+Error Response: {
+  "error": string,
+  "message": string
+}
+```
+
+#### 6.1.2 Organization Management Service
+```
+POST /api/organizations/
+Request: {
+  "name": string,
+  "contact_email": string,
+  "institution_type": string,
+  "publisher_user": {
+    "username": string,
+    "email": string,
+    "password": string
+  }
+}
+Response: {
+  "id": string,
+  "name": string,
+  "status": "created"
+}
+
+GET /api/organizations/{id}/users/
+Response: {
+  "users": [
+    {
+      "id": string,
+      "username": string,
+      "email": string,
+      "role": string,
+      "created_at": datetime
+    }
+  ]
+}
+
+POST /api/organizations/{id}/users/invite/
+Request: {
+  "email": string,
+  "role": "viewer"
+}
+Response: {
+  "status": "invitation_sent",
+  "email": string
+}
+```
+
+#### 6.1.3 Threat Intelligence Service
+```
+GET /api/threats/
+Query Parameters: {
+  "type": string (optional),
+  "severity": string (optional),
+  "date_from": date (optional),
+  "date_to": date (optional),
+  "limit": number (optional),
+  "offset": number (optional)
+}
+Response: {
+  "threats": [ThreatIntelligenceObject],
+  "pagination": {
+    "total": number,
+    "limit": number,
+    "offset": number
+  }
+}
+
+POST /api/threats/
+Request: {
+  "type": string,
+  "indicators": [string],
+  "description": string,
+  "severity": string,
+  "ttps": [string],
+  "anonymization_level": string
+}
+Response: {
+  "id": string,
+  "status": "created",
+  "anonymized_preview": ThreatIntelligenceObject
+}
+
+POST /api/threats/bulk-upload/
+Request: multipart/form-data with file (CSV/JSON)
+Response: {
+  "processed": number,
+  "created": number,
+  "errors": [string]
+}
+```
+
+#### 6.1.4 Alert Service
+```
+GET /api/alerts/
+Response: {
+  "alerts": [
+    {
+      "id": string,
+      "threat_id": string,
+      "severity": string,
+      "message": string,
+      "created_at": datetime,
+      "read": boolean
+    }
+  ]
+}
+
+POST /api/alerts/subscribe/
+Request: {
+  "threat_types": [string],
+  "severity_levels": [string],
+  "notification_methods": [string]
+}
+Response: {
+  "subscription_id": string,
+  "status": "created"
+}
+
+PUT /api/alerts/{id}/read/
+Response: {
+  "status": "marked_as_read"
+}
+```
+
+### 6.2 TAXII 2.1 API Contracts
+
+#### 6.2.1 Discovery Service
+```
+GET /taxii2/
+Response: {
+  "title": "CRISP TAXII 2.1 Server",
+  "description": "Cyber Risk Information Sharing Platform",
+  "contact": string,
+  "default": "/taxii2/collections/",
+  "api_roots": ["/taxii2/"]
+}
+```
+
+#### 6.2.2 Collections Service
+```
+GET /taxii2/collections/
+Response: {
+  "collections": [
+    {
+      "id": string,
+      "title": string,
+      "description": string,
+      "can_read": boolean,
+      "can_write": boolean,
+      "media_types": ["application/stix+json;version=2.1"]
+    }
+  ]
+}
+
+GET /taxii2/collections/{id}/objects/
+Query Parameters: {
+  "added_after": datetime (optional),
+  "limit": number (optional),
+  "match[type]": string (optional)
+}
+Response: {
+  "more": boolean,
+  "next": string (optional),
+  "objects": [STIX2.1Objects]
+}
+```
+
+### 6.3 Internal Service Interfaces
+
+#### 6.3.1 AnonymizationService
+```
+interface AnonymizationService {
+  anonymize(data: ThreatData, level: AnonymizationLevel): AnonymizedThreatData
+  preview(data: ThreatData, level: AnonymizationLevel): AnonymizedThreatData
+  validateEffectiveness(original: ThreatData, anonymized: AnonymizedThreatData): number
+}
+```
+
+#### 6.3.2 TrustService
+```
+interface TrustService {
+  evaluateAccess(requesting_org: string, target_org: string, data_type: string): AccessLevel
+  getAnonymizationLevel(trust_relationship: TrustLevel): AnonymizationLevel
+  updateTrustRelationship(org1: string, org2: string, level: TrustLevel): boolean
+}
+```
+
+#### 6.3.3 AlertService
+```
+interface AlertService {
+  generateAlert(threat: ThreatIntelligence, criteria: AlertCriteria): Alert
+  notifySubscribers(alert: Alert): void
+  manageSubscription(user_id: string, subscription: AlertSubscription): boolean
+}
+```
+
+#### 6.3.4 FeedService
+```
+interface FeedService {
+  consumeFeed(feed_url: string, format: string): ThreatIntelligence[]
+  normalizeFeedData(external_data: any, source_format: string): ThreatIntelligence
+  validateFeedData(data: ThreatIntelligence): ValidationResult
+}
+```
+
+---
+
+## 7. Architectural Requirements
+
+### 7.1 Quality Requirements
+
+#### 7.1.1 Performance Requirements
+- **P1.1** API endpoints shall respond within 2 seconds for 95% of requests under normal load
 - **P1.2** Web pages shall load within 3 seconds for standard broadband connections
 - **P1.3** Threat feed processing shall handle up to 1,000 IoCs per minute
-- **P1.4** Real-time alerts shall be generated within 60 seconds of triggering conditions
-
-#### 4.1.2 Throughput
+- **P1.4** Real-time alerts shall be generated and delivered within 60 seconds of triggering conditions
 - **P1.5** System shall support 20 concurrent users without performance degradation
-- **P1.6** System shall handle 200 API requests per minute during peak usage
-- **P1.7** Data processing shall anonymize 100 threat records per second
+- **P1.6** Bulk threat intelligence uploads shall process 100 records per second
+- **P1.7** Data anonymization shall process 100 threat records per second
 
-### 4.2 Reliability Requirements
-
-#### 4.2.1 Availability
+#### 7.1.2 Reliability Requirements
 - **R1.1** System uptime target of 99% (approximately 7 hours downtime per month)
 - **R1.2** Planned maintenance windows not to exceed 4 hours per month
-- **R1.3** System recovery time objective (RTO) of 30 minutes
-- **R1.4** Data recovery point objective (RPO) of 4 hours
+- **R1.3** System recovery time objective (RTO) of 30 minutes for critical failures
+- **R1.4** Data recovery point objective (RPO) of 4 hours for database recovery
+- **R1.5** System shall gracefully handle invalid input data without crashing
+- **R1.6** System shall provide meaningful error messages to users for all failure scenarios
+- **R1.7** System shall automatically retry failed external API calls (maximum 3 attempts with exponential backoff)
 
-#### 4.2.2 Error Handling
-- **R1.5** System shall gracefully handle invalid input data
-- **R1.6** System shall provide meaningful error messages to users
-- **R1.7** System shall automatically retry failed external API calls (3 attempts)
+#### 7.1.3 Scalability Requirements
+- **S1.1** Architecture shall support scaling from 5 to 50 client organizations
+- **S1.2** Database shall handle growth from 100MB to 10GB of threat intelligence data
+- **S1.3** System shall support horizontal scaling with load balancer for increased user load
+- **S1.4** API shall support rate limiting and throttling to prevent abuse
+- **S1.5** System shall support distributed deployment across multiple CRISP instances
 
-### 4.3 Scalability Requirements
-- **S1.1** Architecture shall support scaling from 5 to 50 organizations
-- **S1.2** Database shall handle growth from 100MB to 10GB of threat data
-- **S1.3** System shall support horizontal scaling with load balancer
-
-### 4.4 Security Requirements
-
-#### 4.4.1 Authentication & Authorization
+#### 7.1.4 Security Requirements
 - **SEC1.1** All user sessions shall timeout after 60 minutes of inactivity
-- **SEC1.2** Administrative accounts should implement two-factor authentication
-- **SEC1.3** API authentication via JWT tokens with 24-hour expiration
-- **SEC1.4** Role-based access control with principle of least privilege
-
-#### 4.4.2 Data Protection
+- **SEC1.2** Administrative accounts should implement two-factor authentication capability
+- **SEC1.3** API authentication via JWT tokens with 24-hour expiration and refresh capability
+- **SEC1.4** Role-based access control with principle of least privilege enforcement
 - **SEC1.5** All data in transit encrypted using TLS 1.2 or higher
-- **SEC1.6** Sensitive data at rest encrypted using AES-256
-- **SEC1.7** Data anonymization effectiveness target of 95%
-- **SEC1.8** Audit logs retained for 12 months
+- **SEC1.6** Sensitive data at rest encrypted using AES-256 encryption
+- **SEC1.7** Data anonymization effectiveness target of 95% (analytical value preserved)
+- **SEC1.8** Comprehensive audit logs retained for 12 months with tamper-proof storage
+- **SEC1.9** Input validation and sanitization for all user inputs to prevent injection attacks
+- **SEC1.10** CSRF protection implemented for all state-changing operations
 
-### 4.5 Usability Requirements
-- **U1.1** Web interface compatible with Chrome, Firefox, Safari, Edge (latest versions)
-- **U1.2** Mobile-responsive design for tablets and smartphones
-- **U1.3** New user onboarding completable within 2 hours
-- **U1.4** Common tasks achievable within 5 clicks
-- **U1.5** Context-sensitive help available throughout interface
+#### 7.1.5 Usability Requirements
+- **U1.1** Web interface compatible with Chrome, Firefox, Safari, Edge (latest 2 versions)
+- **U1.2** Mobile-responsive design supporting tablets and smartphones (viewport ≥ 768px)
+- **U1.3** New Organization Publisher onboarding completable within 2 hours including user setup
+- **U1.4** Common threat intelligence tasks achievable within 5 clicks from dashboard
+- **U1.5** Context-sensitive help and documentation available throughout interface
+- **U1.6** System shall provide clear feedback for all user actions within 1 second
 
-### 4.6 Compliance Requirements
-- **C1.1** STIX 2.1 specification compliance for threat intelligence format
-- **C1.2** TAXII 2.1 specification compliance for threat intelligence sharing
-- **C1.3** RESTful API design following OpenAPI 3.0 specification
-- **C1.4** Support for data export in JSON and CSV formats
+#### 7.1.6 Compliance Requirements
+- **C1.1** Full STIX 2.1 specification compliance for threat intelligence format and structure
+- **C1.2** Complete TAXII 2.1 specification compliance for threat intelligence sharing protocols
+- **C1.3** RESTful API design following OpenAPI 3.0 specification with comprehensive documentation
+- **C1.4** Support for data export in JSON, CSV, and STIX formats for interoperability
+
+### 7.2 Architectural Patterns
+
+#### 7.2.1 Primary Architectural Patterns
+- **Three-Tier Architecture**: Clear separation between presentation (React), application (Django), and data (PostgreSQL) layers
+- **Model-View-Controller (MVC)**: Django framework enforces MVC pattern for organized code structure
+- **RESTful API Architecture**: Stateless, resource-based API design for client-server communication
+- **Microservices Architecture**: Modular services for threat processing, anonymization, alerting, and external integrations
+- **Event-Driven Architecture**: Asynchronous processing for threat feed consumption and alert generation using RabbitMQ
+
+#### 7.2.2 Integration Patterns
+- **API Gateway Pattern**: Centralized entry point for all external API requests with authentication and rate limiting
+- **Repository Pattern**: Data access abstraction layer isolating business logic from database implementation
+- **Service Layer Pattern**: Business logic encapsulation in dedicated service classes
+- **Facade Pattern**: Simplified interface to complex subsystem interactions
+
+### 7.3 Design Patterns
+
+#### 7.3.1 Factory Method Pattern
+- **Implementation**: StixObjectCreator with concrete creators for different STIX object types
+- **Purpose**: Encapsulates creation logic for converting CRISP entities to standardized STIX objects
+- **Benefits**: Ensures consistency, enables extensibility, maintains standardization
+
+#### 7.3.2 Observer Pattern
+- **Implementation**: ThreatFeed as subject with InstitutionObserver and AlertSystemObserver
+- **Purpose**: Real-time notifications when threat intelligence is updated
+- **Benefits**: Loose coupling, broadcast updates, dynamic subscription management
+
+#### 7.3.3 Strategy Pattern
+- **Implementation**: AnonymizationStrategy with concrete strategies for different data types
+- **Purpose**: Flexible anonymization approaches based on data type and trust level
+- **Benefits**: Runtime algorithm selection, encapsulated algorithms, easy extensibility
+
+#### 7.3.4 Adapter Pattern
+- **Implementation**: ThreatIntelligenceSource interface with adapters for external sources
+- **Purpose**: Unified interface for various external threat intelligence sources
+- **Benefits**: Isolation from external changes, simplified integration, format conversion
+
+#### 7.3.5 Decorator Pattern
+- **Implementation**: StixObjectDecorator with validation, export, and enrichment decorators
+- **Purpose**: Dynamic enhancement of STIX objects with additional capabilities
+- **Benefits**: Composable functionality, single responsibility, open/closed principle
+
+#### 7.3.6 Facade Pattern
+- **Implementation**: CRISPFacade providing simplified interface to complex subsystems
+- **Purpose**: Hide complexity of interactions between different services
+- **Benefits**: Simplified client interface, reduced dependencies, clear system boundaries
+
+### 7.4 Constraints
+
+#### 7.4.1 Technology Constraints
+- **TC1.1** Must use open-source technologies to minimize licensing costs
+- **TC1.2** Backend must be implemented in Python using Django framework
+- **TC1.3** Frontend must use React.js for consistency with team expertise
+- **TC1.4** Database must be PostgreSQL for production reliability and security features
+- **TC1.5** Containerization must use Docker for consistent deployment environments
+
+#### 7.4.2 Standards Compliance Constraints
+- **SC1.1** Must fully comply with STIX 2.1 specification for threat intelligence format
+- **SC1.2** Must fully comply with TAXII 2.1 specification for threat sharing protocols
+- **SC1.3** API must follow RESTful design principles and OpenAPI 3.0 specification
+- **SC1.4** Must support JSON-based data exchange for interoperability
+
+#### 7.4.3 Security Constraints
+- **SEC1.1** No storage of unencrypted sensitive data anywhere in the system
+- **SEC1.2** All external communications must use HTTPS/TLS encryption
+- **SEC1.3** User passwords must be hashed using bcrypt with minimum 12 rounds
+- **SEC1.4** API keys and secrets must be stored in secure configuration management
+- **SEC1.5** Audit logging must be immutable and tamper-resistant
+
+#### 7.4.4 Business Constraints
+- **BC1.1** Development must be completed within academic project timeline (semester duration)
+- **BC1.2** Solution must be deployable on standard Linux server infrastructure
+- **BC1.3** System must support BlueVision ITM's client base of educational institutions
+- **BC1.4** Platform must be cost-effective for small to medium educational institutions
+
+#### 7.4.5 Operational Constraints
+- **OC1.1** System must be operable by IT staff with standard cybersecurity knowledge
+- **OC1.2** Backup and recovery procedures must be automated and reliable
+- **OC1.3** System monitoring and alerting must be built-in for operational visibility
+- **OC1.4** Documentation must be comprehensive for both users and administrators
 
 ---
 
-## 5. System Architecture
+## 8. Technology Requirements
 
-### 5.1 High-Level Architecture
-CRISP follows a three-tier architecture:
-- **Presentation Layer**: React.js web interface
-- **Application Layer**: Django REST API backend
-- **Data Layer**: PostgreSQL database with Redis caching
+### 8.1 Backend Technologies
 
-### 5.2 Key Components
-- **Authentication Service**: User login, session management
-- **Threat Intelligence Engine**: Data processing, anonymization
-- **STIX/TAXII Service**: Standards-compliant threat sharing
-- **Alert Manager**: Notification and alerting system
-- **Trust Manager**: Access control and sharing policies
-- **External Integrations**: MISP, OpenCTI, and other CTI sources
+#### 8.1.1 Core Framework
+- **Python 3.9+**: Primary development language with robust cybersecurity libraries
+- **Django 4.2+ with Django REST Framework**: Secure web framework with batteries-included approach
+- **PostgreSQL 13+**: Primary database with advanced security and querying capabilities
+- **Redis 6+**: Caching layer and session storage for improved performance
 
-### 5.3 Deployment Architecture
-- **Containerization**: Docker containers for all services
-- **Orchestration**: Docker Compose for local development
-- **Web Server**: Nginx reverse proxy
-- **Database**: PostgreSQL with automated backups
+#### 8.1.2 Message Queue and Processing
+- **RabbitMQ**: Message broker for distributed communication between CRISP instances
+- **Celery**: Asynchronous task processing for threat feed consumption and alert generation
+
+### 8.2 Threat Intelligence and Security
+
+#### 8.2.1 Standards Implementation
+- **python-stix2**: Python library for STIX 2.1 object creation and manipulation
+- **taxii2-client**: Client library for TAXII 2.1 protocol implementation
+- **OpenCTI Integration**: Integration capabilities with open source threat intelligence platform
+
+#### 8.2.2 Security Libraries
+- **PyJWT**: JSON Web Token implementation for API authentication
+- **bcrypt**: Secure password hashing
+- **cryptography**: Encryption libraries for data protection
+
+### 8.3 Frontend Technologies
+
+#### 8.3.1 Core Framework
+- **React.js 18+**: Modern frontend library with component-based architecture
+- **Material-UI**: UI component library for consistent design
+- **D3.js**: Advanced data visualization for threat intelligence dashboards
+
+#### 8.3.2 State Management and Routing
+- **React Router**: Client-side routing for single-page application
+- **Context API**: State management for user authentication and global state
+
+### 8.4 DevOps and Infrastructure
+
+#### 8.4.1 Containerization
+- **Docker**: Application containerization for consistent environments
+- **Docker Compose**: Multi-container orchestration for development and deployment
+- **Nginx**: Web server and reverse proxy for production deployment
+
+#### 8.4.2 Development Tools
+- **Git**: Version control with GitHub for collaboration
+- **GitHub Actions**: Continuous integration and automated testing
+- **pytest**: Python testing framework for comprehensive test coverage
+
+### 8.5 Security and Monitoring Tools
+
+#### 8.5.1 Security Testing
+- **OWASP ZAP**: Automated security vulnerability scanning
+- **Bandit**: Python security linter for identifying common security issues
+- **Safety**: Python dependency vulnerability checking
+
+#### 8.5.2 Monitoring and Logging
+- **Prometheus**: Metrics collection and monitoring
+- **Grafana**: Metrics visualization and dashboards
+- **Structured Logging**: JSON-based logging for better analysis and monitoring
 
 ---
 
-## 6. User Interface Requirements
+## 9. Appendices
 
-### 6.1 Web Interface
-- **Dashboard**: Overview of system status, recent threats, and alerts
-- **Threat Intelligence Management**: Create, edit, view threat data
-- **Feed Management**: Configure and monitor external threat feeds
-- **User Management**: Administrative interface for user and organization management
-- **Reports**: Generate usage and threat intelligence reports
+### 9.1 Glossary
+- **Anonymization**: Process of removing or masking identifying information while preserving analytical value
+- **CRISP Instance**: Individual deployment of the CRISP platform serving specific organizations
+- **Educational Institution**: Universities, colleges, schools, and other learning organizations
+- **Organization Publisher**: Primary user account for client organizations with publishing rights
+- **Threat Actor**: Individual or group responsible for cyber attacks and malicious activities
+- **Trust Relationship**: Defined level of data sharing permission between organizations
 
-### 6.2 API Interface
-- **RESTful API**: JSON-based API for programmatic access
-- **TAXII Endpoints**: Standards-compliant threat intelligence sharing
-- **Authentication**: JWT-based API authentication
-- **Documentation**: OpenAPI/Swagger documentation
-
----
-
-## 7. Security Requirements
-
-### 7.1 Authentication Security
-- Secure password storage using bcrypt hashing
-- Protection against brute force attacks
-- Session management with secure cookies
-- CSRF protection for all forms
-
-### 7.2 Data Security
-- Input validation and sanitization
-- SQL injection prevention
-- XSS protection
-- Secure configuration management
-
-### 7.3 Infrastructure Security
-- HTTPS enforcement for all connections
-- Security headers implementation
-- Regular security updates and patches
-- Vulnerability scanning integration
-
----
-
-## 8. Appendices
-
-### 8.1 Glossary
-Detailed definitions of technical terms and acronyms used throughout the document.
-
-### 8.2 References
+### 9.2 References
 - STIX 2.1 Specification: https://docs.oasis-open.org/cti/stix/v2.1/
 - TAXII 2.1 Specification: https://docs.oasis-open.org/cti/taxii/v2.1/
-- NIST Cybersecurity Framework
-- MISP Documentation
+- NIST Cybersecurity Framework: https://www.nist.gov/cyberframework
+- Django Documentation: https://docs.djangoproject.com/
+- React Documentation: https://react.dev/
 
-### 8.3 Revision History
-| Version | Date | Changes | Author |
+### 9.3 Revision History
+| Version | Date | Changes | Author/s |
 |---------|------|---------|--------|
-| 1.0 | May 26, 2025 | Initial version | Armand van der Colf |
+| 1.0 | May 24, 2025 | Initial version | Dreas Vermaak |
+| 1.1 | May 26, 2025 | Restructured to match specification requirements | Armand van der Colf, Liam van Kasterkop & Diaan Botes |
 
 ---
