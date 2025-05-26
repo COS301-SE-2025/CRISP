@@ -59,10 +59,10 @@ CRISP implements several design patterns for a flexible, maintainable, and exten
 
 ## 👥 Team Members
 
-### Armand van der Colf - Full Stack Developer & Security Specialist
+### Armand van der Colf - Full Stack Developer
 **Email:** u22574982@tuks.co.za  
 **GitHub:** [@Githubber0101](https://github.com/Githubber0101)  
-**LinkedIn:** [armand-vander-colf](https://linkedin.com/in/armand-vander-colf)
+**LinkedIn:** [armand-van-der-colf](https://linkedin.com/in/armand-van-der-colf)
 
 *Versatile full stack developer with strong cybersecurity foundations. Experienced in establishing startups and developing secure web solutions. Specializes in security implementation, threat analysis, and system architecture.*
 
@@ -167,6 +167,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 **Contact:** Ivan Burke - ib@bitm.co.za
 
 **Development Team:** Data Defenders  
-**Project Lead:** Jadyn Stoltz
-
+**Contact:** datadefenders.sa@gmail.com
 ---
