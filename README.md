@@ -114,9 +114,9 @@ CRISP implements several design patterns for a flexible, maintainable, and exten
 
 ## 📈 Development Methodology
 
-We follow an **Agile Scrum Framework** with DevSecOps integration:
+We follow an **Agile Scrum Framework**:
 
-- **Sprint Duration:** 2 weeks
+- **Sprint Duration:** 1 weeks
 - **Daily Stand-ups:** 15-minute progress meetings
 - **Security-First Approach:** Integrated security testing throughout development
 - **Continuous Integration:** Automated testing and security scanning
@@ -132,10 +132,6 @@ We follow an **Agile Scrum Framework** with DevSecOps integration:
 
 ### Installation
 ```bash
-# Clone the repository
-git clone https://github.com/your-org/crisp.git
-cd crisp
-
 # Start with Docker Compose
 docker-compose up -d
 
@@ -153,13 +149,6 @@ CRISP is built with security as a primary concern:
 - Regular security scanning and vulnerability assessments
 - Compliance with threat intelligence sharing standards
 
-## 🤝 Contributing
-
-We welcome contributions! Please read our contributing guidelines and follow our code of conduct.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## 📞 Contact
 
