@@ -139,7 +139,6 @@ The following five essential use case diagrams illustrate the core functionality
 - **System Administrator** has administrative access to all system functions
 - **Organization Publisher** inherits Organization User capabilities plus publishing rights
 - **Organization User** has read-only access to authorized threat intelligence
-- **External API User** User is stopped at login page and restricted
 
 ### 4.3 Use Case Priorities
 
