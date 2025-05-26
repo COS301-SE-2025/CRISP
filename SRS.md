@@ -25,15 +25,15 @@
 ## 1. Introduction
 
 ### 1.1 Business Need
-Educational institutions face increasing cyber threats with limited resources for threat intelligence sharing. Recent months have shown a disturbing trend where once an educational organization is attacked, similar institutions often become subsequent targets. CRISP addresses the critical need for timely and effective information sharing regarding cyber security incidents among educational institutions, enabling proactive defense against emerging threats.
+Educational institutions face increasing cyber threats with limited resources for threat intelligence sharing. Recent months have shown a disturbing trend where once an educational Institution is attacked, similar institutions often become subsequent targets. CRISP addresses the critical need for timely and effective information sharing regarding cyber security incidents among educational institutions, enabling proactive defense against emerging threats.
 
 ### 1.2 Project Scope
 CRISP will provide a web-based platform for BlueVision ITM to serve their clients with:
 - Secure threat intelligence sharing using industry standards (STIX/TAXII)
-- Anonymization of sensitive organizational data while preserving analytical value
+- Anonymization of sensitive Institutional data while preserving analytical value
 - Integration with external threat intelligence sources
 - Real-time threat alerting and notification systems
-- Trust-based access control and data sharing between organizations
+- Trust-based access control and data sharing between Institutions
 - Autonomous sharing between distributed CRISP instances
 
 The platform will facilitate both consumption of external threat feeds and publication of anonymized threat data, ensuring confidentiality while maximizing the benefit of shared intelligence.
@@ -61,43 +61,43 @@ The platform will facilitate both consumption of external threat feeds and publi
 
 #### BlueVision ITM System Administrator
 - **Role**: Platform administrator with full system access
-- **Purpose**: Manage the entire CRISP platform, onboard new client organizations, and maintain system health
+- **Purpose**: Manage the entire CRISP platform, onboard new client Institutions, and maintain system health
 
-#### Organization Publisher (Client Organizations)
+#### Institution Publisher (Client Institutions)
 - **Role**: BlueVision ITM clients who have publishing rights
 - **Purpose**: Represent educational institutions that can both publish and consume threat intelligence
 
-#### Organization Users (Viewers)
-- **Role**: Users within client organizations with viewing rights only
+#### Institution Users (Viewers)
+- **Role**: Users within client Institutions with viewing rights only
 - **Purpose**: Security analysts and IT staff who need access to threat intelligence but cannot publish
 
 ### 2.2 User Stories
 
 #### BlueVision ITM System Administrator Stories
-- As a System Administrator, I want to register new client organizations so that they can join the threat sharing community
-- As a System Administrator, I want to manage organization accounts and their settings so that I can control platform access and configurations
+- As a System Administrator, I want to register new client Institutions so that they can join the threat sharing community
+- As a System Administrator, I want to manage Institution accounts and their settings so that I can control platform access and configurations
 - As a System Administrator, I want to monitor system health and usage statistics so that I can ensure platform reliability and optimize performance
-- As a System Administrator, I want to configure global anonymization policies so that sensitive data is properly protected across all organizations
-- As a System Administrator, I want to manage trust relationships between organizations so that I can control data sharing permissions
+- As a System Administrator, I want to configure global anonymization policies so that sensitive data is properly protected across all Institutions
+- As a System Administrator, I want to manage trust relationships between Institutions so that I can control data sharing permissions
 - As a System Administrator, I want to access comprehensive audit logs so that I can track system usage and investigate security incidents
 
-#### Organization Publisher (Client) Stories
-- As an Organization Publisher, I want to publish threat intelligence about attacks on my institution so that I can help protect other educational organizations
-- As an Organization Publisher, I want to add users from my organization via email invitation so that my team can access relevant threat intelligence
-- As an Organization Publisher, I want to configure what types of threats my organization shares so that I can control our data sharing policies
-- As an Organization Publisher, I want to set anonymization levels for different types of data so that I can protect sensitive institutional information
-- As an Organization Publisher, I want to consume threat feeds from other organizations so that I can stay informed about relevant threats
-- As an Organization Publisher, I want to receive alerts about threats targeting educational institutions so that I can proactively defend my organization
-- As an Organization Publisher, I want to manage my organization's users and their permissions so that I can control who has access to what information
-- As an Organization Publisher, I want to upload threat intelligence in bulk via CSV/JSON so that I can efficiently share large datasets
+#### Institution Publisher (Client) Stories
+- As an Institution Publisher, I want to publish threat intelligence about attacks on my institution so that I can help protect other educational Institutions
+- As an Institution Publisher, I want to add users from my Institution via email invitation so that my team can access relevant threat intelligence
+- As an Institution Publisher, I want to configure what types of threats my Institution shares so that I can control our data sharing policies
+- As an Institution Publisher, I want to set anonymization levels for different types of data so that I can protect sensitive institutional information
+- As an Institution Publisher, I want to consume threat feeds from other Institutions so that I can stay informed about relevant threats
+- As an Institution Publisher, I want to receive alerts about threats targeting educational institutions so that I can proactively defend my Institution
+- As an Institution Publisher, I want to manage my Institution's users and their permissions so that I can control who has access to what information
+- As an Institution Publisher, I want to upload threat intelligence in bulk via CSV/JSON so that I can efficiently share large datasets
 
-#### Organization User (Viewer) Stories
-- As an Organization User, I want to view threat intelligence relevant to my institution so that I can understand current threat landscape
-- As an Organization User, I want to receive real-time alerts about high-priority threats so that I can respond quickly to emerging risks
-- As an Organization User, I want to search and filter threat intelligence by type, date, and severity so that I can find relevant information quickly
-- As an Organization User, I want to export threat data for integration with our security tools so that I can enhance our defensive capabilities
-- As an Organization User, I want to view threat trends and analytics so that I can understand attack patterns targeting educational institutions
-- As an Organization User, I want to access threat intelligence via API so that I can integrate with existing security systems
+#### Institution User (Viewer) Stories
+- As an Institution User, I want to view threat intelligence relevant to my institution so that I can understand current threat landscape
+- As an Institution User, I want to receive real-time alerts about high-priority threats so that I can respond quickly to emerging risks
+- As an Institution User, I want to search and filter threat intelligence by type, date, and severity so that I can find relevant information quickly
+- As an Institution User, I want to export threat data for integration with our security tools so that I can enhance our defensive capabilities
+- As an Institution User, I want to view threat trends and analytics so that I can understand attack patterns targeting educational institutions
+- As an Institution User, I want to access threat intelligence via API so that I can integrate with existing security systems
 
 #### External API User Stories
 - As an External System, I want to consume threat intelligence via TAXII-compliant endpoints so that I can integrate with existing security tools
@@ -109,34 +109,80 @@ The platform will facilitate both consumption of external threat feeds and publi
 ## 3. Domain Model
 
 ### 3.1 UML Class Diagram
-*[PNG IMAGE REQUIRED: UML class diagram showing relationships between User, Organization, ThreatIntelligence, Feed, Alert, TrustRelationship, and other core entities]*
+*[PNG IMAGE REQUIRED: UML class diagram showing relationships between User, Institution, ThreatIntelligence, Feed, Alert, TrustRelationship, and other core entities]*
 
 ### 3.2 Core Domain Entities Description
 - **User**: System users with different roles (Admin, Publisher, Viewer) and authentication details
-- **Organization**: Client institutions with publishing capabilities and user management
+- **Institution**: Client institutions with publishing capabilities and user management
 - **ThreatIntelligence**: Core threat data including IoCs, TTPs, with anonymization metadata
 - **Feed**: External and internal threat intelligence sources and subscriptions
 - **Alert**: Notifications for high-priority threats with customizable criteria
-- **TrustRelationship**: Defines sharing permissions and anonymization levels between organizations
+- **TrustRelationship**: Defines sharing permissions and anonymization levels between Institutions
 - **AnonymizationPolicy**: Rules for protecting sensitive data while preserving analytical value
 
 ---
 
 ## 4. Use Cases
 
-### 4.1 High-Level Use Case Diagram
-*[PNG IMAGE REQUIRED: Use case diagram showing actors (System Admin, Organization Publisher, Organization User, External API) and their primary use cases]*
+### 4.1 Use Case Diagrams
+The following five essential use case diagrams illustrate the core functionality and interactions within the CRISP system:
 
-### 4.2 Primary Use Cases
-- **UC1**: Manage Organizations (System Admin)
-- **UC2**: Publish Threat Intelligence (Organization Publisher)
-- **UC3**: Consume Threat Feeds (Organization Publisher/User)
-- **UC4**: Configure Trust Relationships (System Admin/Organization Publisher)
-- **UC5**: Manage Organization Users (Organization Publisher)
-- **UC6**: Generate and Receive Alerts (All Users)
-- **UC7**: Export Threat Data (Organization Publisher/User)
-- **UC8**: API Access for External Systems (External API User)
+1. **System Overview** - High-level view of all major actors and primary use cases
+2. **Threat Intelligence Publication and Sharing** - Core value creation through threat data sharing
+3. **Threat Intelligence Consumption and Alerts** - Core value consumption and notification system
+4. **User and Organization Management** - Foundation user and organization administration
+5. **Data Validation and Quality Assurance** - Ensuring data integrity and STIX compliance
 
+### 4.2 Use Case Relationships
+
+#### 4.2.1 Actor Relationships
+- **System Administrator** has administrative access to all system functions
+- **Organization Publisher** inherits Organization User capabilities plus publishing rights
+- **Organization User** has read-only access to authorized threat intelligence
+- **External API User** User is stopped at login page and restricted
+
+### 4.3 Use Case Priorities
+
+#### 4.3.1 Critical Use Cases (Must Have)
+1. **User Authentication and Authorization** - Foundation for all system access
+2. **Threat Intelligence Publication** - Core value creation functionality
+3. **Threat Intelligence Consumption** - Core value consumption functionality
+4. **Organization Management** - Essential for multi-tenant architecture
+5. **Data Validation and STIX Compliance** - Required for standards compliance
+
+#### 4.3.2 Important Use Cases (Should Have)
+1. **Real-time Alert System** - Enhances threat response capabilities
+2. **Trust Relationship Management** - Enables controlled data sharing
+3. **Bulk Data Upload** - Improves operational efficiency
+4. **External Feed Integration** - Enriches threat intelligence sources
+5. **Data Anonymization** - Protects sensitive organizational information
+
+#### 4.3.3 Enhancement Use Cases (Could Have)
+1. **Advanced Analytics and Reporting** - Provides deeper threat insights
+2. **API Rate Limiting and Throttling** - Protects system resources
+3. **Audit Trail Management** - Enhances security and compliance
+4. **System Health Monitoring** - Improves operational visibility
+5. **Data Export Capabilities** - Supports integration requirements
+
+### 4.4 Cross-Functional Use Cases
+
+#### 4.4.1 Security Use Cases
+- **Secure Authentication** - Multi-factor authentication for administrative accounts
+- **Data Encryption** - End-to-end encryption for sensitive threat intelligence
+- **Access Control** - Role-based permissions with principle of least privilege
+- **Audit Logging** - Comprehensive logging for security monitoring
+
+#### 4.4.2 Integration Use Cases
+- **STIX/TAXII Compliance** - Standards-based threat intelligence exchange
+- **External API Integration** - RESTful API for third-party tool integration
+- **Feed Syndication** - Automated consumption of external threat feeds
+- **Data Format Conversion** - Support for multiple import/export formats
+
+#### 4.4.3 Operational Use Cases
+- **System Monitoring** - Real-time system health and performance monitoring
+- **Backup and Recovery** - Automated data protection and disaster recovery
+- **Configuration Management** - Centralized system configuration and deployment
+- **Performance Optimization** - Query optimization and caching strategies
 ---
 
 ## 5. Functional Requirements
@@ -152,39 +198,39 @@ The platform will facilitate both consumption of external threat feeds and publi
 - **R1.1.6** CRISP shall implement session timeout after 60 minutes of inactivity
 
 #### R1.2 User Management
-- **R1.2.1** CRISP shall allow System Administrators to create and manage organization accounts
-- **R1.2.2** CRISP shall allow Organization Publishers to invite users via email to their organization
-- **R1.2.3** CRISP shall support three user roles: System Admin, Organization Publisher, Organization User
-- **R1.2.4** CRISP shall allow Organization Publishers to manage their organization's user permissions
-- **R1.2.5** CRISP shall allow System Administrators to deactivate user accounts across all organizations
+- **R1.2.1** CRISP shall allow System Administrators to create and manage Institution accounts
+- **R1.2.2** CRISP shall allow Institution Publishers to invite users via email to their Institution
+- **R1.2.3** CRISP shall support three user roles: System Admin, Institution Publisher, Institution User
+- **R1.2.4** CRISP shall allow Institution Publishers to manage their Institution's user permissions
+- **R1.2.5** CRISP shall allow System Administrators to deactivate user accounts across all Institutions
 
-#### R1.3 Organization Management
-- **R1.3.1** CRISP shall allow System Administrators to register new client organizations
-- **R1.3.2** CRISP shall associate each organization with a primary Organization Publisher account
-- **R1.3.3** CRISP shall allow organizations to manage their profile information and settings
+#### R1.3 Institution Management
+- **R1.3.1** CRISP shall allow System Administrators to register new client Institutions
+- **R1.3.2** CRISP shall associate each Institution with a primary Institution Publisher account
+- **R1.3.3** CRISP shall allow Institutions to manage their profile information and settings
 
 ### R2. Threat Intelligence Publication
 
 #### R2.1 Data Publication
-- **R2.1.1** CRISP shall support manual entry of threat intelligence through web forms by Organization Publishers
-- **R2.1.2** CRISP shall support bulk import via CSV and JSON file uploads for Organization Publishers
+- **R2.1.1** CRISP shall support manual entry of threat intelligence through web forms by Institution Publishers
+- **R2.1.2** CRISP shall support bulk import via CSV and JSON file uploads for Institution Publishers
 - **R2.1.3** CRISP shall validate threat intelligence data for completeness, format, and STIX compliance
-- **R2.1.4** CRISP shall automatically tag threat intelligence with metadata (timestamp, source organization, threat type)
-- **R2.1.5** CRISP shall require Organization Publishers to categorize threats by type (Malware, IP, Domain, Hash, Email, etc.)
+- **R2.1.4** CRISP shall automatically tag threat intelligence with metadata (timestamp, source Institution, threat type)
+- **R2.1.5** CRISP shall require Institution Publishers to categorize threats by type (Malware, IP, Domain, Hash, Email, etc.)
 
 #### R2.2 Data Anonymization
 - **R2.2.1** CRISP shall mask IP addresses (e.g., 192.168.1.x becomes 192.168.1.XXX) in shared data
 - **R2.2.2** CRISP shall mask email addresses (e.g., user@domain.com becomes user@XXX.com) in shared data
-- **R2.2.3** CRISP shall remove or redact organization-specific identifiers before sharing
+- **R2.2.3** CRISP shall remove or redact Institution-specific identifiers before sharing
 - **R2.2.4** CRISP shall apply configurable anonymization levels based on trust relationships
 - **R2.2.5** CRISP shall preserve the analytical value of threat intelligence after anonymization (95% effectiveness target)
-- **R2.2.6** CRISP shall allow Organization Publishers to preview anonymized data before publication
+- **R2.2.6** CRISP shall allow Institution Publishers to preview anonymized data before publication
 
 #### R2.3 Intelligence Distribution
 - **R2.3.1** CRISP shall export threat intelligence in STIX 2.1 format for standards compliance
 - **R2.3.2** CRISP shall provide TAXII 2.1 compliant API endpoints for threat sharing
-- **R2.3.3** CRISP shall support selective sharing based on trust relationships between organizations
-- **R2.3.4** CRISP shall notify subscribed organizations when new relevant intelligence is published
+- **R2.3.3** CRISP shall support selective sharing based on trust relationships between Institutions
+- **R2.3.4** CRISP shall notify subscribed Institutions when new relevant intelligence is published
 
 ### R3. Threat Feed Consumption
 
@@ -202,7 +248,7 @@ The platform will facilitate both consumption of external threat feeds and publi
 
 #### R3.3 Alerting System
 - **R3.3.1** CRISP shall generate alerts for high-priority threat intelligence based on configurable criteria
-- **R3.3.2** CRISP shall support customizable alert thresholds per organization and threat type
+- **R3.3.2** CRISP shall support customizable alert thresholds per Institution and threat type
 - **R3.3.3** CRISP shall deliver alerts via email and web interface notifications
 - **R3.3.4** CRISP shall allow users to subscribe to specific threat categories, sources, or severity levels
 - **R3.3.5** CRISP shall generate alerts within 60 seconds of triggering conditions
@@ -211,9 +257,9 @@ The platform will facilitate both consumption of external threat feeds and publi
 
 #### R4.1 Trust Configuration
 - **R4.1.1** CRISP shall support three trust levels: Public, Trusted, Restricted
-- **R4.1.2** CRISP shall allow System Administrators to configure organization trust relationships
-- **R4.1.3** CRISP shall support community groups for multi-organization trust relationships
-- **R4.1.4** CRISP shall enable bilateral trust agreements between organizations
+- **R4.1.2** CRISP shall allow System Administrators to configure Institution trust relationships
+- **R4.1.3** CRISP shall support community groups for multi-Institution trust relationships
+- **R4.1.4** CRISP shall enable bilateral trust agreements between Institutions
 
 #### R4.2 Access Control
 - **R4.2.1** CRISP shall filter shared intelligence based on established trust relationships
@@ -225,7 +271,7 @@ The platform will facilitate both consumption of external threat feeds and publi
 
 #### R5.1 Monitoring and Statistics
 - **R5.1.1** CRISP shall provide system health monitoring dashboard for administrators
-- **R5.1.2** CRISP shall generate usage reports (users, organizations, data volume, API calls)
+- **R5.1.2** CRISP shall generate usage reports (users, Institutions, data volume, API calls)
 - **R5.1.3** CRISP shall implement API rate limiting (100 requests/minute per user)
 - **R5.1.4** CRISP shall maintain comprehensive audit logs for 12 months
 - **R5.1.5** CRISP shall provide real-time system performance metrics
@@ -255,7 +301,7 @@ Response: {
     "id": string,
     "username": string,
     "role": string,
-    "organization_id": string
+    "Institution_id": string
   },
   "expires_in": number
 }
@@ -265,9 +311,9 @@ Error Response: {
 }
 ```
 
-#### 6.1.2 Organization Management Service
+#### 6.1.2 Institution Management Service
 ```
-POST /api/organizations/
+POST /api/Institutions/
 Request: {
   "name": string,
   "contact_email": string,
@@ -284,7 +330,7 @@ Response: {
   "status": "created"
 }
 
-GET /api/organizations/{id}/users/
+GET /api/Institutions/{id}/users/
 Response: {
   "users": [
     {
@@ -297,7 +343,7 @@ Response: {
   ]
 }
 
-POST /api/organizations/{id}/users/invite/
+POST /api/Institutions/{id}/users/invite/
 Request: {
   "email": string,
   "role": "viewer"
@@ -491,7 +537,7 @@ interface FeedService {
 - **R1.7** System shall automatically retry failed external API calls (maximum 3 attempts with exponential backoff)
 
 #### 7.1.3 Scalability Requirements
-- **S1.1** Architecture shall support scaling from 5 to 50 client organizations
+- **S1.1** Architecture shall support scaling from 5 to 50 client Institutions
 - **S1.2** Database shall handle growth from 100MB to 10GB of threat intelligence data
 - **S1.3** System shall support horizontal scaling with load balancer for increased user load
 - **S1.4** API shall support rate limiting and throttling to prevent abuse
@@ -512,7 +558,7 @@ interface FeedService {
 #### 7.1.5 Usability Requirements
 - **U1.1** Web interface compatible with Chrome, Firefox, Safari, Edge (latest 2 versions)
 - **U1.2** Mobile-responsive design supporting tablets and smartphones (viewport ≥ 768px)
-- **U1.3** New Organization Publisher onboarding completable within 2 hours including user setup
+- **U1.3** New Institution Publisher onboarding completable within 2 hours including user setup
 - **U1.4** Common threat intelligence tasks achievable within 5 clicks from dashboard
 - **U1.5** Context-sensitive help and documentation available throughout interface
 - **U1.6** System shall provide clear feedback for all user actions within 1 second
@@ -673,11 +719,11 @@ interface FeedService {
 
 ### 9.1 Glossary
 - **Anonymization**: Process of removing or masking identifying information while preserving analytical value
-- **CRISP Instance**: Individual deployment of the CRISP platform serving specific organizations
-- **Educational Institution**: Universities, colleges, schools, and other learning organizations
-- **Organization Publisher**: Primary user account for client organizations with publishing rights
+- **CRISP Instance**: Individual deployment of the CRISP platform serving specific Institutions
+- **Educational Institution**: Universities, colleges, schools, and other learning Institutions
+- **Institution Publisher**: Primary user account for client Institutions with publishing rights
 - **Threat Actor**: Individual or group responsible for cyber attacks and malicious activities
-- **Trust Relationship**: Defined level of data sharing permission between organizations
+- **Trust Relationship**: Defined level of data sharing permission between Institutions
 
 ### 9.2 References
 - STIX 2.1 Specification: https://docs.oasis-open.org/cti/stix/v2.1/

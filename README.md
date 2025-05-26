@@ -1,6 +1,6 @@
 # Data Defenders - CRISP - Cyber Risk Information Sharing Platform
 
-CRISP (Cyber Risk Information Sharing Platform) is a secure threat intelligence sharing platform designed to streamline and enhance threat intelligence sharing among organizations, particularly in response to increasing ransomware attacks targeting tertiary education institutions.
+CRISP (Cyber Risk Information Sharing Platform) is a secure threat intelligence sharing platform designed to streamline and enhance threat intelligence sharing among Institutions, particularly in response to increasing ransomware attacks targeting tertiary education institutions.
 
 ## 📋 Project Links
 
