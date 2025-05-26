@@ -690,6 +690,6 @@ interface FeedService {
 | Version | Date | Changes | Author/s |
 |---------|------|---------|--------|
 | 1.0 | May 24, 2025 | Initial version | Dreas Vermaak |
-| 1.1 | May 26, 2025 | Restructured to match specification requirements | Armand van der Colf, Liam van Kasterkop & Diaan Botes |
+| 1.1 | May 26, 2025 | Restructured to match specification requirements | Armand van der Colf|
 
 ---
