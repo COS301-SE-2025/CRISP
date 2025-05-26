@@ -10,10 +10,17 @@ function App() {
     setActivePage(pageId);
   };
 
+  // Add this function to handle logout
+  function handleLogout() {
+    localStorage.removeItem('crisp_auth_token');
+    localStorage.removeItem('crisp_user');
+    window.location.reload(); // Reload the page to show login screen
+  }
+
   return (
     <div className="App">
       {/* Header */}
-      <Header />
+      <Header handleLogout={handleLogout} />
       
       {/* Main Navigation */}
       <MainNav activePage={activePage} showPage={showPage} />
@@ -45,7 +52,7 @@ function App() {
 }
 
 // Header Component
-function Header() {
+function Header({ handleLogout }) {
   return (
     <header>
       <div className="container header-container">
@@ -67,6 +74,11 @@ function Header() {
             <div className="user-info">
               <div className="user-name">Admin</div>
               <div className="user-role">Security Analyst</div>
+            </div>
+            {/* Add a logout button to your header in the App component */}
+            <div className="logout-button" onClick={handleLogout}>
+              <i className="fas fa-sign-out-alt"></i>
+              <span>Logout</span>
             </div>
           </div>
         </div>
@@ -2378,6 +2390,25 @@ function CSSStyles() {
             color: var(--text-muted);
         }
         
+        /* Logout button styles */
+        .logout-button {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+          padding: 8px 12px;
+          border-radius: 6px;
+          color: var(--text-muted);
+          font-size: 14px;
+          transition: all 0.3s;
+          margin-left: 10px;
+        }
+
+        .logout-button:hover {
+          background-color: var(--light-gray);
+          color: var(--danger);
+        }
+        
         /* Main Navigation */
         nav.main-nav {
             background-color: var(--primary-blue);
@@ -2638,10 +2669,8 @@ function CSSStyles() {
         .card-title {
             font-size: 18px;
             font-weight: 600;
+            margin-bottom: 5px;
             color: var(--dark-blue);
-            display: flex;
-            align-items: center;
-            gap: 10px;
         }
         
         .card-icon {
