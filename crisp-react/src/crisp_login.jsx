@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { loginUser } from './api.js'; // Import the API function
+import BlueVLogo from './BlueV.png'; // Import the logo directly from src directory
 
 // Login Component that works with the AuthWrapper in main.jsx
 function CrispLogin({ onLoginSuccess }) {
@@ -32,32 +34,25 @@ function CrispLogin({ onLoginSuccess }) {
     }
   }, [error, isLoading]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
     
-    // Simulate API call with timeout
-    setTimeout(() => {
-      if (username === 'ADMIN' && password === 'Admin123') {
-        // Create mock user data and token
-        const userData = {
-          user: {
-            id: 1,
-            username: 'ADMIN',
-            name: 'Admin User',
-            role: 'Security Analyst'
-          },
-          token: 'mock_jwt_token_' + Date.now()
-        };
-        
-        // Call the onLoginSuccess callback with user data
-        onLoginSuccess(userData);
-      } else {
-        setError('Invalid username or password');
-        setIsLoading(false);
-      }
-    }, 800);
+    try {
+      // Call the API function
+      const userData = await loginUser(username, password);
+      
+      // Call the onLoginSuccess callback with user data
+      onLoginSuccess({
+        user: userData.user,
+        token: userData.token
+      });
+    } catch (error) {
+      setError(error.message || 'Invalid username or password');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -67,7 +62,10 @@ function CrispLogin({ onLoginSuccess }) {
         <div className="login-content">
           <div className="login-left">
             <div className="brand-info">
-              <h1>CRISP</h1>
+              {/* Replace CRISP heading with BlueV.PNG image */}
+              <div className="logo-container">
+                <img src={BlueVLogo} alt="BlueV Logo" className="brand-logo" />
+              </div>
               <h2>Cyber Risk Information Sharing Platform</h2>
               <p>Streamline your threat intelligence sharing and committee management</p>
               
@@ -146,7 +144,6 @@ function CrispLogin({ onLoginSuccess }) {
               
               <div className="login-footer">
                 <p>Don't have an account? Contact <a href="#" className="register-link">BlueVision ITM</a> for account registration.</p>
-                
               </div>
             </div>
           </div>
@@ -247,17 +244,21 @@ function CSSStyles() {
             opacity: 0.3;
         }
         
+        /* Logo container styles */
+        .logo-container {
+            margin-bottom: 1.5rem;
+        }
+        
+        .brand-logo {
+            max-width: 250px;
+            height: auto;
+        }
+        
         .brand-info {
             position: relative;
             z-index: 2;
             max-width: 700px;
             margin: 0 auto;
-        }
-        
-        .brand-info h1 {
-            font-size: 3.5rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
         }
         
         .brand-info h2 {
@@ -378,6 +379,11 @@ function CSSStyles() {
             font-size: 1rem;
             background-color: var(--bg-light);
             transition: all 0.3s;
+            color: #000000 !important; /* Ensuring text is black when user types */
+        }
+        
+        .input-with-icon input::placeholder {
+            color: #718096; /* Light gray for placeholder text */
         }
         
         .input-with-icon input:focus {
@@ -385,6 +391,7 @@ function CSSStyles() {
             border-color: var(--primary-color);
             background-color: var(--text-light);
             box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1);
+            color: #000000 !important; /* Ensuring text is black when focused */
         }
         
         .btn-sign-in {
@@ -535,8 +542,8 @@ function CSSStyles() {
         }
         
         @media (max-width: 768px) {
-            .brand-info h1 {
-                font-size: 2.5rem;
+            .brand-logo {
+                max-width: 200px;
             }
             
             .brand-info h2 {
@@ -557,8 +564,8 @@ function CSSStyles() {
                 padding: 1.5rem;
             }
             
-            .brand-info h1 {
-                font-size: 2rem;
+            .brand-logo {
+                max-width: 180px;
             }
             
             .brand-info h2 {
