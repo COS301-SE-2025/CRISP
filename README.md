@@ -1,234 +1,234 @@
-# Threat Intelligence Publication Service
+# TAXII Feed Consumption Service
 
-A comprehensive service that allows organizations to create, anonymize, and publish threat intelligence in STIX 2.1 format via TAXII 2.1 endpoints. This implementation follows the requirements specified in SRS R2.1, R2.2, and R2.3.
+A Django application for consuming external TAXII 2.1 compliant threat intelligence feeds, part of the CRISP (Cyber Risk Information Sharing Platform) project.
+
+## Overview
+
+This service provides a complete implementation for consuming STIX/TAXII 2.1 threat intelligence feeds, including:
+
+- TAXII 2.1 client implementation for discovery and data retrieval
+- Feed configuration management with Django admin interface
+- Asynchronous data processing with Celery
+- Duplicate detection and education sector relevance tagging
+- Comprehensive error handling and monitoring
 
 ## Features
 
-- **STIX 2.1 Object Creation**
-  - Support for core STIX objects (Indicator, Malware, Attack-Pattern, Threat-Actor)
-  - Web API for manual threat intelligence entry
-  - Bulk upload support for CSV and JSON formats
-  - Auto-generation of STIX metadata (timestamps, UUIDs, relationships)
+- **TAXII 2.1 Client**:
+  - Discovery service client (GET /taxii2/)
+  - Collections enumeration (GET /taxii2/collections/)
+  - Object retrieval with filtering (GET /taxii2/collections/{id}/objects/)
+  - Support for API key, JWT, and basic authentication
 
-- **TAXII 2.1 Server Implementation**
-  - Discovery service endpoint (GET /taxii2/)
-  - Collections management (GET /taxii2/collections/)
-  - Object publishing (POST /taxii2/collections/{id}/objects/)
-  - Support for filtering and pagination
-  - Authentication and authorization for API access
+- **Feed Configuration**:
+  - Django models for external feed sources
+  - Admin interface for configuration
+  - Support for feed categorization (malware, indicators, TTPs)
+  - Configurable polling intervals (hourly, daily, weekly)
 
-- **Trust-Based Sharing**
-  - Filter shared intelligence based on trust relationships
-  - Apply appropriate anonymization levels per trust level
-  - Selective sharing to authorized organizations only
-  - Audit logging for all sharing activities
+- **Data Processing**:
+  - STIX 2.1 format validation
+  - Normalization to internal schema
+  - Duplicate detection across feed sources
+  - Education sector relevance tagging
 
-## Technical Implementation
-
-- Uses python-stix2 library for STIX object creation and validation
-- Implements Factory Method pattern for STIX object creation (per SRS 7.3.1)
-- Implements Strategy Pattern for anonymization algorithms (per SRS 7.3.3)
-- Django REST Framework for TAXII API endpoints
-- Comprehensive validation for STIX 2.1 compliance
+- **Error Handling**:
+  - Comprehensive logging for all activities
+  - Graceful handling of network and authentication failures
+  - Retry mechanism with exponential backoff
+  - Health check endpoints for monitoring
 
 ## Installation
 
 ### Prerequisites
 
-- Python 3.8+
-- PostgreSQL 12+
-- Redis (for Celery)
+- Python 3.9+
+- PostgreSQL 13+
+- Redis 6+
+- RabbitMQ (for Celery)
 
 ### Setup
 
-1. Clone the repository:
-   ```
-   git clone <repository-url>
-   cd threat_intel_service
-   ```
+1. Add the application to your Django project:
 
-2. Create a virtual environment:
-   ```
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+```python
+# settings.py
+INSTALLED_APPS = [
+    # ... other apps
+    'feed_consumption',
+]
 
-3. Install dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
+# TAXII client settings
+TAXII_VERIFY_SSL = True  # Set to False for development/testing with self-signed certs
+TAXII_PAGE_SIZE = 100    # Number of objects to retrieve per page
+CRISP_VERSION = '1.0.0'  # Used in User-Agent header
+```
 
-4. Configure your PostgreSQL database in `threat_intel/settings.py`.
+2. Set up Celery for asynchronous tasks:
 
-5. Run migrations:
-   ```
-   python manage.py migrate
-   ```
+```python
+# celery.py
+from celery import Celery
 
-6. Initialize the database with sample data:
-   ```
-   python initial_setup.py
-   ```
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'your_project.settings')
 
-7. Start the development server:
-   ```
-   python manage.py runserver
-   ```
+app = Celery('your_project')
+app.config_from_object('django.conf:settings', namespace='CELERY')
+app.autodiscover_tasks()
+
+# Add periodic tasks
+app.conf.beat_schedule = {
+    'schedule-feed-consumption': {
+        'task': 'feed_consumption.tasks.schedule_feed_consumption',
+        'schedule': 300.0,  # Run every 5 minutes
+    },
+    'retry-failed-feeds': {
+        'task': 'feed_consumption.tasks.retry_failed_feeds',
+        'schedule': 3600.0,  # Run every hour
+    },
+}
+```
+
+3. Apply migrations:
+
+```bash
+python manage.py makemigrations feed_consumption
+python manage.py migrate
+```
+
+4. Start the Celery worker and beat scheduler:
+
+```bash
+celery -A your_project worker -l info
+celery -A your_project beat -l info
+```
 
 ## Usage
 
-### API Endpoints
+### Adding a Feed Source
 
-#### TAXII 2.1 Endpoints
+1. Via the Django Admin interface:
+   - Navigate to Feed Sources section
+   - Click "Add Feed Source"
+   - Enter the feed details (name, discovery URL, authentication)
+   - Set categories and polling interval
+   - Save to activate the feed
 
-- `GET /taxii2/` - TAXII Discovery
-- `GET /taxii2/collections/` - List Collections
-- `GET /taxii2/collections/{id}/` - Get Collection
-- `GET /taxii2/collections/{id}/objects/` - Get Objects
-- `POST /taxii2/collections/{id}/objects/` - Add Objects
-- `GET /taxii2/collections/{id}/objects/{object_id}/` - Get Object
-- `GET /taxii2/collections/{id}/manifest/` - Get Manifest
-
-#### REST API Endpoints
-
-- `/api/organizations/` - Organization management
-- `/api/stix/` - STIX object management
-- `/api/stix/create-from-form/{stix_type}/` - Create STIX object from form data
-- `/api/stix/bulk-upload/` - Bulk upload of STIX objects
-- `/api/stix/{id}/anonymize/` - Create anonymized version of STIX object
-- `/api/collections/` - Collection management
-- `/api/collections/{id}/objects/` - Get objects in collection
-- `/api/collections/{id}/add_object/` - Add object to collection
-- `/api/collections/{id}/remove_object/` - Remove object from collection
-- `/api/feeds/` - Feed management
-- `/api/feeds/{id}/publish/` - Publish feed
-- `/api/trust/relationships/` - Trust relationship management
-- `/api/trust/groups/` - Trust group management
-- `/api/trust/memberships/` - Trust group membership management
-
-### Authentication
-
-All API endpoints require authentication. The system uses OAuth2 for API authentication.
-
-### Creating STIX Objects
-
-#### Manual Entry
-
-To create a STIX object via the API:
+2. Via the API:
 
 ```python
-import requests
+from feed_consumption.models import ExternalFeedSource
 
-# Create an indicator
-data = {
-    "name": "Suspicious IP",
-    "description": "Indicator for a suspicious IP address",
-    "pattern": "[ipv4-addr:value = '192.168.1.1']",
-    "pattern_type": "stix",
-    "indicator_types": ["malicious-activity"],
-    "valid_from": "2023-01-01T00:00:00Z"
-}
-
-response = requests.post(
-    "http://localhost:8000/api/stix/create-from-form/indicator/",
-    json=data,
-    headers={"Authorization": "Bearer YOUR_TOKEN"}
+feed = ExternalFeedSource.objects.create(
+    name='MISP Community Feed',
+    discovery_url='https://example.com/taxii2/',
+    categories=['malware', 'indicators'],
+    poll_interval=ExternalFeedSource.PollInterval.DAILY,
+    auth_type=ExternalFeedSource.AuthType.API_KEY,
+    auth_credentials={'key': 'your-api-key', 'header_name': 'Authorization'},
+    is_active=True,
+    added_by=request.user
 )
 ```
 
-#### Bulk Upload
+### Manually Triggering Feed Consumption
 
-For CSV upload, you need to provide a mapping configuration:
+1. Via the Django Admin interface:
+   - Go to the Feed Source detail page
+   - Click "Refresh Now" button
 
-```python
-import requests
-
-files = {
-    "data": open("indicators.csv", "rb")
-}
-
-data = {
-    "format": "csv",
-    "mapping": {
-        "stix_type": "indicator",
-        "properties": {
-            "name": "indicator_name",
-            "description": "description",
-            "labels": "tags",
-            "confidence": "confidence_score"
-        },
-        "pattern_field": "ioc_value",
-        "pattern_prefix": "[file:hashes.MD5 = '",
-        "pattern_suffix": "']",
-        "list_delimiter": "|"
-    }
-}
-
-response = requests.post(
-    "http://localhost:8000/api/stix/bulk-upload/",
-    data=data,
-    files=files,
-    headers={"Authorization": "Bearer YOUR_TOKEN"}
-)
-```
-
-### Publishing Threat Intelligence
-
-To publish threat intelligence via a feed:
+2. Via the API:
 
 ```python
-import requests
+from feed_consumption.tasks import manual_feed_refresh
 
-response = requests.post(
-    "http://localhost:8000/api/feeds/YOUR_FEED_ID/publish/",
-    headers={"Authorization": "Bearer YOUR_TOKEN"}
-)
+# Trigger immediate refresh
+result = manual_feed_refresh.delay(str(feed_id))
 ```
 
-## Anonymization
+3. Via management command:
 
-The system supports three levels of anonymization:
+```bash
+python manage.py refresh_feed <feed_id>
+```
 
-- **None**: No anonymization, used for high-trust relationships
-- **Partial**: Anonymizes selected sensitive fields based on trust level (default)
-- **Full**: Aggressive anonymization of all sensitive fields, used for low-trust relationships
+### Monitoring Feed Status
 
-The anonymization strategy preserves the analytical value of the intelligence while protecting the source organization's sensitive information.
+1. Check the Feed Consumption Logs in the admin interface
+2. Use the health check endpoint:
+
+```
+GET /feed-consumption/health/
+```
+
+3. Check the dashboard for analytics:
+
+```
+GET /feed-consumption/dashboard/
+```
+
+## API Endpoints
+
+The service provides a REST API for managing feed sources and monitoring consumption:
+
+- `GET /api/feed-sources/` - List all feed sources
+- `POST /api/feed-sources/` - Create a new feed source
+- `GET /api/feed-sources/{id}/` - Get feed source details
+- `POST /api/feed-sources/{id}/refresh/` - Trigger immediate refresh
+- `GET /api/feed-sources/{id}/collections/` - List available TAXII collections
+- `POST /api/feed-sources/{id}/set_collection/` - Set active collection
+- `GET /api/feed-sources/{id}/discover/` - Perform TAXII discovery
+- `GET /api/feed-sources/stats/` - Get feed source statistics
+- `GET /api/consumption-logs/` - List consumption logs
+- `GET /api/consumption-logs/{id}/` - Get consumption log details
+- `GET /api/consumption-logs/stats/` - Get consumption statistics
+
+## Architecture
+
+The feed consumption service follows a modular architecture:
+
+1. **Models Layer**:
+   - `ExternalFeedSource` - Configuration for feed sources
+   - `FeedConsumptionLog` - Logging for consumption activities
+
+2. **Service Layer**:
+   - `TaxiiClient` - Handles TAXII protocol communication
+   - `DataProcessor` - Validates, normalizes, and stores threat data
+
+3. **Task Layer**:
+   - Celery tasks for asynchronous processing
+   - Scheduled polling based on intervals
+   - Retry mechanism for failed feeds
+
+4. **API Layer**:
+   - REST API for feed management
+   - Health check and monitoring endpoints
 
 ## Testing
 
-To test the functionality of the system:
+Run the comprehensive test suite with:
 
+```bash
+python manage.py test feed_consumption
 ```
-python test_functionality.py
-```
 
-This will create sample STIX objects, test anonymization, generate STIX bundles, and publish feeds.
+The tests cover:
+- Model validation and methods
+- TAXII client functionality
+- Data processing pipeline
+- Celery tasks
+- API endpoints
 
-## Audit Logging
+## Contributing
 
-The system logs all activities related to threat intelligence sharing, including:
+Contributions are welcome! Please follow these steps:
 
-- TAXII API access
-- STIX object creation, updates, and deletion
-- Collection management
-- Trust relationship management
-- Feed publishing
-
-Logs can be accessed via the Django admin interface or directly in the database.
-
-## Security
-
-- OAuth2 authentication for API access
-- HTTPS recommended for production deployment
-- Role-based access control
-- Trust-based sharing controls
-- Comprehensive audit logging
-
-## Performance
-
-The system is designed to handle bulk processing of 100 records per second (P1.6 requirement) and supports scaling through Celery for background tasks.
+1. Fork the repository
+2. Create a feature branch
+3. Add your changes
+4. Run tests and ensure they pass
+5. Submit a pull request
 
 ## License
 
-This project is licensed under the terms of the license included in the repository.
+This project is licensed under the MIT License - see the LICENSE file for details.

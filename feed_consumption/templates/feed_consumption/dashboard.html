@@ -1,0 +1,157 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}TAXII Feed Dashboard | CRISP{% endblock %}
+
+{% block extrastyle %}
+<style>
+    .dashboard-container {
+        padding: 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        grid-gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: #fff;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        padding: 20px;
+        text-align: center;
+    }
+    
+    .stat-card h3 {
+        margin-top: 0;
+        color: #666;
+        font-size: 14px;
+        text-transform: uppercase;
+    }
+    
+    .stat-value {
+        font-size: 32px;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .feed-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 30px;
+    }
+    
+    .feed-table th {
+        text-align: left;
+        padding: 12px;
+        background: #f5f5f5;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .feed-table td {
+        padding: 12px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .failures-list {
+        background: #fff;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .failures-list h2 {
+        margin-top: 0;
+    }
+    
+    .failure-item {
+        padding: 12px;
+        border-left: 4px solid #f44336;
+        margin-bottom: 10px;
+        background: #fff8f8;
+    }
+    
+    .failure-item p {
+        margin: 5px 0;
+    }
+    
+    .error-message {
+        font-family: monospace;
+        background: #f5f5f5;
+        padding: 8px;
+        border-radius: 4px;
+        overflow-x: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <h1>TAXII Feed Dashboard</h1>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>Total Feed Sources</h3>
+            <div class="stat-value">{{ total_feeds }}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Active Feeds</h3>
+            <div class="stat-value">{{ active_feeds }}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Processed (30 days)</h3>
+            <div class="stat-value">{{ consumption_stats.objects_processed }}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Added (30 days)</h3>
+            <div class="stat-value">{{ consumption_stats.objects_added }}</div>
+        </div>
+    </div>
+    
+    <h2>Top Performing Feed Sources</h2>
+    <table class="feed-table">
+        <thead>
+            <tr>
+                <th>Feed Source</th>
+                <th>Objects Added</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for feed in top_feeds %}
+            <tr>
+                <td>{{ feed.feed_source__name }}</td>
+                <td>{{ feed.total_objects }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="2">No data available</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    {% if recent_failures %}
+    <div class="failures-list">
+        <h2>Recent Failures</h2>
+        {% for failure in recent_failures %}
+        <div class="failure-item">
+            <p><strong>{{ failure.feed_source.name }}</strong> - {{ failure.created_at|date:"Y-m-d H:i:s" }}</p>
+            {% if failure.error_message %}
+            <div class="error-message">{{ failure.error_message }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <div>
+        <a href="{% url 'admin:feed_consumption_externalfeedsource_changelist' %}" class="button">Manage Feed Sources</a>
+        <a href="{% url 'admin:feed_consumption_feedconsumptionlog_changelist' %}" class="button">View All Logs</a>
+    </div>
+</div>
+{% endblock %}
