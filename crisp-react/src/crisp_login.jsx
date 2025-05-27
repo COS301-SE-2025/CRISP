@@ -146,11 +146,7 @@ function CrispLogin({ onLoginSuccess }) {
               
               <div className="login-footer">
                 <p>Don't have an account? Contact <a href="#" className="register-link">BlueVision ITM</a> for account registration.</p>
-                <div className="demo-credentials">
-                  <p><strong>Demo Credentials:</strong></p>
-                  <p>Username: ADMIN</p>
-                  <p>Password: Admin123</p>
-                </div>
+                
               </div>
             </div>
           </div>
@@ -361,6 +357,7 @@ function CSSStyles() {
         
         .input-with-icon {
             position: relative;
+            
         }
         
         .input-with-icon i {
