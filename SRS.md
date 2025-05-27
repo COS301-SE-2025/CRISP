@@ -128,17 +128,31 @@ The platform will facilitate both consumption of external threat feeds and publi
 The following five essential use case diagrams illustrate the core functionality and interactions within the CRISP system:
 
 1. **System Overview** - High-level view of all major actors and primary use cases
+
+![System Overview Use Case Diagram](Use%20Case%20Diagrams/U1_-_System_Overview.png)
+
 2. **Threat Intelligence Publication and Sharing** - Core value creation through threat data sharing
+
+![Threat Intelligence Publication and Sharing Use Case Diagram](Use%20Case%20Diagrams/U2%20-%20Threat%20Intelligence%20Publication%20and%20Sharing.png)
+
 3. **Threat Intelligence Consumption and Alerts** - Core value consumption and notification system
-4. **User and Organization Management** - Foundation user and organization administration
+
+![Threat Intelligence Consumption and Alerts Use Case Diagram](Use%20Case%20Diagrams/U3%20-%20Threat%20Intelligence%20Consumption%20and%20Alerts.png)
+
+4. **User and Institution Management** - Foundation user and Institution administration
+
+![User and Institution Management Use Case Diagram](Use%20Case%20Diagrams/U4%20-%20User%20and%20Institution%20Management.png)
+
 5. **Data Validation and Quality Assurance** - Ensuring data integrity and STIX compliance
+
+![Data Validation and Quality Assurance Use Case Diagram](Use%20Case%20Diagrams/U5%20-%20Data%20Validation%20and%20Quality%20Assurance.png)
 
 ### 4.2 Use Case Relationships
 
 #### 4.2.1 Actor Relationships
 - **System Administrator** has administrative access to all system functions
-- **Organization Publisher** inherits Organization User capabilities plus publishing rights
-- **Organization User** has read-only access to authorized threat intelligence
+- **Institution Publisher** inherits Institution User capabilities plus publishing rights
+- **Institution User** has read-only access to authorized threat intelligence
 
 ### 4.3 Use Case Priorities
 
@@ -146,7 +160,7 @@ The following five essential use case diagrams illustrate the core functionality
 1. **User Authentication and Authorization** - Foundation for all system access
 2. **Threat Intelligence Publication** - Core value creation functionality
 3. **Threat Intelligence Consumption** - Core value consumption functionality
-4. **Organization Management** - Essential for multi-tenant architecture
+4. **Institution Management** - Essential for multi-tenant architecture
 5. **Data Validation and STIX Compliance** - Required for standards compliance
 
 #### 4.3.2 Important Use Cases (Should Have)
@@ -154,7 +168,7 @@ The following five essential use case diagrams illustrate the core functionality
 2. **Trust Relationship Management** - Enables controlled data sharing
 3. **Bulk Data Upload** - Improves operational efficiency
 4. **External Feed Integration** - Enriches threat intelligence sources
-5. **Data Anonymization** - Protects sensitive organizational information
+5. **Data Anonymization** - Protects sensitive Institutional information
 
 #### 4.3.3 Enhancement Use Cases (Could Have)
 1. **Advanced Analytics and Reporting** - Provides deeper threat insights
