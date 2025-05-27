@@ -16,13 +16,23 @@ class CrispUser(AbstractUser):
     # Additional fields
     organization = models.CharField(max_length=255, blank=True)
     phone_number = models.CharField(max_length=20, blank=True)
-    job_title = models.CharField(max_length=100, blank=True)
+    job_title = models.CharField(max_length=100, blank=True, null=True)
     
     # Security fields
-    last_password_change = models.DateTimeField(auto_now_add=True)
+    last_password_change = models.DateTimeField(null=True, blank=True)
     require_password_change = models.BooleanField(default=False)
     failed_login_attempts = models.IntegerField(default=0)
     is_locked = models.BooleanField(default=False)
+    
+    # Optional: Additional fields you might want
+    last_login_ip = models.GenericIPAddressField(null=True, blank=True)
+    
+    # Add the is_admin field that's missing
+    is_admin = models.BooleanField(default=False)
+    
+    # You can use this to determine if a user is an admin
+    def is_admin_user(self):
+        return self.is_admin or self.is_staff or self.role.lower() in ['admin', 'administrator']
     
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"

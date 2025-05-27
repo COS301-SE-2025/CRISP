@@ -107,38 +107,25 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'auth_api.CrispUser'
 
 # CORS settings - allow React frontend to connect
-CORS_ALLOW_ALL_ORIGINS = False  # Set to True only for development
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Default Vite dev server
-    "http://localhost:3000",  # Common React port
-    # Add any other origins you need
+    "http://localhost:5173",  # Default Vite development server
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",  # In case you're using a different port
+    "http://localhost:8001",  # Django server on port 8001
+    "http://127.0.0.1:8001",
 ]
 
-CORS_ALLOW_CREDENTIALS = True  # If using cookies/sessions
+CORS_ALLOW_CREDENTIALS = True
 
-# For production, you might want to be more restrictive
-if not DEBUG:
-    CORS_ALLOWED_ORIGINS = [
-        "https://your-production-domain.com",
-    ]
-
-# REST Framework settings
+# For SimpleJWT authentication
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
+    'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
-    ],
+    ),
 }
 
-# JWT settings
+# JWT Settings
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-    'ROTATE_REFRESH_TOKENS': False,
-    'ALGORITHM': 'HS256',
-    'SIGNING_KEY': SECRET_KEY,
-    'AUTH_HEADER_TYPES': ('Bearer',),
 }

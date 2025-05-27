@@ -1,14 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
-import CSSStyles from './CSSStyles'; // Import the separate CSS file
+import { useNavigate } from 'react-router-dom';
+import CSSStyles from './CSSStyles';
 
-function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthWrapper passes
+function AppRegister({ user, onLogout }) {
+  const navigate = useNavigate();
   // State to manage the active page
   const [activePage, setActivePage] = useState('dashboard');
 
   // Function to switch between pages
   const showPage = (pageId) => {
     setActivePage(pageId);
+  };
+
+  // Function to navigate to RegisterUser page
+  const navigateToRegisterUser = () => {
+    navigate('/register-user');
   };
 
   // Add resize listener to handle chart resizing when zooming
@@ -33,7 +40,7 @@ function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthW
       <CSSStyles />
       
       {/* Header */}
-      <Header user={user} onLogout={onLogout} isAdmin={isAdmin} /> {/* Pass user and isAdmin to header */}
+      <Header user={user} onLogout={onLogout} navigateToRegisterUser={navigateToRegisterUser} />
       
       {/* Main Navigation */}
       <MainNav activePage={activePage} showPage={showPage} />
@@ -64,12 +71,12 @@ function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthW
   );
 }
 
-// Header Component with Logout Button and Register User button for admins
-function Header({ user, onLogout, isAdmin }) {
+// Header Component with Logout Button and Register User button
+function Header({ user, onLogout, navigateToRegisterUser }) {
   // Get first initial for avatar
   const userInitial = user && user.username ? user.username.charAt(0).toUpperCase() : 'A';
-  const userName = user && user.username ? user.username.split('@')[0] : 'User';
-  const userRole = user && user.role ? user.role : (isAdmin ? 'Administrator' : 'User');
+  const userName = user && user.username ? user.username.split('@')[0] : 'Admin';
+  const userRole = user && user.role ? user.role : 'Administrator';
 
   return (
     <header>
@@ -93,13 +100,11 @@ function Header({ user, onLogout, isAdmin }) {
               <div className="user-name">{userName}</div>
               <div className="user-role">{userRole}</div>
             </div>
-            {/* Show Register User button only if user is admin */}
-            {isAdmin && (
-              <div className="register-button" onClick={() => window.location.href = '/register'}>
-                <i className="fas fa-user-plus"></i>
-                <span>Register User</span>
-              </div>
-            )}
+            {/* Add Register User button for admins */}
+            <div className="register-button" onClick={navigateToRegisterUser}>
+              <i className="fas fa-user-plus"></i>
+              <span>Register User</span>
+            </div>
             {/* Add logout button */}
             <div className="logout-button" onClick={onLogout}>
               <i className="fas fa-sign-out-alt"></i>
@@ -1366,7 +1371,7 @@ function Institutions({ active }) {
     if (active && mapRef.current) {
       createInstitutionMap();
       
-      // Add resize handler for responsive map
+      // Add resize handler to handle map resizing
       const handleResize = () => {
         createInstitutionMap();
       };
@@ -1601,7 +1606,6 @@ function Reports({ active }) {
           </div>
         </div>
 
-        {/* Report Cards 3-6 would go here, similar to the original code */}
         {/* Report Card 3 */}
         <div className="report-card">
           <div className="report-header">
@@ -1638,6 +1642,117 @@ function Reports({ active }) {
             </div>
           </div>
         </div>
+
+        {/* Report Card 4 */}
+        <div className="report-card">
+          <div className="report-header">
+            <div className="report-type">Trend Analysis</div>
+            <h3 className="report-title">Emerging Phishing Techniques in 2025</h3>
+            <div className="report-meta">
+              <span>May 10, 2025</span>
+              <span><i className="fas fa-eye"></i> 342</span>
+            </div>
+          </div>
+          <div className="report-content">
+            <div className="report-stats">
+              <div className="report-stat">
+                <div className="stat-number">53</div>
+                <div className="stat-label">IoCs Analyzed</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">7</div>
+                <div className="stat-label">New Techniques</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">14</div>
+                <div className="stat-label">Organizations</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">High</div>
+                <div className="stat-label">Relevance</div>
+              </div>
+            </div>
+            <p>Analysis of evolving phishing techniques observed across multiple sectors, with focus on AI-generated content and deep fakes.</p>
+            <div className="report-actions">
+              <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i> Share</button>
+              <button className="btn btn-primary btn-sm"><i className="fas fa-eye"></i> View Report</button>
+            </div>
+          </div>
+        </div>
+
+        {/* Report Card 5 */}
+        <div className="report-card">
+          <div className="report-header">
+            <div className="report-type">Sector Analysis</div>
+            <h3 className="report-title">Financial Sector Threat Landscape</h3>
+            <div className="report-meta">
+              <span>May 5, 2025</span>
+              <span><i className="fas fa-eye"></i> 198</span>
+            </div>
+          </div>
+          <div className="report-content">
+            <div className="report-stats">
+              <div className="report-stat">
+                <div className="stat-number">94</div>
+                <div className="stat-label">IoCs Analyzed</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">16</div>
+                <div className="stat-label">TTPs Identified</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">5</div>
+                <div className="stat-label">Threat Actors</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">High</div>
+                <div className="stat-label">Severity</div>
+              </div>
+            </div>
+            <p>Comprehensive overview of current threats targeting financial institutions in Southern Africa, with focus on banking trojans and ATM malware.</p>
+            <div className="report-actions">
+              <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i> Share</button>
+              <button className="btn btn-primary btn-sm"><i className="fas fa-eye"></i> View Report</button>
+            </div>
+          </div>
+        </div>
+
+        {/* Report Card 6 */}
+        <div className="report-card">
+          <div className="report-header">
+            <div className="report-type">Technical Analysis</div>
+            <h3 className="report-title">EDU-Ransom Malware Analysis</h3>
+            <div className="report-meta">
+              <span>May 2, 2025</span>
+              <span><i className="fas fa-eye"></i> 276</span>
+            </div>
+          </div>
+          <div className="report-content">
+            <div className="report-stats">
+              <div className="report-stat">
+                <div className="stat-number">37</div>
+                <div className="stat-label">IoCs Generated</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">9</div>
+                <div className="stat-label">TTPs Mapped</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">RansomGroup-X</div>
+                <div className="stat-label">Attribution</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">Critical</div>
+                <div className="stat-label">Severity</div>
+              </div>
+            </div>
+            <p>Technical deep-dive into the EDU-Ransom malware strain targeting educational institutions, including code analysis and IOC extraction.</p>
+            <div className="report-actions">
+              <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i> Share</button>
+              <button className="btn btn-primary btn-sm"><i className="fas fa-eye"></i> View Report</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="pagination">
@@ -1652,4 +1767,5 @@ function Reports({ active }) {
   );
 }
 
-export default App;
+export default AppRegister;
+

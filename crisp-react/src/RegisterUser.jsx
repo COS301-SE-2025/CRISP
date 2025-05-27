@@ -1,60 +1,99 @@
-import React, { useState, useEffect } from 'react';
-import { loginUser } from './api.js'; // Import the API function
-import BlueVLogo from './BlueV.png';
+import { useState } from 'react';
+import { registerUser } from './api'; // Import the real API function
 
-
-// Login Component that works with the AuthWrapper in main.jsx
-function CrispLogin({ onLoginSuccess, switchView }) {
+function RegisterUser({ onRegisterSuccess, switchView }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [institution, setInstitution] = useState('');
+  const [role, setRole] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
-  // Initialize Feather icons when component mounts
-  useEffect(() => {
-    // Load Feather icons script if not already loaded
-    if (!window.feather) {
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.29.0/feather.min.js';
-      script.onload = () => {
-        if (window.feather) {
-          window.feather.replace();
-        }
-      };
-      document.head.appendChild(script);
-    } else {
-      // If already loaded, just replace the icons
-      window.feather.replace();
-    }
-  }, []);
-
-  // Re-run feather.replace() when error state changes to ensure new icons are rendered
-  useEffect(() => {
-    if (window.feather) {
-      setTimeout(() => window.feather.replace(), 100);
-    }
-  }, [error, isLoading]);
+  const [success, setSuccess] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validation
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    
+    if (!username || !password || !fullName || !institution || !role) {
+      setError('All fields are required');
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(username)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    // Password strength validation
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long');
+      return;
+    }
+    
     setIsLoading(true);
     setError('');
+    setSuccess('');
     
     try {
-      // Call the API function
-      const userData = await loginUser(username, password);
+      console.log('Attempting to register user:', { username, fullName, institution, role });
       
-      // Call the onLoginSuccess callback with user data
-      onLoginSuccess({
-        user: userData.user,
-        token: userData.token
-      });
+      // Call the real API function to register the user
+      const userData = await registerUser(username, password, fullName, institution, role);
+      
+      console.log('Registration successful:', userData);
+      setSuccess('User registered successfully!');
+      
+      // Clear form
+      setUsername('');
+      setPassword('');
+      setConfirmPassword('');
+      setFullName('');
+      setInstitution('');
+      setRole('');
+      
+      // Call the onRegisterSuccess callback with user data
+      if (onRegisterSuccess) {
+        // If we're in admin mode registering another user, don't auto-login
+        const isAdminRegistering = localStorage.getItem("crisp_auth_token");
+        if (isAdminRegistering) {
+          setTimeout(() => {
+            onRegisterSuccess();
+          }, 2000);
+        } else {
+          // If registering as a new user, auto-login
+          onRegisterSuccess({
+            user: userData.user,
+            token: userData.token
+          });
+        }
+      }
     } catch (error) {
-      setError(error.message || 'Invalid username or password');
+      console.error('Registration error:', error);
+      if (typeof error === 'string') {
+        setError(error);
+      } else if (error.message) {
+        setError(error.message);
+      } else if (error.detail) {
+        setError(error.detail);
+      } else {
+        setError('Registration failed. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Check if user is already authenticated (admin registering another user)
+  const isAdminMode = localStorage.getItem("crisp_auth_token");
 
   return (
     <>
@@ -64,14 +103,14 @@ function CrispLogin({ onLoginSuccess, switchView }) {
           <div className="login-left">
             <div className="brand-info">
               <div className="logo-container">
-                <img src="BlueV.png" alt="BlueV Logo" className="brand-logo" />
+                <div className="brand-logo-placeholder">CRISP</div>
               </div>
               <h2>Cyber Risk Information Sharing Platform</h2>
-              <p>Streamline your threat intelligence sharing and committee management</p>
+              <p>{isAdminMode ? 'Register a new user to access the platform' : 'Create your account to access threat intelligence sharing and committee management'}</p>
               
               <div className="feature-list">
                 <div className="feature-item">
-                  <div className="feature-icon"><i data-feather="shield"></i></div>
+                  <div className="feature-icon"><i className="fas fa-shield-alt"></i></div>
                   <div className="feature-text">
                     <h3>Monitor Threats</h3>
                     <p>Track and analyze security threats across institutions</p>
@@ -79,7 +118,7 @@ function CrispLogin({ onLoginSuccess, switchView }) {
                 </div>
                 
                 <div className="feature-item">
-                  <div className="feature-icon"><i data-feather="repeat"></i></div>
+                  <div className="feature-icon"><i className="fas fa-exchange-alt"></i></div>
                   <div className="feature-text">
                     <h3>Share Intelligence</h3>
                     <p>Securely exchange threat data with trusted partners</p>
@@ -87,7 +126,7 @@ function CrispLogin({ onLoginSuccess, switchView }) {
                 </div>
                 
                 <div className="feature-item">
-                  <div className="feature-icon"><i data-feather="trending-up"></i></div>
+                  <div className="feature-icon"><i className="fas fa-chart-line"></i></div>
                   <div className="feature-text">
                     <h3>Analyze Patterns</h3>
                     <p>Identify emerging threat patterns with advanced analytics</p>
@@ -99,52 +138,127 @@ function CrispLogin({ onLoginSuccess, switchView }) {
           
           <div className="login-right">
             <div className="login-form-container">
-              <h2>Welcome Back</h2>
-              <p className="subtitle">Sign in to your account</p>
+              <h2>{isAdminMode ? 'Register New User' : 'Create Account'}</h2>
+              <p className="subtitle">{isAdminMode ? 'Add a new user to the platform' : 'Join the CRISP community'}</p>
               
-              {error && <div className="error-message"><i data-feather="alert-circle"></i> {error}</div>}
+              {error && <div className="error-message"><i className="fas fa-exclamation-circle"></i> {error}</div>}
+              {success && <div className="success-message"><i className="fas fa-check-circle"></i> {success}</div>}
               
-              <div className="form-group">
-                <label htmlFor="username">Email</label>
-                <div className="input-with-icon">
-                  <i data-feather="mail"></i>
-                  <input 
-                    type="text" 
-                    id="username" 
-                    value={username} 
-                    onChange={(e) => setUsername(e.target.value)} 
-                    placeholder="username@example.com"
-                    onKeyPress={(e) => e.key === 'Enter' && handleSubmit(e)}
-                  />
+              <form onSubmit={handleSubmit}>
+                <div className="form-group">
+                  <label htmlFor="fullName">Full Name *</label>
+                  <div className="input-with-icon">
+                    <i className="fas fa-user"></i>
+                    <input 
+                      type="text" 
+                      id="fullName" 
+                      value={fullName} 
+                      onChange={(e) => setFullName(e.target.value)} 
+                      placeholder="John Doe"
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="password">Password</label>
-                <div className="input-with-icon">
-                  <i data-feather="lock"></i>
-                  <input 
-                    type="password" 
-                    id="password" 
-                    value={password} 
-                    onChange={(e) => setPassword(e.target.value)} 
-                    placeholder="••••••••"
-                    onKeyPress={(e) => e.key === 'Enter' && handleSubmit(e)}
-                  />
+                
+                <div className="form-group">
+                  <label htmlFor="username">Email Address *</label>
+                  <div className="input-with-icon">
+                    <i className="fas fa-envelope"></i>
+                    <input 
+                      type="email" 
+                      id="username" 
+                      value={username} 
+                      onChange={(e) => setUsername(e.target.value)} 
+                      placeholder="john.doe@example.com"
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
-              
-              <button 
-                className="btn-sign-in" 
-                onClick={handleSubmit}
-                disabled={isLoading}
-              >
-                {isLoading ? 'Signing in...' : 'Sign In'}
-
-              </button>
+                
+                <div className="form-group">
+                  <label htmlFor="institution">Institution/Organization *</label>
+                  <div className="input-with-icon">
+                    <i className="fas fa-building"></i>
+                    <input 
+                      type="text" 
+                      id="institution" 
+                      value={institution} 
+                      onChange={(e) => setInstitution(e.target.value)} 
+                      placeholder="University of Pretoria"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="role">Role *</label>
+                  <div className="input-with-icon">
+                    <i className="fas fa-user-shield"></i>
+                    <select 
+                      id="role" 
+                      value={role} 
+                      onChange={(e) => setRole(e.target.value)}
+                      className="role-select"
+                      required
+                    >
+                      <option value="">Select a role</option>
+                      <option value="analyst">Security Analyst</option>
+                      <option value="admin">Administrator</option>
+                      <option value="user">Standard User</option>
+                      <option value="guest">Guest</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="password">Password *</label>
+                  <div className="input-with-icon">
+                    <i className="fas fa-lock"></i>
+                    <input 
+                      type="password" 
+                      id="password" 
+                      value={password} 
+                      onChange={(e) => setPassword(e.target.value)} 
+                      placeholder="••••••••"
+                      required
+                      minLength="8"
+                    />
+                  </div>
+                  <small className="password-hint">Password must be at least 8 characters long</small>
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="confirmPassword">Confirm Password *</label>
+                  <div className="input-with-icon">
+                    <i className="fas fa-lock"></i>
+                    <input 
+                      type="password" 
+                      id="confirmPassword" 
+                      value={confirmPassword} 
+                      onChange={(e) => setConfirmPassword(e.target.value)} 
+                      placeholder="••••••••"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <button 
+                  type="submit"
+                  className="btn-sign-in" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Registering...' : (isAdminMode ? 'Register User' : 'Create Account')}
+                </button>
+              </form>
               
               <div className="login-footer">
-                <p>Don't have an account? Contact <a href="#" className="register-link">BlueVision ITM</a> for account registration.</p>
+                <p>
+                  {isAdminMode ? (
+                    <>Return to <a href="#" onClick={() => switchView ? switchView() : null} className="register-link">Dashboard</a></>
+                  ) : (
+                    <>Already have an account? <a href="#" onClick={() => switchView ? switchView() : null} className="register-link">Sign In</a></>
+                  )}
+                </p>
               </div>
             </div>
           </div>
@@ -154,7 +268,7 @@ function CrispLogin({ onLoginSuccess, switchView }) {
   );
 }
 
-// CSS Styles for Login
+// CSS Styles for Register with scrollable right panel
 function CSSStyles() {
   return (
     <style>
@@ -195,15 +309,6 @@ function CSSStyles() {
             min-height: 100vh;
         }
         
-        /* Global Feather icon styling */
-        i[data-feather] {
-            stroke: currentColor;
-            stroke-width: 2;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-            fill: none;
-        }
-        
         /* Login Styles */
         .login-page {
             min-height: 100vh;
@@ -240,8 +345,6 @@ function CSSStyles() {
             left: 0;
             right: 0;
             bottom: 0;
-            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MDAgODAwIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIj48ZyBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIG9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxLjUiPjxjaXJjbGUgcj0iMTAwIiBjeD0iNDAwIiBjeT0iNDAwIi8+PGNpcmNsZSByPSIyMDAiIGN4PSI0MDAiIGN5PSI0MDAiLz48Y2lyY2xlIHI9IjMwMCIgY3g9IjQwMCIgY3k9IjQwMCIvPjxjaXJjbGUgcj0iNDAwIiBjeD0iNDAwIiBjeT0iNDAwIi8+PC9nPjxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgb3BhY2l0eT0iMC4yIiBzdHJva2Utd2lkdGg9IjEiPjxwYXRoIGQ9Ik0yMDAgMjAwIEw2MDAgNjAwIE0yMDAgNjAwIEw2MDAgMjAwIE0zMDAgMTAwIEwzMDAgNzAwIE01MDAgMTAwIEw1MDAgNzAwIE0xMDAgMzAwIEw3MDAgMzAwIE0xMDAgNTAwIEw3MDAgNTAwIi8+PC9nPjxnIGZpbGw9IiNmZmYiIG9wYWNpdHk9IjAuMiI+PGNpcmNsZSByPSIzIiBjeD0iMjAwIiBjeT0iMjAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNDAwIiBjeT0iMjAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNjAwIiBjeT0iMjAwIi8+PGNpcmNsZSByPSIzIiBjeD0iMjAwIiBjeT0iNDAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNDAwIiBjeT0iNDAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNjAwIiBjeT0iNDAwIi8+PGNpcmNsZSByPSIzIiBjeD0iMjAwIiBjeT0iNjAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNDAwIiBjeT0iNjAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNjAwIiBjeT0iNjAwIi8+PC9nPjxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgb3BhY2l0eT0iMC4xIiBzdHJva2Utd2lkdGg9IjEiPjxwYXRoIGQ9Ik0zMDAgMzAwIEw1MDAgNTAwIE0zMDAgNTAwIEw1MDAgMzAwIi8+PC9nPjwvc3ZnPg=='), url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgMjQwIj48ZGVmcz48cGF0dGVybiBpZD0ic21hbGwtZ3JpZCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cmVjdCB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9Im5vbmUiLz48cGF0aCBkPSJNIDEwIDAgTCAwIDAgTCAwIDEwIiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMC41IiBvcGFjaXR5PSIwLjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjc21hbGwtZ3JpZCkiLz48L3N2Zz4=');
-            background-blend-mode: overlay;
             opacity: 0.3;
         }
         
@@ -250,9 +353,14 @@ function CSSStyles() {
             margin-bottom: 1.5rem;
         }
         
-        .brand-logo {
-            max-width: 250px;
-            height: auto;
+        .brand-logo-placeholder {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: white;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            display: inline-block;
         }
         
         .brand-info {
@@ -297,12 +405,6 @@ function CSSStyles() {
             margin-right: 1rem;
         }
         
-        .feature-icon i {
-            width: 24px;
-            height: 24px;
-            stroke-width: 2;
-        }
-        
         .feature-text h3 {
             font-size: 1.2rem;
             font-weight: 600;
@@ -319,19 +421,22 @@ function CSSStyles() {
             flex: 1;
             background-color: var(--text-light);
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             justify-content: center;
             min-width: 320px;
-            max-width: 400px;
+            max-width: 450px;
             box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
             position: relative;
             z-index: 2;
+            overflow-y: auto;
+            max-height: 100vh;
         }
         
         .login-form-container {
             width: 100%;
-            max-width: 300px;
+            max-width: 350px;
             padding: 1.5rem;
+            padding-bottom: 3rem;
         }
         
         .login-form-container h2 {
@@ -359,7 +464,6 @@ function CSSStyles() {
         
         .input-with-icon {
             position: relative;
-            
         }
         
         .input-with-icon i {
@@ -368,11 +472,10 @@ function CSSStyles() {
             top: 50%;
             transform: translateY(-50%);
             color: var(--text-muted);
-            width: 16px;
-            height: 16px;
         }
         
-        .input-with-icon input {
+        .input-with-icon input,
+        .input-with-icon select {
             width: 100%;
             padding: 0.8rem 1rem 0.8rem 2.8rem;
             border: 1px solid var(--bg-medium);
@@ -380,15 +483,36 @@ function CSSStyles() {
             font-size: 1rem;
             background-color: var(--bg-light);
             transition: all 0.3s;
-            color: #000000; /* Ensuring text is black when user types */
+            color: #000000 !important;
         }
         
-        .input-with-icon input:focus {
+        .input-with-icon input::placeholder,
+        .input-with-icon select::placeholder {
+            color: #718096;
+        }
+        
+        .input-with-icon input:focus,
+        .input-with-icon select:focus {
             outline: none;
             border-color: var(--primary-color);
             background-color: var(--text-light);
             box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1);
-            color: #000000; /* Ensuring text is black when focused */
+            color: #000000 !important;
+        }
+        
+        .role-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 16px;
+        }
+
+        .password-hint {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 5px;
+            display: block;
         }
         
         .btn-sign-in {
@@ -405,7 +529,7 @@ function CSSStyles() {
             margin-top: 1rem;
         }
         
-        .btn-sign-in:hover {
+        .btn-sign-in:hover:not(:disabled) {
             background-color: var(--primary-dark);
         }
         
@@ -421,23 +545,11 @@ function CSSStyles() {
             font-size: 0.9rem;
         }
         
-        .demo-credentials {
-            margin-top: 1rem;
-            padding: 0.75rem;
-            background-color: var(--bg-light);
-            border-radius: 6px;
-            border: 1px solid var(--bg-medium);
-        }
-        
-        .demo-credentials p {
-            margin: 0.2rem 0;
-            font-size: 0.8rem;
-        }
-        
         .register-link {
             color: var(--primary-color);
             text-decoration: none;
             font-weight: 600;
+            cursor: pointer;
         }
         
         .register-link:hover {
@@ -455,11 +567,17 @@ function CSSStyles() {
             gap: 0.5rem;
             font-size: 0.9rem;
         }
-        
-        .error-message i {
-            width: 16px;
-            height: 16px;
-            flex-shrink: 0;
+
+        .success-message {
+            background-color: rgba(56, 161, 105, 0.1);
+            color: var(--success);
+            padding: 0.8rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
         }
         
         /* Responsive Design */
@@ -511,6 +629,7 @@ function CSSStyles() {
             
             .login-page {
                 height: auto;
+                min-height: 100vh;
                 overflow: visible;
             }
             
@@ -519,6 +638,8 @@ function CSSStyles() {
                 width: 100%;
                 min-width: unset;
                 max-width: unset;
+                max-height: unset;
+                overflow-y: visible;
             }
             
             .login-left {
@@ -530,6 +651,7 @@ function CSSStyles() {
             .login-right {
                 box-shadow: none;
                 border-top: 1px solid var(--bg-medium);
+                padding: 1rem 0;
             }
             
             .login-form-container {
@@ -539,10 +661,6 @@ function CSSStyles() {
         }
         
         @media (max-width: 768px) {
-            .brand-logo {
-                max-width: 200px;
-            }
-            
             .brand-info h2 {
                 font-size: 1.3rem;
             }
@@ -561,8 +679,9 @@ function CSSStyles() {
                 padding: 1.5rem;
             }
             
-            .brand-logo {
-                max-width: 180px;
+            .brand-logo-placeholder {
+                font-size: 2rem;
+                padding: 0.75rem 1.5rem;
             }
             
             .brand-info h2 {
@@ -588,4 +707,4 @@ function CSSStyles() {
   );
 }
 
-export default CrispLogin;
+export default RegisterUser;
