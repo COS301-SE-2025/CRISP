@@ -64,7 +64,7 @@ function CrispLogin({ onLoginSuccess, switchView }) {
           <div className="login-left">
             <div className="brand-info">
               <div className="logo-container">
-                <img src="BlueV.png" alt="BlueV Logo" className="brand-logo" />
+                <img src={BlueVLogo} alt="BlueV Logo" className="brand-logo" />
               </div>
               <h2>Cyber Risk Information Sharing Platform</h2>
               <p>Streamline your threat intelligence sharing and committee management</p>
