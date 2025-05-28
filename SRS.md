@@ -149,7 +149,7 @@ The following five essential use case diagrams illustrate the core functionality
 
 6. **Anonymization and Trust Management Use Case Diagram** - how CRISP handles sensitive data protection
 
-(Use%20Case%20Diagrams/U5%20-%20Data%20Validation%20and%20Quality%20Anon.png)
+![Anonymization and Trust Management Use Case Diagram](Use%20Case%20Diagrams/U5%20-%20Data%20Validation%20and%20Quality%20Anon.png)
 
 ### 4.2 Use Case Relationships
 
