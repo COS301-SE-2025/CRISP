@@ -109,7 +109,7 @@ The platform will facilitate both consumption of external threat feeds and publi
 ## 3. Domain Model
 
 ### 3.1 UML Class Diagram
-*[PNG IMAGE REQUIRED: UML class diagram showing relationships between User, Institution, ThreatIntelligence, Feed, Alert, TrustRelationship, and other core entities]*
+![Domain Model](Domain%20Model%20Diagram/COS%20301%20CRISP%20Domain%20Model.png)
 
 ### 3.2 Core Domain Entities Description
 - **User**: System users with different roles (Admin, Publisher, Viewer) and authentication details
@@ -129,7 +129,7 @@ The following five essential use case diagrams illustrate the core functionality
 
 1. **System Overview** - High-level view of all major actors and primary use cases
 
-![System Overview Use Case Diagram](Use%20Case%20Diagrams/U1_-_System_Overview.png)
+![System Overview Use Case Diagram](Domain Model Diagram/COS 301 CRISP Domain Model.png)
 
 2. **Threat Intelligence Publication and Sharing** - Core value creation through threat data sharing
 
