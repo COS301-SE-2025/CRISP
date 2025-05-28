@@ -56,7 +56,8 @@ class IPAddressAnonymizationStrategy(AnonymizationStrategy):
                     octets[-1] = 'x'
                     return '.'.join(octets)
                 else:  # IPv6
-                    return str(ip)[:-4] + 'xxxx'
+                    return str(ip)[:-1] + 'xxxx'
+
             elif level == AnonymizationLevel.MEDIUM:
                 # Anonymize last two octets for IPv4, last 32 bits for IPv6
                 if ip.version == 4:

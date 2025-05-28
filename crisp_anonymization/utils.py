@@ -2,7 +2,10 @@ import hashlib
 import random
 import string
 from typing import List, Tuple
-from .enums import AnonymizationLevel, DataType
+try:
+    from .enums import AnonymizationLevel, DataType
+except ImportError:
+    from crisp_anonymization.enums import AnonymizationLevel, DataType
 
 
 class AnonymizationUtils:
