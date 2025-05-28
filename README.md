@@ -55,6 +55,17 @@ CRISP implements several design patterns for a flexible, maintainable, and exten
 - **OWASP ZAP** - Security testing
 - **HashiCorp Vault** - Secrets management
 
+## GitFlow Branching Strategy
+
+Our team follows the GitFlow branching model to ensure organized, secure, and collaborative development for the CRISP platform. This strategy aligns with our security-first development approach and supports our 2-week sprint cycles.
+Key Branches:
+
+ - **Main/Master:** Production-ready code with stable releases
+ - **Develop:** Integration branch for ongoing development work
+ - **Feature branches:** Individual features developed in isolation (feature/*)
+ - **Release branches:** Preparation for production releases (release/*)
+ - **Hotfix branches:** Critical fixes for production issues (hotfix/*)
+
 ## 👥 Team Members
 
 ### Armand van der Colf - Full Stack Developer
