@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'taxii_api',
     'trust',
     'audit',
+    'django_celery_beat',
 ]
 
 MIDDLEWARE = [
@@ -198,3 +199,11 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
+
+# Celery Beat schedule
+CELERY_BEAT_SCHEDULE = {
+    'check-feeds': {
+        'task': 'core.tasks.publish_scheduled_feeds',
+        'schedule': 60.0,  # Check every minute
+    }
+}

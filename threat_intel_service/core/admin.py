@@ -10,33 +10,45 @@ class OrganizationAdmin(admin.ModelAdmin):
     """Admin configuration for Organization model."""
     list_display = [
         'name',
-        'get_stix_id',  # Use a custom method to display related stix_id
-        'get_identity_class',  # Use a custom method to display related identity_class
+        'get_stix_id',
+        'get_identity_class',
         'created_at',
         'updated_at',
         'created_by'
     ]
     list_filter = [
-        'stix_identity__identity_class',  # Filter by the related Identity's class
+        'stix_identity__identity_class',
         'created_at',
         'updated_at'
     ]
     search_fields = ['name', 'description', 'stix_identity__stix_id', 'stix_identity__name']
-    readonly_fields = ['id', 'created_at', 'updated_at']
+
+    # Add/Modify readonly_fields here:
+    readonly_fields = [
+        'id', # Usually good to make the UUID id readonly
+        'created_at', 
+        'updated_at',
+        'get_stix_id_admin', # Add your methods here
+        'get_identity_class_admin',
+        'get_identity_name_admin'
+    ]
 
     fieldsets = (
         (None, {
             'fields': ('id', 'name', 'description')
         }),
         ('Metadata', {
-            'fields': ('created_by', 'created_at', 'updated_at')
+            # 'created_by' should be a ForeignKey, it's editable unless made readonly
+            'fields': ('created_by', 'created_at', 'updated_at') 
         }),
         ('STIX Identity Info', {
-            'fields': ('get_stix_id_admin', 'get_identity_class_admin', 'get_identity_name_admin'), # Display related Identity info
+            # These will now be displayed as readonly fields using your methods
+            'fields': ('get_stix_id_admin', 'get_identity_class_admin', 'get_identity_name_admin'),
         }),
     )
 
     def get_stix_id(self, obj):
+        # This method is for list_display
         if hasattr(obj, 'stix_identity') and obj.stix_identity:
             return obj.stix_identity.stix_id
         return None
@@ -44,26 +56,27 @@ class OrganizationAdmin(admin.ModelAdmin):
     get_stix_id.admin_order_field = 'stix_identity__stix_id'
 
     def get_identity_class(self, obj):
+        # This method is for list_display
         if hasattr(obj, 'stix_identity') and obj.stix_identity:
             return obj.stix_identity.identity_class
         return None
     get_identity_class.short_description = 'Identity Class'
     get_identity_class.admin_order_field = 'stix_identity__identity_class'
 
-    # Methods for display in fieldsets if needed (cannot be directly in 'fields' if not model fields)
+    # Methods for display in fieldsets (must be in readonly_fields)
     def get_stix_id_admin(self, obj):
-        return self.get_stix_id(obj)
-    get_stix_id_admin.short_description = 'STIX ID'
+        return self.get_stix_id(obj) # You can reuse the list_display method
+    get_stix_id_admin.short_description = 'STIX ID (from Identity)' # Differentiate if needed
 
     def get_identity_class_admin(self, obj):
-        return self.get_identity_class(obj)
-    get_identity_class_admin.short_description = 'Identity Class'
+        return self.get_identity_class(obj) # You can reuse
+    get_identity_class_admin.short_description = 'Identity Class (from Identity)'
 
     def get_identity_name_admin(self, obj):
         if hasattr(obj, 'stix_identity') and obj.stix_identity:
             return obj.stix_identity.name
         return None
-    get_identity_name_admin.short_description = 'Identity Name'
+    get_identity_name_admin.short_description = 'Identity Name (from Identity)'
 
 
 @admin.register(STIXObject)
@@ -123,21 +136,41 @@ class CollectionObjectAdmin(admin.ModelAdmin):
 @admin.register(Feed)
 class FeedAdmin(admin.ModelAdmin):
     """Admin configuration for Feed model."""
-    list_display = ('name', 'collection', 'status', 'last_published', 'created_by', 'created_at')
-    list_filter = ('status', 'created_at', 'collection')
-    search_fields = ('name', 'description')
-    readonly_fields = ('created_at', 'updated_at', 'last_published')
+    list_display = ('name', 'get_collection', 'status', 'last_published_time', 'get_created_by')
+    list_filter = ('status',)
+    search_fields = ('name', 'description', 'collection__title')
     raw_id_fields = ('collection', 'created_by')
+    readonly_fields = ('id', 'last_published_time', 'next_publish_time', 
+                      'publish_count', 'error_count', 'last_bundle_id', 
+                      'last_error', 'created_at', 'updated_at')
+    
     fieldsets = (
         (None, {
-            'fields': ('name', 'description', 'collection', 'created_by')
+            'fields': ('id', 'name', 'description')
+        }),
+        ('Relationships', {
+            'fields': ('collection', 'created_by')
         }),
         ('Configuration', {
             'fields': ('query_parameters', 'update_interval', 'status')
         }),
-        ('Publication', {
-            'fields': ('last_published', 'created_at', 'updated_at')
+        ('Publication Stats', {
+            'fields': ('last_published_time', 'next_publish_time', 'publish_count', 
+                      'error_count', 'last_bundle_id', 'last_error')
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at')
         }),
     )
+
+    def get_collection(self, obj):
+        return obj.collection.title if obj.collection else None
+    get_collection.short_description = 'Collection'
+    get_collection.admin_order_field = 'collection__title'
+
+    def get_created_by(self, obj):
+        return obj.created_by.username if obj.created_by else None
+    get_created_by.short_description = 'Created By'
+    get_created_by.admin_order_field = 'created_by__username'
 
 # admin.site.register(Identity)  # Uncomment this line if you want to register the Identity model

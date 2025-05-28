@@ -2,6 +2,10 @@ from django.db import models
 from django.contrib.auth.models import User
 import uuid
 from django.utils import timezone # Ensure timezone is imported
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from datetime import timedelta
+from django.conf import settings
 
 class Organization(models.Model):
     """
@@ -157,33 +161,39 @@ class Feed(models.Model):
     """
     Represents a threat feed configuration for publishing.
     """
-    STATUS_CHOICES = (
+    STATUS_CHOICES = [
         ('active', 'Active'),
         ('paused', 'Paused'),
-        ('archived', 'Archived'),
-    )
+        ('error', 'Error')
+    ]
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
-    collection = models.ForeignKey(Collection, on_delete=models.CASCADE, related_name='feeds')
-    query_parameters = models.JSONField(default=dict)  # Filtering parameters
-    update_interval = models.IntegerField(default=86400)  # Update interval in seconds (default: daily)
+    collection = models.ForeignKey('Collection', on_delete=models.CASCADE, related_name='feeds')
+    query_parameters = models.JSONField(default=dict)
+    update_interval = models.IntegerField(default=3600)  # Default: hourly in seconds
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
-    last_published = models.DateTimeField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_feeds')
-    
-    # Add new fields for feed publishing
-    last_bundle_id = models.CharField(max_length=255, blank=True, null=True)  # Track last published bundle
     last_published_time = models.DateTimeField(null=True, blank=True)
+    next_publish_time = models.DateTimeField(null=True, blank=True)
     publish_count = models.IntegerField(default=0)
     error_count = models.IntegerField(default=0)
+    last_bundle_id = models.CharField(max_length=255, blank=True, null=True)
     last_error = models.TextField(blank=True, null=True)
-    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='created_feeds'
+    )
+
     def __str__(self):
         return self.name
+
+    class Meta:
+        ordering = ['-created_at']
 
     def publish(self):
         """Publish the feed's content as a STIX bundle"""
@@ -197,6 +207,10 @@ class Feed(models.Model):
             self.publish_count += 1
             self.save()
             
+            # Schedule next publish if active
+            if self.status == 'active':
+                self.schedule_next_publish()
+                
             # Return publishing results
             return {
                 'published_at': self.last_published_time,
@@ -210,6 +224,15 @@ class Feed(models.Model):
             self.last_error = str(e)
             self.save()
             raise
+
+    def schedule_next_publish(self):
+        """Schedule next publish time based on interval"""
+        if self.last_published_time:
+            self.next_publish_time = self.last_published_time + timedelta(seconds=self.update_interval)
+        else:
+            # If never published, schedule from now or based on a default policy
+            self.next_publish_time = timezone.now() + timedelta(seconds=self.update_interval)
+        self.save()
 
     def get_publication_status(self):
         """Get the current publication status"""
@@ -248,3 +271,71 @@ class Identity(models.Model):
         """Convert to STIX format"""
         import json
         return json.loads(self.raw_data)
+
+def test_simulated_bulk_stix_creation(organization: Organization, collection_target: Collection):
+    print(f"\n=== Testing Simulated Bulk STIX Object Creation ===")
+    print(f"Simulating bulk creation into collection '{collection_target.title}'")
+
+    # Example CSV data and mapping (adjust as per your actual test setup)
+    csv_content = """indicator_name,description,tags,confidence_score,ioc_value
+Malicious File,Description of malicious file,malicious,80,filename="evil.exe"
+Suspicious IP,Description of suspicious IP,suspicious,70,192.0.2.1
+Phishing URL,Description of phishing URL,phishing,90,url="http://evil.com"
+"""
+
+    # Simulate reading from CSV and creating STIX objects
+    created_db_stix_objects = []  # Track created STIX objects
+    for row in csv_content.strip().split('\n')[1:]:  # Skip header row
+        fields = row.split(',')
+        name, description, tags, confidence_score, ioc_value = fields
+
+        # Create a new STIX object (indicator)
+        stix_object = STIXObject(
+            name=name,
+            description=description,
+            stix_type='indicator',
+            spec_version="2.1",
+            created=timezone.now(),
+            modified=timezone.now(),
+            created_by_ref=organization.created_by.username,
+            revoked=False,
+            labels=tags.split(';'),
+            confidence=int(confidence_score),
+            external_references=[{"source_name": "CSV Import", "url": "http://example.com"}],
+            object_marking_refs=[],
+            granular_markings=[],
+            raw_data={
+                "type": "indicator",
+                "id": f"indicator--{uuid.uuid4()}",
+                "name": name,
+                "description": description,
+                "pattern": ioc_value,
+                "valid_from": timezone.now().isoformat(),
+                "labels": tags.split(';'),
+                "confidence": int(confidence_score),
+                "external_references": [{"source_name": "CSV Import", "url": "http://example.com"}],
+            },
+            source_organization=organization,
+            created_by=organization.created_by
+        )
+        try:
+            stix_object.save()
+            created_db_stix_objects.append(stix_object)  # Track created object
+
+            # Add to collection
+            collection_target.stix_objects.add(stix_object)
+        except Exception as e:
+            print(f"Error creating STIX object for row '{row}': {e}")
+            # Optionally, you can raise an error or handle it as needed
+            # assert False, f"Failed to create DB objects for STIX ID {stix_dict.get('id')}: {e}"
+            continue
+
+
+    print(f"Successfully created {len(created_db_stix_objects)} STIX objects and linked them to collection '{collection_target.title}'.")
+
+    # Assertion: Check if CollectionObjects were created for each processed STIX object
+    for db_obj in created_db_stix_objects:
+        assert CollectionObject.objects.filter(collection=collection_target, stix_object=db_obj).exists(), \
+            f"CollectionObject for STIX ID {db_obj.stix_id} not found in collection '{collection_target.title}'"
+    
+    print("Simulated bulk STIX object creation test passed.")

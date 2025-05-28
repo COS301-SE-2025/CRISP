@@ -919,3 +919,23 @@ def publish_all_feeds(request):
             'status': 'error',
             'message': str(e)
         }, status=400)
+
+from core.tasks import publish_feed_immediate
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def publish_feed_webhook(request, feed_id):
+    """Webhook endpoint for immediate feed publishing"""
+    try:
+        # Queue immediate publish task
+        task = publish_feed_immediate.delay(feed_id)
+        
+        return Response({
+            'status': 'scheduled',
+            'task_id': task.id
+        })
+    except Exception as e:
+        return Response({
+            'status': 'error',
+            'error': str(e)
+        }, status=500)
