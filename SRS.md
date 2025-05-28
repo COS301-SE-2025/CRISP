@@ -147,6 +147,10 @@ The following five essential use case diagrams illustrate the core functionality
 
 ![Data Validation and Quality Assurance Use Case Diagram](Use%20Case%20Diagrams/U5%20-%20Data%20Validation%20and%20Quality%20Assurance.png)
 
+6. **Anonymization and Trust Management Use Case Diagram** - how CRISP handles sensitive data protection
+
+(Use%20Case%20Diagrams/U5%20-%20Data%20Validation%20and%20Quality%20Anon.png)
+
 ### 4.2 Use Case Relationships
 
 #### 4.2.1 Actor Relationships
