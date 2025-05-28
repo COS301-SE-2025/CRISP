@@ -1,6 +1,6 @@
 # Makefile for CRISP Anonymization System
 
-.PHONY: help install install-dev test demo interactive clean
+.PHONY: help install install-dev test test-all test-runner demo interactive clean
 
 # Default target
 help:
@@ -8,10 +8,12 @@ help:
 	@echo ""
 	@echo "  install         Install package and basic dependencies"
 	@echo "  install-dev     Install package with development dependencies"
-	@echo "  test           Run unit tests"
-	@echo "  demo           Run demonstration"
-	@echo "  interactive    Start interactive mode"
-	@echo "  clean          Clean up temporary files"
+	@echo "  test            Run original unit tests"
+	@echo "  test-all        Run all three test files separately"
+	@echo "  test-runner     Run unified test runner with all tests"
+	@echo "  demo            Run demonstration"
+	@echo "  interactive     Start interactive mode"
+	@echo "  clean           Clean up temporary files"
 	@echo ""
 
 # Installation targets
@@ -25,12 +27,26 @@ install-dev:
 test:
 	python test_anonymization.py
 
+test-all:
+	python test_anonymization.py
+	python additional_tests.py
+	python test_strategies.py
+
+test-runner:
+	python run_tests.py
+
+test-perf:
+	python run_tests.py --performance
+
 # Development targets
 demo:
 	python main.py demo
 
 interactive:
 	python main.py interactive
+
+quick-test:
+	python quick_test.py
 
 # Clean up
 clean:

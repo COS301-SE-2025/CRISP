@@ -1,4 +1,3 @@
-
 from abc import ABC, abstractmethod
 import re
 import hashlib
