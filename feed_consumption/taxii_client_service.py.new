@@ -18,7 +18,7 @@ import requests
 from requests.exceptions import RequestException, Timeout, ConnectionError
 from requests.auth import HTTPBasicAuth
 from taxii2client.v21 import Server, ApiRoot, Collection
-from taxii2client.exceptions import TAXIIServiceException
+from taxii2client.v21.exceptions import TAXIIServiceException
 
 from .models import ExternalFeedSource, FeedConsumptionLog
 from .taxii_client import TaxiiClientError, TaxiiConnectionError, TaxiiAuthenticationError, TaxiiDataError

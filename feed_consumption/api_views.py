@@ -12,8 +12,8 @@ from .serializers import (
     ExternalFeedSourceSerializer, FeedConsumptionLogSerializer,
     CollectionSerializer, ApiRootSerializer, DiscoverySerializer
 )
-from .taxii_client_service import TaxiiClient
 from .tasks import manual_feed_refresh
+from .taxii_client_service import TaxiiClient
 
 class ExternalFeedSourceViewSet(viewsets.ModelViewSet):
     """ViewSet for external feed sources"""
@@ -50,20 +50,15 @@ class ExternalFeedSourceViewSet(viewsets.ModelViewSet):
         feed = self.get_object()
         
         try:
-            client = TaxiiClient(
-                discovery_url=feed.discovery_url,
-                auth_type=feed.auth_type,
-                auth_credentials=feed.auth_config,
-                headers=feed.headers
-            )
+            client = TaxiiClient(feed)
             
-            discovery_data = client.get_discovery()
+            discovery_data = client.discover()
             serializer = DiscoverySerializer(discovery_data)
             
             # Update API root URL if available
             if discovery_data.get('api_roots'):
-                feed.api_root_url = discovery_data['api_roots'][0]
-                feed.save(update_fields=['api_root_url'])
+                feed.api_root = discovery_data['api_roots'][0]
+                feed.save(update_fields=['api_root'])
             
             return Response(serializer.data)
         except Exception as e:
@@ -74,21 +69,16 @@ class ExternalFeedSourceViewSet(viewsets.ModelViewSet):
         """Get available collections from the feed's API root"""
         feed = self.get_object()
         
-        if not feed.api_root_url:
+        if not feed.api_root:
             return Response(
                 {"detail": "API root URL not set. Run discovery first."}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
             
         try:
-            client = TaxiiClient(
-                discovery_url=feed.discovery_url,
-                auth_type=feed.auth_type,
-                auth_credentials=feed.auth_config,
-                headers=feed.headers
-            )
+            client = TaxiiClient(feed)
             
-            collections = client.get_collections(feed.api_root_url)
+            collections = client.get_collections()
             serializer = CollectionSerializer(collections, many=True)
             
             return Response(serializer.data)

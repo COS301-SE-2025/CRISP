@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 from django.conf import settings
 
 from requests.exceptions import RequestException, Timeout, ConnectionError
-from taxii2client.v21.exceptions import TAXIIServiceException
+from taxii2client.exceptions import TAXIIServiceException
 
 from feed_consumption.models import ExternalFeedSource, FeedConsumptionLog
 from feed_consumption.taxii_client_service import TaxiiClient
@@ -94,7 +94,7 @@ class TaxiiClientTests(TestCase):
         
         self.assertEqual(client.auth, ('testuser', 'testpass'))
     
-    @mock.patch('feed_consumption.taxii_client.Server')
+    @mock.patch('taxii2client.v21.Server')
     def test_discover_success(self, mock_server):
         """Test successful discovery."""
         # Configure mock
@@ -127,7 +127,7 @@ class TaxiiClientTests(TestCase):
         self.feed_source.refresh_from_db()
         self.assertEqual(self.feed_source.api_root, 'https://example.com/taxii2/api1/')
     
-    @mock.patch('feed_consumption.taxii_client.Server')
+    @mock.patch('taxii2client.v21.Server')
     def test_discover_error(self, mock_server):
         """Test discovery with error."""
         # Configure mock to raise exception
@@ -137,7 +137,7 @@ class TaxiiClientTests(TestCase):
         with self.assertRaises(TaxiiClientError):
             self.client.discover()
     
-    @mock.patch('feed_consumption.taxii_client.ApiRoot')
+    @mock.patch('taxii2client.v21.ApiRoot')
     def test_get_collections_success(self, mock_api_root):
         """Test successful collection retrieval."""
         # Set up the feed source with an API root
@@ -187,7 +187,7 @@ class TaxiiClientTests(TestCase):
         self.feed_source.refresh_from_db()
         self.assertEqual(self.feed_source.collection_id, 'collection-1')
     
-    @mock.patch('feed_consumption.taxii_client.ApiRoot')
+    @mock.patch('taxii2client.v21.ApiRoot')
     def test_get_collections_error(self, mock_api_root):
         """Test collection retrieval with error."""
         # Set up the feed source with an API root
@@ -201,8 +201,8 @@ class TaxiiClientTests(TestCase):
         with self.assertRaises(TaxiiClientError):
             self.client.get_collections()
     
-    @mock.patch('feed_consumption.taxii_client.TaxiiClient.discover')
-    @mock.patch('feed_consumption.taxii_client.ApiRoot')
+    @mock.patch('feed_consumption.taxii_client_service.TaxiiClient.discover')
+    @mock.patch('taxii2client.v21.ApiRoot')
     def test_get_collections_no_api_root(self, mock_api_root, mock_discover):
         """Test collection retrieval when API root is not set."""
         # Set up the feed source with no API root
@@ -225,7 +225,7 @@ class TaxiiClientTests(TestCase):
         # Verify discover was called
         mock_discover.assert_called_once()
     
-    @mock.patch('feed_consumption.taxii_client.Collection')
+    @mock.patch('taxii2client.v21.Collection')
     def test_get_objects_success(self, mock_collection):
         """Test successful object retrieval."""
         # Set up the feed source with API root and collection ID
@@ -280,7 +280,7 @@ class TaxiiClientTests(TestCase):
         self.client.log_entry.refresh_from_db()
         self.assertEqual(self.client.log_entry.objects_retrieved, 3)
     
-    @mock.patch('feed_consumption.taxii_client.Collection')
+    @mock.patch('taxii2client.v21.Collection')
     def test_get_objects_with_filters(self, mock_collection):
         """Test object retrieval with filters."""
         # Set up the feed source with API root and collection ID
@@ -317,7 +317,7 @@ class TaxiiClientTests(TestCase):
         self.assertEqual(len(objects), 1)
         self.assertEqual(objects[0]['id'], 'indicator--1')
     
-    @mock.patch('feed_consumption.taxii_client.Collection')
+    @mock.patch('taxii2client.v21.Collection')
     def test_get_objects_max_limit(self, mock_collection):
         """Test object retrieval with maximum limit."""
         # Set up the feed source with API root and collection ID
@@ -350,7 +350,7 @@ class TaxiiClientTests(TestCase):
         self.assertEqual(objects[0]['id'], 'indicator--0')
         self.assertEqual(objects[14]['id'], 'indicator--14')
     
-    @mock.patch('feed_consumption.taxii_client.Collection')
+    @mock.patch('taxii2client.v21.Collection')
     def test_get_objects_error(self, mock_collection):
         """Test object retrieval with error."""
         # Set up the feed source with API root and collection ID
@@ -374,7 +374,7 @@ class TaxiiClientTests(TestCase):
         self.client.log_entry.refresh_from_db()
         self.assertIn('Object retrieval failed', self.client.log_entry.error_message)
     
-    @mock.patch('feed_consumption.taxii_client.TaxiiClient.get_objects')
+    @mock.patch('feed_consumption.taxii_client_service.TaxiiClient.get_objects')
     def test_consume_feed_success(self, mock_get_objects):
         """Test successful feed consumption."""
         # Configure mock
@@ -409,7 +409,7 @@ class TaxiiClientTests(TestCase):
         self.feed_source.refresh_from_db()
         self.assertIsNotNone(self.feed_source.last_poll_time)
     
-    @mock.patch('feed_consumption.taxii_client.TaxiiClient.get_objects')
+    @mock.patch('feed_consumption.taxii_client_service.TaxiiClient.get_objects')
     def test_consume_feed_error(self, mock_get_objects):
         """Test feed consumption with error."""
         # Configure mock to raise exception
