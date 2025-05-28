@@ -28,9 +28,7 @@ CRISP implements several design patterns for a flexible, maintainable, and exten
 - **Factory Method Pattern** - For STIX object creation and standardization
 - **Observer Pattern** - Real-time threat feed notifications
 - **Strategy Pattern** - Flexible data anonymization approaches
-- **Adapter Pattern** - Integration with external threat intelligence sources
-- **Decorator Pattern** - Enhanced STIX object capabilities
-- **Facade Pattern** - Simplified system interface
+- **Decorator Pattern** - Enhanced STIX object capabilities, Validation and Exportation
 
 ## 🛠️ Technology Stack
 
