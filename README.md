@@ -1,8 +1,7 @@
 # Data Defenders - CRISP - Cyber Risk Information Sharing Platform
 
-[![Requirements Status](https://img.shields.io/badge/requirements-up%20to%20date-%23brightgreen?style=for-the-badge)](requirements.txt) \
-[![GitHub Issues](https://img.shields.io/github/issues/COS301-SE-2025/CRISP?style=for-the-badge&logo=github)](https://github.com/COS301-SE-2025/CRISP/issues) \
-[![Uptime Robot status](https://img.shields.io/uptimerobot/status/YOUR_UPTIMEROBOT_MONITOR_ID?style=for-the-badge&logo=uptimerobot)](https://uptimerobot.com/)
+[![Requirements Status](https://img.shields.io/badge/requirements-up%20to%20date-%23brightgreen?style=for-the-badge)](requirements.txt) 
+[![GitHub Issues](https://img.shields.io/github/issues/COS301-SE-2025/CRISP?style=for-the-badge&logo=github)](https://github.com/COS301-SE-2025/CRISP/issues) 
 
 CRISP (Cyber Risk Information Sharing Platform) is a secure threat intelligence sharing platform designed to streamline and enhance threat intelligence sharing among organizations, particularly in response to increasing ransomware attacks targeting tertiary education institutions.
 
