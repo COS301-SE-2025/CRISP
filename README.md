@@ -1,5 +1,9 @@
 # Data Defenders - CRISP - Cyber Risk Information Sharing Platform
 
+[![Requirements Status](https://img.shields.io/badge/requirements-up%20to%20date-%23brightgreen?style=for-the-badge)](requirements.txt) \
+[![GitHub Issues](https://img.shields.io/github/issues/COS301-SE-2025/CRISP?style=for-the-badge&logo=github)](https://github.com/COS301-SE-2025/CRISP/issues) \
+[![Uptime Robot status](https://img.shields.io/uptimerobot/status/YOUR_UPTIMEROBOT_MONITOR_ID?style=for-the-badge&logo=uptimerobot)](https://uptimerobot.com/)
+
 CRISP (Cyber Risk Information Sharing Platform) is a secure threat intelligence sharing platform designed to streamline and enhance threat intelligence sharing among organizations, particularly in response to increasing ransomware attacks targeting tertiary education institutions.
 
 ## 📋 Project Links
@@ -138,23 +142,3 @@ docker-compose up -d
 # Access the application
 # Web Interface: http://localhost:8000
 # API Documentation: http://localhost:8000/api/docs
-```
-
-## 🔒 Security
-
-CRISP is built with security as a primary concern:
-- End-to-end encryption for threat intelligence data
-- Configurable anonymization protocols
-- Secure API authentication with JWT
-- Regular security scanning and vulnerability assessments
-- Compliance with threat intelligence sharing standards
-
-
-## 📞 Contact
-
-**Client:** BlueVision ITM  
-**Contact:** Ivan Burke - ib@bitm.co.za
-
-**Development Team:** Data Defenders  
-**Contact:** datadefenders.sa@gmail.com
----
