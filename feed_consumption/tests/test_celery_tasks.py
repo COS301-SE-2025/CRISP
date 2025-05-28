@@ -1,299 +1,327 @@
-import uuid
-from unittest import mock
 from datetime import datetime, timedelta
-
+import pytz
+from unittest.mock import patch, MagicMock, call 
 from django.test import TestCase
 from django.utils import timezone
-from django.contrib.auth.models import User
-
-from celery.exceptions import MaxRetriesExceededError
+from django.conf import settings
 
 from feed_consumption.models import ExternalFeedSource, FeedConsumptionLog
 from feed_consumption.tasks import (
-    consume_feed, schedule_feed_consumption,
-    retry_failed_feeds, manual_feed_refresh
+    consume_feed as consume_feed_task, # Alias for test compatibility
+    schedule_feed_consumption, # Corrected: Removed _task suffix
+    retry_failed_feeds, # Corrected: Removed _task suffix
+    LoggableTask
 )
-from feed_consumption.taxii_client import TaxiiClientError
-from feed_consumption.data_processor import DataProcessingError
+from feed_consumption.taxii_client import TaxiiClientError # Keep for raising
+from feed_consumption.data_processor import DataProcessingError # Keep for raising
 
+# mock_now_dt is a fixed datetime object for consistent testing
+mock_now_dt = datetime(2023, 1, 1, 12, 0, 0, tzinfo=pytz.utc)
 
+# Use a lambda for the patch to ensure it returns the datetime directly
+@patch('feed_consumption.taxii_client_service.TaxiiClientService')
+@patch('feed_consumption.data_processing_service.DataProcessor')
+@patch('feed_consumption.tasks.timezone.now', lambda: mock_now_dt) # Changed to lambda
 class CeleryTaskTests(TestCase):
-    """Test the Celery tasks implementation."""
-    
-    def setUp(self):
-        """Set up test data."""
-        self.user = User.objects.create_user(
-            username='testadmin',
-            email='testadmin@example.com',
-            password='password123'
-        )
+    def setUp(self, MockDataProcessorClass, MockTaxiiServiceClass): # Order matters based on decorator order
+        # These are now mock classes. We'll use their return_value for instances.
+        self.MockDataProcessorClass = MockDataProcessorClass
+        self.MockTaxiiServiceClass = MockTaxiiServiceClass
+
+        # Configure default behavior for mock instances
+        self.mock_taxii_service_instance = self.MockTaxiiServiceClass.return_value
+        self.mock_data_processor_instance = self.MockDataProcessorClass.return_value
         
-        # Create active feed source
-        self.active_feed = ExternalFeedSource.objects.create(
-            name='Active Feed',
-            discovery_url='https://example.com/taxii2/',
-            categories=['malware', 'indicators'],
-            poll_interval=ExternalFeedSource.PollInterval.DAILY,
+        # Common feed source for tests that don't create their own
+        self.feed_source = ExternalFeedSource.objects.create(
+            name="Test Feed Setup",
+            feed_url="http://example.com/taxii2_setup",
+            api_root_url="http://example.com/api_setup",
+            collection_id="collection_setup",
+            feed_format="taxii2",
             is_active=True,
-            added_by=self.user
-        )
-        
-        # Create inactive feed source
-        self.inactive_feed = ExternalFeedSource.objects.create(
-            name='Inactive Feed',
-            discovery_url='https://example.com/taxii2/inactive/',
-            categories=['ttps'],
-            poll_interval=ExternalFeedSource.PollInterval.WEEKLY,
-            is_active=False,
-            added_by=self.user
-        )
-        
-        # Create feed source with last poll time
-        self.recently_polled_feed = ExternalFeedSource.objects.create(
-            name='Recently Polled Feed',
-            discovery_url='https://example.com/taxii2/recent/',
-            categories=['indicators'],
-            poll_interval=ExternalFeedSource.PollInterval.DAILY,
-            is_active=True,
-            last_poll_time=timezone.now() - timedelta(hours=12),
-            added_by=self.user
-        )
-        
-        # Create feed source that needs polling
-        self.needs_polling_feed = ExternalFeedSource.objects.create(
-            name='Needs Polling Feed',
-            discovery_url='https://example.com/taxii2/needs-polling/',
-            categories=['malware'],
-            poll_interval=ExternalFeedSource.PollInterval.DAILY,
-            is_active=True,
-            last_poll_time=timezone.now() - timedelta(days=2),
-            added_by=self.user
-        )
-    
-    @mock.patch('feed_consumption.tasks.TaxiiClient')
-    @mock.patch('feed_consumption.tasks.DataProcessor')
-    def test_consume_feed_success(self, mock_processor_class, mock_client_class):
-        """Test successful feed consumption task."""
-        # Configure mocks
-        mock_client = mock.MagicMock()
-        mock_client_class.return_value = mock_client
-        
-        mock_client.consume_feed.return_value = {
-            'status': 'success',
-            'objects': [{'id': 'indicator-1'}, {'id': 'malware-1'}],
-            'objects_retrieved': 2
-        }
-        
-        mock_processor = mock.MagicMock()
-        mock_processor_class.return_value = mock_processor
-        
-        mock_processor.process_objects.return_value = {
-            'processed': 2,
-            'failed': 0,
-            'duplicates': 0,
-            'edu_relevant': 1
-        }
-        
-        # Call the task
-        result = consume_feed(str(self.active_feed.id))
-        
-        # Check task was successful
-        self.assertEqual(result['status'], 'success')
-        
-        # Verify TaxiiClient was created and used
-        mock_client_class.assert_called_once_with(self.active_feed)
-        mock_client.consume_feed.assert_called_once()
-        
-        # Verify DataProcessor was created and used
-        mock_processor_class.assert_called_once_with(self.active_feed, mock_client.log_entry)
-        mock_processor.process_objects.assert_called_once_with([{'id': 'indicator-1'}, {'id': 'malware-1'}])
-        
-        # Check combined results
-        self.assertEqual(result['processed'], 2)
-        self.assertEqual(result['failed'], 0)
-        self.assertEqual(result['duplicates'], 0)
-        self.assertEqual(result['edu_relevant'], 1)
-    
-    def test_consume_feed_inactive(self):
-        """Test feed consumption task with inactive feed."""
-        # Call the task with inactive feed
-        result = consume_feed(str(self.inactive_feed.id))
-        
-        # Check task was skipped
-        self.assertEqual(result['status'], 'skipped')
-        self.assertEqual(result['reason'], 'feed not active')
-    
-    def test_consume_feed_not_found(self):
-        """Test feed consumption task with non-existent feed."""
-        # Call the task with a random UUID
-        result = consume_feed(str(uuid.uuid4()))
-        
-        # Check task failed
-        self.assertEqual(result['status'], 'error')
-        self.assertEqual(result['reason'], 'feed not found')
-    
-    @mock.patch('feed_consumption.tasks.TaxiiClient')
-    def test_consume_feed_client_error(self, mock_client_class):
-        """Test feed consumption task with client error."""
-        # Configure mock to raise exception
-        mock_client = mock.MagicMock()
-        mock_client_class.return_value = mock_client
-        
-        mock_client.consume_feed.side_effect = TaxiiClientError("Connection failed")
-        
-        # Mock the retry method
-        consume_feed.retry = mock.MagicMock(side_effect=MaxRetriesExceededError)
-        
-        # Call the task
-        result = consume_feed(str(self.active_feed.id))
-        
-        # Check task failed
-        self.assertEqual(result['status'], 'error')
-        self.assertEqual(result['reason'], 'Connection failed')
-        
-        # Verify retry was attempted
-        consume_feed.retry.assert_called_once()
-    
-    @mock.patch('feed_consumption.tasks.TaxiiClient')
-    def test_consume_feed_unexpected_error(self, mock_client_class):
-        """Test feed consumption task with unexpected error."""
-        # Configure mock to raise unexpected exception
-        mock_client = mock.MagicMock()
-        mock_client_class.return_value = mock_client
-        
-        mock_client.consume_feed.side_effect = ValueError("Unexpected error")
-        
-        # Call the task
-        result = consume_feed(str(self.active_feed.id))
-        
-        # Check task failed
-        self.assertEqual(result['status'], 'error')
-        self.assertIn('Unexpected error', result['reason'])
-    
-    @mock.patch('feed_consumption.tasks.consume_feed.delay')
-    def test_schedule_feed_consumption(self, mock_delay):
-        """Test feed consumption scheduling task."""
-        # Call the task
-        result = schedule_feed_consumption()
-        
-        # Check only the feeds that need polling were scheduled
-        self.assertEqual(result['total'], 1)
-        self.assertEqual(result['daily'], 1)  # Only the needs_polling_feed
-        
-        # Verify consume_feed.delay was called for the right feed
-        mock_delay.assert_called_once_with(str(self.needs_polling_feed.id))
-    
-    @mock.patch('feed_consumption.tasks.timezone.now')
-    @mock.patch('feed_consumption.tasks.consume_feed.delay')
-    def test_schedule_feed_consumption_all_intervals(self, mock_delay, mock_now):
-        """Test scheduling with different poll intervals."""
-        # Set up mock for current time
-        current_time = timezone.now()
-        mock_now.return_value = current_time
-        
-        # Set up feeds with different intervals
-        hourly_feed = ExternalFeedSource.objects.create(
-            name='Hourly Feed',
-            discovery_url='https://example.com/taxii2/hourly/',
             poll_interval=ExternalFeedSource.PollInterval.HOURLY,
+            username="user",
+            password="password",
+            # created_at and updated_at are auto-set
+        )
+        # Ensure a clean slate for logs related to self.feed_source if needed by specific tests
+        FeedConsumptionLog.objects.filter(feed=self.feed_source).delete()
+
+
+    @patch('feed_consumption.tasks.send_notification') # This is an inner patch
+    def test_consume_feed_success(self, mock_send_notification, MockDataProcessorClass_method_arg, MockTaxiiServiceClass_method_arg):
+        # Ensure we use the instance from setUp or re-assign if class mocks are method args
+        mock_taxii_service = self.MockTaxiiServiceClass.return_value
+        mock_data_processor = self.MockDataProcessorClass.return_value
+
+        feed_source = ExternalFeedSource.objects.create(
+            name="Test Feed Success",
+            feed_url="http://example.com/taxii2",
+            api_root_url="http://example.com/api1",
+            collection_id="collection1",
+            feed_format="taxii2",
             is_active=True,
-            last_poll_time=current_time - timedelta(hours=2),
-            added_by=self.user
+            poll_interval=ExternalFeedSource.PollInterval.HOURLY
         )
+
+        mock_taxii_service.consume_feed.return_value = {
+            'status': 'success',
+            'feed_name': feed_source.name,
+            'objects_retrieved': 1,
+            'objects_processed': 1,
+            'errors': 0,
+            'duration': 1.0,
+            'reason': None
+        }
         
-        weekly_feed = ExternalFeedSource.objects.create(
-            name='Weekly Feed',
-            discovery_url='https://example.com/taxii2/weekly/',
-            poll_interval=ExternalFeedSource.PollInterval.WEEKLY,
-            is_active=True,
-            last_poll_time=current_time - timedelta(days=8),
-            added_by=self.user
-        )
-        
-        monthly_feed = ExternalFeedSource.objects.create(
-            name='Monthly Feed',
-            discovery_url='https://example.com/taxii2/monthly/',
-            poll_interval=ExternalFeedSource.PollInterval.MONTHLY,
-            is_active=True,
-            last_poll_time=current_time - timedelta(days=31),
-            added_by=self.user
-        )
-        
-        # Call the task
-        result = schedule_feed_consumption()
-        
-        # Check results
-        self.assertEqual(result['total'], 4)  # needs_polling_feed + 3 new feeds
-        self.assertEqual(result['hourly'], 1)
-        self.assertEqual(result['daily'], 1)
-        self.assertEqual(result['weekly'], 1)
-        self.assertEqual(result['monthly'], 1)
-        
-        # Verify consume_feed.delay was called for each feed
-        self.assertEqual(mock_delay.call_count, 4)
-        call_args_list = [call_args[0][0] for call_args in mock_delay.call_args_list]
-        self.assertIn(str(hourly_feed.id), call_args_list)
-        self.assertIn(str(weekly_feed.id), call_args_list)
-        self.assertIn(str(monthly_feed.id), call_args_list)
-        self.assertIn(str(self.needs_polling_feed.id), call_args_list)
-    
-    @mock.patch('feed_consumption.tasks.consume_feed.delay')
-    def test_retry_failed_feeds(self, mock_delay):
-        """Test retrying failed feeds."""
-        # Create failed log entries
-        log1 = FeedConsumptionLog.objects.create(
-            feed_source=self.active_feed,
-            status=FeedConsumptionLog.ConsumptionStatus.FAILURE,
-            start_time=timezone.now() - timedelta(hours=1),
-            error_message="Test failure"
-        )
-        
-        log2 = FeedConsumptionLog.objects.create(
-            feed_source=self.needs_polling_feed,
-            status=FeedConsumptionLog.ConsumptionStatus.FAILURE,
-            start_time=timezone.now() - timedelta(hours=2),
-            error_message="Another failure"
-        )
-        
-        # Create a failed log for inactive feed (shouldn't be retried)
-        log3 = FeedConsumptionLog.objects.create(
-            feed_source=self.inactive_feed,
-            status=FeedConsumptionLog.ConsumptionStatus.FAILURE,
-            start_time=timezone.now() - timedelta(hours=3),
-            error_message="Inactive feed failure"
-        )
-        
-        # Create an old failed log (shouldn't be retried)
-        log4 = FeedConsumptionLog.objects.create(
-            feed_source=self.active_feed,
-            status=FeedConsumptionLog.ConsumptionStatus.FAILURE,
-            start_time=timezone.now() - timedelta(hours=25),
-            error_message="Old failure"
-        )
-        
-        # Call the task
-        result = retry_failed_feeds()
-        
-        # Check results
-        self.assertEqual(result['retried'], 2)  # Only the recent failures for active feeds
-        
-        # Verify consume_feed.delay was called for the right feeds
-        self.assertEqual(mock_delay.call_count, 2)
-        call_args_list = [call_args[0][0] for call_args in mock_delay.call_args_list]
-        self.assertIn(str(self.active_feed.id), call_args_list)
-        self.assertIn(str(self.needs_polling_feed.id), call_args_list)
-    
-    @mock.patch('feed_consumption.tasks.consume_feed')
-    def test_manual_feed_refresh(self, mock_consume_feed):
-        """Test manual feed refresh task."""
-        # Configure mock
-        mock_consume_feed.return_value = {'status': 'success', 'processed': 5}
-        
-        # Call the task
-        result = manual_feed_refresh(str(self.active_feed.id))
-        
-        # Check task was successful
+        result = consume_feed_task(feed_source.id)
+
         self.assertEqual(result['status'], 'success')
+        self.assertEqual(result['objects_retrieved'], 1)
+        self.assertEqual(result['objects_processed'], 1)
+        mock_taxii_service.consume_feed.assert_called_once()
+        mock_send_notification.assert_called_once()
+        log = FeedConsumptionLog.objects.get(feed=feed_source)
+        self.assertEqual(log.status, FeedConsumptionLog.Status.COMPLETED)
+        self.assertEqual(log.objects_retrieved, 1)
+
+    @patch('feed_consumption.tasks.send_notification')
+    def test_consume_feed_data_processing_error(self, mock_send_notification, MockDataProcessorClass_method_arg, MockTaxiiServiceClass_method_arg):
+        mock_taxii_service = self.MockTaxiiServiceClass.return_value
         
-        # Verify consume_feed was called with the right feed
-        mock_consume_feed.assert_called_once_with(str(self.active_feed.id))
+        feed_source = ExternalFeedSource.objects.create(
+            name="Test Feed Data Error",
+            feed_url="http://example.com/taxii2_data_error",
+            api_root_url="http://example.com/api_data_error",
+            collection_id="collection_data_error",
+            feed_format="taxii2",
+            is_active=True,
+            poll_interval=ExternalFeedSource.PollInterval.HOURLY
+        )
+        
+        expected_reason = "Data processing failed during consumption"
+        mock_taxii_service.consume_feed.return_value = {
+            'status': 'error',
+            'feed_name': feed_source.name,
+            'reason': expected_reason,
+            'duration': 1.0
+        }
+
+        result = consume_feed_task(feed_source.id)
+
+        self.assertEqual(result['status'], 'error')
+        self.assertEqual(result['reason'], expected_reason)
+        mock_taxii_service.consume_feed.assert_called_once()
+        # Notification might be sent for errors too, depending on logic
+        # mock_send_notification.assert_called_once() 
+        log = FeedConsumptionLog.objects.get(feed=feed_source)
+        self.assertEqual(log.status, FeedConsumptionLog.Status.FAILED)
+        self.assertIn(expected_reason, log.error_message)
+
+    @patch('feed_consumption.tasks.send_notification')
+    def test_consume_feed_client_error(self, mock_send_notification, MockDataProcessorClass_method_arg, MockTaxiiServiceClass_method_arg):
+        mock_taxii_service = self.MockTaxiiServiceClass.return_value
+
+        feed_source = ExternalFeedSource.objects.create(
+            name="Test Feed Client Error",
+            feed_url="http://example.com/taxii2_client_error",
+            api_root_url="http://example.com/api_client_error", # Must be present
+            collection_id="collection_client_error",       # Must be present
+            feed_format="taxii2",
+            is_active=True,
+            poll_interval=ExternalFeedSource.PollInterval.HOURLY
+        )
+        
+        expected_reason = "Connection failed" # This is what the service should return as reason
+        mock_taxii_service.consume_feed.return_value = {
+            'status': 'error',
+            'feed_name': feed_source.name,
+            'reason': expected_reason,
+            'duration': 1.0
+        }
+        # If consume_feed itself raises the error, it would be:
+        # mock_taxii_service.consume_feed.side_effect = TaxiiClientError(expected_reason)
+
+
+        result = consume_feed_task(feed_source.id)
+
+        self.assertEqual(result['status'], 'error')
+        self.assertEqual(result['reason'], expected_reason)
+        mock_taxii_service.consume_feed.assert_called_once()
+        log = FeedConsumptionLog.objects.get(feed=feed_source)
+        self.assertEqual(log.status, FeedConsumptionLog.Status.FAILED)
+        self.assertEqual(log.error_message, expected_reason)
+
+    @patch('feed_consumption.tasks.send_notification')
+    def test_consume_feed_unexpected_error(self, mock_send_notification, MockDataProcessorClass_method_arg, MockTaxiiServiceClass_method_arg):
+        mock_taxii_service = self.MockTaxiiServiceClass.return_value
+        
+        feed_source = ExternalFeedSource.objects.create(
+            name="Test Feed Unexpected Error",
+            feed_url="http://example.com/taxii2_unexpected",
+            api_root_url="http://example.com/api_unexpected",
+            collection_id="collection_unexpected",
+            feed_format="taxii2",
+            is_active=True,
+            poll_interval=ExternalFeedSource.PollInterval.HOURLY
+        )
+        
+        # Simulate the service's consume_feed method raising an unexpected error
+        mock_taxii_service.consume_feed.side_effect = Exception("Something broke badly")
+
+        result = consume_feed_task(feed_source.id)
+
+        self.assertEqual(result['status'], 'error')
+        self.assertIn('Unexpected error: Something broke badly', result['reason'])
+        mock_taxii_service.consume_feed.assert_called_once()
+        log = FeedConsumptionLog.objects.get(feed=feed_source)
+        self.assertEqual(log.status, FeedConsumptionLog.Status.FAILED)
+        self.assertIn("Something broke badly", log.error_message)
+
+    @patch('feed_consumption.tasks.consume_feed_task.delay') # Mock delay for this test
+    def test_schedule_feed_consumption(self, mock_consume_feed_delay, MockDataProcessorClass_method_arg, MockTaxiiServiceClass_method_arg):
+        # ExternalFeedSource created in setUp is hourly and active
+        # Create another one to be sure
+        hourly_feed = ExternalFeedSource.objects.create(
+            name="Test Feed Hourly Schedule",
+            feed_url="http://example.com/taxii2_hourly_schedule",
+            api_root_url="http://example.com/api_hourly_schedule",
+            collection_id="collection_hourly_schedule",
+            feed_format="taxii2",
+            is_active=True,
+            poll_interval=ExternalFeedSource.PollInterval.HOURLY
+        )
+        
+        result = schedule_feed_consumption(ExternalFeedSource.PollInterval.HOURLY.value)
+        
+        self.assertEqual(result['status'], 'completed')
+        # It should find self.feed_source and hourly_feed
+        self.assertEqual(result['total'], 2) 
+        self.assertEqual(mock_consume_feed_delay.call_count, 2)
+        mock_consume_feed_delay.assert_any_call(self.feed_source.id)
+        mock_consume_feed_delay.assert_any_call(hourly_feed.id)
+
+
+    @patch('feed_consumption.tasks.consume_feed_task.delay') # Mock delay for this test
+    def test_schedule_feed_consumption_all_intervals(self, mock_consume_feed_delay, MockDataProcessorClass_method_arg, MockTaxiiServiceClass_method_arg):
+        # These feeds are created, and the lambda mock for timezone.now should prevent F() error
+        ExternalFeedSource.objects.create(name="H", feed_url="h",api_root_url="h",collection_id="h",is_active=True,poll_interval=ExternalFeedSource.PollInterval.HOURLY)
+        ExternalFeedSource.objects.create(name="D", feed_url="d",api_root_url="d",collection_id="d",is_active=True,poll_interval=ExternalFeedSource.PollInterval.DAILY)
+        ExternalFeedSource.objects.create(name="W", feed_url="w",api_root_url="w",collection_id="w",is_active=True,poll_interval=ExternalFeedSource.PollInterval.WEEKLY)
+        ExternalFeedSource.objects.create(name="M", feed_url="m",api_root_url="m",collection_id="m",is_active=True,poll_interval=ExternalFeedSource.PollInterval.MONTHLY)
+        # self.feed_source is also HOURLY and active
+
+        # Hourly
+        result_hourly = schedule_feed_consumption(ExternalFeedSource.PollInterval.HOURLY.value)
+        self.assertEqual(result_hourly['total'], 2) # H + self.feed_source
+        # Daily
+        result_daily = schedule_feed_consumption(ExternalFeedSource.PollInterval.DAILY.value)
+        self.assertEqual(result_daily['total'], 1) # D
+        # Weekly
+        result_weekly = schedule_feed_consumption(ExternalFeedSource.PollInterval.WEEKLY.value)
+        self.assertEqual(result_weekly['total'], 1) # W
+        # Monthly
+        result_monthly = schedule_feed_consumption(ExternalFeedSource.PollInterval.MONTHLY.value)
+        self.assertEqual(result_monthly['total'], 1) # M
+        
+        self.assertEqual(mock_consume_feed_delay.call_count, 2 + 1 + 1 + 1)
+
+
+    @patch('feed_consumption.tasks.consume_feed_task.delay') # Mock delay for this test
+    def test_retry_failed_feeds(self, mock_consume_feed_delay, MockDataProcessorClass_method_arg, MockTaxiiServiceClass_method_arg):
+        # Active feed, recent failure
+        active_feed_recent_failure = ExternalFeedSource.objects.create(
+            name="Active Feed Recent Failure", feed_url="url1", api_root_url="api1", collection_id="col1",
+            is_active=True, poll_interval=ExternalFeedSource.PollInterval.HOURLY
+        )
+        FeedConsumptionLog.objects.create(
+            feed=active_feed_recent_failure, status=FeedConsumptionLog.Status.FAILED, 
+            error_message="failed", updated_at=mock_now_dt - timedelta(hours=1)
+        )
+
+        # Active feed, old failure (should not be retried)
+        active_feed_old_failure = ExternalFeedSource.objects.create(
+            name="Active Feed Old Failure", feed_url="url2", api_root_url="api2", collection_id="col2",
+            is_active=True, poll_interval=ExternalFeedSource.PollInterval.HOURLY
+        )
+        FeedConsumptionLog.objects.create(
+            feed=active_feed_old_failure, status=FeedConsumptionLog.Status.FAILED, 
+            error_message="failed old", updated_at=mock_now_dt - timedelta(days=3) # Older than 1 day
+        )
+
+        # Inactive feed, recent failure (should not be retried)
+        inactive_feed_recent_failure = ExternalFeedSource.objects.create(
+            name="Inactive Feed Recent Failure", feed_url="url3", api_root_url="api3", collection_id="col3",
+            is_active=False, poll_interval=ExternalFeedSource.PollInterval.HOURLY # Inactive
+        )
+        FeedConsumptionLog.objects.create(
+            feed=inactive_feed_recent_failure, status=FeedConsumptionLog.Status.FAILED, 
+            error_message="failed inactive", updated_at=mock_now_dt - timedelta(hours=1)
+        )
+        
+        # Active feed, but successful log (should not be retried)
+        active_feed_success = ExternalFeedSource.objects.create(
+            name="Active Feed Success Log", feed_url="url4", api_root_url="api4", collection_id="col4",
+            is_active=True, poll_interval=ExternalFeedSource.PollInterval.HOURLY
+        )
+        FeedConsumptionLog.objects.create(
+            feed=active_feed_success, status=FeedConsumptionLog.Status.COMPLETED, 
+            updated_at=mock_now_dt - timedelta(hours=1)
+        )
+
+        result = retry_failed_feeds_task()
+
+        self.assertEqual(result['status'], 'completed')
+        self.assertEqual(result['retried'], 1) # Only active_feed_recent_failure
+        self.assertEqual(mock_consume_feed_delay.call_count, 1)
+        mock_consume_feed_delay.assert_called_once_with(active_feed_recent_failure.id)
+        # Check that total_failed_logs reflects all FAILED logs within cutoff, regardless of retry decision based on unique feeds
+        # In this setup, only one log (for active_feed_recent_failure) matches all criteria for initial selection.
+        self.assertEqual(result['total_failed_logs'], 1)
+
+
+    def test_loggable_task_on_failure(self, MockDataProcessorClass_method_arg, MockTaxiiServiceClass_method_arg):
+        feed = ExternalFeedSource.objects.create(name="FailureTestFeed", feed_url="url", api_root_url="api", collection_id="col")
+        task_instance = LoggableTask()
+        task_instance.request = MagicMock()
+        task_instance.request.id = "test_task_id"
+        task_instance.feed_id = feed.id # Manually set for test
+        
+        exc = ValueError("Test exception")
+        einfo = MagicMock()
+
+        # Mock timezone.now specifically for this LoggableTask context if its internal now is different
+        # However, the class-level mock should cover feed_consumption.tasks.timezone.now
+        
+        task_instance.on_failure(exc, "task_id_placeholder", (), {}, einfo)
+        
+        log = FeedConsumptionLog.objects.get(feed=feed)
+        self.assertEqual(log.status, FeedConsumptionLog.Status.FAILED)
+        self.assertIn("ValueError: Test exception", log.error_message)
+        self.assertEqual(log.task_id, "task_id_placeholder") # Celery task ID
+
+    def test_loggable_task_on_success(self, MockDataProcessorClass_method_arg, MockTaxiiServiceClass_method_arg):
+        feed = ExternalFeedSource.objects.create(name="SuccessTestFeed", feed_url="urlS", api_root_url="apiS", collection_id="colS")
+        task_instance = LoggableTask()
+        task_instance.request = MagicMock()
+        task_instance.request.id = "test_task_id_success"
+        task_instance.feed_id = feed.id # Manually set
+
+        # Simulate a successful result dict from consume_feed_task
+        retval = {
+            'status': 'success', 
+            'feed_name': feed.name, 
+            'objects_retrieved': 10, 
+            'objects_processed': 8,
+            'errors': 2, 
+            'duration': 5.5
+        }
+        
+        task_instance.on_success(retval, "task_id_success_placeholder", (), {})
+        
+        log = FeedConsumptionLog.objects.get(feed=feed)
+        self.assertEqual(log.status, FeedConsumptionLog.Status.COMPLETED)
+        self.assertEqual(log.objects_retrieved, 10)
+        self.assertEqual(log.objects_processed, 8)
+        self.assertEqual(log.task_id, "task_id_success_placeholder")

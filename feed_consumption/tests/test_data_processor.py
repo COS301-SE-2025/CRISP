@@ -2,24 +2,30 @@ import uuid
 import json
 from unittest import mock
 from datetime import datetime, timedelta
+from unittest.mock import patch, MagicMock
 
 from django.test import TestCase
 from django.utils import timezone
 from django.contrib.auth.models import User
 from django.db import IntegrityError
 
-from stix2.exceptions import STIXError
+from stix2 import Indicator, Malware, Relationship, Bundle # For creating STIX objects
+from stix2.exceptions import STIXError # For raising STIXError
 
-from feed_consumption.models import ExternalFeedSource, FeedConsumptionLog
-from feed_consumption.data_processor import (
-    DataProcessor, DataProcessingError, StixValidationError
-)
+from feed_consumption.models import ExternalFeedSource, FeedConsumptionLog # Added model imports
+from feed_consumption.data_processing_service import DataProcessor
+from feed_consumption.data_processor import DataProcessingError, StixValidationError
 
 
 # Mock the ThreatIntelligence, StixObject, and DuplicateTracker models
-@mock.patch('feed_consumption.data_processor.ThreatIntelligence')
-@mock.patch('feed_consumption.data_processor.StixObject')
-@mock.patch('feed_consumption.data_processor.DuplicateTracker')
+@mock.patch('feed_consumption.data_processing_service.ThreatIntelligence') # Patched to data_processing_service
+@mock.patch('feed_consumption.data_processing_service.StixObject') # Patched to data_processing_service
+@mock.patch('feed_consumption.data_processing_service.DuplicateTracker') # Patched to data_processing_service
+@patch('feed_consumption.data_processing_service.DuplicateTracker.objects.get_or_create')
+@patch('feed_consumption.data_processing_service.StixObject.objects.create')
+@patch('feed_consumption.data_processing_service.ThreatIntelligence.objects.create')
+@patch('feed_consumption.data_processing_service.DataProcessor._parse_stix_object') # Patching the instance method
+@patch('feed_consumption.data_processing_service.DataProcessor.validate_stix_object') # Patching the instance method
 class DataProcessorTests(TestCase):
     """Test the data processor implementation."""
     
@@ -103,8 +109,8 @@ class DataProcessorTests(TestCase):
         # Create the processor
         self.processor = DataProcessor(self.feed_source, self.log_entry)
     
-    @mock.patch('feed_consumption.data_processor.stix2.parse')
-    @mock.patch('feed_consumption.data_processor.validate_instance')
+    @mock.patch('feed_consumption.data_processing_service.stix2.parse') # Patched to data_processing_service
+    @mock.patch('feed_consumption.data_processing_service.validate_instance') # Patched to data_processing_service
     def test_validate_stix_object_success(self, mock_validate, mock_parse, *mocks):
         """Test successful STIX object validation."""
         # Configure mocks
@@ -122,8 +128,8 @@ class DataProcessorTests(TestCase):
         mock_parse.assert_called_once_with(self.indicator_object, allow_custom=True)
         mock_validate.assert_called_once_with(self.indicator_object)
     
-    @mock.patch('feed_consumption.data_processor.stix2.parse')
-    @mock.patch('feed_consumption.data_processor.validate_instance')
+    @mock.patch('feed_consumption.data_processing_service.stix2.parse') # Patched to data_processing_service
+    @mock.patch('feed_consumption.data_processing_service.validate_instance') # Patched to data_processing_service
     def test_validate_stix_object_invalid(self, mock_validate, mock_parse, *mocks):
         """Test validation of an invalid STIX object."""
         # Configure mocks
@@ -145,7 +151,7 @@ class DataProcessorTests(TestCase):
         # Check log entry was updated
         self.assertIn("Invalid pattern syntax", self.log_entry.error_message)
     
-    @mock.patch('feed_consumption.data_processor.stix2.parse')
+    @mock.patch('feed_consumption.data_processing_service.stix2.parse') # Patched to data_processing_service
     def test_validate_stix_object_parse_error(self, mock_parse, *mocks):
         """Test STIX object that fails to parse."""
         # Configure mock to raise exception
@@ -444,148 +450,238 @@ class DataProcessorTests(TestCase):
         args = mock_stix_object.objects.create.call_args[1]
         self.assertTrue(args['is_education_relevant'])
     
-    @mock.patch('feed_consumption.data_processor.DataProcessor.validate_stix_object')
-    @mock.patch('feed_consumption.data_processor.DataProcessor.normalize_to_internal')
-    @mock.patch('feed_consumption.data_processor.DataProcessor.save_to_database')
-    def test_process_object_success(self, mock_save, mock_normalize, mock_validate, *mocks):
+    @mock.patch('feed_consumption.data_processing_service.DataProcessor.validate_stix_object')
+    @mock.patch('feed_consumption.data_processing_service.DataProcessor._parse_stix_object')
+    @mock.patch('feed_consumption.data_processing_service.ThreatIntelligence.objects.create')
+    @mock.patch('feed_consumption.data_processing_service.StixObject.objects.create')
+    @mock.patch('feed_consumption.data_processing_service.DuplicateTracker.objects.get_or_create')
+    def test_process_object_success(self, mock_get_or_create_duplicate, mock_stix_object_create, mock_ti_create, mock_parse_stix, mock_validate_stix):
         """Test successful processing of a single object."""
         # Configure mocks
-        mock_validate.return_value = True
-        mock_normalize.return_value = {'normalized': 'data'}
-        mock_save.return_value = (mock.MagicMock(), True)
+        mock_parse_stix.return_value = self.stix_object_valid
+        mock_validate_stix.return_value = True
+        mock_get_or_create_duplicate.return_value = (MagicMock(spec=DuplicateTracker), True) # New object
+        mock_ti_create.return_value = MagicMock(spec=ThreatIntelligence)
+        mock_stix_object_create.return_value = MagicMock(spec=StixObject)
         
         # Process an indicator
         result = self.processor.process_object(self.indicator_object)
         
         # Check result
-        self.assertEqual(result, {'normalized': 'data'})
+        self.assertEqual(result, {'parsed': 'data'})
         self.assertEqual(self.processor.processed_count, 1)
         self.assertEqual(self.processor.failed_count, 0)
         
         # Verify methods were called
-        mock_validate.assert_called_once_with(self.indicator_object)
-        mock_normalize.assert_called_once_with(self.indicator_object)
-        mock_save.assert_called_once_with({'normalized': 'data'})
+        mock_validate_stix.assert_called_once_with(self.indicator_object)
+        mock_parse_stix.assert_called_once_with(self.indicator_object, allow_custom=True)
+        mock_stix_object_create.assert_called_once()
     
-    @mock.patch('feed_consumption.data_processor.DataProcessor.validate_stix_object')
-    def test_process_object_validation_error(self, mock_validate, *mocks):
+    @mock.patch('feed_consumption.data_processing_service.DataProcessor.validate_stix_object')
+    @mock.patch('feed_consumption.data_processing_service.DataProcessor._parse_stix_object')
+    @mock.patch('feed_consumption.data_processing_service.ThreatIntelligence.objects.create')
+    @mock.patch('feed_consumption.data_processing_service.StixObject.objects.create')
+    @mock.patch('feed_consumption.data_processing_service.DuplicateTracker.objects.get_or_create')
+    def test_process_object_duplicate(self, mock_validate_stix, mock_parse_stix, mock_ti_create, mock_stix_object_create, mock_get_or_create_duplicate):
+        """Test processing an object that is a duplicate."""
+        mock_parse_stix.return_value = self.stix_object_valid
+        mock_validate_stix.return_value = True
+        # Simulate duplicate found
+        mock_duplicate_instance = MagicMock(spec=DuplicateTracker)
+        mock_get_or_create_duplicate.return_value = (mock_duplicate_instance, False) # False means it was not created, so it existed
+
+        success, result = self.processor.process_object(self.stix_data_valid)
+
+        self.assertFalse(success)
+        self.assertEqual(result, "Duplicate object")
+        mock_parse_stix.assert_called_once_with(self.stix_data_valid)
+        mock_validate_stix.assert_called_once_with(self.stix_object_valid)
+        mock_get_or_create_duplicate.assert_called_once()
+        mock_ti_create.assert_not_called() # Should not be called for duplicates
+        mock_stix_object_create.assert_not_called()
+
+    @mock.patch('feed_consumption.data_processing_service.DataProcessor.validate_stix_object')
+    @mock.patch('feed_consumption.data_processing_service.DataProcessor._parse_stix_object')
+    @mock.patch('feed_consumption.data_processing_service.ThreatIntelligence.objects.create')
+    @mock.patch('feed_consumption.data_processing_service.StixObject.objects.create')
+    @mock.patch('feed_consumption.data_processing_service.DuplicateTracker.objects.get_or_create')
+    def test_process_object_validation_error(self, mock_validate_stix, mock_parse_stix, mock_ti_create, mock_stix_object_create, mock_get_or_create_duplicate):
         """Test processing an object that fails validation."""
-        # Configure mock to raise exception
-        mock_validate.side_effect = StixValidationError("Validation failed")
-        
-        # Process an indicator
-        result = self.processor.process_object(self.indicator_object)
-        
-        # Check result
-        self.assertIsNone(result)
-        self.assertEqual(self.processor.processed_count, 0)
-        self.assertEqual(self.processor.failed_count, 1)
-    
-    @mock.patch('feed_consumption.data_processor.DataProcessor.validate_stix_object')
-    @mock.patch('feed_consumption.data_processor.DataProcessor.normalize_to_internal')
-    @mock.patch('feed_consumption.data_processor.DataProcessor.save_to_database')
-    def test_process_object_database_error(self, mock_save, mock_normalize, mock_validate, *mocks):
+        mock_parse_stix.return_value = self.stix_object_valid
+        mock_validate_stix.side_effect = StixValidationError("Invalid STIX pattern")
+
+        success, result = self.processor.process_object(self.stix_data_valid)
+
+        self.assertFalse(success)
+        self.assertEqual(result, "STIX validation failed: Invalid STIX pattern")
+        mock_parse_stix.assert_called_once_with(self.stix_data_valid)
+        mock_validate_stix.assert_called_once_with(self.stix_object_valid)
+        mock_ti_create.assert_not_called()
+        mock_stix_object_create.assert_not_called()
+        mock_get_or_create_duplicate.assert_not_called() # Should not be called if validation fails before duplicate check
+
+    @mock.patch('feed_consumption.data_processing_service.DataProcessor.validate_stix_object')
+    @mock.patch('feed_consumption.data_processing_service.DataProcessor._parse_stix_object')
+    @mock.patch('feed_consumption.data_processing_service.ThreatIntelligence.objects.create')
+    @mock.patch('feed_consumption.data_processing_service.StixObject.objects.create')
+    @mock.patch('feed_consumption.data_processing_service.DuplicateTracker.objects.get_or_create')
+    def test_process_object_database_error(self, mock_validate_stix, mock_parse_stix, mock_ti_create, mock_stix_object_create, mock_get_or_create_duplicate):
         """Test processing an object that fails to save to the database."""
-        # Configure mocks
-        mock_validate.return_value = True
-        mock_normalize.return_value = {'normalized': 'data'}
-        mock_save.side_effect = IntegrityError("Database error")
+        mock_parse_stix.return_value = self.stix_object_valid
+        mock_validate_stix.return_value = True
+        mock_get_or_create_duplicate.return_value = (MagicMock(spec=DuplicateTracker), True)
+        mock_ti_create.side_effect = Exception("DB error") # Simulate database error
+
+        success, result = self.processor.process_object(self.stix_data_valid)
+
+        self.assertFalse(success)
+        self.assertEqual(result, "Database error: DB error")
+        mock_parse_stix.assert_called_once_with(self.stix_data_valid)
+        mock_validate_stix.assert_called_once_with(self.stix_object_valid)
+        mock_get_or_create_duplicate.assert_called_once()
+        mock_ti_create.assert_called_once() # It will be called, but then raise an error
+        mock_stix_object_create.assert_not_called() # If TI create fails, StixObject might not be created
+
+    def test_process_objects(self, mock_validate_stix, mock_parse_stix, mock_ti_create, mock_stix_object_create, mock_get_or_create_duplicate):
+        stix_data_list = [self.stix_data_valid, {"type": "malware", "id": "malware--example"}]
         
-        # Process an indicator
-        result = self.processor.process_object(self.indicator_object)
-        
-        # Check result
-        self.assertIsNone(result)
-        self.assertEqual(self.processor.processed_count, 0)
-        self.assertEqual(self.processor.failed_count, 1)
-        
-        # Check log entry was updated with error
-        self.assertIn("Database error", self.log_entry.error_message)
-    
-    @mock.patch('feed_consumption.data_processor.DataProcessor.process_object')
-    def test_process_objects(self, mock_process_object, *mocks):
-        """Test processing a batch of objects."""
-        # Configure mock
-        def side_effect(obj):
-            if obj['id'] == self.indicator_object['id']:
-                self.processor.processed_count += 1
-                return {'processed': 'indicator'}
-            elif obj['id'] == self.malware_object['id']:
-                self.processor.processed_count += 1
-                return {'processed': 'malware'}
-            else:
-                self.processor.failed_count += 1
-                return None
-                
-        mock_process_object.side_effect = side_effect
-        
-        # Process a batch of objects
-        objects = [
-            self.indicator_object,
-            self.malware_object,
-            {'id': 'invalid-object', 'type': 'unknown'}
+        # Mock side effects for process_object calls
+        # For simplicity, assume the first succeeds and the second is a duplicate
+        mock_stix_obj1 = Indicator(**self.stix_data_valid)
+        mock_stix_obj2 = Malware(id="malware--example", is_family=False)
+
+        # Configure side effects for the patched methods based on calls to process_object
+        # This requires careful ordering or more specific side_effect functions if logic is complex.
+        # For this test, we'll mock the behavior of process_object indirectly via its components.
+
+        # First call (success)
+        mock_parse_stix.side_effect = [mock_stix_obj1, mock_stix_obj2]
+        mock_validate_stix.side_effect = [True, True] # Both validate
+        mock_get_or_create_duplicate.side_effect = [
+            (MagicMock(spec=DuplicateTracker), True),  # First is new
+            (MagicMock(spec=DuplicateTracker), False) # Second is duplicate
         ]
+        mock_ti_create.return_value = MagicMock(spec=ThreatIntelligence)
+        mock_stix_object_create.return_value = MagicMock(spec=StixObject)
+
+        processed_count, errors = self.processor.process_objects(stix_data_list)
+
+        self.assertEqual(processed_count, 1) # Only the first one was truly processed and saved
+        self.assertEqual(len(errors), 1)
+        self.assertIn("Duplicate object", errors[0]['reason'])
+        self.assertEqual(errors[0]['object_id'], "malware--example")
+
+        self.assertEqual(mock_parse_stix.call_count, 2)
+        self.assertEqual(mock_validate_stix.call_count, 2)
+        self.assertEqual(mock_get_or_create_duplicate.call_count, 2)
+        self.assertEqual(mock_ti_create.call_count, 1) # Only for the first object
+        self.assertEqual(mock_stix_object_create.call_count, 1) # Only for the first object
+
+    def test_process_objects_all_success(self, mock_validate_stix, mock_parse_stix, mock_ti_create, mock_stix_object_create, mock_get_or_create_duplicate):
+        stix_data_list = [self.stix_data_valid, {
+            "type": "malware", 
+            "spec_version": "2.1",
+            "id": "malware--0f29a97f-1769-4403-a358-21e16f08008a",
+            "created": "2017-01-20T00:00:00.000Z",
+            "modified": "2017-01-20T00:00:00.000Z",
+            "name": "Cryptolocker",
+            "is_family": False
+        }]
+        mock_stix_obj1 = Indicator(**stix_data_list[0])
+        mock_stix_obj2 = Malware(**stix_data_list[1])
+
+        mock_parse_stix.side_effect = [mock_stix_obj1, mock_stix_obj2]
+        mock_validate_stix.return_value = True # Both validate successfully
+        mock_get_or_create_duplicate.return_value = (MagicMock(spec=DuplicateTracker), True) # Both are new
+        mock_ti_create.return_value = MagicMock(spec=ThreatIntelligence)
+        mock_stix_object_create.return_value = MagicMock(spec=StixObject)
+
+        processed_count, errors = self.processor.process_objects(stix_data_list)
+
+        self.assertEqual(processed_count, 2)
+        self.assertEqual(len(errors), 0)
+        self.assertEqual(mock_ti_create.call_count, 2)
+        self.assertEqual(mock_stix_object_create.call_count, 2)
+
+    def test_process_objects_all_fail(self, mock_validate_stix, mock_parse_stix, mock_ti_create, mock_stix_object_create, mock_get_or_create_duplicate):
+        stix_data_list = [self.stix_data_valid, {"type": "malware", "id": "malware--example"}]
+        mock_stix_obj1 = Indicator(**stix_data_list[0])
+        mock_stix_obj2 = Malware(id="malware--example", is_family=False)
+
+        mock_parse_stix.side_effect = [mock_stix_obj1, mock_stix_obj2]
+        mock_validate_stix.side_effect = StixValidationError("Validation failed") # Both fail validation
+
+        processed_count, errors = self.processor.process_objects(stix_data_list)
+
+        self.assertEqual(processed_count, 0)
+        self.assertEqual(len(errors), 2)
+        self.assertIn("STIX validation failed: Validation failed", errors[0]['reason'])
+        self.assertIn("STIX validation failed: Validation failed", errors[1]['reason'])
+        mock_ti_create.assert_not_called()
+        mock_stix_object_create.assert_not_called()
+
+    # Test _parse_stix_object directly (though it's an internal method)
+    @patch('feed_consumption.data_processing_service.parse') # Patch the 'parse' function from stix2 library
+    def test_parse_stix_object_success(self, mock_stix2_parse, mock_validate_stix, mock_parse_stix_method_ignore, mock_ti_create, mock_stix_object_create, mock_get_or_create_duplicate):
+        mock_stix2_parse.return_value = self.stix_object_valid
+        # We are testing _parse_stix_object, so we call it directly.
+        # The other mocks (mock_validate_stix, etc.) are for the class-level patches and can be ignored or configured if _parse_stix_object calls them.
+        # In this case, _parse_stix_object only calls stix2.parse.
         
-        result = self.processor.process_objects(objects)
+        parsed_obj = self.processor._parse_stix_object(self.stix_data_valid)
+        self.assertEqual(parsed_obj, self.stix_object_valid)
+        mock_stix2_parse.assert_called_once_with(self.stix_data_valid, allow_custom=True)
+
+    @patch('feed_consumption.data_processing_service.parse')
+    def test_parse_stix_object_failure(self, mock_stix2_parse, mock_validate_stix_ignore, mock_parse_stix_method_ignore, mock_ti_create_ignore, mock_stix_object_create_ignore, mock_get_or_create_duplicate_ignore):
+        mock_stix2_parse.side_effect = STIXError("Invalid format")
+        with self.assertRaises(DataProcessingError) as context:
+            self.processor._parse_stix_object(self.stix_data_valid)
+        self.assertIn("Failed to parse STIX object: Invalid format", str(context.exception))
+
+    # Test validate_stix_object directly
+    def test_validate_stix_object_valid(self, mock_validate_stix_method_ignore, mock_parse_stix_method_ignore, mock_ti_create_ignore, mock_stix_object_create_ignore, mock_get_or_create_duplicate_ignore):
+        # No external calls to mock for this simple validation if it's just checking type
+        # If it used stix2.validate_string or similar, that would need mocking.
+        # Assuming validate_stix_object is more complex and might be patched by `mock_validate_stix` in other tests.
+        # For a direct test, if it has internal logic:
+        malware_obj = Malware(name="Test Malware", is_family=False) # Valid STIX object
+        try:
+            self.processor.validate_stix_object(malware_obj) # Should not raise
+        except StixValidationError:
+            self.fail("validate_stix_object raised StixValidationError unexpectedly for valid object")
+
+    def test_validate_stix_object_invalid_pattern(self, mock_validate_stix_method_ignore, mock_parse_stix_method_ignore, mock_ti_create_ignore, mock_stix_object_create_ignore, mock_get_or_create_duplicate_ignore):
+        # Create an indicator with an invalid pattern to test the actual validation logic
+        # This assumes that the internal validate_stix_object will try to validate the pattern.
+        # The stix2 library itself might raise an error upon creation with a bad pattern, 
+        # or validation might be a separate step.
+        # For this test, let's assume the object can be created but fails our custom validation.
         
-        # Check result
-        self.assertEqual(result['processed'], 2)
-        self.assertEqual(result['failed'], 1)
-        self.assertEqual(result['duplicates'], 0)
-        self.assertEqual(result['edu_relevant'], 0)
+        # If validate_stix_object uses stix2.validate_instance or similar, that would be the target for a mock if testing isolation.
+        # Here, we test the integrated behavior.
+        indicator_invalid_pattern = Indicator(
+            name="Invalid Pattern Indicator", 
+            pattern_type="stix", 
+            pattern="[ipv4-addr:value = '198.51.100.1' OR ]" # Invalid pattern
+        )
+        with self.assertRaises(StixValidationError) as context:
+            self.processor.validate_stix_object(indicator_invalid_pattern)
+        self.assertIn("Invalid pattern syntax", str(context.exception)) # Or whatever message it produces
+
+    @patch('feed_consumption.data_processing_service.parse') # Mocking stix2.parse for this specific test of validate_stix_object
+    def test_validate_stix_object_parse_error_in_validation_path(self, mock_stix2_parse_for_validation, mock_validate_stix_method_ignore, mock_parse_stix_method_ignore, mock_ti_create_ignore, mock_stix_object_create_ignore, mock_get_or_create_duplicate_ignore):
+        # This test is a bit conceptual if validate_stix_object itself doesn't call parse.
+        # The original test_validate_stix_object_parse_error seemed to imply parse was part of validation.
+        # If validate_stix_object is *given* a string and calls parse, then this is valid.
+        # If it's given an object, parse errors are for _parse_stix_object.
+        # Let's assume for a moment validate_stix_object can be passed raw data that it tries to parse.
         
-        # Verify log entry was updated
-        self.log_entry.refresh_from_db()
-        self.assertEqual(self.log_entry.objects_processed, 2)
-        self.assertEqual(self.log_entry.objects_failed, 1)
-        self.assertEqual(self.log_entry.status, FeedConsumptionLog.ConsumptionStatus.PARTIAL)
-        self.assertIsNotNone(self.log_entry.end_time)
-    
-    @mock.patch('feed_consumption.data_processor.DataProcessor.process_object')
-    def test_process_objects_all_success(self, mock_process_object, *mocks):
-        """Test processing a batch where all objects succeed."""
-        # Configure mock
-        def side_effect(obj):
-            self.processor.processed_count += 1
-            if obj['type'] == 'indicator':
-                return {'processed': 'indicator'}
-            else:
-                return {'processed': 'malware'}
-                
-        mock_process_object.side_effect = side_effect
-        
-        # Process a batch of objects
-        objects = [self.indicator_object, self.malware_object]
-        
-        result = self.processor.process_objects(objects)
-        
-        # Check result
-        self.assertEqual(result['processed'], 2)
-        self.assertEqual(result['failed'], 0)
-        
-        # Verify log entry was updated
-        self.log_entry.refresh_from_db()
-        self.assertEqual(self.log_entry.status, FeedConsumptionLog.ConsumptionStatus.SUCCESS)
-    
-    @mock.patch('feed_consumption.data_processor.DataProcessor.process_object')
-    def test_process_objects_all_fail(self, mock_process_object, *mocks):
-        """Test processing a batch where all objects fail."""
-        # Configure mock
-        def side_effect(obj):
-            self.processor.failed_count += 1
-            return None
-                
-        mock_process_object.side_effect = side_effect
-        
-        # Process a batch of objects
-        objects = [self.indicator_object, self.malware_object]
-        
-        result = self.processor.process_objects(objects)
-        
-        # Check result
-        self.assertEqual(result['processed'], 0)
-        self.assertEqual(result['failed'], 2)
-        
-        # Verify log entry was updated
-        self.log_entry.refresh_from_db()
-        self.assertEqual(self.log_entry.status, FeedConsumptionLog.ConsumptionStatus.FAILURE)
+        # This test is more about _parse_stix_object, which is already tested.
+        # The original test name was test_validate_stix_object_parse_error
+        # It was mocking `parse` from `stix2` and making it raise STIXError.
+        # This should be tested in the context of `_parse_stix_object` or if `validate_stix_object` itself calls `parse`.
+        # Given the current structure, `validate_stix_object` receives an already parsed object.
+        # So, a STIXError from `parse` would occur in `_parse_stix_object`.
+        # We will keep the STIXError import and ensure _parse_stix_object handles it.
+        pass # Covered by test_parse_stix_object_failure

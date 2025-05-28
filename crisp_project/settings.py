@@ -43,7 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'feed_consumption',
+    'feed_consumption',  # This is the correct app
 ]
 
 # TAXII client settings

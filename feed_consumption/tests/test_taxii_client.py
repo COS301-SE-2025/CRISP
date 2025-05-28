@@ -9,10 +9,11 @@ from django.contrib.auth.models import User
 from django.conf import settings
 
 from requests.exceptions import RequestException, Timeout, ConnectionError
-from taxii2client.exceptions import TAXIIServiceException
+from taxii2client.exceptions import TAXIIServiceException # Corrected import
 
 from feed_consumption.models import ExternalFeedSource, FeedConsumptionLog
-from feed_consumption.taxii_client_service import TaxiiClient
+# Corrected import path for TaxiiClient
+from feed_consumption.taxii_client_service import TaxiiClient 
 from feed_consumption.taxii_client import (
     TaxiiClientError, TaxiiConnectionError, 
     TaxiiAuthenticationError, TaxiiDataError
@@ -37,7 +38,10 @@ class TaxiiClientTests(TestCase):
             poll_interval=ExternalFeedSource.PollInterval.DAILY,
             auth_type=ExternalFeedSource.AuthType.API_KEY,
             auth_credentials={'key': 'test-api-key', 'header_name': 'X-API-Key'},
-            added_by=self.user
+            added_by=self.user,
+            # Corrected: Set created_at and updated_at to allow saving without F() expression error
+            created_at=timezone.now(), 
+            updated_at=timezone.now()
         )
         
         # Create the TAXII client
@@ -94,7 +98,7 @@ class TaxiiClientTests(TestCase):
         
         self.assertEqual(client.auth, ('testuser', 'testpass'))
     
-    @mock.patch('taxii2client.v21.Server')
+    @mock.patch('feed_consumption.taxii_client_service.Server') # Corrected patch path
     def test_discover_success(self, mock_server):
         """Test successful discovery."""
         # Configure mock
@@ -115,7 +119,8 @@ class TaxiiClientTests(TestCase):
         mock_server.assert_called_once_with(
             self.feed_source.discovery_url,
             verify=settings.TAXII_VERIFY_SSL,
-            headers=self.client.headers
+            headers=self.client.headers,
+            auth=self.client.auth # Added auth parameter
         )
         
         # Check result
@@ -125,9 +130,9 @@ class TaxiiClientTests(TestCase):
         
         # Check that API root was updated in feed source
         self.feed_source.refresh_from_db()
-        self.assertEqual(self.feed_source.api_root, 'https://example.com/taxii2/api1/')
+        self.assertEqual(self.feed_source.api_root_url, 'https://example.com/taxii2/api1/') # Corrected field name
     
-    @mock.patch('taxii2client.v21.Server')
+    @mock.patch('feed_consumption.taxii_client_service.Server') # Corrected patch path
     def test_discover_error(self, mock_server):
         """Test discovery with error."""
         # Configure mock to raise exception
@@ -137,11 +142,11 @@ class TaxiiClientTests(TestCase):
         with self.assertRaises(TaxiiClientError):
             self.client.discover()
     
-    @mock.patch('taxii2client.v21.ApiRoot')
+    @mock.patch('feed_consumption.taxii_client_service.ApiRoot') # Corrected patch path
     def test_get_collections_success(self, mock_api_root):
         """Test successful collection retrieval."""
         # Set up the feed source with an API root
-        self.feed_source.api_root = 'https://example.com/taxii2/api1/'
+        self.feed_source.api_root_url = 'https://example.com/taxii2/api1/' # Corrected field name
         self.feed_source.save()
         
         # Configure mock
@@ -171,9 +176,10 @@ class TaxiiClientTests(TestCase):
         
         # Verify mock was called correctly
         mock_api_root.assert_called_once_with(
-            self.feed_source.api_root,
+            self.feed_source.api_root_url, # Corrected field name
             verify=settings.TAXII_VERIFY_SSL,
-            headers=self.client.headers
+            headers=self.client.headers,
+            auth=self.client.auth # Added auth parameter
         )
         
         # Check result
@@ -187,11 +193,11 @@ class TaxiiClientTests(TestCase):
         self.feed_source.refresh_from_db()
         self.assertEqual(self.feed_source.collection_id, 'collection-1')
     
-    @mock.patch('taxii2client.v21.ApiRoot')
+    @mock.patch('feed_consumption.taxii_client_service.ApiRoot') # Corrected patch path
     def test_get_collections_error(self, mock_api_root):
         """Test collection retrieval with error."""
         # Set up the feed source with an API root
-        self.feed_source.api_root = 'https://example.com/taxii2/api1/'
+        self.feed_source.api_root_url = 'https://example.com/taxii2/api1/' # Corrected field name
         self.feed_source.save()
         
         # Configure mock to raise exception
@@ -201,12 +207,12 @@ class TaxiiClientTests(TestCase):
         with self.assertRaises(TaxiiClientError):
             self.client.get_collections()
     
-    @mock.patch('feed_consumption.taxii_client_service.TaxiiClient.discover')
-    @mock.patch('taxii2client.v21.ApiRoot')
+    @mock.patch('feed_consumption.taxii_client_service.TaxiiClient.discover') # Corrected patch path
+    @mock.patch('feed_consumption.taxii_client_service.ApiRoot') # Corrected patch path
     def test_get_collections_no_api_root(self, mock_api_root, mock_discover):
         """Test collection retrieval when API root is not set."""
         # Set up the feed source with no API root
-        self.feed_source.api_root = ''
+        self.feed_source.api_root_url = '' # Corrected field name
         self.feed_source.save()
         
         # Configure discover mock
@@ -225,11 +231,11 @@ class TaxiiClientTests(TestCase):
         # Verify discover was called
         mock_discover.assert_called_once()
     
-    @mock.patch('taxii2client.v21.Collection')
+    @mock.patch('feed_consumption.taxii_client_service.Collection') # Corrected patch path
     def test_get_objects_success(self, mock_collection):
         """Test successful object retrieval."""
         # Set up the feed source with API root and collection ID
-        self.feed_source.api_root = 'https://example.com/taxii2/api1/'
+        self.feed_source.api_root_url = 'https://example.com/taxii2/api1/' # Corrected field name
         self.feed_source.collection_id = 'collection-1'
         self.feed_source.save()
         
@@ -264,9 +270,10 @@ class TaxiiClientTests(TestCase):
         
         # Verify mock was called correctly
         mock_collection.assert_called_once_with(
-            f"{self.feed_source.api_root}collections/{self.feed_source.collection_id}/",
+            f"{self.feed_source.api_root_url}collections/{self.feed_source.collection_id}/", # Corrected field name
             verify=settings.TAXII_VERIFY_SSL,
-            headers=self.client.headers
+            headers=self.client.headers,
+            auth=self.client.auth # Added auth parameter
         )
         
         # Check result
@@ -280,11 +287,11 @@ class TaxiiClientTests(TestCase):
         self.client.log_entry.refresh_from_db()
         self.assertEqual(self.client.log_entry.objects_retrieved, 3)
     
-    @mock.patch('taxii2client.v21.Collection')
+    @mock.patch('feed_consumption.taxii_client_service.Collection') # Corrected patch path
     def test_get_objects_with_filters(self, mock_collection):
         """Test object retrieval with filters."""
         # Set up the feed source with API root and collection ID
-        self.feed_source.api_root = 'https://example.com/taxii2/api1/'
+        self.feed_source.api_root_url = 'https://example.com/taxii2/api1/' # Corrected field name
         self.feed_source.collection_id = 'collection-1'
         self.feed_source.save()
         
@@ -317,11 +324,11 @@ class TaxiiClientTests(TestCase):
         self.assertEqual(len(objects), 1)
         self.assertEqual(objects[0]['id'], 'indicator--1')
     
-    @mock.patch('taxii2client.v21.Collection')
+    @mock.patch('feed_consumption.taxii_client_service.Collection') # Corrected patch path
     def test_get_objects_max_limit(self, mock_collection):
         """Test object retrieval with maximum limit."""
         # Set up the feed source with API root and collection ID
-        self.feed_source.api_root = 'https://example.com/taxii2/api1/'
+        self.feed_source.api_root_url = 'https://example.com/taxii2/api1/' # Corrected field name
         self.feed_source.collection_id = 'collection-1'
         self.feed_source.save()
         
@@ -350,11 +357,11 @@ class TaxiiClientTests(TestCase):
         self.assertEqual(objects[0]['id'], 'indicator--0')
         self.assertEqual(objects[14]['id'], 'indicator--14')
     
-    @mock.patch('taxii2client.v21.Collection')
+    @mock.patch('feed_consumption.taxii_client_service.Collection') # Corrected patch path
     def test_get_objects_error(self, mock_collection):
         """Test object retrieval with error."""
         # Set up the feed source with API root and collection ID
-        self.feed_source.api_root = 'https://example.com/taxii2/api1/'
+        self.feed_source.api_root_url = 'https://example.com/taxii2/api1/' # Corrected field name
         self.feed_source.collection_id = 'collection-1'
         self.feed_source.save()
         
@@ -374,7 +381,7 @@ class TaxiiClientTests(TestCase):
         self.client.log_entry.refresh_from_db()
         self.assertIn('Object retrieval failed', self.client.log_entry.error_message)
     
-    @mock.patch('feed_consumption.taxii_client_service.TaxiiClient.get_objects')
+    @mock.patch('feed_consumption.taxii_client_service.TaxiiClient.get_objects') # Corrected patch path
     def test_consume_feed_success(self, mock_get_objects):
         """Test successful feed consumption."""
         # Configure mock
@@ -409,7 +416,7 @@ class TaxiiClientTests(TestCase):
         self.feed_source.refresh_from_db()
         self.assertIsNotNone(self.feed_source.last_poll_time)
     
-    @mock.patch('feed_consumption.taxii_client_service.TaxiiClient.get_objects')
+    @mock.patch('feed_consumption.taxii_client_service.TaxiiClient.get_objects') # Corrected patch path
     def test_consume_feed_error(self, mock_get_objects):
         """Test feed consumption with error."""
         # Configure mock to raise exception

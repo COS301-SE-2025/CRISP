@@ -93,9 +93,9 @@ class TaxiiClient:
             api_roots = [root.url for root in server.api_roots]
             
             # Save the first API root to the feed source if not already set
-            if api_roots and not self.feed_source.api_root:
-                self.feed_source.api_root = api_roots[0]
-                self.feed_source.save(update_fields=['api_root'])
+            if api_roots and not self.feed_source.api_root_url: # Corrected field name
+                self.feed_source.api_root_url = api_roots[0]
+                self.feed_source.save(update_fields=['api_root_url']) # Corrected field name
             
             return {
                 'title': server.title,
@@ -122,15 +122,15 @@ class TaxiiClient:
             List of dictionaries containing collection information
         """
         # If no API root is set, try to discover one
-        if not self.feed_source.api_root:
+        if not self.feed_source.api_root_url: # Corrected field name
             discover_info = self.discover()
-            if not self.feed_source.api_root and discover_info.get('api_roots'):
-                self.feed_source.api_root = discover_info['api_roots'][0]
-                self.feed_source.save(update_fields=['api_root'])
+            if not self.feed_source.api_root_url and discover_info.get('api_roots'): # Corrected field name
+                self.feed_source.api_root_url = discover_info['api_roots'][0]
+                self.feed_source.save(update_fields=['api_root_url']) # Corrected field name
         
         def _do_get_collections():
             api_root = ApiRoot(
-                self.feed_source.api_root,
+                self.feed_source.api_root_url, # Corrected field name
                 verify=getattr(settings, 'TAXII_VERIFY_SSL', True),
                 headers=self.headers,
                 auth=self.auth
@@ -181,12 +181,12 @@ class TaxiiClient:
         Returns:
             Tuple of (list of objects, count of objects)
         """
-        if not self.feed_source.api_root or not self.feed_source.collection_id:
+        if not self.feed_source.api_root_url or not self.feed_source.collection_id: # Corrected field name
             raise TaxiiClientError("API root or collection ID not set")
         
         def _do_get_objects():
             collection = Collection(
-                f"{self.feed_source.api_root}collections/{self.feed_source.collection_id}/",
+                f"{self.feed_source.api_root_url}collections/{self.feed_source.collection_id}/", # Corrected field name
                 verify=getattr(settings, 'TAXII_VERIFY_SSL', True),
                 headers=self.headers,
                 auth=self.auth
@@ -245,7 +245,7 @@ class TaxiiClient:
         self.log_entry = FeedConsumptionLog.objects.create(
             feed_source=self.feed_source,
             start_time=timezone.now(),
-            status=FeedConsumptionLog.ConsumptionStatus.PENDING
+            status=FeedConsumptionLog.Status.PENDING  # Corrected Enum
         )
         
         try:
@@ -256,7 +256,7 @@ class TaxiiClient:
             objects, count = self.get_objects(added_after=last_poll)
             
             # Mark as success and update object count
-            self.log_entry.status = FeedConsumptionLog.ConsumptionStatus.SUCCESS
+            self.log_entry.status = FeedConsumptionLog.Status.COMPLETED # Corrected Enum
             self.log_entry.objects_retrieved = count
             self.log_entry.objects_processed = count
             self.log_entry.end_time = timezone.now()
@@ -279,7 +279,7 @@ class TaxiiClient:
             logger.exception(error_msg)
             
             # Mark as failed
-            self.log_entry.status = FeedConsumptionLog.ConsumptionStatus.FAILURE
+            self.log_entry.status = FeedConsumptionLog.Status.FAILED # Corrected Enum
             self.log_entry.error_message = error_msg
             self.log_entry.end_time = timezone.now()
             self.log_entry.save()

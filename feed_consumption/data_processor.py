@@ -11,6 +11,3 @@ class DataProcessingError(Exception):
 class StixValidationError(DataProcessingError):
     """Error validating STIX object"""
     pass
-
-# Import actual data processor implementation from service file
-from feed_consumption.data_processing_service import DataProcessor

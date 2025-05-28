@@ -9,6 +9,8 @@ from django.utils import timezone
 from django.conf import settings
 
 from .models import ExternalFeedSource, FeedConsumptionLog
+from .taxii_client_service import TaxiiClient # Added import
+from .data_processing_service import DataProcessor # Added import
 from .taxii_client import TaxiiClientError
 
 logger = logging.getLogger(__name__)
