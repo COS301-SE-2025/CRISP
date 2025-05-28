@@ -1,0 +1,121 @@
+====================================================================================================
+                              COMPREHENSIVE TEST EXECUTION REPORT
+====================================================================================================
+Total Execution Time: 5.56 seconds
+Report Generated: 2025-05-28 07:03:33
+
+
+TEST EXECUTION SUMMARY
+--------------------------------------------------
+Total Tests:                 10
+Passed:                      10
+Failed:                       0
+Success Rate:            100.0%
+
+DETAILED TEST RESULTS
+--------------------------------------------------------------------------------
+Test Name                           Status     Duration   Memory     Queries 
+--------------------------------------------------------------------------------
+test_comprehensive_identity_manage  passed        1.147s      0.4MB     180
+setup_organizations                 passed        1.031s      0.1MB     161
+test_comprehensive_feed_ecosystem   passed        1.029s      0.4MB     106
+setup_diverse_collections           passed        0.394s      0.1MB      72
+setup_comprehensive_trust_network   passed        0.388s      0.1MB      70
+test_advanced_collection_operation  passed        0.152s      0.2MB      16
+test_advanced_error_handling_and_r  passed        0.107s      0.0MB      16
+test_advanced_bundle_generation_ma  passed        0.022s      0.0MB       7
+test_comprehensive_stix_object_cre  passed        0.014s      0.0MB       0
+test_comprehensive_anonymization_e  passed        0.002s      0.0MB       0
+
+
+PERFORMANCE ANALYSIS
+--------------------------------------------------
+Metric                    Min        Max        Avg        Total     
+-----------------------------------------------------------------
+Execution Time (s)            0.002     1.147     0.429     4.287
+Memory Delta (MB)               0.0       0.4       0.1       1.4
+Database Queries                  0       180      62.8       628
+
+SLOWEST TESTS
+----------------------------------------
+test_comprehensive_identity_ma    1.147s
+setup_organizations               1.031s
+test_comprehensive_feed_ecosys    1.029s
+setup_diverse_collections         0.394s
+setup_comprehensive_trust_netw    0.388s
+
+
+MEMORY USAGE ANALYSIS
+--------------------------------------------------
+Initial Memory (MB):            80.4
+Current Memory (MB):            91.8
+Memory Growth (MB):             11.4
+Memory Usage (%):                1.2
+Available Memory (MB):        6045.2
+
+
+DATABASE STATISTICS
+--------------------------------------------------
+Organizations:                    14
+STIX Objects:                     11
+Collections:                      25
+Trust Relationships:              10
+Feeds:                             6
+Identities:                       10
+Total DB Queries:                712
+
+
+OBJECT CREATION STATISTICS
+--------------------------------------------------
+Object Type          Count      Percentage  
+------------------------------------------
+collection           12               25.5%
+organization         10               21.3%
+trust_relationship   10               21.3%
+identity             10               21.3%
+feed                 5                10.6%
+------------------------------------------
+TOTAL                47               100.0%
+
+
+ANONYMIZATION PERFORMANCE ANALYSIS
+------------------------------------------------------------
+No anonymization data available
+
+
+BUNDLE GENERATION METRICS
+------------------------------------------------------------
+No bundle generation data available
+
+
+FEED PUBLISHING STATISTICS
+------------------------------------------------------------
+Feed Name                 Objects    Size(KB)     Time(s)    Throughput  
+----------------------------------------------------------------------
+High Frequency Indicator          1        0.3    0.157        6.4/s
+Daily Malware Report              1        0.3    0.082       12.3/s
+Weekly Threat Summary             1        0.3    0.138        7.2/s
+Research Feed                     1        0.3    0.229        4.4/s
+Emergency Alerts                  1        0.3    0.120        8.3/s
+
+
+ERROR ANALYSIS
+--------------------------------------------------
+No errors encountered during testing
+
+
+TEST COVERAGE AND QUALITY METRICS
+------------------------------------------------------------
+FUNCTIONAL COVERAGE
+------------------------------
+Organization Management   1/2 ( 50.0%)
+Trust Relationships       0/2 (  0.0%)
+STIX Objects              0/2 (  0.0%)
+Collections               0/2 (  0.0%)
+Anonymization             0/2 (  0.0%)
+Bundle Generation         0/2 (  0.0%)
+Feed Management           0/2 (  0.0%)
+Error Handling            0/1 (  0.0%)
+------------------------------
+OVERALL COVERAGE          1/15 (  6.7%)
+====================================================================================================
