@@ -12,5 +12,4 @@ urlpatterns = [
     path('api/auth/user/', UserView.as_view(), name='user'),
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     
-    # Add other API endpoints here
 ]

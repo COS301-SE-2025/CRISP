@@ -16,7 +16,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-# Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -25,11 +24,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     
-    # Third-party apps
     'rest_framework',
     'corsheaders',
     
-    # Local apps
     'auth_api',
 ]
 
@@ -97,34 +94,28 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
 
-# Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Custom user model
 AUTH_USER_MODEL = 'auth_api.CrispUser'
 
-# CORS settings - allow React frontend to connect
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Default Vite development server
+    "http://localhost:5173",  
     "http://127.0.0.1:5173",
-    "http://localhost:3000",  # In case you're using a different port
-    "http://localhost:8001",  # Django server on port 8001
+    "http://localhost:3000",  
+    "http://localhost:8001",  
     "http://127.0.0.1:8001",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
 
-# For SimpleJWT authentication
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
 }
 
-# JWT Settings
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
