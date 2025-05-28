@@ -1,0 +1,40 @@
+# CRISP Anonymization System Dependencies
+
+# Core dependencies (none required - uses only Python standard library)
+# The anonymization system is designed to work with Python 3.7+ standard library only
+
+# Development and testing dependencies
+pytest>=7.0.0                # Advanced testing framework
+pytest-cov>=4.0.0           # Test coverage reporting
+pytest-mock>=3.10.0         # Mocking for tests
+
+# Code quality and formatting
+black>=22.0.0               # Code formatter
+flake8>=5.0.0              # Code linting
+mypy>=1.0.0                # Type checking
+isort>=5.10.0              # Import sorting
+
+# Documentation
+sphinx>=5.0.0              # Documentation generation
+sphinx-rtd-theme>=1.2.0    # ReadTheDocs theme
+
+# Optional: For enhanced functionality in production
+# requests>=2.28.0          # HTTP requests (for external threat feeds)
+# cryptography>=38.0.0      # Enhanced cryptographic functions
+# pyyaml>=6.0               # YAML configuration files
+# python-dotenv>=0.20.0     # Environment variable management
+
+# Optional: For performance monitoring and logging
+# psutil>=5.9.0             # System and process utilities
+# structlog>=22.1.0         # Structured logging
+
+# Optional: For data validation and serialization
+# pydantic>=1.10.0          # Data validation using Python type annotations
+# marshmallow>=3.17.0       # Object serialization/deserialization
+
+# Development tools
+pre-commit>=2.20.0         # Git pre-commit hooks
+tox>=3.25.0               # Testing across multiple Python versions
+
+# Note: Uncomment dependencies above as needed for your specific deployment
+# The core anonymization system works without any external dependencies
