@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import CSSStyles from './CSSStyles'; // Import the separate CSS file
+import logoImage from './BlueV2.png';
+
 
 function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthWrapper passes
   // State to manage the active page
@@ -75,9 +77,7 @@ function Header({ user, onLogout, isAdmin }) {
     <header>
       <div className="container header-container">
         <a href="#" className="logo">
-          <div className="logo-icon"><i className="fas fa-shield-alt"></i></div>
-          <div className="logo-text">CRISP</div>
-        </a>
+                <img src={logoImage} alt="CRISP Logo" className="logo-image" />      </a>
         <div className="nav-actions">
           <div className="search-bar">
             <span className="search-icon"><i className="fas fa-search"></i></span>

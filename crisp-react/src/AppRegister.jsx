@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { useNavigate } from 'react-router-dom';
 import CSSStyles from './CSSStyles';
+import logoImage from './BlueV2.png';
+
 
 function AppRegister({ user, onLogout }) {
   const navigate = useNavigate();
@@ -82,9 +84,7 @@ function Header({ user, onLogout, navigateToRegisterUser }) {
     <header>
       <div className="container header-container">
         <a href="#" className="logo">
-          <div className="logo-icon"><i className="fas fa-shield-alt"></i></div>
-          <div className="logo-text">CRISP</div>
-        </a>
+        <img src={logoImage} alt="CRISP Logo" className="logo-image" />      </a>
         <div className="nav-actions">
           <div className="search-bar">
             <span className="search-icon"><i className="fas fa-search"></i></span>

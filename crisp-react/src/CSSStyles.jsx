@@ -1088,6 +1088,12 @@ function CSSStyles() {
         .register-button:hover {
             background-color: var(--light-blue);
         }
+
+        .logo-image {
+        height: 30px;
+        width: auto;
+        max-width: 100%;
+        }
       `}
     </style>
   );
