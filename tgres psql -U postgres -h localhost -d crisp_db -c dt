@@ -1,6 +1,0 @@
-                                              List of databases
-   Name   |  Owner   | Encoding | Collate |  Ctype  | Access privileges |  Size   | Tablespace | Description 
-----------+----------+----------+---------+---------+-------------------+---------+------------+-------------
- crisp_db | postgres | UTF8     | C.UTF-8 | C.UTF-8 |                   | 9473 kB | pg_default | 
-(1 row)
-
