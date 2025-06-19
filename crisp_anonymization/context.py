@@ -1,5 +1,4 @@
-
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 import re
 import ipaddress
 try:
@@ -11,6 +10,7 @@ try:
         EmailAnonymizationStrategy,
         URLAnonymizationStrategy
     )
+    from .exceptions import AnonymizationError, DataValidationError
 except ImportError:
     from enums import AnonymizationLevel, DataType
     from strategies import (
@@ -20,6 +20,14 @@ except ImportError:
         EmailAnonymizationStrategy,
         URLAnonymizationStrategy
     )
+    # Define exceptions if not imported
+    class AnonymizationError(Exception):
+        """Base exception for anonymization errors"""
+        pass
+    
+    class DataValidationError(AnonymizationError):
+        """Raised when data doesn't match the expected format"""
+        pass
 
 
 class AnonymizationContext:
@@ -60,6 +68,7 @@ class AnonymizationContext:
             
         Raises:
             ValueError: If no suitable strategy is found
+            DataValidationError: If the data doesn't match the expected format
         """
         strategy = self._strategies.get(data_type)
         
@@ -86,18 +95,42 @@ class AnonymizationContext:
             The anonymized data
         """
         data_type = self._detect_data_type(data)
+        
+        # For IP addresses, validate before anonymizing
+        if data_type == DataType.IP_ADDRESS:
+            try:
+                # Remove any zone identifier before validation
+                ip_part = data.split('%')[0] if '%' in data else data
+                ipaddress.ip_address(ip_part)
+            except ValueError:
+                # If it looks like an IP but isn't valid, return an error
+                return f"INVALID IP ADDRESS: {data}"
+        
         return self.execute_anonymization(data, data_type, level)
     
     def _detect_data_type(self, data: str) -> DataType:
         """Detect the type of data based on patterns"""
         data = data.strip()
         
-        # Check for IP address
-        try:
-            ipaddress.ip_address(data)
+        # Check for IPv6-like pattern (most specific first)
+        # This catches addresses like 3393:3017:6301:1db6:9ebf:c2dc:bcf0:b99x
+        ipv6_pattern = r'^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{0,4}:){1,7}:|^:((:[0-9a-fA-F]{1,4}){1,7}|:)$|^[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})$|^([0-9a-fA-F]{1,4}:){1,2}((:[0-9a-fA-F]{1,4}){1,5})$|^([0-9a-fA-F]{1,4}:){1,3}((:[0-9a-fA-F]{1,4}){1,4})$|^([0-9a-fA-F]{1,4}:){1,4}((:[0-9a-fA-F]{1,4}){1,3})$|^([0-9a-fA-F]{1,4}:){1,5}((:[0-9a-fA-F]{1,4}){1,2})$|^([0-9a-fA-F]{1,4}:){1,6}(:[0-9a-fA-F]{1,4})$'
+        
+        # Even more general IPv6-like pattern
+        ipv6_simple_pattern = r'^[0-9a-fA-F:]+$'
+        
+        # IPv4 patterns
+        ipv4_pattern = r'^(\d{1,3}\.){3}\d{1,3}$'
+        ipv4_like_pattern = r'^(\d{1,3}\.)[a-zA-Z0-9\.]+$'  # Catches 192.xxxx.158.1
+        
+        # Check if it looks like an IP address (even if invalid)
+        if (re.match(ipv6_pattern, data) or 
+            re.match(ipv6_simple_pattern, data) or 
+            re.match(ipv4_pattern, data) or
+            re.match(ipv4_like_pattern, data) or
+            (data.count('.') == 3 and data[0].isdigit()) or  # Simple IPv4 heuristic
+            (data.count(':') >= 2 and re.search(r'[0-9a-fA-F]', data))):  # Simple IPv6 heuristic
             return DataType.IP_ADDRESS
-        except ValueError:
-            pass
         
         # Check for email
         if '@' in data and re.match(r'^[^@]+@[^@]+\.[^@]+$', data):
@@ -114,7 +147,7 @@ class AnonymizationContext:
         # Default to domain if unsure
         return DataType.DOMAIN
     
-    def bulk_anonymize(self, data_items: List[tuple], level: AnonymizationLevel) -> List[str]:
+    def bulk_anonymize(self, data_items: List[Tuple[str, DataType]], level: AnonymizationLevel) -> List[str]:
         """
         Anonymize multiple data items at once
         

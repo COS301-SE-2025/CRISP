@@ -18,35 +18,35 @@ help:
 
 # Installation targets
 install:
-	pip install -e .
+	pip3 install -e .
 
 install-dev:
-	pip install -e .[dev]
+	pip3 install -e .[dev]
 
 # Testing targets
 test:
-	python test_anonymization.py
+	python3 test_anonymization.py
 
 test-all:
-	python test_anonymization.py
-	python additional_tests.py
-	python test_strategies.py
+	python3 test_anonymization.py
+	python3 additional_tests.py
+	python3 test_strategies.py
 
 test-runner:
-	python run_tests.py
+	python3 run_tests.py
 
 test-perf:
-	python run_tests.py --performance
+	python3 run_tests.py --performance
 
 # Development targets
 demo:
-	python main.py demo
+	python3 main.py demo
 
 interactive:
-	python main.py interactive
+	python3 main.py interactive
 
 quick-test:
-	python quick_test.py
+	python3 quick_test.py
 
 # Clean up
 clean:
