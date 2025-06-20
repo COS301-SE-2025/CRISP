@@ -10,7 +10,7 @@ SECRET_KEY = 'django-insecure-z9d&!6rvx0m1k@6uh$#_s&3r_^6b5z-p#-36=(=ug^21&7f*^r
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']  # Restrict in production
+ALLOWED_HOSTS = ['100.117.251.119', 'localhost', '127.0.0.1']
 
 # Application definition
 INSTALLED_APPS = [
@@ -68,13 +68,15 @@ WSGI_APPLICATION = 'threat_intel.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'threat_intel'),
-        'USER': os.environ.get('DB_USER', 'postgres'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'postgres'),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
+        'NAME': 'crisp_db',
+        'USER': 'crisp_user',
+        'PASSWORD': 'CrispAdmin@#$',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
+
+CORS_ALLOW_ALL_ORIGINS = True
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -205,5 +207,25 @@ CELERY_BEAT_SCHEDULE = {
     'check-feeds': {
         'task': 'core.tasks.publish_scheduled_feeds',
         'schedule': 60.0,  # Check every minute
+    },
+    'fetch-otx-feeds': {
+        'task': 'core.tasks.fetch_otx_threat_feeds',
+        'schedule': 3600.0,  # Fetch OTX feeds every hour
     }
 }
+
+# OTX (AlienVault Open Threat Exchange) settings
+OTX_SETTINGS = {
+    'ENABLED': True,
+    'FETCH_INTERVAL': 3600,  # Fetch every hour (in seconds)
+    'BATCH_SIZE': 50,  # Number of pulses to fetch per request
+    'INDICATOR_TYPES': [
+        'IPv4', 'IPv6', 'domain', 'hostname', 'URL', 'URI',
+        'FileHash-MD5', 'FileHash-SHA1', 'FileHash-SHA256',
+        'email', 'Mutex', 'CVE'
+    ],
+    'MAX_AGE_DAYS': 30,  # Only fetch pulses from last 30 days
+}
+
+# OTX API Key - should be set via environment variable
+OTX_API_KEY = os.environ.get('OTX_API_KEY', None)
