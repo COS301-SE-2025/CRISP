@@ -1,0 +1,12 @@
+{
+  "type": "indicator",
+  "spec_version": "2.1",
+  "id": "indicator--12345678-1234-5678-9abc-123456789012",
+  "created": "2023-01-01T00:00:00.000Z",
+  "modified": "2023-01-01T00:00:00.000Z",
+  "name": "Test Indicator with Sensitive Data",
+  "description": "This indicator contains IP 203.0.113.1 and domain test-malware.example.com",
+  "pattern_type": "stix",
+  "pattern": "[ipv4-addr:value = '203.0.113.1'] AND [domain-name:value = 'test-malware.example.com']",
+  "valid_from": "2023-01-01T00:00:00.000Z"
+}

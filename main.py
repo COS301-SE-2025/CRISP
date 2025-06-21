@@ -5,6 +5,7 @@ Demonstrates practical usage scenarios for threat intelligence sharing
 
 import sys
 import json
+import argparse
 from typing import List, Dict, Any
 from datetime import datetime
 
@@ -75,6 +76,27 @@ class ThreatIntelligenceProcessor:
             processed_feed.append(processed_threat)
         
         return processed_feed
+    
+    def process_stix_feed(self, stix_data: Dict, recipient_trust: str) -> Dict:
+        """
+        Process a STIX feed and anonymize based on recipient trust level
+        
+        Args:
+            stix_data: STIX bundle or object
+            recipient_trust: Trust level ("high", "medium", "low", "untrusted")
+            
+        Returns:
+            Processed STIX data with appropriate anonymization
+        """
+        anonymization_level = self.trust_levels.get(recipient_trust, AnonymizationLevel.FULL)
+        
+        # Process the STIX data
+        processed_stix = self.anonymization_context.anonymize_stix_object(
+            stix_data,
+            anonymization_level
+        )
+        
+        return json.loads(processed_stix)
     
     def auto_process_mixed_indicators(self, indicators: List[str], trust_level: str) -> Dict[str, Any]:
         """
@@ -216,6 +238,39 @@ def demonstrate_threat_intelligence_sharing():
             print()
 
 
+def demonstrate_stix_sharing():
+    """Demonstrate STIX data sharing"""
+    print("\n\n=== STIX Intelligence Sharing Demo ===\n")
+    
+    processor = ThreatIntelligenceProcessor()
+    
+    # Sample STIX Indicator
+    stix_indicator = {
+        "type": "indicator",
+        "spec_version": "2.1",
+        "id": "indicator--d81f86b8-975b-4c0b-875e-810c5ad40ac2",
+        "created": "2021-03-01T15:30:00.000Z",
+        "modified": "2021-03-01T15:30:00.000Z",
+        "name": "Malicious IP Address",
+        "description": "This IP address 192.168.1.100 was observed in malicious activity",
+        "indicator_types": ["malicious-activity"],
+        "pattern_type": "stix",
+        "pattern": "[ipv4-addr:value = '192.168.1.100']",
+        "valid_from": "2021-03-01T15:30:00.000Z",
+    }
+    
+    print("Original STIX Indicator:")
+    print(json.dumps(stix_indicator, indent=2))
+    
+    # Process STIX data for different trust levels
+    trust_levels = ["high", "medium", "low"]
+    
+    for trust in trust_levels:
+        print(f"\n--- Sharing with {trust.upper()} trust institution ---")
+        processed_stix = processor.process_stix_feed(stix_indicator, trust)
+        print(json.dumps(processed_stix, indent=2))
+
+
 def demonstrate_auto_detection():
     """Demonstrate automatic data type detection"""
     print("\n\n=== Auto-Detection Demonstration ===\n")
@@ -252,32 +307,6 @@ def demonstrate_auto_detection():
         print(f"Trust level: {results['trust_level']}")
         print(f"Anonymization level: {results['anonymization_level']}")
         print()
-
-
-def demonstrate_consistency():
-    """Demonstrate anonymization consistency"""
-    print("\n\n=== Anonymization Consistency Test ===\n")
-    
-    context = AnonymizationContext()
-    
-    # Test that same inputs produce same outputs
-    test_data = "192.168.1.100"
-    
-    print(f"Testing consistency with: {test_data}")
-    print("Running anonymization 5 times at FULL level:")
-    
-    results = []
-    for i in range(5):
-        result = context.execute_anonymization(
-            test_data, DataType.IP_ADDRESS, AnonymizationLevel.FULL
-        )
-        results.append(result)
-        print(f"  Run {i+1}: {result}")
-    
-    # Check if all results are the same
-    all_same = all(r == results[0] for r in results)
-    print(f"\nAll results identical: {all_same}")
-    print("✓ Anonymization is consistent!" if all_same else "✗ Inconsistency detected!")
 
 
 def interactive_mode():
@@ -329,45 +358,63 @@ def interactive_mode():
     print("Goodbye!")
 
 
+def parse_arguments():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(description='CRISP Anonymization System')
+    parser.add_argument('--mode', choices=['demo', 'interactive', 'test', 'stix'], 
+                        default='demo', help='Operation mode')
+    parser.add_argument('--file', help='Input file for STIX anonymization')
+    parser.add_argument('--trust', choices=['high', 'medium', 'low', 'untrusted'],
+                        default='medium', help='Trust level for anonymization')
+    parser.add_argument('--output', help='Output file for anonymized data')
+    
+    return parser.parse_args()
+
+
 def main():
     """Main application entry point"""
     print("CRISP Anonymization System")
     print("=" * 50)
     
-    if len(sys.argv) > 1:
-        mode = sys.argv[1].lower()
-        
-        if mode == "demo":
-            demonstrate_basic_usage()
-            demonstrate_threat_intelligence_sharing() 
-            demonstrate_auto_detection()
-            demonstrate_consistency()
-        elif mode == "interactive":
-            interactive_mode()
-        elif mode == "test":
-            # Run a quick test
-            context = AnonymizationContext()
-            result = context.auto_detect_and_anonymize("192.168.1.1", AnonymizationLevel.MEDIUM)
-            print(f"Quick test: 192.168.1.1 → {result}")
-        else:
-            print(f"Unknown mode: {mode}")
-            print("Available modes: demo, interactive, test")
-    else:
-        # Default: run all demonstrations
-        demonstrate_basic_usage()
-        demonstrate_threat_intelligence_sharing()
-        demonstrate_auto_detection() 
-        demonstrate_consistency()
-        
-        # Ask if user wants interactive mode
-        try:
-            choice = input("\nWould you like to try interactive mode? (y/n): ").strip().lower()
-            if choice in ['y', 'yes']:
-                interactive_mode()
-        except KeyboardInterrupt:
-            pass
+    args = parse_arguments()
     
-    print("\nThanks for using CRISP Anonymization System!")
+    if args.mode == "demo":
+        demonstrate_basic_usage()
+        demonstrate_threat_intelligence_sharing() 
+        demonstrate_auto_detection()
+        demonstrate_stix_sharing()
+    elif args.mode == "interactive":
+        interactive_mode()
+    elif args.mode == "test":
+        # Run a quick test
+        context = AnonymizationContext()
+        result = context.auto_detect_and_anonymize("192.168.1.1", AnonymizationLevel.MEDIUM)
+        print(f"Quick test: 192.168.1.1 → {result}")
+    elif args.mode == "stix":
+        # Process STIX data
+        if not args.file:
+            print("Error: --file parameter is required for STIX mode")
+            return
+        
+        try:
+            with open(args.file, 'r') as f:
+                stix_data = json.load(f)
+            
+            context = AnonymizationContext()
+            anonymization_level = getattr(AnonymizationLevel, args.trust.upper())
+            anonymized = context.anonymize_stix_object(stix_data, anonymization_level)
+            
+            if args.output:
+                with open(args.output, 'w') as f:
+                    f.write(anonymized)
+                print(f"Anonymized STIX data written to {args.output}")
+            else:
+                print(anonymized)
+        except Exception as e:
+            print(f"Error processing STIX data: {e}")
+    else:
+        print(f"Unknown mode: {args.mode}")
+        print("Available modes: demo, interactive, test, stix")
 
 
 if __name__ == "__main__":

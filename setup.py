@@ -7,8 +7,11 @@ import os
 
 # Read README file
 current_dir = os.path.abspath(os.path.dirname(__file__))
-with open(os.path.join(current_dir, "crisp_anonymization", "README.md"), encoding="utf-8") as f:
-    long_description = f.read()
+try:
+    with open(os.path.join(current_dir, "crisp_anonymization", "README.md"), encoding="utf-8") as f:
+        long_description = f.read()
+except FileNotFoundError:
+    long_description = "CRISP Anonymization System - A flexible system for anonymizing cybersecurity threat intelligence data"
 
 # Read version from __init__.py
 version = {}
@@ -23,7 +26,7 @@ setup(
     description="Flexible anonymization system for threat intelligence sharing",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/crisp-system/anonymization",
+    url="https://github.com/COS301-SE-2025/CRISP",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -53,27 +56,26 @@ setup(
             "mypy>=1.0.0",
             "isort>=5.10.0",
         ],
+        "stix": [
+            "stix2>=3.0.0",
+            "stix2-validator>=3.0.0",
+        ],
         "docs": [
             "sphinx>=5.0.0",
             "sphinx-rtd-theme>=1.2.0",
         ],
-        "enhanced": [
-            "requests>=2.28.0",
-            "cryptography>=38.0.0",
-            "pyyaml>=6.0",
-        ],
     },
     entry_points={
         "console_scripts": [
-            "crisp-anonymize=crisp_anonymization.demo:demonstrate_anonymization",
+            "crisp-anonymize=crisp_anonymization.main:main",
         ],
     },
     project_urls={
-        "Bug Reports": "https://github.com/crisp-system/anonymization/issues",
-        "Source": "https://github.com/crisp-system/anonymization",
-        "Documentation": "https://crisp-anonymization.readthedocs.io/",
+        "Bug Reports": "https://github.com/COS301-SE-2025/CRISP/issues",
+        "Source": "https://github.com/COS301-SE-2025/CRISP",
+        "Documentation": "https://github.com/COS301-SE-2025/CRISP/blob/documents/SRS.md",
     },
-    keywords="anonymization, threat-intelligence, cybersecurity, privacy, crisp",
+    keywords="anonymization, threat-intelligence, cybersecurity, privacy, crisp, stix, taxii",
     package_data={
         "crisp_anonymization": ["README.md"],
     },

@@ -1,3 +1,7 @@
+"""
+Custom exceptions for the CRISP Anonymization System
+"""
+
 class AnonymizationError(Exception):
     """Base exception for anonymization errors"""
     pass
