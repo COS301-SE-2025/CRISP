@@ -5,11 +5,13 @@ Complete OTX client and processor implementation.
 import requests
 import logging
 from typing import Dict, List, Optional, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from django.conf import settings
 from django.utils import timezone
 from django.db import transaction
 import stix2
+from stix2 import Report, Bundle, Indicator, Identity
+from dateutil.parser import isoparse
 
 from crisp_threat_intel.models import STIXObject, Organization, Collection, CollectionObject
 from crisp_threat_intel.factories.stix_factory import STIXObjectFactory
@@ -20,6 +22,26 @@ logger = logging.getLogger(__name__)
 class OTXAPIError(Exception):
     """Custom exception for OTX API errors"""
     pass
+
+
+def _clean_and_parse_timestamp(timestamp_str: str) -> datetime:
+    """
+    Safely converts an ISO format string from OTX to a timezone-aware datetime object
+    using the robust dateutil.parser.
+    """
+    if not timestamp_str:
+        return timezone.now()
+    try:
+        # isoparse is very flexible and handles various ISO 8601 formats,
+        # including 'Z' suffix and variable-length fractional seconds.
+        dt = isoparse(timestamp_str)
+        # Ensure the datetime object is timezone-aware for consistency
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt
+    except (ValueError, TypeError) as e:
+        logger.warning(f"Could not parse timestamp '{timestamp_str}' with dateutil: {e}. Using current time.")
+        return timezone.now()
 
 
 class OTXClient:
@@ -185,20 +207,8 @@ class OTXClient:
             return False
     
     def get_user_info(self) -> Dict[str, Any]:
-        """
-        Get information about the authenticated user.
-        
-        Returns:
-            User information dictionary
-        """
-        try:
-            response = self._make_request('/user/me')
-            logger.debug("Retrieved OTX user information")
-            return response
-            
-        except OTXAPIError as e:
-            logger.error(f"Failed to retrieve user info: {e}")
-            raise
+        """Get user information"""
+        return self._make_request('user/me')
 
 
 class OTXProcessor:
@@ -207,17 +217,10 @@ class OTXProcessor:
     """
     
     def __init__(self, organization: Organization, collection: Collection):
-        """
-        Initialize processor with target organization and collection.
-        
-        Args:
-            organization: Organization that will own the processed data
-            collection: Collection to store the processed STIX objects
-        """
         self.organization = organization
         self.collection = collection
-        self.client = OTXClient()
-        
+        self.client = OTXClient(settings.OTX_SETTINGS.get('API_KEY'))
+
     def convert_otx_pulse_to_stix(self, pulse: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
         Convert an OTX pulse to STIX objects.
@@ -231,51 +234,25 @@ class OTXProcessor:
         stix_objects = []
         
         try:
-            # Create a STIX Report object for the pulse
-            report_data = {
-                'name': pulse.get('name', 'Unknown Pulse'),
-                'description': pulse.get('description', ''),
-                'published': pulse.get('created', timezone.now().isoformat()),
-                'labels': ['threat-report'],
-                'object_refs': [],  # Will be populated with indicator references
-            }
-            
-            # Add external references
-            if pulse.get('references'):
-                report_data['external_references'] = [
-                    {'source_name': 'OTX', 'url': ref} 
-                    for ref in pulse['references'] if ref
-                ]
-            
-            # Add tags as labels if available
-            if pulse.get('tags'):
-                report_data['labels'].extend(pulse['tags'])
+            # The current factory does not support 'report' objects, which causes errors.
+            # We will skip creating a report and only process the indicators from the pulse.
             
             # Process indicators from the pulse
             indicators = pulse.get('indicators', [])
-            indicator_refs = []
             
             for indicator_data in indicators:
                 stix_indicator = self._convert_otx_indicator_to_stix(indicator_data, pulse)
                 if stix_indicator:
                     stix_objects.append(stix_indicator)
-                    indicator_refs.append(stix_indicator['id'])
             
-            # Update report with indicator references
-            if indicator_refs:
-                report_data['object_refs'] = indicator_refs
-                
-                # Create the report object using factory
-                report = STIXObjectFactory.create_object('report', report_data)
-                stix_objects.append(report)
-            
-            logger.info(f"Converted OTX pulse '{pulse.get('name')}' to {len(stix_objects)} STIX objects")
+            if stix_objects:
+                logger.info(f"Converted {len(stix_objects)} indicators from OTX pulse '{pulse.get('name')}'")
             
         except Exception as e:
             logger.error(f"Error converting OTX pulse to STIX: {e}")
             
         return stix_objects
-    
+
     def _convert_otx_indicator_to_stix(self, indicator: Dict[str, Any], pulse: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Convert an OTX indicator to a STIX indicator.
@@ -426,8 +403,8 @@ class OTXProcessor:
                 stix_id=stix_obj['id'],
                 stix_type=stix_obj['type'],
                 spec_version=stix_obj.get('spec_version', '2.1'),
-                created=datetime.fromisoformat(stix_obj['created'].replace('Z', '+00:00')),
-                modified=datetime.fromisoformat(stix_obj['modified'].replace('Z', '+00:00')),
+                created=_clean_and_parse_timestamp(stix_obj['created']),
+                modified=_clean_and_parse_timestamp(stix_obj['modified']),
                 created_by_ref=stix_obj.get('created_by_ref', ''),
                 revoked=stix_obj.get('revoked', False),
                 labels=stix_obj.get('labels', []),

@@ -277,3 +277,794 @@ WARNING 2025-06-21 09:27:19,830 basehttp 1973 126138668009024 "GET /static/admin
 WARNING 2025-06-21 09:27:19,831 basehttp 1973 126138659616320 "GET /static/admin/css/responsive.css HTTP/1.1" 404 179
 WARNING 2025-06-21 09:27:19,833 log 1973 126138684794432 Not Found: /static/admin/js/nav_sidebar.js
 WARNING 2025-06-21 09:27:19,838 basehttp 1973 126138684794432 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 404 179
+INFO 2025-06-21 09:41:19,175 feed_observers 1984 130235718762496 Connected feed observer signals
+INFO 2025-06-21 09:41:37,433 feed_observers 1985 139253998972928 Connected feed observer signals
+INFO 2025-06-21 09:41:44,942 feed_observers 1986 132193279033344 Connected feed observer signals
+INFO 2025-06-21 09:42:02,979 feed_observers 1987 133739733168128 Connected feed observer signals
+INFO 2025-06-21 09:42:13,536 feed_observers 1988 130461122400256 Connected feed observer signals
+INFO 2025-06-21 09:42:15,007 otx_service 1988 130461122400256 OTX API connection test successful
+INFO 2025-06-21 09:42:19,234 otx_service 1988 130461122400256 Retrieved 5 pulses from OTX
+INFO 2025-06-21 09:42:26,246 feed_observers 1989 134360158957568 Connected feed observer signals
+INFO 2025-06-21 09:42:27,641 otx_service 1989 134360158957568 OTX API connection test successful
+INFO 2025-06-21 09:42:29,000 otx_service 1989 134360158957568 Fetching OTX pulses modified since 2025-06-14 09:42:29.000743+00:00
+INFO 2025-06-21 09:42:30,625 otx_service 1989 134360158957568 Retrieved 50 pulses from OTX
+ERROR 2025-06-21 09:42:30,627 otx_service 1989 134360158957568 Error converting OTX pulse to STIX: Unsupported STIX object type: report
+ERROR 2025-06-21 09:42:30,848 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:30.62735+00:00'
+ERROR 2025-06-21 09:42:30,908 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:30.62757+00:00'
+ERROR 2025-06-21 09:42:31,322 otx_service 1989 134360158957568 Error converting OTX pulse to STIX: Unsupported STIX object type: report
+ERROR 2025-06-21 09:42:31,507 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.32254+00:00'
+ERROR 2025-06-21 09:42:31,690 otx_service 1989 134360158957568 Error converting OTX pulse to STIX: Unsupported STIX object type: report
+ERROR 2025-06-21 09:42:31,911 otx_service 1989 134360158957568 Error converting OTX pulse to STIX: Unsupported STIX object type: report
+ERROR 2025-06-21 09:42:32,022 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.88224+00:00'
+ERROR 2025-06-21 09:42:32,042 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.88238+00:00'
+ERROR 2025-06-21 09:42:32,066 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.88251+00:00'
+ERROR 2025-06-21 09:42:32,302 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.8846+00:00'
+ERROR 2025-06-21 09:42:32,367 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.88506+00:00'
+ERROR 2025-06-21 09:42:32,472 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.88617+00:00'
+ERROR 2025-06-21 09:42:32,483 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.88636+00:00'
+ERROR 2025-06-21 09:42:32,506 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.88697+00:00'
+ERROR 2025-06-21 09:42:32,527 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.88734+00:00'
+ERROR 2025-06-21 09:42:32,561 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.88825+00:00'
+ERROR 2025-06-21 09:42:32,611 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.88872+00:00'
+ERROR 2025-06-21 09:42:32,634 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.88906+00:00'
+ERROR 2025-06-21 09:42:32,657 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.88969+00:00'
+ERROR 2025-06-21 09:42:32,704 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.89055+00:00'
+ERROR 2025-06-21 09:42:32,731 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.89094+00:00'
+ERROR 2025-06-21 09:42:32,746 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.89143+00:00'
+ERROR 2025-06-21 09:42:32,750 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.89164+00:00'
+ERROR 2025-06-21 09:42:32,796 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.89262+00:00'
+ERROR 2025-06-21 09:42:32,869 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.89471+00:00'
+ERROR 2025-06-21 09:42:32,871 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.89475+00:00'
+ERROR 2025-06-21 09:42:32,890 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.89507+00:00'
+ERROR 2025-06-21 09:42:32,906 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.89569+00:00'
+ERROR 2025-06-21 09:42:32,923 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.89597+00:00'
+ERROR 2025-06-21 09:42:32,930 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.89611+00:00'
+ERROR 2025-06-21 09:42:32,987 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.89691+00:00'
+ERROR 2025-06-21 09:42:32,988 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.89695+00:00'
+ERROR 2025-06-21 09:42:32,995 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.89708+00:00'
+ERROR 2025-06-21 09:42:32,999 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.89716+00:00'
+ERROR 2025-06-21 09:42:33,000 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.89721+00:00'
+ERROR 2025-06-21 09:42:33,016 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.89755+00:00'
+ERROR 2025-06-21 09:42:33,111 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.89921+00:00'
+ERROR 2025-06-21 09:42:33,112 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.89928+00:00'
+ERROR 2025-06-21 09:42:33,122 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.89964+00:00'
+ERROR 2025-06-21 09:42:33,159 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.90011+00:00'
+ERROR 2025-06-21 09:42:33,161 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.90015+00:00'
+ERROR 2025-06-21 09:42:33,165 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.90027+00:00'
+ERROR 2025-06-21 09:42:33,196 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.90069+00:00'
+ERROR 2025-06-21 09:42:33,248 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.90162+00:00'
+ERROR 2025-06-21 09:42:33,268 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.90191+00:00'
+ERROR 2025-06-21 09:42:33,383 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.9051+00:00'
+ERROR 2025-06-21 09:42:33,415 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.9064+00:00'
+ERROR 2025-06-21 09:42:33,535 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.90983+00:00'
+ERROR 2025-06-21 09:42:33,553 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.91025+00:00'
+ERROR 2025-06-21 09:42:33,554 otx_service 1989 134360158957568 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:42:31.91039+00:00'
+INFO 2025-06-21 09:51:02,994 feed_observers 1991 129173062082560 Connected feed observer signals
+INFO 2025-06-21 09:51:05,041 otx_service 1991 129173062082560 OTX API connection test successful
+INFO 2025-06-21 09:51:06,428 otx_service 1991 129173062082560 Fetching OTX pulses modified since 2025-06-14 09:51:06.428312+00:00
+INFO 2025-06-21 09:51:07,235 otx_service 1991 129173062082560 Retrieved 50 pulses from OTX
+INFO 2025-06-21 09:51:07,238 otx_service 1991 129173062082560 Converted 19 indicators from OTX pulse 'China-Nexus Threat Actor Actively Exploiting Ivanti Endpoint Manager Mobile (CVE-2025-4428) Vulnerability'
+WARNING 2025-06-21 09:51:07,369 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:07.23745Z': Invalid isoformat string: '2025-06-21T09:51:07.23745+00:00'. Using current time.
+WARNING 2025-06-21 09:51:07,370 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:07.23745Z': Invalid isoformat string: '2025-06-21T09:51:07.23745+00:00'. Using current time.
+INFO 2025-06-21 09:51:08,628 otx_service 1991 129173062082560 Converted 12 indicators from OTX pulse 'Cybercriminals Abusing Vercel to Deliver Remote Access Malware'
+WARNING 2025-06-21 09:51:08,739 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:08.62856Z': Invalid isoformat string: '2025-06-21T09:51:08.62856+00:00'. Using current time.
+WARNING 2025-06-21 09:51:08,739 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:08.62856Z': Invalid isoformat string: '2025-06-21T09:51:08.62856+00:00'. Using current time.
+INFO 2025-06-21 09:51:09,062 otx_service 1991 129173062082560 Converted 1 indicators from OTX pulse 'TxTag Takedown: Busting Phishing Email Schemes'
+INFO 2025-06-21 09:51:09,267 otx_service 1991 129173062082560 Converted 461 indicators from OTX pulse 'Threat actor Banana Squad exploits GitHub repos in new campaign'
+WARNING 2025-06-21 09:51:09,471 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.23858Z': Invalid isoformat string: '2025-06-21T09:51:09.23858+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,472 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.23858Z': Invalid isoformat string: '2025-06-21T09:51:09.23858+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,502 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.23875Z': Invalid isoformat string: '2025-06-21T09:51:09.23875+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,503 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.23875Z': Invalid isoformat string: '2025-06-21T09:51:09.23875+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,653 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.23948Z': Invalid isoformat string: '2025-06-21T09:51:09.23948+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,653 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.23948Z': Invalid isoformat string: '2025-06-21T09:51:09.23948+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,680 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24002Z': Invalid isoformat string: '2025-06-21T09:51:09.24002+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,681 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24002Z': Invalid isoformat string: '2025-06-21T09:51:09.24002+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,788 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24091Z': Invalid isoformat string: '2025-06-21T09:51:09.24091+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,788 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24091Z': Invalid isoformat string: '2025-06-21T09:51:09.24091+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,839 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24144Z': Invalid isoformat string: '2025-06-21T09:51:09.24144+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,840 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24144Z': Invalid isoformat string: '2025-06-21T09:51:09.24144+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,862 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24166Z': Invalid isoformat string: '2025-06-21T09:51:09.24166+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,863 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24166Z': Invalid isoformat string: '2025-06-21T09:51:09.24166+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,881 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24201Z': Invalid isoformat string: '2025-06-21T09:51:09.24201+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,882 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24201Z': Invalid isoformat string: '2025-06-21T09:51:09.24201+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,891 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24206Z': Invalid isoformat string: '2025-06-21T09:51:09.24206+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,891 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24206Z': Invalid isoformat string: '2025-06-21T09:51:09.24206+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,898 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24227Z': Invalid isoformat string: '2025-06-21T09:51:09.24227+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,899 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24227Z': Invalid isoformat string: '2025-06-21T09:51:09.24227+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,919 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24251Z': Invalid isoformat string: '2025-06-21T09:51:09.24251+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,920 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24251Z': Invalid isoformat string: '2025-06-21T09:51:09.24251+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,974 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24299Z': Invalid isoformat string: '2025-06-21T09:51:09.24299+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,975 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24299Z': Invalid isoformat string: '2025-06-21T09:51:09.24299+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,985 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24308Z': Invalid isoformat string: '2025-06-21T09:51:09.24308+00:00'. Using current time.
+WARNING 2025-06-21 09:51:09,986 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24308Z': Invalid isoformat string: '2025-06-21T09:51:09.24308+00:00'. Using current time.
+WARNING 2025-06-21 09:51:10,007 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24325Z': Invalid isoformat string: '2025-06-21T09:51:09.24325+00:00'. Using current time.
+WARNING 2025-06-21 09:51:10,008 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24325Z': Invalid isoformat string: '2025-06-21T09:51:09.24325+00:00'. Using current time.
+WARNING 2025-06-21 09:51:10,071 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24459Z': Invalid isoformat string: '2025-06-21T09:51:09.24459+00:00'. Using current time.
+WARNING 2025-06-21 09:51:10,072 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24459Z': Invalid isoformat string: '2025-06-21T09:51:09.24459+00:00'. Using current time.
+WARNING 2025-06-21 09:51:10,181 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24735Z': Invalid isoformat string: '2025-06-21T09:51:09.24735+00:00'. Using current time.
+WARNING 2025-06-21 09:51:10,182 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24735Z': Invalid isoformat string: '2025-06-21T09:51:09.24735+00:00'. Using current time.
+WARNING 2025-06-21 09:51:10,240 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24835Z': Invalid isoformat string: '2025-06-21T09:51:09.24835+00:00'. Using current time.
+WARNING 2025-06-21 09:51:10,241 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24835Z': Invalid isoformat string: '2025-06-21T09:51:09.24835+00:00'. Using current time.
+WARNING 2025-06-21 09:51:10,277 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24886Z': Invalid isoformat string: '2025-06-21T09:51:09.24886+00:00'. Using current time.
+WARNING 2025-06-21 09:51:10,278 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24886Z': Invalid isoformat string: '2025-06-21T09:51:09.24886+00:00'. Using current time.
+WARNING 2025-06-21 09:51:10,306 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24935Z': Invalid isoformat string: '2025-06-21T09:51:09.24935+00:00'. Using current time.
+WARNING 2025-06-21 09:51:10,307 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.24935Z': Invalid isoformat string: '2025-06-21T09:51:09.24935+00:00'. Using current time.
+WARNING 2025-06-21 09:51:10,404 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.25027Z': Invalid isoformat string: '2025-06-21T09:51:09.25027+00:00'. Using current time.
+WARNING 2025-06-21 09:51:10,405 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.25027Z': Invalid isoformat string: '2025-06-21T09:51:09.25027+00:00'. Using current time.
+WARNING 2025-06-21 09:51:10,439 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.25063Z': Invalid isoformat string: '2025-06-21T09:51:09.25063+00:00'. Using current time.
+WARNING 2025-06-21 09:51:10,440 otx_service 1991 129173062082560 Could not parse timestamp '2025-06-21T09:51:09.25063Z': Invalid isoformat string: '2025-06-21T09:51:09.25063+00:00'. Using current time.
+INFO 2025-06-21 09:53:24,980 feed_observers 1993 138303236382720 Connected feed observer signals
+INFO 2025-06-21 09:55:22,050 feed_observers 1995 127011411468288 Connected feed observer signals
+INFO 2025-06-21 09:55:23,984 otx_service 1995 127011411468288 OTX API connection test successful
+INFO 2025-06-21 09:55:25,383 otx_service 1995 127011411468288 Fetching OTX pulses modified since 2025-06-14 09:55:25.383828+00:00
+INFO 2025-06-21 09:55:26,785 otx_service 1995 127011411468288 Retrieved 50 pulses from OTX
+INFO 2025-06-21 09:55:26,787 otx_service 1995 127011411468288 Converted 19 indicators from OTX pulse 'China-Nexus Threat Actor Actively Exploiting Ivanti Endpoint Manager Mobile (CVE-2025-4428) Vulnerability'
+INFO 2025-06-21 09:55:27,430 otx_service 1995 127011411468288 Converted 12 indicators from OTX pulse 'Cybercriminals Abusing Vercel to Deliver Remote Access Malware'
+INFO 2025-06-21 09:55:27,893 otx_service 1995 127011411468288 Converted 1 indicators from OTX pulse 'TxTag Takedown: Busting Phishing Email Schemes'
+INFO 2025-06-21 09:55:28,130 otx_service 1995 127011411468288 Converted 461 indicators from OTX pulse 'Threat actor Banana Squad exploits GitHub repos in new campaign'
+INFO 2025-06-21 09:55:31,488 otx_service 1995 127011411468288 Converted 29 indicators from OTX pulse 'BERT RANSOMWARE - THE RAVEN FILE'
+INFO 2025-06-21 09:55:32,182 otx_service 1995 127011411468288 Converted 6 indicators from OTX pulse 'Caught in the Act: Uncovering SpyNote in Unexpected Places'
+INFO 2025-06-21 09:55:32,545 otx_service 1995 127011411468288 Converted 10 indicators from OTX pulse 'DMV-Themed Phishing Campaign Targeting U.S. Citizens'
+INFO 2025-06-21 09:55:32,863 otx_service 1995 127011411468288 Converted 22 indicators from OTX pulse 'Malicious Loan App Removed from iOS and Google Play App Store Posed Severe Risks to Users'
+INFO 2025-06-21 09:55:33,355 otx_service 1995 127011411468288 Converted 40 indicators from OTX pulse 'Crypto Phishing Applications On The Play Store'
+INFO 2025-06-21 09:55:34,023 otx_service 1995 127011411468288 Converted 6 indicators from OTX pulse 'Hiding in GitHub'
+INFO 2025-06-21 09:55:34,377 otx_service 1995 127011411468288 Converted 31 indicators from OTX pulse 'Steam Phishing: Popular as Ever'
+INFO 2025-06-21 09:55:34,911 otx_service 1995 127011411468288 Converted 29 indicators from OTX pulse 'Resurgence of the Prometei Botnet'
+INFO 2025-06-21 09:55:35,455 otx_service 1995 127011411468288 Converted 53 indicators from OTX pulse 'The Sting of Fake Kling: Facebook Malvertising Lures Victims to Fake AI Generation Website'
+INFO 2025-06-21 09:55:37,117 otx_service 1995 127011411468288 Converted 6 indicators from OTX pulse 'TxTag Takedown: Busting Phishing Email Schemes'
+INFO 2025-06-21 09:55:37,422 otx_service 1995 127011411468288 Converted 2 indicators from OTX pulse 'Stealthy GitHub Malware Campaign Targets Devs'
+INFO 2025-06-21 09:55:37,712 otx_service 1995 127011411468288 Converted 1376 indicators from OTX pulse 'Part 2: Tracking LummaC2 Infrastructure'
+INFO 2025-06-21 09:55:43,325 otx_service 1995 127011411468288 Converted 189 indicators from OTX pulse 'Analyzing SERPENTINE#CLOUD: Threat Actors Abuse Cloudflare Tunnels to Infect Systems with Stealthy Python-Based Malware'
+INFO 2025-06-21 09:55:45,770 otx_service 1995 127011411468288 Converted 277 indicators from OTX pulse 'Threat actor Banana Squad exploits GitHub repos in new campaign'
+INFO 2025-06-21 09:55:47,716 otx_service 1995 127011411468288 Converted 20 indicators from OTX pulse 'Inside the BlueNoroff Web3 macOS Intrusion Analysis'
+INFO 2025-06-21 09:55:48,826 otx_service 1995 127011411468288 Converted 2 indicators from OTX pulse 'Analysis of a Malicious WordPress Plugin: The Covert Redirector'
+INFO 2025-06-21 09:55:49,087 otx_service 1995 127011411468288 Converted 2 indicators from OTX pulse 'What's in an ASP? Creative Phishing Attack on Prominent Academics and Critics of Russia'
+INFO 2025-06-21 09:55:49,277 otx_service 1995 127011411468288 Converted 5 indicators from OTX pulse 'SAP Zero – Frostbite: How Russian RaaS Actor Qilin Exploited CVE-2025-31324 Weeks Before its Public Disclosure'
+INFO 2025-06-21 09:55:49,546 otx_service 1995 127011411468288 Converted 55 indicators from OTX pulse 'Critical Langflow Vulnerability (CVE-2025-3248) Actively Exploited to Deliver Flodrix Botnet'
+INFO 2025-06-21 09:55:50,515 otx_service 1995 127011411468288 Converted 12 indicators from OTX pulse 'May 2025 APT Group Trends (South Korea)'
+INFO 2025-06-21 09:55:50,882 otx_service 1995 127011411468288 Converted 11 indicators from OTX pulse 'May 2025 Infostealer Trend Report'
+INFO 2025-06-21 09:55:51,240 otx_service 1995 127011411468288 Converted 8 indicators from OTX pulse 'Warning Against Distribution of Malware Disguised as Research Papers'
+INFO 2025-06-21 09:55:51,546 otx_service 1995 127011411468288 Converted 7 indicators from OTX pulse 'Masslogger Fileless Variant – Spreads via .VBE, Hides in Registry'
+INFO 2025-06-21 09:55:51,839 otx_service 1995 127011411468288 Converted 69 indicators from OTX pulse 'Famous Chollima deploying Python version of GolangGhost RAT'
+INFO 2025-06-21 09:55:54,213 otx_service 1995 127011411468288 Converted 19 indicators from OTX pulse 'Fake Minecraft mods distributed by the Stargazers Ghost Network to steal gamers’ data'
+INFO 2025-06-21 09:55:54,932 otx_service 1995 127011411468288 Converted 14 indicators from OTX pulse 'Amatera Stealer: Rebranded ACR Stealer With Improved Evasion, Sophistication'
+WARNING 2025-06-21 09:55:55,402 otx_service 1995 127011411468288 Could not create STIX pattern for indicator type: cidr
+INFO 2025-06-21 09:55:55,444 otx_service 1995 127011411468288 Converted 406 indicators from OTX pulse 'New FIN7-Linked Infrastructure, PowerNet Loader, and Fake Update Attacks'
+INFO 2025-06-21 09:55:58,191 otx_service 1995 127011411468288 Converted 19 indicators from OTX pulse 'GitHub's Dark Side: Unveiling Malware Disguised as Cracks, Hacks, and Crypto Tools'
+INFO 2025-06-21 09:55:58,684 otx_service 1995 127011411468288 Converted 52 indicators from OTX pulse 'From ClickFix deception to information stealer deployment'
+INFO 2025-06-21 09:55:59,669 otx_service 1995 127011411468288 Converted 20 indicators from OTX pulse 'Fog Ransomware: Unusual Toolset Used in Recent Attack'
+INFO 2025-06-21 09:56:00,154 otx_service 1995 127011411468288 Converted 3 indicators from OTX pulse 'New ELF malware on Shellshock: the ChinaZ'
+INFO 2025-06-21 09:56:00,363 otx_service 1995 127011411468288 Converted 55 indicators from OTX pulse 'Exploring a New KimJongRAT Stealer Variant and Its PowerShell Implementation'
+INFO 2025-06-21 09:56:01,912 otx_service 1995 127011411468288 Converted 18 indicators from OTX pulse 'AsyncRAT Campaign Continues to Evade Endpoint Detection'
+INFO 2025-06-21 09:56:03,798 otx_service 1995 127011411468288 Converted 10 indicators from OTX pulse 'Uncovering a Tor-Enabled Docker Exploit'
+INFO 2025-06-21 09:56:05,219 otx_service 1995 127011411468288 Converted 90 indicators from OTX pulse 'Another Confluence Bites the Dust: Falling to ELPACO-team Ransomware'
+INFO 2025-06-21 09:56:06,502 otx_service 1995 127011411468288 Converted 42 indicators from OTX pulse 'BlueNoroff introduces new methods bypassing MoTW'
+INFO 2025-06-21 09:56:08,695 otx_service 1995 127011411468288 Converted 16 indicators from OTX pulse 'Operation RoundPress targeting high-value webmail servers'
+INFO 2025-06-21 09:56:09,852 otx_service 1995 127011411468288 Converted 17 indicators from OTX pulse 'Fileless AsyncRAT Distributed Via Clickfix Technique Targeting German Speaking Users'
+INFO 2025-06-21 09:56:10,376 otx_service 1995 127011411468288 Converted 21 indicators from OTX pulse 'Clone, Compile, Compromise: Open-Source Malware Trap on GitHub'
+INFO 2025-06-21 09:56:11,207 otx_service 1995 127011411468288 Converted 8 indicators from OTX pulse 'More Steganography!'
+INFO 2025-06-21 09:56:11,544 otx_service 1995 127011411468288 Converted 2 indicators from OTX pulse 'How Interlock Ransomware Affects the Defense Industrial Base Supply Chain'
+INFO 2025-06-21 09:56:11,847 otx_service 1995 127011411468288 Converted 62 indicators from OTX pulse 'Shared SSH Keys Expose Phishing Infrastructure Targeting Kuwait'
+INFO 2025-06-21 09:56:12,889 otx_service 1995 127011411468288 Converted 5 indicators from OTX pulse 'Mass Scanning and Exploit Campaigns'
+INFO 2025-06-21 09:56:13,154 otx_service 1995 127011411468288 Converted 61 indicators from OTX pulse 'Part 2: Compromised WordPress Pages and Malware Campaigns'
+INFO 2025-06-21 09:56:14,169 otx_service 1995 127011411468288 Converted 10 indicators from OTX pulse 'Yet Another NodeJS Backdoor (YaNB): A Modern Challenge'
+INFO 2025-06-21 09:56:14,573 otx_service 1995 127011411468288 Converted 26 indicators from OTX pulse 'Operation RoundPress targeting high-value webmail servers'
+INFO 2025-06-21 09:56:15,583 otx_service 1995 127011411468288 OTX processing complete. Processed 50/50 pulses, created 3736 objects
+INFO 2025-06-21 09:57:48,169 feed_observers 1997 126507909857280 Connected feed observer signals
+INFO 2025-06-21 09:57:49,208 feed_observers 1998 129039975108608 Connected feed observer signals
+INFO 2025-06-21 09:57:49,257 autoreload 1998 129039975108608 Watching for file changes with StatReloader
+INFO 2025-06-21 09:57:53,553 basehttp 1998 129039888021056 "GET / HTTP/1.1" 200 2922
+WARNING 2025-06-21 09:57:54,143 log 1998 129039888021056 Not Found: /favicon.ico
+WARNING 2025-06-21 09:57:54,145 basehttp 1998 129039888021056 "GET /favicon.ico HTTP/1.1" 404 179
+INFO 2025-06-21 09:58:10,843 basehttp 1998 129039888021056 "GET /dashboard/ HTTP/1.1" 302 0
+WARNING 2025-06-21 09:58:10,849 log 1998 129039888021056 Not Found: /accounts/login/
+WARNING 2025-06-21 09:58:10,851 basehttp 1998 129039888021056 "GET /accounts/login/?next=/dashboard/ HTTP/1.1" 404 179
+INFO 2025-06-21 09:58:12,940 basehttp 1998 129039888021056 "GET /admin/ HTTP/1.1" 302 0
+INFO 2025-06-21 09:58:13,032 basehttp 1998 129039888021056 "GET /admin/login/?next=/admin/ HTTP/1.1" 200 4181
+WARNING 2025-06-21 09:58:13,106 log 1998 129039888021056 Not Found: /static/admin/css/base.css
+WARNING 2025-06-21 09:58:13,108 basehttp 1998 129039888021056 "GET /static/admin/css/base.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:13,124 log 1998 129039809377856 Not Found: /static/admin/css/dark_mode.css
+WARNING 2025-06-21 09:58:13,128 log 1998 129039800985152 Not Found: /static/admin/css/nav_sidebar.css
+WARNING 2025-06-21 09:58:13,131 log 1998 129039792592448 Not Found: /static/admin/css/login.css
+WARNING 2025-06-21 09:58:13,135 log 1998 129039784199744 Not Found: /static/admin/css/responsive.css
+WARNING 2025-06-21 09:58:13,139 log 1998 129039775807040 Not Found: /static/admin/js/theme.js
+WARNING 2025-06-21 09:58:13,141 basehttp 1998 129039809377856 "GET /static/admin/css/dark_mode.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:13,141 basehttp 1998 129039800985152 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:13,144 basehttp 1998 129039792592448 "GET /static/admin/css/login.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:13,146 basehttp 1998 129039784199744 "GET /static/admin/css/responsive.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:13,150 log 1998 129039809377856 Not Found: /static/admin/js/nav_sidebar.js
+WARNING 2025-06-21 09:58:13,150 basehttp 1998 129039775807040 "GET /static/admin/js/theme.js HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:13,154 basehttp 1998 129039809377856 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 404 179
+INFO 2025-06-21 09:58:21,329 basehttp 1998 129039809377856 "POST /admin/login/?next=/admin/ HTTP/1.1" 200 4342
+WARNING 2025-06-21 09:58:21,347 log 1998 129039809377856 Not Found: /static/admin/css/base.css
+WARNING 2025-06-21 09:58:21,348 basehttp 1998 129039809377856 "GET /static/admin/css/base.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:21,353 log 1998 129039888021056 Not Found: /static/admin/css/dark_mode.css
+WARNING 2025-06-21 09:58:21,356 log 1998 129039775807040 Not Found: /static/admin/css/nav_sidebar.css
+WARNING 2025-06-21 09:58:21,358 log 1998 129039784199744 Not Found: /static/admin/css/login.css
+WARNING 2025-06-21 09:58:21,360 log 1998 129039800985152 Not Found: /static/admin/js/theme.js
+WARNING 2025-06-21 09:58:21,363 log 1998 129039792592448 Not Found: /static/admin/css/responsive.css
+WARNING 2025-06-21 09:58:21,367 basehttp 1998 129039888021056 "GET /static/admin/css/dark_mode.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:21,370 basehttp 1998 129039775807040 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:21,372 basehttp 1998 129039784199744 "GET /static/admin/css/login.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:21,373 basehttp 1998 129039800985152 "GET /static/admin/js/theme.js HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:21,377 log 1998 129039888021056 Not Found: /static/admin/js/nav_sidebar.js
+WARNING 2025-06-21 09:58:21,377 basehttp 1998 129039792592448 "GET /static/admin/css/responsive.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:21,384 basehttp 1998 129039888021056 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 404 179
+INFO 2025-06-21 09:58:27,246 basehttp 1998 129039888021056 "GET /admin/ HTTP/1.1" 302 0
+INFO 2025-06-21 09:58:27,260 basehttp 1998 129039888021056 "GET /admin/login/?next=/admin/ HTTP/1.1" 200 4181
+WARNING 2025-06-21 09:58:27,324 log 1998 129039888021056 Not Found: /static/admin/css/base.css
+WARNING 2025-06-21 09:58:27,325 basehttp 1998 129039888021056 "GET /static/admin/css/base.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:27,331 log 1998 129039809377856 Not Found: /static/admin/css/dark_mode.css
+WARNING 2025-06-21 09:58:27,335 log 1998 129039792592448 Not Found: /static/admin/css/nav_sidebar.css
+WARNING 2025-06-21 09:58:27,337 log 1998 129039800985152 Not Found: /static/admin/css/login.css
+WARNING 2025-06-21 09:58:27,338 log 1998 129039784199744 Not Found: /static/admin/css/responsive.css
+WARNING 2025-06-21 09:58:27,340 log 1998 129039775807040 Not Found: /static/admin/js/theme.js
+WARNING 2025-06-21 09:58:27,341 basehttp 1998 129039809377856 "GET /static/admin/css/dark_mode.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:27,344 basehttp 1998 129039792592448 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:27,344 basehttp 1998 129039800985152 "GET /static/admin/css/login.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:27,345 basehttp 1998 129039784199744 "GET /static/admin/css/responsive.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:27,347 basehttp 1998 129039775807040 "GET /static/admin/js/theme.js HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:27,351 log 1998 129039809377856 Not Found: /static/admin/js/nav_sidebar.js
+WARNING 2025-06-21 09:58:27,357 basehttp 1998 129039809377856 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 404 179
+INFO 2025-06-21 09:58:39,912 basehttp 1998 129039809377856 "POST /admin/login/?next=/admin/ HTTP/1.1" 200 4342
+WARNING 2025-06-21 09:58:39,929 log 1998 129039809377856 Not Found: /static/admin/css/base.css
+WARNING 2025-06-21 09:58:39,930 basehttp 1998 129039809377856 "GET /static/admin/css/base.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:39,934 log 1998 129039888021056 Not Found: /static/admin/css/dark_mode.css
+WARNING 2025-06-21 09:58:39,937 log 1998 129039775807040 Not Found: /static/admin/css/nav_sidebar.css
+WARNING 2025-06-21 09:58:39,940 log 1998 129039784199744 Not Found: /static/admin/css/login.css
+WARNING 2025-06-21 09:58:39,943 log 1998 129039800985152 Not Found: /static/admin/css/responsive.css
+WARNING 2025-06-21 09:58:39,945 log 1998 129039792592448 Not Found: /static/admin/js/theme.js
+WARNING 2025-06-21 09:58:39,947 basehttp 1998 129039888021056 "GET /static/admin/css/dark_mode.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:39,948 basehttp 1998 129039775807040 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:39,950 basehttp 1998 129039784199744 "GET /static/admin/css/login.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:39,950 basehttp 1998 129039800985152 "GET /static/admin/css/responsive.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:39,952 basehttp 1998 129039792592448 "GET /static/admin/js/theme.js HTTP/1.1" 404 179
+WARNING 2025-06-21 09:58:39,956 log 1998 129039775807040 Not Found: /static/admin/js/nav_sidebar.js
+WARNING 2025-06-21 09:58:39,960 basehttp 1998 129039775807040 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 404 179
+INFO 2025-06-21 09:59:44,145 feed_observers 2007 124415931174912 Connected feed observer signals
+INFO 2025-06-21 09:59:45,130 feed_observers 2008 140053272092672 Connected feed observer signals
+INFO 2025-06-21 09:59:45,182 autoreload 2008 140053272092672 Watching for file changes with StatReloader
+INFO 2025-06-21 09:59:47,843 basehttp 2008 140053112157760 "GET / HTTP/1.1" 200 2922
+INFO 2025-06-21 09:59:51,889 basehttp 2008 140053112157760 "GET /admin/ HTTP/1.1" 302 0
+INFO 2025-06-21 09:59:51,948 basehttp 2008 140053112157760 "GET /admin/login/?next=/admin/ HTTP/1.1" 200 4181
+WARNING 2025-06-21 09:59:52,032 log 2008 140053112157760 Not Found: /static/admin/css/base.css
+WARNING 2025-06-21 09:59:52,034 basehttp 2008 140053112157760 "GET /static/admin/css/base.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:59:52,052 log 2008 140053103765056 Not Found: /static/admin/css/dark_mode.css
+WARNING 2025-06-21 09:59:52,055 basehttp 2008 140053103765056 "GET /static/admin/css/dark_mode.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:59:52,063 log 2008 140053095372352 Not Found: /static/admin/css/nav_sidebar.css
+WARNING 2025-06-21 09:59:52,067 log 2008 140053086979648 Not Found: /static/admin/css/login.css
+WARNING 2025-06-21 09:59:52,070 log 2008 140053103765056 Not Found: /static/admin/js/nav_sidebar.js
+WARNING 2025-06-21 09:59:52,075 log 2008 140053078586944 Not Found: /static/admin/css/responsive.css
+WARNING 2025-06-21 09:59:52,081 log 2008 140053070194240 Not Found: /static/admin/js/theme.js
+WARNING 2025-06-21 09:59:52,082 basehttp 2008 140053086979648 "GET /static/admin/css/login.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:59:52,083 basehttp 2008 140053103765056 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 404 179
+WARNING 2025-06-21 09:59:52,083 basehttp 2008 140053095372352 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:59:52,088 basehttp 2008 140053078586944 "GET /static/admin/css/responsive.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:59:52,090 basehttp 2008 140053070194240 "GET /static/admin/js/theme.js HTTP/1.1" 404 179
+INFO 2025-06-21 09:59:58,570 basehttp 2008 140053103765056 "POST /admin/login/?next=/admin/ HTTP/1.1" 302 0
+INFO 2025-06-21 09:59:58,642 basehttp 2008 140053103765056 "GET /admin/ HTTP/1.1" 200 8723
+WARNING 2025-06-21 09:59:58,704 log 2008 140053103765056 Not Found: /static/admin/css/base.css
+WARNING 2025-06-21 09:59:58,705 basehttp 2008 140053103765056 "GET /static/admin/css/base.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:59:58,712 log 2008 140053070194240 Not Found: /static/admin/css/dashboard.css
+WARNING 2025-06-21 09:59:58,714 log 2008 140053078586944 Not Found: /static/admin/css/dark_mode.css
+WARNING 2025-06-21 09:59:58,716 log 2008 140053095372352 Not Found: /static/admin/css/nav_sidebar.css
+WARNING 2025-06-21 09:59:58,719 log 2008 140053086979648 Not Found: /static/admin/css/responsive.css
+WARNING 2025-06-21 09:59:58,722 log 2008 140053112157760 Not Found: /static/admin/js/theme.js
+WARNING 2025-06-21 09:59:58,723 basehttp 2008 140053070194240 "GET /static/admin/css/dashboard.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:59:58,725 basehttp 2008 140053078586944 "GET /static/admin/css/dark_mode.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:59:58,727 basehttp 2008 140053095372352 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:59:58,731 basehttp 2008 140053086979648 "GET /static/admin/css/responsive.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:59:58,734 basehttp 2008 140053112157760 "GET /static/admin/js/theme.js HTTP/1.1" 404 179
+WARNING 2025-06-21 09:59:58,739 log 2008 140053070194240 Not Found: /static/admin/js/nav_sidebar.js
+WARNING 2025-06-21 09:59:58,765 basehttp 2008 140053070194240 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 404 179
+INFO 2025-06-21 10:01:26,594 feed_observers 2017 136246013870080 Connected feed observer signals
+INFO 2025-06-21 10:01:39,932 feed_observers 2018 128626374619136 Connected feed observer signals
+INFO 2025-06-21 10:01:40,933 feed_observers 2019 140121177812992 Connected feed observer signals
+INFO 2025-06-21 10:01:41,004 autoreload 2019 140121177812992 Watching for file changes with StatReloader
+INFO 2025-06-21 10:01:44,644 basehttp 2019 140121022133824 "GET / HTTP/1.1" 200 2922
+INFO 2025-06-21 10:01:48,167 basehttp 2019 140121022133824 "GET /admin/ HTTP/1.1" 200 8723
+WARNING 2025-06-21 10:01:48,208 log 2019 140121022133824 Not Found: /static/admin/css/base.css
+WARNING 2025-06-21 10:01:48,210 basehttp 2019 140121022133824 "GET /static/admin/css/base.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:01:48,216 log 2019 140121013741120 Not Found: /static/admin/css/responsive.css
+WARNING 2025-06-21 10:01:48,220 basehttp 2019 140121013741120 "GET /static/admin/css/responsive.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:01:48,223 log 2019 140121005348416 Not Found: /static/admin/css/dark_mode.css
+WARNING 2025-06-21 10:01:48,233 log 2019 140121013741120 Not Found: /static/admin/js/nav_sidebar.js
+WARNING 2025-06-21 10:01:48,234 log 2019 140120996955712 Not Found: /static/admin/css/nav_sidebar.css
+WARNING 2025-06-21 10:01:48,241 log 2019 140120988563008 Not Found: /static/admin/css/dashboard.css
+WARNING 2025-06-21 10:01:48,248 basehttp 2019 140121005348416 "GET /static/admin/css/dark_mode.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:01:48,247 basehttp 2019 140121013741120 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:01:48,245 log 2019 140120980170304 Not Found: /static/admin/js/theme.js
+WARNING 2025-06-21 10:01:48,250 basehttp 2019 140120996955712 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:01:48,252 basehttp 2019 140120988563008 "GET /static/admin/css/dashboard.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:01:48,260 basehttp 2019 140120980170304 "GET /static/admin/js/theme.js HTTP/1.1" 404 179
+INFO 2025-06-21 10:13:09,826 feed_observers 2284 134860608278528 Connected feed observer signals
+INFO 2025-06-21 10:13:28,756 feed_observers 2285 138090046459904 Connected feed observer signals
+INFO 2025-06-21 10:14:03,358 feed_observers 2286 138318673031168 Connected feed observer signals
+INFO 2025-06-21 10:14:04,490 feed_observers 2287 130971638628352 Connected feed observer signals
+INFO 2025-06-21 10:14:04,594 autoreload 2287 130971638628352 Watching for file changes with StatReloader
+INFO 2025-06-21 10:14:08,891 basehttp 2287 130971551659584 "GET / HTTP/1.1" 302 0
+INFO 2025-06-21 10:14:09,074 basehttp 2287 130971551659584 "GET /admin/ HTTP/1.1" 200 8723
+WARNING 2025-06-21 10:14:09,613 log 2287 130971551659584 Not Found: /static/admin/css/nav_sidebar.css
+WARNING 2025-06-21 10:14:09,620 log 2287 130971470919232 Not Found: /static/admin/css/responsive.css
+WARNING 2025-06-21 10:14:09,621 basehttp 2287 130971551659584 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:09,638 basehttp 2287 130971470919232 "GET /static/admin/css/responsive.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:09,648 log 2287 130971462526528 Not Found: /static/admin/css/base.css
+WARNING 2025-06-21 10:14:09,669 log 2287 130971551659584 Not Found: /static/admin/js/nav_sidebar.js
+WARNING 2025-06-21 10:14:09,683 log 2287 130971454133824 Not Found: /static/admin/css/dark_mode.css
+WARNING 2025-06-21 10:14:09,687 log 2287 130971445741120 Not Found: /static/admin/js/theme.js
+WARNING 2025-06-21 10:14:09,696 log 2287 130971437348416 Not Found: /static/admin/css/dashboard.css
+WARNING 2025-06-21 10:14:09,697 basehttp 2287 130971551659584 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:09,698 basehttp 2287 130971462526528 "GET /static/admin/css/base.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:09,703 basehttp 2287 130971454133824 "GET /static/admin/css/dark_mode.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:09,712 basehttp 2287 130971445741120 "GET /static/admin/js/theme.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:09,716 basehttp 2287 130971437348416 "GET /static/admin/css/dashboard.css HTTP/1.1" 404 179
+INFO 2025-06-21 10:14:16,213 basehttp 2287 130971551659584 "GET /admin/crisp_threat_intel/stixobject/ HTTP/1.1" 200 73967
+WARNING 2025-06-21 10:14:16,248 log 2287 130971551659584 Not Found: /static/admin/css/base.css
+WARNING 2025-06-21 10:14:16,250 basehttp 2287 130971551659584 "GET /static/admin/css/base.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:16,261 log 2287 130971437348416 Not Found: /static/admin/css/dark_mode.css
+WARNING 2025-06-21 10:14:16,264 log 2287 130971445741120 Not Found: /static/admin/css/nav_sidebar.css
+WARNING 2025-06-21 10:14:16,267 log 2287 130971454133824 Not Found: /static/admin/css/changelists.css
+WARNING 2025-06-21 10:14:16,274 log 2287 130971470919232 Not Found: /static/admin/js/vendor/jquery/jquery.min.js
+WARNING 2025-06-21 10:14:16,276 basehttp 2287 130971437348416 "GET /static/admin/css/dark_mode.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:16,277 basehttp 2287 130971445741120 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:16,279 basehttp 2287 130971454133824 "GET /static/admin/css/changelists.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:16,282 basehttp 2287 130971470919232 "GET /static/admin/js/vendor/jquery/jquery.min.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:16,286 log 2287 130971437348416 Not Found: /static/admin/css/responsive.css
+WARNING 2025-06-21 10:14:16,297 log 2287 130971445741120 Not Found: /static/admin/js/jquery.init.js
+WARNING 2025-06-21 10:14:16,300 log 2287 130971551659584 Not Found: /static/admin/js/actions.js
+WARNING 2025-06-21 10:14:16,309 log 2287 130971454133824 Not Found: /static/admin/js/core.js
+WARNING 2025-06-21 10:14:16,325 log 2287 130971470919232 Not Found: /static/admin/js/admin/RelatedObjectLookups.js
+WARNING 2025-06-21 10:14:16,329 basehttp 2287 130971437348416 "GET /static/admin/css/responsive.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:16,333 basehttp 2287 130971445741120 "GET /static/admin/js/jquery.init.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:16,347 basehttp 2287 130971551659584 "GET /static/admin/js/actions.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:16,349 basehttp 2287 130971454133824 "GET /static/admin/js/core.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:16,351 basehttp 2287 130971470919232 "GET /static/admin/js/admin/RelatedObjectLookups.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:16,377 log 2287 130971437348416 Not Found: /static/admin/js/urlify.js
+WARNING 2025-06-21 10:14:16,386 log 2287 130971445741120 Not Found: /static/admin/js/prepopulate.js
+INFO 2025-06-21 10:14:16,386 basehttp 2287 130971462526528 "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+WARNING 2025-06-21 10:14:16,389 basehttp 2287 130971437348416 "GET /static/admin/js/urlify.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:16,391 basehttp 2287 130971445741120 "GET /static/admin/js/prepopulate.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:16,395 log 2287 130971551659584 Not Found: /static/admin/js/vendor/xregexp/xregexp.min.js
+WARNING 2025-06-21 10:14:16,410 log 2287 130971454133824 Not Found: /static/admin/img/icon-no.svg
+WARNING 2025-06-21 10:14:16,411 log 2287 130971462526528 Not Found: /static/admin/img/search.svg
+WARNING 2025-06-21 10:14:16,420 basehttp 2287 130971551659584 "GET /static/admin/js/vendor/xregexp/xregexp.min.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:16,421 basehttp 2287 130971454133824 "GET /static/admin/img/icon-no.svg HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:16,423 basehttp 2287 130971462526528 "GET /static/admin/img/search.svg HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:16,476 log 2287 130971462526528 Not Found: /static/admin/js/theme.js
+WARNING 2025-06-21 10:14:16,478 log 2287 130971551659584 Not Found: /static/admin/js/filters.js
+WARNING 2025-06-21 10:14:16,481 log 2287 130971454133824 Not Found: /static/admin/css/responsive.css
+WARNING 2025-06-21 10:14:16,483 log 2287 130971437348416 Not Found: /static/admin/js/nav_sidebar.js
+WARNING 2025-06-21 10:14:16,486 log 2287 130971445741120 Not Found: /static/admin/img/icon-no.svg
+WARNING 2025-06-21 10:14:16,486 basehttp 2287 130971462526528 "GET /static/admin/js/theme.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:16,488 basehttp 2287 130971551659584 "GET /static/admin/js/filters.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:16,490 basehttp 2287 130971454133824 "GET /static/admin/css/responsive.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:16,491 basehttp 2287 130971437348416 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:16,492 basehttp 2287 130971445741120 "GET /static/admin/img/icon-no.svg HTTP/1.1" 404 179
+INFO 2025-06-21 10:14:23,524 basehttp 2287 130971551659584 "GET /admin/crisp_threat_intel/stixobject/?source_organization__id__exact=4bc859b9-7d59-4dc9-9ec7-c7e9960cb022 HTTP/1.1" 200 18004
+WARNING 2025-06-21 10:14:23,549 log 2287 130971551659584 Not Found: /static/admin/css/base.css
+WARNING 2025-06-21 10:14:23,551 basehttp 2287 130971551659584 "GET /static/admin/css/base.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:23,565 log 2287 130971454133824 Not Found: /static/admin/js/core.js
+WARNING 2025-06-21 10:14:23,567 log 2287 130971445741120 Not Found: /static/admin/css/nav_sidebar.css
+WARNING 2025-06-21 10:14:23,571 log 2287 130971462526528 Not Found: /static/admin/css/dark_mode.css
+WARNING 2025-06-21 10:14:23,575 log 2287 130971470919232 Not Found: /static/admin/js/actions.js
+WARNING 2025-06-21 10:14:23,579 log 2287 130971437348416 Not Found: /static/admin/js/admin/RelatedObjectLookups.js
+WARNING 2025-06-21 10:14:23,588 basehttp 2287 130971470919232 "GET /static/admin/js/actions.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:23,586 basehttp 2287 130971445741120 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:23,582 basehttp 2287 130971454133824 "GET /static/admin/js/core.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:23,589 basehttp 2287 130971462526528 "GET /static/admin/css/dark_mode.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:23,591 basehttp 2287 130971437348416 "GET /static/admin/js/admin/RelatedObjectLookups.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:23,596 log 2287 130971470919232 Not Found: /static/admin/js/prepopulate.js
+WARNING 2025-06-21 10:14:23,599 log 2287 130971551659584 Not Found: /static/admin/js/vendor/jquery/jquery.min.js
+WARNING 2025-06-21 10:14:23,603 log 2287 130971445741120 Not Found: /static/admin/css/responsive.css
+WARNING 2025-06-21 10:14:23,610 log 2287 130971454133824 Not Found: /static/admin/css/changelists.css
+WARNING 2025-06-21 10:14:23,616 log 2287 130971462526528 Not Found: /static/admin/js/urlify.js
+WARNING 2025-06-21 10:14:23,624 basehttp 2287 130971470919232 "GET /static/admin/js/prepopulate.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:23,627 basehttp 2287 130971551659584 "GET /static/admin/js/vendor/jquery/jquery.min.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:23,630 basehttp 2287 130971445741120 "GET /static/admin/css/responsive.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:23,633 basehttp 2287 130971454133824 "GET /static/admin/css/changelists.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:23,635 basehttp 2287 130971462526528 "GET /static/admin/js/urlify.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:23,670 log 2287 130971470919232 Not Found: /static/admin/js/jquery.init.js
+WARNING 2025-06-21 10:14:23,673 basehttp 2287 130971470919232 "GET /static/admin/js/jquery.init.js HTTP/1.1" 404 179
+INFO 2025-06-21 10:14:23,678 basehttp 2287 130971437348416 "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+WARNING 2025-06-21 10:14:23,691 log 2287 130971551659584 Not Found: /static/admin/img/search.svg
+WARNING 2025-06-21 10:14:23,694 log 2287 130971462526528 Not Found: /static/admin/img/icon-no.svg
+WARNING 2025-06-21 10:14:23,697 log 2287 130971445741120 Not Found: /static/admin/js/vendor/xregexp/xregexp.min.js
+WARNING 2025-06-21 10:14:23,699 basehttp 2287 130971551659584 "GET /static/admin/img/search.svg HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:23,704 basehttp 2287 130971462526528 "GET /static/admin/img/icon-no.svg HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:23,705 basehttp 2287 130971445741120 "GET /static/admin/js/vendor/xregexp/xregexp.min.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:23,763 log 2287 130971445741120 Not Found: /static/admin/js/theme.js
+WARNING 2025-06-21 10:14:23,766 log 2287 130971462526528 Not Found: /static/admin/js/nav_sidebar.js
+WARNING 2025-06-21 10:14:23,772 log 2287 130971551659584 Not Found: /static/admin/css/responsive.css
+WARNING 2025-06-21 10:14:23,775 log 2287 130971437348416 Not Found: /static/admin/js/filters.js
+WARNING 2025-06-21 10:14:23,775 basehttp 2287 130971445741120 "GET /static/admin/js/theme.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:23,778 basehttp 2287 130971462526528 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:23,779 basehttp 2287 130971551659584 "GET /static/admin/css/responsive.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:14:23,784 basehttp 2287 130971437348416 "GET /static/admin/js/filters.js HTTP/1.1" 404 179
+INFO 2025-06-21 10:14:26,148 basehttp 2287 130971551659584 "GET /admin/crisp_threat_intel/stixobject/ HTTP/1.1" 200 73967
+INFO 2025-06-21 10:17:40,890 feed_observers 2553 138562075947008 Connected feed observer signals
+INFO 2025-06-21 10:17:42,000 feed_observers 2554 133208416858112 Connected feed observer signals
+INFO 2025-06-21 10:17:42,062 autoreload 2554 133208416858112 Watching for file changes with StatReloader
+INFO 2025-06-21 10:17:45,758 basehttp 2554 133208259688000 "GET / HTTP/1.1" 302 0
+INFO 2025-06-21 10:17:46,013 basehttp 2554 133208259688000 "GET /admin/ HTTP/1.1" 200 8723
+WARNING 2025-06-21 10:17:46,363 log 2554 133208259688000 Not Found: /static/admin/css/dashboard.css
+WARNING 2025-06-21 10:17:46,366 log 2554 133208251295296 Not Found: /static/admin/css/base.css
+WARNING 2025-06-21 10:17:46,371 log 2554 133208242902592 Not Found: /static/admin/css/dark_mode.css
+WARNING 2025-06-21 10:17:46,376 log 2554 133208234509888 Not Found: /static/admin/css/nav_sidebar.css
+WARNING 2025-06-21 10:17:46,378 basehttp 2554 133208259688000 "GET /static/admin/css/dashboard.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:17:46,382 log 2554 133208226117184 Not Found: /static/admin/css/responsive.css
+WARNING 2025-06-21 10:17:46,383 basehttp 2554 133208251295296 "GET /static/admin/css/base.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:17:46,388 log 2554 133207873812032 Not Found: /static/admin/js/theme.js
+WARNING 2025-06-21 10:17:46,394 log 2554 133207865419328 Not Found: /static/admin/js/nav_sidebar.js
+WARNING 2025-06-21 10:17:46,395 basehttp 2554 133208242902592 "GET /static/admin/css/dark_mode.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:17:46,396 basehttp 2554 133208234509888 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:17:46,398 basehttp 2554 133208226117184 "GET /static/admin/css/responsive.css HTTP/1.1" 404 179
+WARNING 2025-06-21 10:17:46,411 basehttp 2554 133207873812032 "GET /static/admin/js/theme.js HTTP/1.1" 404 179
+WARNING 2025-06-21 10:17:46,416 basehttp 2554 133207865419328 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 404 179
+INFO 2025-06-21 10:20:28,349 feed_observers 3087 132473422131200 Connected feed observer signals
+INFO 2025-06-21 10:20:29,758 feed_observers 3088 138760842551296 Connected feed observer signals
+INFO 2025-06-21 10:20:29,815 autoreload 3088 138760842551296 Watching for file changes with StatReloader
+INFO 2025-06-21 10:20:33,324 basehttp 3088 138760754820672 "GET / HTTP/1.1" 302 0
+INFO 2025-06-21 10:20:33,517 basehttp 3088 138760754820672 "GET /admin/ HTTP/1.1" 200 10798
+INFO 2025-06-21 10:20:33,967 basehttp 3088 138760746427968 "GET /static/admin/css/dashboard.css HTTP/1.1" 200 441
+INFO 2025-06-21 10:20:33,970 basehttp 3088 138760754820672 "GET /static/admin/css/dark_mode.css HTTP/1.1" 200 2929
+INFO 2025-06-21 10:20:33,989 basehttp 3088 138760519935552 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 200 2694
+INFO 2025-06-21 10:20:34,001 basehttp 3088 138760503150144 "GET /static/admin/css/responsive.css HTTP/1.1" 200 18559
+INFO 2025-06-21 10:20:34,001 basehttp 3088 138760528328256 "GET /static/admin/css/base.css HTTP/1.1" 200 21310
+INFO 2025-06-21 10:20:34,023 basehttp 3088 138760511542848 "GET /static/admin/js/theme.js HTTP/1.1" 200 1943
+INFO 2025-06-21 10:20:34,129 basehttp 3088 138760503150144 "GET /static/admin/img/icon-changelink.svg HTTP/1.1" 200 380
+INFO 2025-06-21 10:20:34,129 basehttp 3088 138760511542848 "GET /static/admin/img/icon-addlink.svg HTTP/1.1" 200 331
+INFO 2025-06-21 10:20:34,129 basehttp 3088 138760528328256 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 200 3063
+INFO 2025-06-21 10:20:37,038 basehttp 3088 138760528328256 "GET /admin/auth/group/ HTTP/1.1" 200 11222
+INFO 2025-06-21 10:20:37,120 basehttp 3088 138760528328256 "GET /static/admin/css/changelists.css HTTP/1.1" 200 6566
+INFO 2025-06-21 10:20:37,130 basehttp 3088 138760519935552 "GET /static/admin/js/jquery.init.js HTTP/1.1" 200 347
+INFO 2025-06-21 10:20:37,149 basehttp 3088 138760511542848 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2025-06-21 10:20:37,170 basehttp 3088 138760746427968 "GET /static/admin/js/admin/RelatedObjectLookups.js HTTP/1.1" 200 8943
+INFO 2025-06-21 10:20:37,172 basehttp 3088 138760754820672 "GET /static/admin/js/core.js HTTP/1.1" 200 5682
+INFO 2025-06-21 10:20:37,220 basehttp 3088 138760519935552 "GET /static/admin/js/actions.js HTTP/1.1" 200 7872
+INFO 2025-06-21 10:20:37,223 basehttp 3088 138760511542848 "GET /static/admin/js/urlify.js HTTP/1.1" 200 7887
+INFO 2025-06-21 10:20:37,224 basehttp 3088 138760528328256 "GET /static/admin/js/prepopulate.js HTTP/1.1" 200 1531
+INFO 2025-06-21 10:20:37,228 basehttp 3088 138760754820672 "GET /static/admin/img/search.svg HTTP/1.1" 200 458
+INFO 2025-06-21 10:20:37,333 basehttp 3088 138760503150144 "GET /static/admin/js/vendor/jquery/jquery.min.js HTTP/1.1" 200 89795
+INFO 2025-06-21 10:20:37,390 basehttp 3088 138760503150144 "GET /static/admin/js/filters.js HTTP/1.1" 200 978
+INFO 2025-06-21 10:20:37,404 basehttp 3088 138760746427968 "GET /static/admin/js/vendor/xregexp/xregexp.min.js HTTP/1.1" 200 125266
+INFO 2025-06-21 10:20:37,492 basehttp 3088 138760746427968 "GET /static/admin/img/tooltag-add.svg HTTP/1.1" 200 331
+INFO 2025-06-21 10:20:39,105 basehttp 3088 138760746427968 "GET /admin/crisp_threat_intel/collection/ HTTP/1.1" 200 18519
+INFO 2025-06-21 10:20:39,164 basehttp 3088 138760746427968 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2025-06-21 10:20:39,170 basehttp 3088 138760503150144 "GET /static/admin/img/icon-yes.svg HTTP/1.1" 200 436
+INFO 2025-06-21 10:20:39,286 basehttp 3088 138760503150144 "GET /static/admin/img/icon-viewlink.svg HTTP/1.1" 200 581
+INFO 2025-06-21 10:20:39,294 basehttp 3088 138760746427968 "GET /static/admin/img/sorting-icons.svg HTTP/1.1" 200 1097
+INFO 2025-06-21 10:20:40,720 basehttp 3088 138760746427968 "GET /admin/crisp_threat_intel/collectionobject/ HTTP/1.1" 200 74176
+INFO 2025-06-21 10:20:40,774 basehttp 3088 138760746427968 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2025-06-21 10:20:46,689 basehttp 3088 138760746427968 "GET /admin/crisp_threat_intel/collectionobject/fd1ed728-c1a8-4244-b9ef-023d67761b62/change/ HTTP/1.1" 200 775896
+INFO 2025-06-21 10:20:46,756 basehttp 3088 138760511542848 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2025-06-21 10:20:46,761 basehttp 3088 138760746427968 "GET /static/admin/css/forms.css HTTP/1.1" 200 9090
+INFO 2025-06-21 10:20:46,764 basehttp 3088 138760503150144 "GET /static/admin/js/prepopulate_init.js HTTP/1.1" 200 586
+INFO 2025-06-21 10:20:46,854 basehttp 3088 138760746427968 "GET /static/admin/css/widgets.css HTTP/1.1" 200 11921
+INFO 2025-06-21 10:20:46,860 basehttp 3088 138760503150144 "GET /static/admin/js/change_form.js HTTP/1.1" 200 606
+INFO 2025-06-21 10:20:55,046 basehttp 3088 138760746427968 "GET /admin/crisp_threat_intel/stixobject/4bd9f1b5-4274-4372-8c0c-4495e9680d33/change/?_to_field=id&_popup=1 HTTP/1.1" 200 22261
+INFO 2025-06-21 10:20:55,101 basehttp 3088 138760746427968 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2025-06-21 10:20:55,130 basehttp 3088 138760503150144 "GET /static/admin/js/calendar.js HTTP/1.1" 200 8466
+INFO 2025-06-21 10:20:55,131 basehttp 3088 138760511542848 "GET /static/admin/js/admin/DateTimeShortcuts.js HTTP/1.1" 200 19319
+INFO 2025-06-21 10:20:55,248 basehttp 3088 138760511542848 "GET /static/admin/img/icon-deletelink.svg HTTP/1.1" 200 392
+INFO 2025-06-21 10:20:55,331 basehttp 3088 138760511542848 "GET /static/admin/img/icon-calendar.svg HTTP/1.1" 200 1086
+INFO 2025-06-21 10:20:55,332 basehttp 3088 138760746427968 "GET /static/admin/img/icon-clock.svg HTTP/1.1" 200 677
+INFO 2025-06-21 10:23:28,337 feed_observers 3096 129151419183104 Connected feed observer signals
+INFO 2025-06-21 10:23:31,795 utils 3096 129151419183104 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: Test University
+INFO 2025-06-21 10:23:31,808 utils 3096 129151419183104 Generated bundle bundle--7d243e57-1e1b-4374-af03-dc588c1f767b with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:23:32,345 utils 3096 129151419183104 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-06-21 10:23:32,352 utils 3096 129151419183104 Generated bundle bundle--f03b1c75-afa3-4e62-a051-f9c0c42c4384 with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:23:32,353 utils 3096 129151419183104 Attempting to publish feed 'Test Feed' (ID: 52cefcc6-bf09-45fe-9ef7-a29fcc1608b4). Collection: 'Test Threat Collection'
+INFO 2025-06-21 10:23:32,353 utils 3096 129151419183104 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-06-21 10:23:32,360 utils 3096 129151419183104 Generated bundle bundle--b5e355a0-2001-4d0c-9c9d-4a3258b15452 with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:23:32,363 utils 3096 129151419183104 Feed 'Test Feed' published successfully. Bundle ID: bundle--b5e355a0-2001-4d0c-9c9d-4a3258b15452, 2 objects.
+INFO 2025-06-21 10:23:32,943 utils 3096 129151419183104 Processed 2 CSV rows, generated 2 STIX SDO dictionaries.
+INFO 2025-06-21 10:24:38,882 feed_observers 3098 133723528015872 Connected feed observer signals
+INFO 2025-06-21 10:24:40,075 utils 3098 133723528015872 Generating bundle for collection 'Test Verification Collection' (Owner: Test Verification Org). Requesting org: None (Internal View)
+INFO 2025-06-21 10:24:40,922 utils 3098 133723528015872 Generated bundle bundle--28e2e498-a866-4969-b04c-77097bf310ae with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:24:58,757 feed_observers 3355 123533406584832 Connected feed observer signals
+INFO 2025-06-21 10:25:18,752 feed_observers 3356 124233790296064 Connected feed observer signals
+INFO 2025-06-21 10:25:19,185 utils 3356 124233790296064 Generating bundle for collection 'Test Verification Collection' (Owner: Test Verification Org). Requesting org: None (Internal View)
+INFO 2025-06-21 10:25:19,845 utils 3356 124233790296064 Generated bundle bundle--5b6c7ef3-d6bf-43e8-bbe7-40f16435ba59 with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:25:32,907 feed_observers 3357 130835906076672 Connected feed observer signals
+INFO 2025-06-21 10:25:33,399 utils 3357 130835906076672 Attempting to publish feed 'Test Verification Feed' (ID: 60bd0de3-899c-4045-b4a3-9b8b4dec56b9). Collection: 'Test Verification Collection'
+INFO 2025-06-21 10:25:33,405 utils 3357 130835906076672 Generating bundle for collection 'Test Verification Collection' (Owner: Test Verification Org). Requesting org: None (Internal View)
+INFO 2025-06-21 10:25:35,889 utils 3357 130835906076672 Generated bundle bundle--118ae3a2-99f4-441c-84d1-3fb4af4a4c6d with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:25:37,210 utils 3357 130835906076672 Feed 'Test Verification Feed' published successfully. Bundle ID: bundle--118ae3a2-99f4-441c-84d1-3fb4af4a4c6d, 2 objects.
+INFO 2025-06-21 10:25:42,292 feed_observers 3360 137099172773888 Connected feed observer signals
+INFO 2025-06-21 10:33:56,577 feed_observers 4627 136739683983360 Connected feed observer signals
+INFO 2025-06-21 10:34:16,046 feed_observers 4629 127545154084864 Connected feed observer signals
+INFO 2025-06-21 10:34:32,258 feed_observers 4631 123228599627776 Connected feed observer signals
+INFO 2025-06-21 10:35:04,280 feed_observers 4635 126128408518656 Connected feed observer signals
+INFO 2025-06-21 10:35:27,214 feed_observers 4638 132367363489792 Connected feed observer signals
+INFO 2025-06-21 10:35:28,538 feed_observers 4639 130137742471168 Connected feed observer signals
+INFO 2025-06-21 10:35:28,597 autoreload 4639 130137742471168 Watching for file changes with StatReloader
+INFO 2025-06-21 10:35:31,926 basehttp 4639 130137656911424 "GET / HTTP/1.1" 302 0
+INFO 2025-06-21 10:35:32,045 basehttp 4639 130137656911424 "GET /admin/ HTTP/1.1" 302 0
+INFO 2025-06-21 10:35:32,192 basehttp 4639 130137656911424 "GET /admin/login/?next=/admin/ HTTP/1.1" 200 4173
+INFO 2025-06-21 10:35:32,596 basehttp 4639 130137656911424 "GET /static/admin/css/base.css HTTP/1.1" 304 0
+INFO 2025-06-21 10:35:32,597 basehttp 4639 130137576175168 "GET /static/admin/css/dark_mode.css HTTP/1.1" 304 0
+INFO 2025-06-21 10:35:32,602 basehttp 4639 130137567782464 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 304 0
+INFO 2025-06-21 10:35:32,612 basehttp 4639 130137550997056 "GET /static/admin/css/responsive.css HTTP/1.1" 304 0
+INFO 2025-06-21 10:35:32,613 basehttp 4639 130137542604352 "GET /static/admin/js/theme.js HTTP/1.1" 304 0
+INFO 2025-06-21 10:35:32,625 basehttp 4639 130137559389760 "GET /static/admin/css/login.css HTTP/1.1" 200 958
+INFO 2025-06-21 10:35:32,628 basehttp 4639 130137542604352 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 304 0
+INFO 2025-06-21 10:35:42,104 basehttp 4639 130137542604352 "POST /admin/login/?next=/admin/ HTTP/1.1" 200 4341
+INFO 2025-06-21 10:35:47,494 basehttp 4639 130137542604352 "POST /admin/login/?next=/admin/ HTTP/1.1" 200 4341
+INFO 2025-06-21 10:35:52,938 basehttp 4639 130137542604352 "POST /admin/login/?next=/admin/ HTTP/1.1" 200 4341
+INFO 2025-06-21 10:36:21,191 basehttp 4639 130137542604352 "POST /admin/login/?next=/admin/ HTTP/1.1" 200 4341
+INFO 2025-06-21 10:36:31,141 basehttp 4639 130137542604352 "POST /admin/login/?next=/admin/ HTTP/1.1" 200 4341
+INFO 2025-06-21 10:36:38,800 basehttp 4639 130137542604352 "POST /admin/login/?next=/admin/ HTTP/1.1" 200 4341
+INFO 2025-06-21 10:36:38,822 basehttp 4639 130137542604352 "GET /static/admin/css/base.css HTTP/1.1" 304 0
+INFO 2025-06-21 10:36:38,834 basehttp 4639 130137559389760 "GET /static/admin/css/dark_mode.css HTTP/1.1" 304 0
+INFO 2025-06-21 10:36:38,836 basehttp 4639 130137550997056 "GET /static/admin/js/theme.js HTTP/1.1" 304 0
+INFO 2025-06-21 10:36:38,838 basehttp 4639 130137656911424 "GET /static/admin/css/responsive.css HTTP/1.1" 304 0
+INFO 2025-06-21 10:36:38,838 basehttp 4639 130137576175168 "GET /static/admin/css/login.css HTTP/1.1" 304 0
+INFO 2025-06-21 10:36:38,838 basehttp 4639 130137567782464 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 304 0
+INFO 2025-06-21 10:36:38,848 basehttp 4639 130137656911424 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 304 0
+INFO 2025-06-21 10:37:18,641 feed_observers 4661 128643550990336 Connected feed observer signals
+INFO 2025-06-21 10:37:33,270 feed_observers 4664 132758183886848 Connected feed observer signals
+INFO 2025-06-21 10:37:46,928 basehttp 4639 130137656911424 "POST /admin/login/?next=/admin/ HTTP/1.1" 200 4341
+INFO 2025-06-21 10:37:46,948 basehttp 4639 130137656911424 "GET /static/admin/css/base.css HTTP/1.1" 304 0
+INFO 2025-06-21 10:37:46,954 basehttp 4639 130137542604352 "GET /static/admin/css/dark_mode.css HTTP/1.1" 304 0
+INFO 2025-06-21 10:37:46,961 basehttp 4639 130137559389760 "GET /static/admin/css/responsive.css HTTP/1.1" 304 0
+INFO 2025-06-21 10:37:46,961 basehttp 4639 130137576175168 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 304 0
+INFO 2025-06-21 10:37:46,962 basehttp 4639 130137567782464 "GET /static/admin/js/theme.js HTTP/1.1" 304 0
+INFO 2025-06-21 10:37:46,962 basehttp 4639 130137550997056 "GET /static/admin/css/login.css HTTP/1.1" 304 0
+INFO 2025-06-21 10:37:46,975 basehttp 4639 130137550997056 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 304 0
+INFO 2025-06-21 10:37:53,285 feed_observers 4668 131896592154624 Connected feed observer signals
+INFO 2025-06-21 10:37:54,482 feed_observers 4669 130101236813824 Connected feed observer signals
+INFO 2025-06-21 10:37:54,537 autoreload 4669 130101236813824 Watching for file changes with StatReloader
+INFO 2025-06-21 10:37:58,050 basehttp 4669 130101149689408 "GET / HTTP/1.1" 302 0
+INFO 2025-06-21 10:37:58,108 basehttp 4669 130101149689408 "GET /admin/ HTTP/1.1" 302 0
+INFO 2025-06-21 10:37:58,267 basehttp 4669 130101149689408 "GET /admin/login/?next=/admin/ HTTP/1.1" 200 4173
+INFO 2025-06-21 10:38:04,392 basehttp 4669 130101149689408 "POST /admin/login/?next=/admin/ HTTP/1.1" 302 0
+INFO 2025-06-21 10:38:04,477 basehttp 4669 130101149689408 "GET /admin/ HTTP/1.1" 200 10798
+INFO 2025-06-21 10:38:04,550 basehttp 4669 130101149689408 "GET /static/admin/css/dashboard.css HTTP/1.1" 304 0
+INFO 2025-06-21 10:38:04,607 basehttp 4669 130101149689408 "GET /static/admin/img/icon-addlink.svg HTTP/1.1" 304 0
+INFO 2025-06-21 10:38:04,608 basehttp 4669 130101068953152 "GET /static/admin/img/icon-changelink.svg HTTP/1.1" 304 0
+INFO 2025-06-21 10:38:07,324 basehttp 4669 130101149689408 "GET /admin/crisp_threat_intel/organization/ HTTP/1.1" 200 12670
+INFO 2025-06-21 10:38:07,347 basehttp 4669 130101149689408 "GET /static/admin/css/changelists.css HTTP/1.1" 304 0
+INFO 2025-06-21 10:38:07,375 basehttp 4669 130101060560448 "GET /static/admin/js/jquery.init.js HTTP/1.1" 304 0
+INFO 2025-06-21 10:38:07,381 basehttp 4669 130101052167744 "GET /static/admin/js/vendor/jquery/jquery.min.js HTTP/1.1" 304 0
+INFO 2025-06-21 10:38:07,383 basehttp 4669 130101060560448 "GET /static/admin/js/actions.js HTTP/1.1" 304 0
+INFO 2025-06-21 10:38:07,393 basehttp 4669 130101052167744 "GET /static/admin/js/urlify.js HTTP/1.1" 304 0
+INFO 2025-06-21 10:38:07,397 basehttp 4669 130101149689408 "GET /static/admin/js/prepopulate.js HTTP/1.1" 304 0
+INFO 2025-06-21 10:38:07,400 basehttp 4669 130101043775040 "GET /static/admin/js/admin/RelatedObjectLookups.js HTTP/1.1" 304 0
+INFO 2025-06-21 10:38:07,402 basehttp 4669 130101035382336 "GET /static/admin/js/core.js HTTP/1.1" 304 0
+INFO 2025-06-21 10:38:07,409 basehttp 4669 130101043775040 "GET /static/admin/js/vendor/xregexp/xregexp.min.js HTTP/1.1" 304 0
+INFO 2025-06-21 10:38:07,416 basehttp 4669 130101035382336 "GET /static/admin/img/search.svg HTTP/1.1" 304 0
+INFO 2025-06-21 10:38:07,426 basehttp 4669 130101068953152 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2025-06-21 10:38:07,460 basehttp 4669 130101043775040 "GET /static/admin/js/filters.js HTTP/1.1" 304 0
+INFO 2025-06-21 10:38:07,474 basehttp 4669 130101052167744 "GET /static/admin/img/icon-viewlink.svg HTTP/1.1" 304 0
+INFO 2025-06-21 10:38:07,474 basehttp 4669 130101035382336 "GET /static/admin/img/tooltag-add.svg HTTP/1.1" 304 0
+INFO 2025-06-21 10:38:09,298 basehttp 4669 130101052167744 "GET /admin/crisp_threat_intel/identity/ HTTP/1.1" 200 12614
+INFO 2025-06-21 10:38:09,353 basehttp 4669 130101052167744 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2025-06-21 10:38:10,780 basehttp 4669 130101052167744 "GET /admin/crisp_threat_intel/feed/ HTTP/1.1" 200 13813
+INFO 2025-06-21 10:38:10,850 basehttp 4669 130101052167744 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2025-06-21 10:38:11,560 basehttp 4669 130101052167744 "GET /admin/crisp_threat_intel/collection/ HTTP/1.1" 200 13053
+INFO 2025-06-21 10:38:11,621 basehttp 4669 130101052167744 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2025-06-21 10:38:13,462 basehttp 4669 130101052167744 "GET /admin/crisp_threat_intel/collectionobject/ HTTP/1.1" 200 12191
+INFO 2025-06-21 10:38:13,526 basehttp 4669 130101052167744 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2025-06-21 10:39:12,043 feed_observers 4696 131024089903104 Connected feed observer signals
+INFO 2025-06-21 10:39:29,939 feed_observers 4699 131771412770816 Connected feed observer signals
+INFO 2025-06-21 10:39:34,872 feed_observers 4701 128707787427840 Connected feed observer signals
+INFO 2025-06-21 10:39:39,717 feed_observers 4703 123138200756224 Connected feed observer signals
+INFO 2025-06-21 10:39:51,602 feed_observers 4706 130897256611840 Connected feed observer signals
+INFO 2025-06-21 10:40:11,470 feed_observers 4708 132295250579456 Connected feed observer signals
+INFO 2025-06-21 10:40:13,100 otx_service 4708 132295250579456 OTX API connection test successful
+INFO 2025-06-21 10:40:14,732 otx_service 4708 132295250579456 Fetching OTX pulses modified since 2025-06-14 10:40:14.732024+00:00
+INFO 2025-06-21 10:40:15,923 otx_service 4708 132295250579456 Retrieved 50 pulses from OTX
+INFO 2025-06-21 10:40:15,925 otx_service 4708 132295250579456 Converted 19 indicators from OTX pulse 'China-Nexus Threat Actor Actively Exploiting Ivanti Endpoint Manager Mobile (CVE-2025-4428) Vulnerability'
+INFO 2025-06-21 10:40:16,787 otx_service 4708 132295250579456 Converted 12 indicators from OTX pulse 'Cybercriminals Abusing Vercel to Deliver Remote Access Malware'
+INFO 2025-06-21 10:40:17,090 otx_service 4708 132295250579456 Converted 1 indicators from OTX pulse 'TxTag Takedown: Busting Phishing Email Schemes'
+INFO 2025-06-21 10:40:17,417 otx_service 4708 132295250579456 Converted 461 indicators from OTX pulse 'Threat actor Banana Squad exploits GitHub repos in new campaign'
+INFO 2025-06-21 10:40:20,102 otx_service 4708 132295250579456 Converted 29 indicators from OTX pulse 'BERT RANSOMWARE - THE RAVEN FILE'
+INFO 2025-06-21 10:40:20,304 otx_service 4708 132295250579456 Converted 6 indicators from OTX pulse 'Caught in the Act: Uncovering SpyNote in Unexpected Places'
+INFO 2025-06-21 10:40:20,376 otx_service 4708 132295250579456 Converted 10 indicators from OTX pulse 'DMV-Themed Phishing Campaign Targeting U.S. Citizens'
+INFO 2025-06-21 10:40:20,460 otx_service 4708 132295250579456 Converted 22 indicators from OTX pulse 'Malicious Loan App Removed from iOS and Google Play App Store Posed Severe Risks to Users'
+INFO 2025-06-21 10:40:20,630 otx_service 4708 132295250579456 Converted 40 indicators from OTX pulse 'Crypto Phishing Applications On The Play Store'
+INFO 2025-06-21 10:40:20,908 otx_service 4708 132295250579456 Converted 6 indicators from OTX pulse 'Hiding in GitHub'
+INFO 2025-06-21 10:40:20,994 otx_service 4708 132295250579456 Converted 31 indicators from OTX pulse 'Steam Phishing: Popular as Ever'
+INFO 2025-06-21 10:40:21,199 otx_service 4708 132295250579456 Converted 29 indicators from OTX pulse 'Resurgence of the Prometei Botnet'
+INFO 2025-06-21 10:40:21,387 otx_service 4708 132295250579456 Converted 53 indicators from OTX pulse 'The Sting of Fake Kling: Facebook Malvertising Lures Victims to Fake AI Generation Website'
+INFO 2025-06-21 10:40:21,700 otx_service 4708 132295250579456 Converted 6 indicators from OTX pulse 'TxTag Takedown: Busting Phishing Email Schemes'
+INFO 2025-06-21 10:40:21,782 otx_service 4708 132295250579456 Converted 2 indicators from OTX pulse 'Stealthy GitHub Malware Campaign Targets Devs'
+INFO 2025-06-21 10:40:21,912 otx_service 4708 132295250579456 Converted 1376 indicators from OTX pulse 'Part 2: Tracking LummaC2 Infrastructure'
+INFO 2025-06-21 10:40:30,404 otx_service 4708 132295250579456 Converted 189 indicators from OTX pulse 'Analyzing SERPENTINE#CLOUD: Threat Actors Abuse Cloudflare Tunnels to Infect Systems with Stealthy Python-Based Malware'
+INFO 2025-06-21 10:40:31,646 otx_service 4708 132295250579456 Converted 277 indicators from OTX pulse 'Threat actor Banana Squad exploits GitHub repos in new campaign'
+INFO 2025-06-21 10:40:33,421 otx_service 4708 132295250579456 Converted 20 indicators from OTX pulse 'Inside the BlueNoroff Web3 macOS Intrusion Analysis'
+INFO 2025-06-21 10:40:33,589 otx_service 4708 132295250579456 Converted 2 indicators from OTX pulse 'Analysis of a Malicious WordPress Plugin: The Covert Redirector'
+INFO 2025-06-21 10:40:33,644 otx_service 4708 132295250579456 Converted 2 indicators from OTX pulse 'What's in an ASP? Creative Phishing Attack on Prominent Academics and Critics of Russia'
+INFO 2025-06-21 10:40:33,671 otx_service 4708 132295250579456 Converted 5 indicators from OTX pulse 'SAP Zero – Frostbite: How Russian RaaS Actor Qilin Exploited CVE-2025-31324 Weeks Before its Public Disclosure'
+INFO 2025-06-21 10:40:33,762 otx_service 4708 132295250579456 Converted 55 indicators from OTX pulse 'Critical Langflow Vulnerability (CVE-2025-3248) Actively Exploited to Deliver Flodrix Botnet'
+INFO 2025-06-21 10:40:34,181 otx_service 4708 132295250579456 Converted 12 indicators from OTX pulse 'May 2025 APT Group Trends (South Korea)'
+INFO 2025-06-21 10:40:34,322 otx_service 4708 132295250579456 Converted 11 indicators from OTX pulse 'May 2025 Infostealer Trend Report'
+INFO 2025-06-21 10:40:34,441 otx_service 4708 132295250579456 Converted 8 indicators from OTX pulse 'Warning Against Distribution of Malware Disguised as Research Papers'
+INFO 2025-06-21 10:40:34,523 otx_service 4708 132295250579456 Converted 7 indicators from OTX pulse 'Masslogger Fileless Variant – Spreads via .VBE, Hides in Registry'
+INFO 2025-06-21 10:40:34,583 otx_service 4708 132295250579456 Converted 69 indicators from OTX pulse 'Famous Chollima deploying Python version of GolangGhost RAT'
+INFO 2025-06-21 10:40:35,031 otx_service 4708 132295250579456 Converted 19 indicators from OTX pulse 'Fake Minecraft mods distributed by the Stargazers Ghost Network to steal gamers’ data'
+INFO 2025-06-21 10:40:35,194 otx_service 4708 132295250579456 Converted 14 indicators from OTX pulse 'Amatera Stealer: Rebranded ACR Stealer With Improved Evasion, Sophistication'
+WARNING 2025-06-21 10:40:35,305 otx_service 4708 132295250579456 Could not create STIX pattern for indicator type: cidr
+INFO 2025-06-21 10:40:35,333 otx_service 4708 132295250579456 Converted 406 indicators from OTX pulse 'New FIN7-Linked Infrastructure, PowerNet Loader, and Fake Update Attacks'
+INFO 2025-06-21 10:40:37,853 otx_service 4708 132295250579456 Converted 19 indicators from OTX pulse 'GitHub's Dark Side: Unveiling Malware Disguised as Cracks, Hacks, and Crypto Tools'
+INFO 2025-06-21 10:40:37,999 otx_service 4708 132295250579456 Converted 52 indicators from OTX pulse 'From ClickFix deception to information stealer deployment'
+INFO 2025-06-21 10:40:38,374 otx_service 4708 132295250579456 Converted 20 indicators from OTX pulse 'Fog Ransomware: Unusual Toolset Used in Recent Attack'
+INFO 2025-06-21 10:40:38,884 otx_service 4708 132295250579456 Converted 3 indicators from OTX pulse 'New ELF malware on Shellshock: the ChinaZ'
+INFO 2025-06-21 10:40:38,948 otx_service 4708 132295250579456 Converted 55 indicators from OTX pulse 'Exploring a New KimJongRAT Stealer Variant and Its PowerShell Implementation'
+INFO 2025-06-21 10:40:39,320 otx_service 4708 132295250579456 Converted 18 indicators from OTX pulse 'AsyncRAT Campaign Continues to Evade Endpoint Detection'
+INFO 2025-06-21 10:40:39,446 otx_service 4708 132295250579456 Converted 10 indicators from OTX pulse 'Uncovering a Tor-Enabled Docker Exploit'
+INFO 2025-06-21 10:40:39,547 otx_service 4708 132295250579456 Converted 90 indicators from OTX pulse 'Another Confluence Bites the Dust: Falling to ELPACO-team Ransomware'
+INFO 2025-06-21 10:40:40,107 otx_service 4708 132295250579456 Converted 42 indicators from OTX pulse 'BlueNoroff introduces new methods bypassing MoTW'
+INFO 2025-06-21 10:40:40,458 otx_service 4708 132295250579456 Converted 16 indicators from OTX pulse 'Operation RoundPress targeting high-value webmail servers'
+INFO 2025-06-21 10:40:40,627 otx_service 4708 132295250579456 Converted 17 indicators from OTX pulse 'Fileless AsyncRAT Distributed Via Clickfix Technique Targeting German Speaking Users'
+INFO 2025-06-21 10:40:40,780 otx_service 4708 132295250579456 Converted 21 indicators from OTX pulse 'Clone, Compile, Compromise: Open-Source Malware Trap on GitHub'
+INFO 2025-06-21 10:40:40,973 otx_service 4708 132295250579456 Converted 8 indicators from OTX pulse 'More Steganography!'
+INFO 2025-06-21 10:40:41,056 otx_service 4708 132295250579456 Converted 2 indicators from OTX pulse 'How Interlock Ransomware Affects the Defense Industrial Base Supply Chain'
+INFO 2025-06-21 10:40:41,121 otx_service 4708 132295250579456 Converted 62 indicators from OTX pulse 'Shared SSH Keys Expose Phishing Infrastructure Targeting Kuwait'
+INFO 2025-06-21 10:40:41,660 otx_service 4708 132295250579456 Converted 5 indicators from OTX pulse 'Mass Scanning and Exploit Campaigns'
+INFO 2025-06-21 10:40:41,703 otx_service 4708 132295250579456 Converted 61 indicators from OTX pulse 'Part 2: Compromised WordPress Pages and Malware Campaigns'
+INFO 2025-06-21 10:40:42,203 otx_service 4708 132295250579456 Converted 10 indicators from OTX pulse 'Yet Another NodeJS Backdoor (YaNB): A Modern Challenge'
+INFO 2025-06-21 10:40:42,329 otx_service 4708 132295250579456 Converted 26 indicators from OTX pulse 'Operation RoundPress targeting high-value webmail servers'
+INFO 2025-06-21 10:40:42,520 otx_service 4708 132295250579456 OTX processing complete. Processed 50/50 pulses, created 3736 objects
+INFO 2025-06-21 10:40:56,597 feed_observers 4712 130814431748096 Connected feed observer signals
+INFO 2025-06-21 10:41:14,071 feed_observers 4715 131560837066752 Connected feed observer signals
+INFO 2025-06-21 10:41:33,745 feed_observers 4717 138351434014720 Connected feed observer signals
+INFO 2025-06-21 10:41:35,060 feed_observers 4718 139320500207616 Connected feed observer signals
+INFO 2025-06-21 10:41:35,115 autoreload 4718 139320500207616 Watching for file changes with StatReloader
+INFO 2025-06-21 10:41:38,290 basehttp 4718 139320414430784 "GET / HTTP/1.1" 302 0
+INFO 2025-06-21 10:41:38,482 basehttp 4718 139320414430784 "GET /admin/ HTTP/1.1" 200 10798
+INFO 2025-06-21 10:41:38,887 basehttp 4718 139320387155520 "GET /static/admin/css/dashboard.css HTTP/1.1" 200 441
+INFO 2025-06-21 10:41:38,888 basehttp 4718 139320406038080 "GET /static/admin/css/dark_mode.css HTTP/1.1" 200 2808
+INFO 2025-06-21 10:41:38,890 basehttp 4718 139320395548224 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 200 2810
+INFO 2025-06-21 10:41:38,892 basehttp 4718 139320378762816 "GET /static/admin/css/responsive.css HTTP/1.1" 200 16565
+INFO 2025-06-21 10:41:38,893 basehttp 4718 139320370370112 "GET /static/admin/js/theme.js HTTP/1.1" 200 1653
+INFO 2025-06-21 10:41:38,894 basehttp 4718 139320414430784 "GET /static/admin/css/base.css HTTP/1.1" 200 22120
+INFO 2025-06-21 10:41:38,925 basehttp 4718 139320370370112 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 200 3063
+INFO 2025-06-21 10:41:38,934 basehttp 4718 139320395548224 "GET /static/admin/img/icon-changelink.svg HTTP/1.1" 200 380
+INFO 2025-06-21 10:41:38,935 basehttp 4718 139320414430784 "GET /static/admin/img/icon-addlink.svg HTTP/1.1" 200 331
+INFO 2025-06-21 10:41:44,219 basehttp 4718 139320395548224 "GET /admin/crisp_threat_intel/collectionobject/ HTTP/1.1" 200 74276
+INFO 2025-06-21 10:41:44,252 basehttp 4718 139320395548224 "GET /static/admin/css/changelists.css HTTP/1.1" 200 6878
+INFO 2025-06-21 10:41:44,282 basehttp 4718 139320378762816 "GET /static/admin/js/jquery.init.js HTTP/1.1" 200 347
+INFO 2025-06-21 10:41:44,284 basehttp 4718 139320406038080 "GET /static/admin/js/core.js HTTP/1.1" 200 6208
+INFO 2025-06-21 10:41:44,291 basehttp 4718 139320387155520 "GET /static/admin/js/admin/RelatedObjectLookups.js HTTP/1.1" 200 9777
+INFO 2025-06-21 10:41:44,309 basehttp 4718 139320378762816 "GET /static/admin/js/actions.js HTTP/1.1" 200 8076
+INFO 2025-06-21 10:41:44,313 basehttp 4718 139320406038080 "GET /static/admin/js/urlify.js HTTP/1.1" 200 7887
+INFO 2025-06-21 10:41:44,320 basehttp 4718 139320387155520 "GET /static/admin/js/prepopulate.js HTTP/1.1" 200 1531
+INFO 2025-06-21 10:41:44,331 basehttp 4718 139320414430784 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2025-06-21 10:41:44,332 basehttp 4718 139320370370112 "GET /static/admin/js/vendor/jquery/jquery.min.js HTTP/1.1" 200 87533
+INFO 2025-06-21 10:41:44,353 basehttp 4718 139320395548224 "GET /static/admin/js/vendor/xregexp/xregexp.min.js HTTP/1.1" 200 163184
+INFO 2025-06-21 10:41:44,401 basehttp 4718 139320387155520 "GET /static/admin/js/filters.js HTTP/1.1" 200 978
+INFO 2025-06-21 10:41:44,440 basehttp 4718 139320395548224 "GET /static/admin/img/tooltag-add.svg HTTP/1.1" 200 331
+INFO 2025-06-21 10:41:44,447 basehttp 4718 139320406038080 "GET /static/admin/img/icon-viewlink.svg HTTP/1.1" 200 581
+INFO 2025-06-21 10:41:51,513 basehttp 4718 139320395548224 "GET /admin/crisp_threat_intel/organization/ HTTP/1.1" 200 16666
+INFO 2025-06-21 10:41:51,566 basehttp 4718 139320406038080 "GET /static/admin/img/search.svg HTTP/1.1" 200 458
+INFO 2025-06-21 10:41:51,588 basehttp 4718 139320395548224 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2025-06-21 10:41:51,708 basehttp 4718 139320395548224 "GET /static/admin/img/sorting-icons.svg HTTP/1.1" 200 1097
+INFO 2025-06-21 10:41:52,979 basehttp 4718 139320395548224 "GET /admin/crisp_threat_intel/organization/c86eca21-f74f-4b11-b7e3-f2aa6a3b654d/change/ HTTP/1.1" 200 19324
+INFO 2025-06-21 10:41:53,022 basehttp 4718 139320395548224 "GET /static/admin/css/forms.css HTTP/1.1" 200 8525
+INFO 2025-06-21 10:41:53,024 basehttp 4718 139320387155520 "GET /static/admin/js/prepopulate_init.js HTTP/1.1" 200 586
+INFO 2025-06-21 10:41:53,053 basehttp 4718 139320406038080 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2025-06-21 10:41:53,083 basehttp 4718 139320406038080 "GET /static/admin/img/icon-deletelink.svg HTTP/1.1" 200 392
+INFO 2025-06-21 10:41:53,090 basehttp 4718 139320395548224 "GET /static/admin/js/change_form.js HTTP/1.1" 200 606
+INFO 2025-06-21 10:41:53,097 basehttp 4718 139320387155520 "GET /static/admin/css/widgets.css HTTP/1.1" 200 11991
+INFO 2025-06-21 10:42:09,306 basehttp 4718 139320395548224 "GET /admin/crisp_threat_intel/organization/ HTTP/1.1" 200 16666
+INFO 2025-06-21 10:42:09,361 basehttp 4718 139320395548224 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2025-06-21 10:42:13,079 basehttp 4718 139320395548224 "GET /admin/crisp_threat_intel/identity/ HTTP/1.1" 200 15771
+INFO 2025-06-21 10:42:13,144 basehttp 4718 139320395548224 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2025-06-21 10:42:15,644 basehttp 4718 139320395548224 "GET /admin/crisp_threat_intel/feed/ HTTP/1.1" 200 17130
+INFO 2025-06-21 10:42:15,701 basehttp 4718 139320395548224 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2025-06-21 10:42:18,276 basehttp 4718 139320395548224 "GET /admin/crisp_threat_intel/feed/ HTTP/1.1" 200 17130
+INFO 2025-06-21 10:42:18,332 basehttp 4718 139320395548224 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2025-06-21 10:42:23,080 basehttp 4718 139320395548224 "GET /admin/crisp_threat_intel/feed/d9febdc6-fa07-488c-b274-92cd4a0ec112/change/ HTTP/1.1" 200 23997
+INFO 2025-06-21 10:42:23,126 basehttp 4718 139320406038080 "GET /static/admin/js/calendar.js HTTP/1.1" 200 9141
+INFO 2025-06-21 10:42:23,129 basehttp 4718 139320387155520 "GET /static/admin/js/admin/DateTimeShortcuts.js HTTP/1.1" 200 19319
+INFO 2025-06-21 10:42:23,141 basehttp 4718 139320395548224 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2025-06-21 10:42:23,345 basehttp 4718 139320395548224 "GET /static/admin/img/icon-calendar.svg HTTP/1.1" 200 1086
+INFO 2025-06-21 10:42:23,345 basehttp 4718 139320387155520 "GET /static/admin/img/icon-clock.svg HTTP/1.1" 200 677
+INFO 2025-06-21 10:42:30,299 basehttp 4718 139320387155520 "GET /admin/crisp_threat_intel/collection/ HTTP/1.1" 200 18523
+INFO 2025-06-21 10:42:30,337 basehttp 4718 139320395548224 "GET /static/admin/img/icon-yes.svg HTTP/1.1" 200 436
+INFO 2025-06-21 10:42:30,356 basehttp 4718 139320387155520 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2025-06-21 10:42:36,826 basehttp 4718 139320387155520 "GET /admin/auth/user/ HTTP/1.1" 200 14801
+INFO 2025-06-21 10:42:36,881 basehttp 4718 139320387155520 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2025-06-21 10:44:34,310 feed_observers 4758 132375847804928 Connected feed observer signals
+INFO 2025-06-21 10:44:39,980 feed_observers 4760 123932783861760 Connected feed observer signals
+INFO 2025-06-21 10:44:41,358 feed_observers 4761 131968738246656 Connected feed observer signals
+INFO 2025-06-21 10:44:41,420 autoreload 4761 131968738246656 Watching for file changes with StatReloader
+INFO 2025-06-21 10:45:05,306 utils 4758 132375847804928 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: Test University
+INFO 2025-06-21 10:45:05,327 utils 4758 132375847804928 Generated bundle bundle--24bebe5e-f949-4f2d-9ede-f35aa941aee7 with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:45:05,968 utils 4758 132375847804928 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-06-21 10:45:05,983 utils 4758 132375847804928 Generated bundle bundle--edc22879-7ecb-4d71-abcd-6720ae3a54f8 with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:45:05,984 utils 4758 132375847804928 Attempting to publish feed 'Test Feed' (ID: 3eea2b0c-567c-4d35-a066-42926642872d). Collection: 'Test Threat Collection'
+INFO 2025-06-21 10:45:05,985 utils 4758 132375847804928 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-06-21 10:45:05,998 utils 4758 132375847804928 Generated bundle bundle--68aedf9e-bfdb-49b2-a4a8-e01c1b6b8880 with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:45:06,004 utils 4758 132375847804928 Feed 'Test Feed' published successfully. Bundle ID: bundle--68aedf9e-bfdb-49b2-a4a8-e01c1b6b8880, 2 objects.
+INFO 2025-06-21 10:45:06,686 utils 4758 132375847804928 Processed 2 CSV rows, generated 2 STIX SDO dictionaries.
+INFO 2025-06-21 10:45:16,564 feed_observers 4769 140162663976960 Connected feed observer signals
+INFO 2025-06-21 10:45:18,121 utils 4769 140162663976960 Generating bundle for collection 'Test Verification Collection' (Owner: Test Verification Org). Requesting org: None (Internal View)
+INFO 2025-06-21 10:45:18,426 utils 4769 140162663976960 Generated bundle bundle--aad69b4c-324e-445f-999f-e88c3caad337 with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:45:18,526 basehttp 4761 131968650962496 "GET / HTTP/1.1" 302 0
+INFO 2025-06-21 10:45:18,547 basehttp 4761 131968650962496 "GET /admin/ HTTP/1.1" 302 0
+INFO 2025-06-21 10:45:18,643 basehttp 4761 131968650962496 "GET /admin/login/?next=/admin/ HTTP/1.1" 200 4173
+INFO 2025-06-21 10:45:19,321 basehttp 4761 131968650962496 "GET /taxii2/ HTTP/1.1" 200 240
+INFO 2025-06-21 10:45:19,916 basehttp 4761 131968650962496 "GET /taxii2/collections/ HTTP/1.1" 200 736
+INFO 2025-06-21 10:45:25,823 feed_observers 4777 127091838025728 Connected feed observer signals
+INFO 2025-06-21 10:45:34,543 feed_observers 4780 136029110751232 Connected feed observer signals
+INFO 2025-06-21 10:45:35,944 otx_service 4780 136029110751232 OTX API connection test successful
+INFO 2025-06-21 10:45:40,491 otx_service 4780 136029110751232 Retrieved 5 pulses from OTX
+INFO 2025-06-21 10:47:01,329 feed_observers 4784 124811740512256 Connected feed observer signals
+INFO 2025-06-21 10:47:01,824 utils 4784 124811740512256 Generating bundle for collection 'OTX Threat Intelligence' (Owner: AlienVault OTX). Requesting org: None (Internal View)
+INFO 2025-06-21 10:47:02,766 utils 4784 124811740512256 Generated bundle bundle--813a5241-3476-4bbb-b226-810a07b69b00 with 3737 objects (incl. owner identity).
+INFO 2025-06-21 10:47:02,797 utils 4784 124811740512256 Attempting to publish feed 'Test Verification Feed' (ID: 041f4650-3fc3-46d6-acf5-6b510080c454). Collection: 'Test Verification Collection'
+INFO 2025-06-21 10:47:02,801 utils 4784 124811740512256 Generating bundle for collection 'Test Verification Collection' (Owner: Test Verification Org). Requesting org: None (Internal View)
+INFO 2025-06-21 10:47:02,897 utils 4784 124811740512256 Generated bundle bundle--5e016201-e22d-49e6-a74c-512d9340447f with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:47:03,004 utils 4784 124811740512256 Feed 'Test Verification Feed' published successfully. Bundle ID: bundle--5e016201-e22d-49e6-a74c-512d9340447f, 2 objects.
+INFO 2025-06-21 10:47:03,813 basehttp 4761 131968650962496 "GET / HTTP/1.1" 302 0
+INFO 2025-06-21 10:47:03,819 basehttp 4761 131968650962496 "GET /admin/ HTTP/1.1" 302 0
+INFO 2025-06-21 10:47:03,879 basehttp 4761 131968650962496 "GET /admin/login/?next=/admin/ HTTP/1.1" 200 4173
+INFO 2025-06-21 10:47:04,513 basehttp 4761 131968650962496 "GET /taxii2/ HTTP/1.1" 200 240
+INFO 2025-06-21 10:47:05,139 basehttp 4761 131968650962496 "GET /taxii2/collections/ HTTP/1.1" 200 736
+INFO 2025-06-21 10:47:05,752 basehttp 4761 131968650962496 "GET /taxii2/collections/9daec103-a499-4c89-8d4d-03f85e676913/objects/ HTTP/1.1" 200 30
+INFO 2025-06-21 10:47:37,808 utils 4784 124811740512256 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: Test University
+INFO 2025-06-21 10:47:37,833 utils 4784 124811740512256 Generated bundle bundle--ade7f46f-072a-4ae9-9e0b-ff537b28aa28 with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:47:38,517 utils 4784 124811740512256 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-06-21 10:47:38,534 utils 4784 124811740512256 Generated bundle bundle--0be190e0-613f-4c4b-af5e-22ddef76ae42 with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:47:38,535 utils 4784 124811740512256 Attempting to publish feed 'Test Feed' (ID: cad239ba-8bf5-43d2-ae7a-55b43b8924a0). Collection: 'Test Threat Collection'
+INFO 2025-06-21 10:47:38,536 utils 4784 124811740512256 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-06-21 10:47:38,553 utils 4784 124811740512256 Generated bundle bundle--922c7f07-31d3-4073-89ce-ec5bafb2c739 with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:47:38,560 utils 4784 124811740512256 Feed 'Test Feed' published successfully. Bundle ID: bundle--922c7f07-31d3-4073-89ce-ec5bafb2c739, 2 objects.
+INFO 2025-06-21 10:47:39,187 utils 4784 124811740512256 Processed 2 CSV rows, generated 2 STIX SDO dictionaries.
+INFO 2025-06-21 10:47:42,876 feed_observers 4799 135889770864640 Connected feed observer signals
+INFO 2025-06-21 10:47:44,720 feed_observers 4801 132091037265920 Connected feed observer signals
+INFO 2025-06-21 10:47:45,197 utils 4801 132091037265920 Generating bundle for collection 'Test Verification Collection' (Owner: Test Verification Org). Requesting org: None (Internal View)
+INFO 2025-06-21 10:47:45,566 utils 4801 132091037265920 Generated bundle bundle--e7fbf7a9-107c-4eac-b591-2fda2f4c27b5 with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:48:17,348 feed_observers 4816 128709753597952 Connected feed observer signals
+INFO 2025-06-21 10:48:48,086 utils 4816 128709753597952 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: Test University
+INFO 2025-06-21 10:48:48,114 utils 4816 128709753597952 Generated bundle bundle--703cfd72-e8dc-4638-a290-b020f86e929d with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:48:48,695 utils 4816 128709753597952 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-06-21 10:48:48,709 utils 4816 128709753597952 Generated bundle bundle--0fc2f1c7-a319-4355-b538-8c504c96dd18 with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:48:48,710 utils 4816 128709753597952 Attempting to publish feed 'Test Feed' (ID: 06863d09-2211-48a5-bfef-164efc2d7d3e). Collection: 'Test Threat Collection'
+INFO 2025-06-21 10:48:48,711 utils 4816 128709753597952 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-06-21 10:48:48,725 utils 4816 128709753597952 Generated bundle bundle--d3666b09-28fa-41e7-bffa-60f773ccb81f with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:48:48,729 utils 4816 128709753597952 Feed 'Test Feed' published successfully. Bundle ID: bundle--d3666b09-28fa-41e7-bffa-60f773ccb81f, 2 objects.
+INFO 2025-06-21 10:48:49,269 utils 4816 128709753597952 Processed 2 CSV rows, generated 2 STIX SDO dictionaries.
+INFO 2025-06-21 10:49:10,412 feed_observers 5080 131365931487232 Connected feed observer signals
+INFO 2025-06-21 10:49:10,904 utils 5080 131365931487232 Generating bundle for collection 'OTX Threat Intelligence' (Owner: AlienVault OTX). Requesting org: None (Internal View)
+INFO 2025-06-21 10:49:11,477 utils 5080 131365931487232 Generated bundle bundle--2fd68ffc-f73e-40d8-a7cc-08f5bf053d36 with 3737 objects (incl. owner identity).
+INFO 2025-06-21 10:49:11,504 utils 5080 131365931487232 Attempting to publish feed 'Test Verification Feed' (ID: 041f4650-3fc3-46d6-acf5-6b510080c454). Collection: 'Test Verification Collection'
+INFO 2025-06-21 10:49:11,508 utils 5080 131365931487232 Generating bundle for collection 'Test Verification Collection' (Owner: Test Verification Org). Requesting org: None (Internal View)
+INFO 2025-06-21 10:49:11,600 utils 5080 131365931487232 Generated bundle bundle--2b9fa0e8-78a3-4c3b-9cd3-d61e19284dee with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:49:11,707 utils 5080 131365931487232 Feed 'Test Verification Feed' published successfully. Bundle ID: bundle--2b9fa0e8-78a3-4c3b-9cd3-d61e19284dee, 2 objects.
+INFO 2025-06-21 10:49:12,179 basehttp 4761 131968650962496 "GET / HTTP/1.1" 302 0
+INFO 2025-06-21 10:49:12,189 basehttp 4761 131968650962496 "GET /admin/ HTTP/1.1" 302 0
+INFO 2025-06-21 10:49:12,257 basehttp 4761 131968650962496 "GET /admin/login/?next=/admin/ HTTP/1.1" 200 4173
+INFO 2025-06-21 10:49:12,913 basehttp 4761 131968650962496 "GET /taxii2/ HTTP/1.1" 200 240
+INFO 2025-06-21 10:49:13,560 basehttp 4761 131968650962496 "GET /taxii2/collections/ HTTP/1.1" 200 736
+INFO 2025-06-21 10:49:14,144 basehttp 4761 131968650962496 "GET /taxii2/collections/9daec103-a499-4c89-8d4d-03f85e676913/objects/ HTTP/1.1" 200 30
+INFO 2025-06-21 10:49:47,528 utils 5080 131365931487232 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: Test University
+INFO 2025-06-21 10:49:47,546 utils 5080 131365931487232 Generated bundle bundle--611665a7-6802-4dfb-acfb-3f501c783955 with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:49:48,114 utils 5080 131365931487232 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-06-21 10:49:48,126 utils 5080 131365931487232 Generated bundle bundle--398a9383-4c4b-4c73-ad09-c2b02be8b96b with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:49:48,127 utils 5080 131365931487232 Attempting to publish feed 'Test Feed' (ID: e8f810ed-3b33-46bb-b805-97b7b2a8b575). Collection: 'Test Threat Collection'
+INFO 2025-06-21 10:49:48,127 utils 5080 131365931487232 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-06-21 10:49:48,137 utils 5080 131365931487232 Generated bundle bundle--d8df18ce-a98e-4637-834f-122c104fc9e4 with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:49:48,141 utils 5080 131365931487232 Feed 'Test Feed' published successfully. Bundle ID: bundle--d8df18ce-a98e-4637-834f-122c104fc9e4, 2 objects.
+INFO 2025-06-21 10:49:48,713 utils 5080 131365931487232 Processed 2 CSV rows, generated 2 STIX SDO dictionaries.
+INFO 2025-06-21 10:49:55,635 feed_observers 5096 140037169860608 Connected feed observer signals
+INFO 2025-06-21 10:49:56,812 utils 5096 140037169860608 Generating bundle for collection 'Test Verification Collection' (Owner: Test Verification Org). Requesting org: None (Internal View)
+INFO 2025-06-21 10:49:57,762 utils 5096 140037169860608 Generated bundle bundle--c0a18c4b-c67c-4b08-9577-77ab86ebfb17 with 3 objects (incl. owner identity).
+INFO 2025-06-21 10:49:57,797 basehttp 4761 131968650962496 "GET / HTTP/1.1" 302 0
+INFO 2025-06-21 10:49:57,804 basehttp 4761 131968650962496 "GET /admin/ HTTP/1.1" 302 0
+INFO 2025-06-21 10:49:57,869 basehttp 4761 131968650962496 "GET /admin/login/?next=/admin/ HTTP/1.1" 200 4173
+INFO 2025-06-21 10:49:58,515 basehttp 4761 131968650962496 "GET /taxii2/ HTTP/1.1" 200 240
+INFO 2025-06-21 10:49:59,170 basehttp 4761 131968650962496 "GET /taxii2/collections/ HTTP/1.1" 200 736
+INFO 2025-06-21 10:50:09,046 feed_observers 5104 135166888181760 Connected feed observer signals
+INFO 2025-06-21 10:50:39,864 utils 5104 135166888181760 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: Test University
+INFO 2025-06-21 10:50:39,885 utils 5104 135166888181760 Generated bundle bundle--e744c0f5-0cb6-42ce-989e-f77e1a0f0336 with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:50:40,511 utils 5104 135166888181760 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-06-21 10:50:40,526 utils 5104 135166888181760 Generated bundle bundle--bec16dc1-1d72-4eab-81da-96fc96bf29e4 with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:50:40,527 utils 5104 135166888181760 Attempting to publish feed 'Test Feed' (ID: 9f8e7456-b9a6-4f66-aede-8bf04f780a34). Collection: 'Test Threat Collection'
+INFO 2025-06-21 10:50:40,527 utils 5104 135166888181760 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-06-21 10:50:40,542 utils 5104 135166888181760 Generated bundle bundle--88e6d87d-8164-4cea-babf-b8783fe2e8b0 with 2 objects (incl. owner identity).
+INFO 2025-06-21 10:50:40,546 utils 5104 135166888181760 Feed 'Test Feed' published successfully. Bundle ID: bundle--88e6d87d-8164-4cea-babf-b8783fe2e8b0, 2 objects.
+INFO 2025-06-21 10:50:41,229 utils 5104 135166888181760 Processed 2 CSV rows, generated 2 STIX SDO dictionaries.
+INFO 2025-06-21 13:59:18,127 feed_observers 6308 128629560696832 Connected feed observer signals
