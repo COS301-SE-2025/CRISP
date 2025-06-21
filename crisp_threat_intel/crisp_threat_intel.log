@@ -1,0 +1,279 @@
+INFO 2025-06-21 09:19:01,930 feed_observers 1960 137835082543104 Connected feed observer signals
+INFO 2025-06-21 09:22:48,611 feed_observers 1966 130958873329664 Connected feed observer signals
+INFO 2025-06-21 09:22:58,575 feed_observers 1967 123379856805888 Connected feed observer signals
+INFO 2025-06-21 09:23:06,074 feed_observers 1968 123447364292608 Connected feed observer signals
+INFO 2025-06-21 09:23:39,675 feed_observers 1969 129710110244864 Connected feed observer signals
+INFO 2025-06-21 09:23:41,380 otx_service 1969 129710110244864 OTX API connection test successful
+INFO 2025-06-21 09:23:45,594 otx_service 1969 129710110244864 Retrieved 5 pulses from OTX
+INFO 2025-06-21 09:23:57,547 feed_observers 1970 127637562466304 Connected feed observer signals
+INFO 2025-06-21 09:24:01,238 otx_service 1970 127637562466304 OTX API connection test successful
+INFO 2025-06-21 09:24:08,135 otx_service 1970 127637562466304 Fetching OTX pulses modified since 2025-06-14 09:24:08.135841+00:00
+INFO 2025-06-21 09:24:09,210 otx_service 1970 127637562466304 Retrieved 50 pulses from OTX
+ERROR 2025-06-21 09:24:09,213 otx_service 1970 127637562466304 Error converting OTX pulse to STIX: Unsupported STIX object type: report
+ERROR 2025-06-21 09:24:09,272 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.21222+00:00'
+ERROR 2025-06-21 09:24:09,533 otx_service 1970 127637562466304 Error converting OTX pulse to STIX: Unsupported STIX object type: report
+ERROR 2025-06-21 09:24:09,591 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.5331+00:00'
+ERROR 2025-06-21 09:24:09,750 otx_service 1970 127637562466304 Error converting OTX pulse to STIX: Unsupported STIX object type: report
+ERROR 2025-06-21 09:24:09,972 otx_service 1970 127637562466304 Error converting OTX pulse to STIX: Unsupported STIX object type: report
+ERROR 2025-06-21 09:24:09,977 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.94494+00:00'
+ERROR 2025-06-21 09:24:10,020 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.94523+00:00'
+ERROR 2025-06-21 09:24:10,171 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.94867+00:00'
+ERROR 2025-06-21 09:24:10,174 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.94887+00:00'
+ERROR 2025-06-21 09:24:10,186 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.9492+00:00'
+ERROR 2025-06-21 09:24:10,230 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.94992+00:00'
+ERROR 2025-06-21 09:24:10,233 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.95002+00:00'
+ERROR 2025-06-21 09:24:10,323 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.95203+00:00'
+ERROR 2025-06-21 09:24:10,374 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.95291+00:00'
+ERROR 2025-06-21 09:24:10,446 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.9542+00:00'
+ERROR 2025-06-21 09:24:10,524 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.95587+00:00'
+ERROR 2025-06-21 09:24:10,528 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.95596+00:00'
+ERROR 2025-06-21 09:24:10,546 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.95632+00:00'
+ERROR 2025-06-21 09:24:10,570 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.95676+00:00'
+ERROR 2025-06-21 09:24:10,572 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.9568+00:00'
+ERROR 2025-06-21 09:24:10,671 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.95836+00:00'
+ERROR 2025-06-21 09:24:10,678 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.95848+00:00'
+ERROR 2025-06-21 09:24:10,723 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.95917+00:00'
+ERROR 2025-06-21 09:24:10,728 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.95933+00:00'
+ERROR 2025-06-21 09:24:10,739 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.95954+00:00'
+ERROR 2025-06-21 09:24:10,813 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.96089+00:00'
+ERROR 2025-06-21 09:24:10,823 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.9611+00:00'
+ERROR 2025-06-21 09:24:10,885 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.96221+00:00'
+ERROR 2025-06-21 09:24:10,898 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.96242+00:00'
+ERROR 2025-06-21 09:24:10,921 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.96287+00:00'
+ERROR 2025-06-21 09:24:10,935 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.96325+00:00'
+ERROR 2025-06-21 09:24:10,943 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.96347+00:00'
+ERROR 2025-06-21 09:24:10,965 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.96388+00:00'
+ERROR 2025-06-21 09:24:10,970 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.96397+00:00'
+ERROR 2025-06-21 09:24:10,975 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.96406+00:00'
+ERROR 2025-06-21 09:24:10,977 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.9641+00:00'
+ERROR 2025-06-21 09:24:10,978 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.96414+00:00'
+ERROR 2025-06-21 09:24:10,986 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.96436+00:00'
+ERROR 2025-06-21 09:24:11,052 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.96525+00:00'
+ERROR 2025-06-21 09:24:11,063 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.96572+00:00'
+ERROR 2025-06-21 09:24:11,073 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.96596+00:00'
+ERROR 2025-06-21 09:24:11,081 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.96608+00:00'
+ERROR 2025-06-21 09:24:11,083 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.96612+00:00'
+ERROR 2025-06-21 09:24:11,087 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.96621+00:00'
+ERROR 2025-06-21 09:24:11,123 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.9667+00:00'
+ERROR 2025-06-21 09:24:11,153 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.9671+00:00'
+ERROR 2025-06-21 09:24:11,189 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.96772+00:00'
+ERROR 2025-06-21 09:24:11,219 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.96861+00:00'
+ERROR 2025-06-21 09:24:11,313 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.97028+00:00'
+ERROR 2025-06-21 09:24:11,335 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.97083+00:00'
+ERROR 2025-06-21 09:24:11,348 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.97097+00:00'
+ERROR 2025-06-21 09:24:11,427 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.97189+00:00'
+ERROR 2025-06-21 09:24:11,432 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.97197+00:00'
+ERROR 2025-06-21 09:24:11,437 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.97206+00:00'
+ERROR 2025-06-21 09:24:11,472 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.9725+00:00'
+ERROR 2025-06-21 09:24:11,474 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:09.97259+00:00'
+ERROR 2025-06-21 09:24:12,500 otx_service 1970 127637562466304 Error converting OTX pulse to STIX: Unsupported STIX object type: report
+ERROR 2025-06-21 09:24:12,539 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:12.49747+00:00'
+ERROR 2025-06-21 09:24:12,618 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:12.49847+00:00'
+ERROR 2025-06-21 09:24:12,687 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:12.49996+00:00'
+ERROR 2025-06-21 09:24:13,721 otx_service 1970 127637562466304 Error converting OTX pulse to STIX: Unsupported STIX object type: report
+ERROR 2025-06-21 09:24:13,726 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:13.72159+00:00'
+ERROR 2025-06-21 09:24:14,715 otx_service 1970 127637562466304 Error converting OTX pulse to STIX: Unsupported STIX object type: report
+ERROR 2025-06-21 09:24:15,072 otx_service 1970 127637562466304 Error converting OTX pulse to STIX: Unsupported STIX object type: report
+ERROR 2025-06-21 09:24:15,154 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:15.0721+00:00'
+ERROR 2025-06-21 09:24:15,194 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:15.07228+00:00'
+ERROR 2025-06-21 09:24:15,452 otx_service 1970 127637562466304 Error converting OTX pulse to STIX: Unsupported STIX object type: report
+ERROR 2025-06-21 09:24:15,534 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:15.44982+00:00'
+ERROR 2025-06-21 09:24:15,555 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:15.4503+00:00'
+ERROR 2025-06-21 09:24:15,560 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:15.45055+00:00'
+ERROR 2025-06-21 09:24:15,612 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:15.45133+00:00'
+ERROR 2025-06-21 09:24:15,884 otx_service 1970 127637562466304 Error converting OTX pulse to STIX: Unsupported STIX object type: report
+ERROR 2025-06-21 09:24:16,144 otx_service 1970 127637562466304 Error converting OTX pulse to STIX: Unsupported STIX object type: report
+ERROR 2025-06-21 09:24:16,221 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:16.14282+00:00'
+ERROR 2025-06-21 09:24:16,246 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:16.14301+00:00'
+ERROR 2025-06-21 09:24:16,634 otx_service 1970 127637562466304 Error converting OTX pulse to STIX: Unsupported STIX object type: report
+ERROR 2025-06-21 09:24:16,729 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:16.63175+00:00'
+ERROR 2025-06-21 09:24:16,828 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:16.63256+00:00'
+ERROR 2025-06-21 09:24:16,830 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:16.63264+00:00'
+ERROR 2025-06-21 09:24:16,841 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:16.63289+00:00'
+ERROR 2025-06-21 09:24:16,857 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:16.63356+00:00'
+ERROR 2025-06-21 09:24:16,889 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:16.63437+00:00'
+ERROR 2025-06-21 09:24:17,241 otx_service 1970 127637562466304 Error converting OTX pulse to STIX: Unsupported STIX object type: report
+ERROR 2025-06-21 09:24:17,307 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:17.2383+00:00'
+ERROR 2025-06-21 09:24:17,362 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:17.23867+00:00'
+ERROR 2025-06-21 09:24:17,372 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:17.23876+00:00'
+ERROR 2025-06-21 09:24:17,435 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:17.23994+00:00'
+ERROR 2025-06-21 09:24:17,491 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:17.24061+00:00'
+ERROR 2025-06-21 09:24:17,492 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:17.24065+00:00'
+ERROR 2025-06-21 09:24:17,493 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:17.24073+00:00'
+ERROR 2025-06-21 09:24:17,782 otx_service 1970 127637562466304 Error converting OTX pulse to STIX: Unsupported STIX object type: report
+ERROR 2025-06-21 09:24:18,155 otx_service 1970 127637562466304 Error converting OTX pulse to STIX: Unsupported STIX object type: report
+ERROR 2025-06-21 09:24:18,505 otx_service 1970 127637562466304 Error converting OTX pulse to STIX: Unsupported STIX object type: report
+ERROR 2025-06-21 09:24:18,606 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.36413+00:00'
+ERROR 2025-06-21 09:24:18,622 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.36422+00:00'
+ERROR 2025-06-21 09:24:18,659 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.3644+00:00'
+ERROR 2025-06-21 09:24:18,668 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.36449+00:00'
+ERROR 2025-06-21 09:24:18,717 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.36519+00:00'
+ERROR 2025-06-21 09:24:18,805 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.3663+00:00'
+ERROR 2025-06-21 09:24:18,886 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.36816+00:00'
+ERROR 2025-06-21 09:24:18,907 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.36837+00:00'
+ERROR 2025-06-21 09:24:18,909 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.36841+00:00'
+ERROR 2025-06-21 09:24:18,954 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.41891+00:00'
+ERROR 2025-06-21 09:24:18,977 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.41925+00:00'
+ERROR 2025-06-21 09:24:18,995 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.41946+00:00'
+ERROR 2025-06-21 09:24:19,010 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.41971+00:00'
+ERROR 2025-06-21 09:24:19,027 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.41995+00:00'
+ERROR 2025-06-21 09:24:19,062 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.42058+00:00'
+ERROR 2025-06-21 09:24:19,163 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.42194+00:00'
+ERROR 2025-06-21 09:24:19,165 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.42198+00:00'
+ERROR 2025-06-21 09:24:19,293 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.42446+00:00'
+ERROR 2025-06-21 09:24:19,322 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.42491+00:00'
+ERROR 2025-06-21 09:24:19,398 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.4269+00:00'
+ERROR 2025-06-21 09:24:19,444 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.42871+00:00'
+ERROR 2025-06-21 09:24:19,453 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.42901+00:00'
+ERROR 2025-06-21 09:24:19,454 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.42909+00:00'
+ERROR 2025-06-21 09:24:19,469 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.42945+00:00'
+ERROR 2025-06-21 09:24:19,485 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.42982+00:00'
+ERROR 2025-06-21 09:24:19,528 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.43076+00:00'
+ERROR 2025-06-21 09:24:19,548 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.43105+00:00'
+ERROR 2025-06-21 09:24:19,583 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.43218+00:00'
+ERROR 2025-06-21 09:24:19,590 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.43232+00:00'
+ERROR 2025-06-21 09:24:19,645 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.43309+00:00'
+ERROR 2025-06-21 09:24:19,668 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.43342+00:00'
+ERROR 2025-06-21 09:24:19,690 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.43383+00:00'
+ERROR 2025-06-21 09:24:19,708 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.43413+00:00'
+ERROR 2025-06-21 09:24:19,710 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.43417+00:00'
+ERROR 2025-06-21 09:24:19,736 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.43454+00:00'
+ERROR 2025-06-21 09:24:19,747 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.4347+00:00'
+ERROR 2025-06-21 09:24:19,754 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.43483+00:00'
+ERROR 2025-06-21 09:24:19,765 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.43495+00:00'
+ERROR 2025-06-21 09:24:19,783 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.4353+00:00'
+ERROR 2025-06-21 09:24:19,805 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.43566+00:00'
+ERROR 2025-06-21 09:24:19,833 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.43603+00:00'
+ERROR 2025-06-21 09:24:19,898 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.43763+00:00'
+ERROR 2025-06-21 09:24:20,013 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.44046+00:00'
+ERROR 2025-06-21 09:24:20,040 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.44097+00:00'
+ERROR 2025-06-21 09:24:20,052 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.4413+00:00'
+ERROR 2025-06-21 09:24:20,166 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.44261+00:00'
+ERROR 2025-06-21 09:24:20,168 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.44265+00:00'
+ERROR 2025-06-21 09:24:20,286 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.44493+00:00'
+ERROR 2025-06-21 09:24:20,290 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.44503+00:00'
+ERROR 2025-06-21 09:24:20,304 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.44541+00:00'
+ERROR 2025-06-21 09:24:20,373 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.44753+00:00'
+ERROR 2025-06-21 09:24:20,375 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.44766+00:00'
+ERROR 2025-06-21 09:24:20,397 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.44825+00:00'
+ERROR 2025-06-21 09:24:20,447 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.44917+00:00'
+ERROR 2025-06-21 09:24:20,454 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.44948+00:00'
+ERROR 2025-06-21 09:24:20,460 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.44958+00:00'
+ERROR 2025-06-21 09:24:20,495 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.45011+00:00'
+ERROR 2025-06-21 09:24:20,513 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.45036+00:00'
+ERROR 2025-06-21 09:24:20,572 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.45142+00:00'
+ERROR 2025-06-21 09:24:20,628 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.45296+00:00'
+ERROR 2025-06-21 09:24:20,637 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.45346+00:00'
+ERROR 2025-06-21 09:24:20,661 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.45387+00:00'
+ERROR 2025-06-21 09:24:20,667 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.45396+00:00'
+ERROR 2025-06-21 09:24:20,672 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.45406+00:00'
+ERROR 2025-06-21 09:24:20,719 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.45471+00:00'
+ERROR 2025-06-21 09:24:20,725 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.45475+00:00'
+ERROR 2025-06-21 09:24:20,770 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.45567+00:00'
+ERROR 2025-06-21 09:24:20,777 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.4558+00:00'
+ERROR 2025-06-21 09:24:20,801 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.45612+00:00'
+ERROR 2025-06-21 09:24:20,803 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.45617+00:00'
+ERROR 2025-06-21 09:24:20,893 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.45805+00:00'
+ERROR 2025-06-21 09:24:20,895 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.45809+00:00'
+ERROR 2025-06-21 09:24:20,899 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.45818+00:00'
+ERROR 2025-06-21 09:24:20,909 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.45834+00:00'
+ERROR 2025-06-21 09:24:20,934 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.45885+00:00'
+ERROR 2025-06-21 09:24:20,951 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.45911+00:00'
+ERROR 2025-06-21 09:24:20,988 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.45976+00:00'
+ERROR 2025-06-21 09:24:21,014 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.46009+00:00'
+ERROR 2025-06-21 09:24:21,113 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.46293+00:00'
+ERROR 2025-06-21 09:24:21,145 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.46372+00:00'
+ERROR 2025-06-21 09:24:21,198 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.46463+00:00'
+ERROR 2025-06-21 09:24:21,232 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.4658+00:00'
+ERROR 2025-06-21 09:24:21,243 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.46624+00:00'
+ERROR 2025-06-21 09:24:21,248 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.46634+00:00'
+ERROR 2025-06-21 09:24:22,054 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.46883+00:00'
+ERROR 2025-06-21 09:24:22,058 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.4689+00:00'
+ERROR 2025-06-21 09:24:22,132 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.47065+00:00'
+ERROR 2025-06-21 09:24:22,160 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.47169+00:00'
+ERROR 2025-06-21 09:24:22,163 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.47174+00:00'
+ERROR 2025-06-21 09:24:22,283 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.4752+00:00'
+ERROR 2025-06-21 09:24:22,361 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.47872+00:00'
+ERROR 2025-06-21 09:24:22,406 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.47994+00:00'
+ERROR 2025-06-21 09:24:22,425 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.48053+00:00'
+ERROR 2025-06-21 09:24:22,497 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.48185+00:00'
+ERROR 2025-06-21 09:24:22,543 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.48253+00:00'
+ERROR 2025-06-21 09:24:22,577 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.48322+00:00'
+ERROR 2025-06-21 09:24:22,632 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.48425+00:00'
+ERROR 2025-06-21 09:24:22,688 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.48475+00:00'
+ERROR 2025-06-21 09:24:22,691 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.4848+00:00'
+ERROR 2025-06-21 09:24:22,752 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.48552+00:00'
+ERROR 2025-06-21 09:24:22,825 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.48648+00:00'
+ERROR 2025-06-21 09:24:22,889 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.48744+00:00'
+ERROR 2025-06-21 09:24:22,946 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.48857+00:00'
+ERROR 2025-06-21 09:24:22,951 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.48866+00:00'
+ERROR 2025-06-21 09:24:22,958 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.4888+00:00'
+ERROR 2025-06-21 09:24:22,998 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.48934+00:00'
+ERROR 2025-06-21 09:24:23,109 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.49101+00:00'
+ERROR 2025-06-21 09:24:23,234 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.49408+00:00'
+ERROR 2025-06-21 09:24:23,265 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.49452+00:00'
+ERROR 2025-06-21 09:24:23,333 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.49623+00:00'
+ERROR 2025-06-21 09:24:23,341 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.49641+00:00'
+ERROR 2025-06-21 09:24:23,366 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.49713+00:00'
+ERROR 2025-06-21 09:24:23,367 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.49723+00:00'
+ERROR 2025-06-21 09:24:23,396 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.49835+00:00'
+ERROR 2025-06-21 09:24:23,437 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.4995+00:00'
+ERROR 2025-06-21 09:24:23,588 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.50174+00:00'
+ERROR 2025-06-21 09:24:23,771 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.50479+00:00'
+ERROR 2025-06-21 09:24:23,811 otx_service 1970 127637562466304 Error storing STIX object: Invalid isoformat string: '2025-06-21T09:24:18.50535+00:00'
+INFO 2025-06-21 09:26:37,951 feed_observers 1972 138065870606336 Connected feed observer signals
+INFO 2025-06-21 09:26:39,165 feed_observers 1973 126138851516416 Connected feed observer signals
+INFO 2025-06-21 09:26:39,219 autoreload 1973 126138851516416 Watching for file changes with StatReloader
+INFO 2025-06-21 09:26:47,261 basehttp 1973 126138693187136 "GET / HTTP/1.1" 200 2922
+WARNING 2025-06-21 09:26:47,763 log 1973 126138693187136 Not Found: /favicon.ico
+WARNING 2025-06-21 09:26:47,765 basehttp 1973 126138693187136 "GET /favicon.ico HTTP/1.1" 404 179
+INFO 2025-06-21 09:26:50,595 basehttp 1973 126138693187136 "GET /dashboard/ HTTP/1.1" 302 0
+WARNING 2025-06-21 09:26:50,601 log 1973 126138693187136 Not Found: /accounts/login/
+WARNING 2025-06-21 09:26:50,602 basehttp 1973 126138693187136 "GET /accounts/login/?next=/dashboard/ HTTP/1.1" 404 179
+INFO 2025-06-21 09:26:52,887 basehttp 1973 126138693187136 "GET /admin/ HTTP/1.1" 302 0
+INFO 2025-06-21 09:26:52,932 basehttp 1973 126138693187136 "GET /admin/login/?next=/admin/ HTTP/1.1" 200 4181
+WARNING 2025-06-21 09:26:53,015 log 1973 126138693187136 Not Found: /static/admin/css/base.css
+WARNING 2025-06-21 09:26:53,017 basehttp 1973 126138693187136 "GET /static/admin/css/base.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:26:53,026 log 1973 126138684794432 Not Found: /static/admin/css/dark_mode.css
+WARNING 2025-06-21 09:26:53,030 log 1973 126138676401728 Not Found: /static/admin/css/nav_sidebar.css
+WARNING 2025-06-21 09:26:53,033 log 1973 126138668009024 Not Found: /static/admin/css/login.css
+WARNING 2025-06-21 09:26:53,037 log 1973 126138659616320 Not Found: /static/admin/css/responsive.css
+WARNING 2025-06-21 09:26:53,040 basehttp 1973 126138684794432 "GET /static/admin/css/dark_mode.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:26:53,043 log 1973 126138651223616 Not Found: /static/admin/js/theme.js
+WARNING 2025-06-21 09:26:53,043 basehttp 1973 126138676401728 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:26:53,044 basehttp 1973 126138668009024 "GET /static/admin/css/login.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:26:53,046 basehttp 1973 126138659616320 "GET /static/admin/css/responsive.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:26:53,049 log 1973 126138684794432 Not Found: /static/admin/js/nav_sidebar.js
+WARNING 2025-06-21 09:26:53,051 basehttp 1973 126138651223616 "GET /static/admin/js/theme.js HTTP/1.1" 404 179
+WARNING 2025-06-21 09:26:53,056 basehttp 1973 126138684794432 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 404 179
+INFO 2025-06-21 09:27:06,622 basehttp 1973 126138684794432 "POST /admin/login/?next=/admin/ HTTP/1.1" 200 4342
+WARNING 2025-06-21 09:27:06,639 log 1973 126138684794432 Not Found: /static/admin/css/base.css
+WARNING 2025-06-21 09:27:06,640 basehttp 1973 126138684794432 "GET /static/admin/css/base.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:27:06,644 log 1973 126138693187136 Not Found: /static/admin/css/dark_mode.css
+WARNING 2025-06-21 09:27:06,648 log 1973 126138651223616 Not Found: /static/admin/css/nav_sidebar.css
+WARNING 2025-06-21 09:27:06,650 log 1973 126138659616320 Not Found: /static/admin/css/login.css
+WARNING 2025-06-21 09:27:06,652 log 1973 126138668009024 Not Found: /static/admin/css/responsive.css
+WARNING 2025-06-21 09:27:06,655 log 1973 126138676401728 Not Found: /static/admin/js/theme.js
+WARNING 2025-06-21 09:27:06,656 basehttp 1973 126138693187136 "GET /static/admin/css/dark_mode.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:27:06,657 basehttp 1973 126138651223616 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:27:06,658 basehttp 1973 126138659616320 "GET /static/admin/css/login.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:27:06,659 basehttp 1973 126138668009024 "GET /static/admin/css/responsive.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:27:06,660 basehttp 1973 126138676401728 "GET /static/admin/js/theme.js HTTP/1.1" 404 179
+WARNING 2025-06-21 09:27:06,664 log 1973 126138693187136 Not Found: /static/admin/js/nav_sidebar.js
+WARNING 2025-06-21 09:27:06,670 basehttp 1973 126138693187136 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 404 179
+INFO 2025-06-21 09:27:19,729 basehttp 1973 126138693187136 "GET /admin/ HTTP/1.1" 302 0
+INFO 2025-06-21 09:27:19,742 basehttp 1973 126138693187136 "GET /admin/login/?next=/admin/ HTTP/1.1" 200 4181
+WARNING 2025-06-21 09:27:19,802 log 1973 126138693187136 Not Found: /static/admin/css/base.css
+WARNING 2025-06-21 09:27:19,804 basehttp 1973 126138693187136 "GET /static/admin/css/base.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:27:19,816 log 1973 126138684794432 Not Found: /static/admin/css/dark_mode.css
+WARNING 2025-06-21 09:27:19,819 log 1973 126138676401728 Not Found: /static/admin/css/nav_sidebar.css
+WARNING 2025-06-21 09:27:19,822 log 1973 126138651223616 Not Found: /static/admin/js/theme.js
+WARNING 2025-06-21 09:27:19,824 log 1973 126138668009024 Not Found: /static/admin/css/login.css
+WARNING 2025-06-21 09:27:19,825 log 1973 126138659616320 Not Found: /static/admin/css/responsive.css
+WARNING 2025-06-21 09:27:19,826 basehttp 1973 126138684794432 "GET /static/admin/css/dark_mode.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:27:19,828 basehttp 1973 126138676401728 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:27:19,829 basehttp 1973 126138651223616 "GET /static/admin/js/theme.js HTTP/1.1" 404 179
+WARNING 2025-06-21 09:27:19,830 basehttp 1973 126138668009024 "GET /static/admin/css/login.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:27:19,831 basehttp 1973 126138659616320 "GET /static/admin/css/responsive.css HTTP/1.1" 404 179
+WARNING 2025-06-21 09:27:19,833 log 1973 126138684794432 Not Found: /static/admin/js/nav_sidebar.js
+WARNING 2025-06-21 09:27:19,838 basehttp 1973 126138684794432 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 404 179
