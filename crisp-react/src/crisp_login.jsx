@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { loginUser } from './api.js'; // Import the API function
 import BlueVLogo from './assets/BlueV.png';
 import CrispHelp from './crisp_help.jsx'; // Import the help component
+import Construction from './construction.jsx'; // Import construction component
 
 // Login Component that works with the AuthWrapper in main.jsx
 function CrispLogin({ onLoginSuccess, switchView }) {
@@ -10,6 +11,7 @@ function CrispLogin({ onLoginSuccess, switchView }) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false); // State for help modal
+  const [showConstruction, setShowConstruction] = useState(false); // State for construction page
 
   // Initialize Feather icons when component mounts
   useEffect(() => {
@@ -64,6 +66,30 @@ function CrispLogin({ onLoginSuccess, switchView }) {
   const closeHelp = () => {
     setIsHelpOpen(false);
   };
+
+  // Handle navigation from help component
+  const handleNavigate = (page, context) => {
+    console.log(`Navigate to ${page} from login page with context:`, context);
+    
+    // Close help modal first
+    closeHelp();
+    
+    if (page === 'construction') {
+      // Option 1: Use parent component routing if available
+      if (switchView && typeof switchView === 'function') {
+        switchView('Construction');
+      } 
+      // Option 2: Show construction component directly
+      else {
+        setShowConstruction(true);
+      }
+    }
+  };
+
+  // If construction page should be shown, render it instead of login
+  if (showConstruction) {
+    return <Construction />;
+  }
 
   return (
     <>
@@ -181,10 +207,11 @@ function CrispLogin({ onLoginSuccess, switchView }) {
         </div>
       </div>
 
-      {/* Help Modal */}
+      {/* Help Modal - Now with navigation support */}
       <CrispHelp 
         isOpen={isHelpOpen} 
         onClose={closeHelp} 
+        onNavigate={handleNavigate}
       />
     </>
   );
@@ -276,7 +303,7 @@ function CSSStyles() {
             left: 0;
             right: 0;
             bottom: 0;
-            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MDAgODAwIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIj48ZyBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIG9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxLjUiPjxjaXJjbGUgcj0iMTAwIiBjeD0iNDAwIiBjeT0iNDAwIi8+PGNpcmNsZSByPSIyMDAiIGN4PSI0MDAiIGN5PSI0MDAiLz48Y2lyY2xlIHI9IjMwMCIgY3g9IjQwMCIgY3k9IjQwMCIvPjxjaXJjbGUgcj0iNDAwIiBjeD0iNDAwIiBjeT0iNDAwIi8+PC9nPjxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgb3BhY2l0eT0iMC4yIiBzdHJva2Utd2lkdGg9IjEiPjxwYXRoIGQ9Ik0yMDAgMjAwIEw2MDAgNjAwIE0yMDAgNjAwIEw2MDAgMjAwIE0zMDAgMTAwIEwzMDAgNzAwIE01MDAgMTAwIEw1MDAgNzAwIE0xMDAgMzAwIEw3MDAgMzAwIE0xMDAgNTAwIEw3MDAgNTAwIi8+PC9nPjxnIGZpbGw9IiNmZmYiIG9wYWNpdHk9IjAuMiI+PGNpcmNsZSByPSIzIiBjeD0iMjAwIiBjeT0iMjAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNDAwIiBjeT0iMjAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNjAwIiBjeT0iMjAwIi8+PGNpcmNsZSByPSIzIiBjeD0iMjAwIiBjeT0iNDAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNDAwIiBjeT0iNDAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNjAwIiBjeT0iNDAwIi8+PGNpcmNsZSByPSIzIiBjeD0iMjAwIiBjeT0iNjAwIi/+PGNpcmNsZSByPSIzIiBjeD0iNDAwIiBjeT0iNjAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNjAwIiBjeT0iNjAwIi8+PC9nPjxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgb3BhY2l0eT0iMC4xIiBzdHJva2Utd2lkdGg9IjEiPjxwYXRoIGQ9Ik0zMDAgMzAwIEw1MDAgNTAwIE0zMDAgNTAwIEw1MDAgMzAwIi8+PC9nPjwvc3ZnPg=='), url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgMjQwIj48ZGVmcz48cGF0dGVybiBpZD0ic21hbGwtZ3JpZCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cmVjdCB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9Im5vbmUiLz48cGF0aCBkPSJNIDEwIDAgTCAwIDAgTCAwIDEwIiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMC41IiBvcGFjaXR5PSIwLjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjc21hbGwtZ3JpZCkiLz48L3N2Zz4=');
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MDAgODAwIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIj48ZyBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIG9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxLjUiPjxjaXJjbGUgcj0iMTAwIiBjeD0iNDAwIiBjeT0iNDAwIi8+PGNpcmNsZSByPSIyMDAiIGN4PSI0MDAiIGN5PSI0MDAiLz48Y2lyY2xlIHI9IjMwMCIgY3g9IjQwMCIgY3k9IjQwMCIvPjxjaXJjbGUgcj0iNDAwIiBjeD0iNDAwIiBjeT0iNDAwIi8+PC9nPjxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgb3BhY2l0eT0iMC4yIiBzdHJva2Utd2lkdGg9IjEiPjxwYXRoIGQ9Ik0yMDAgMjAwIEw2MDAgNjAwIE0yMDAgNjAwIEw2MDAgMjAwIE0zMDAgMTAwIEwzMDAgNzAwIE01MDAgMTAwIEw1MDAgNzAwIE0xMDAgMzAwIEw3MDAgMzAwIE0xMDAgNTAwIEw3MDAgNTAwIi8+PC9nPjxnIGZpbGw9IiNmZmYiIG9wYWNpdHk9IjAuMiI+PGNpcmNsZSByPSIzIiBjeD0iMjAwIiBjeT0iMjAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNDAwIiBjeT0iMjAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNjAwIiBjeT0iMjAwIi8+PGNpcmNsZSByPSIzIiBjeD0iMjAwIiBjeT0iNDAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNDAwIiBjeT0iNDAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNjAwIiBjeT0iNDAwIi8+PGNpcmNsZSByPSIzIiBjeD0iMjAwIiBjeT0iNjAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNDAwIiBjeT0iNjAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNjAwIiBjeT0iNjAwIi8+PC9nPjxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgb3BhY2l0eT0iMC4xIiBzdHJva2Utd2lkdGg9IjEiPjxwYXRoIGQ9Ik0zMDAgMzAwIEw1MDAgNTAwIE0zMDAgNTAwIEw1MDAgMzAwIi8+PC9nPjwvc3ZnPg=='), url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgMjQwIj48ZGVmcz48cGF0dGVybiBpZD0ic21hbGwtZ3JpZCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cmVjdCB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9Im5vbmUiLz48cGF0aCBkPSJNIDEwIDAgTCAwIDAgTCAwIDEwIiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMC41IiBvcGFjaXR5PSIwLjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjc21hbGwtZ3JpZCkiLz48L3N2Zz4=');
             background-blend-mode: overlay;
             opacity: 0.3;
         }

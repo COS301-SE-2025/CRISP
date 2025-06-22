@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { createRoot } from 'react-dom/client'; // Add proper import for createRoot
 import './assets/crisp_help.css';
+import Construction from './construction.jsx'; // Ensure lowercase to match actual filename
 
 function CrispHelp({ isOpen, onClose, onNavigate }) {
   const [activeTab, setActiveTab] = useState('getting-started');
@@ -50,23 +52,33 @@ function CrispHelp({ isOpen, onClose, onNavigate }) {
     };
   }, [isOpen, onClose]);
 
-  const handleTutorialClick = (item) => {
-    if (item.link === 'construction') {
-      onClose(); // Close the help modal first
-      
-      // Navigate to construction page
-      if (onNavigate) {
-        onNavigate('construction.jsx', item.id);
+  const handleTutorialClick = (item, e) => {
+    e.preventDefault(); // Prevent default link behavior
+    
+    // Close the help modal first
+    onClose();
+    
+    // If it's a construction link and we have the navigation callback
+    if (item.link === 'Construction' || item.link === 'construction') {
+      if (typeof onNavigate === 'function') {
+        onNavigate('construction', { tutorial: item.title });
       } else {
-        // Fallback: Direct navigation if no onNavigate prop
-        window.location.href = '../construction.jsx';
+        // Fallback direct navigation if onNavigate isn't available
+        console.log('Direct navigation to construction page for tutorial:', item.title);
+        
+        // Use window location to navigate
+        window.location.href = '/construction';
       }
     } else if (item.link) {
-      // Handle other types of links (URLs, etc.)
+      // Handle other types of links (external URLs, etc.)
       if (item.link.startsWith('http')) {
         window.open(item.link, '_blank');
       } else {
-        window.location.href = item.link;
+        if (typeof onNavigate === 'function') {
+          onNavigate(item.link);
+        } else {
+          window.location.href = `/${item.link}`;
+        }
       }
     }
   };
@@ -79,36 +91,32 @@ function CrispHelp({ isOpen, onClose, onNavigate }) {
       icon: 'play-circle',
       content: [
         {
-          id: 'quick-start',
           title: 'Quick Start Guide',
           description: 'Learn the basics of CRISP in 5 minutes',
           type: 'tutorial',
           duration: '5 min',
-          link: 'construction' // Change this to actual URL later
+          link: 'Construction'
         },
         {
-          id: 'dashboard-overview',
           title: 'Dashboard Overview',
           description: 'Understanding your threat intelligence dashboard',
           type: 'tutorial',
           duration: '8 min',
-          link: 'construction' // Change this to actual URL later
+          link: 'Construction'
         },
         {
-          id: 'first-feed',
           title: 'Setting up Your First Feed',
           description: 'Connect to your first threat intelligence feed',
           type: 'guide',
           duration: '10 min',
-          link: 'construction' // Change this to actual URL later
+          link: 'Construction'
         },
         {
-          id: 'account-setup',
           title: 'User Account Setup',
           description: 'Configure your profile and preferences',
           type: 'guide',
           duration: '3 min',
-          link: 'construction' // Change this to actual URL later
+          link: 'Construction'
         }
       ]
     },
@@ -117,36 +125,32 @@ function CrispHelp({ isOpen, onClose, onNavigate }) {
       icon: 'rss',
       content: [
         {
-          id: 'stix-taxii',
           title: 'Managing STIX/TAXII Feeds',
           description: 'Configure and monitor STIX/TAXII data sources',
           type: 'tutorial',
           duration: '12 min',
-          link: 'construction' // Change this to actual URL later
+          link: 'Construction'
         },
         {
-          id: 'misp-integration',
           title: 'MISP Integration',
           description: 'Connect and sync with MISP instances',
           type: 'tutorial',
           duration: '15 min',
-          link: 'construction' // Change this to actual URL later
+          link: 'Construction'
         },
         {
-          id: 'feed-monitoring',
           title: 'Feed Health Monitoring',
           description: 'Track feed status and troubleshoot issues',
           type: 'guide',
           duration: '7 min',
-          link: 'construction' // Change this to actual URL later
+          link: 'Construction'
         },
         {
-          id: 'custom-feeds',
           title: 'Custom Feed Creation',
           description: 'Build custom threat intelligence feeds',
           type: 'guide',
           duration: '20 min',
-          link: 'construction' // Change this to actual URL later
+          link: 'Construction'
         }
       ]
     },
@@ -155,36 +159,32 @@ function CrispHelp({ isOpen, onClose, onNavigate }) {
       icon: 'search',
       content: [
         {
-          id: 'ioc-validation',
           title: 'IoC Validation and Verification',
           description: 'Best practices for validating indicators',
           type: 'guide',
           duration: '10 min',
-          link: 'construction' // Change this to actual URL later
+          link: 'Construction'
         },
         {
-          id: 'bulk-operations',
           title: 'Bulk IoC Operations',
           description: 'Import, export, and manage large IoC datasets',
           type: 'tutorial',
           duration: '12 min',
-          link: 'construction' // Change this to actual URL later
+          link: 'Construction'
         },
         {
-          id: 'ioc-sharing',
           title: 'IoC Sharing and Collaboration',
           description: 'Share indicators with trusted institutions',
           type: 'tutorial',
           duration: '8 min',
-          link: 'construction' // Change this to actual URL later
+          link: 'Construction'
         },
         {
-          id: 'automated-processing',
           title: 'Automated IoC Processing',
           description: 'Set up automated IoC enrichment and classification',
           type: 'guide',
           duration: '18 min',
-          link: 'construction' // Change this to actual URL later
+          link: 'Construction'
         }
       ]
     },
@@ -193,36 +193,32 @@ function CrispHelp({ isOpen, onClose, onNavigate }) {
       icon: 'trending-up',
       content: [
         {
-          id: 'mitre-mapping',
           title: 'MITRE ATT&CK Mapping',
           description: 'Map observed behaviors to MITRE ATT&CK framework',
           type: 'tutorial',
           duration: '15 min',
-          link: 'construction' // Change this to actual URL later
+          link: 'Construction'
         },
         {
-          id: 'pattern-recognition',
           title: 'TTP Pattern Recognition',
           description: 'Identify and analyze attack patterns',
           type: 'guide',
           duration: '12 min',
-          link: 'construction' // Change this to actual URL later
+          link: 'Construction'
         },
         {
-          id: 'threat-profiling',
           title: 'Threat Actor Profiling',
           description: 'Build comprehensive threat actor profiles',
           type: 'tutorial',
           duration: '20 min',
-          link: 'construction' // Change this to actual URL later
+          link: 'Construction'
         },
         {
-          id: 'campaign-analysis',
           title: 'Campaign Analysis',
           description: 'Track and analyze multi-stage attack campaigns',
           type: 'guide',
           duration: '16 min',
-          link: 'construction' // Change this to actual URL later
+          link: 'Construction'
         }
       ]
     }
@@ -446,8 +442,8 @@ function CrispHelp({ isOpen, onClose, onNavigate }) {
                     <div className="contact-details">
                       <h4>Email Support</h4>
                       <p>Get help via email with detailed responses</p>
-                      <a href="mailto:support@bluevision-itm.com" className="contact-link">
-                        support@bluevision-itm.com
+                      <a href="mailto:ib@bitm.co.za" className="contact-link">
+                        ib@bitm.co.za
                       </a>
                     </div>
                   </div>
@@ -472,27 +468,15 @@ function CrispHelp({ isOpen, onClose, onNavigate }) {
                     <div className="contact-details">
                       <h4>Online Support</h4>
                       <p>Access our comprehensive knowledge base</p>
-                      <a href="https://support.crisp.bluevision-itm.com" className="contact-link">
+                      <a href="https://bitm.co.za/" className="contact-link">
                         Visit Support Portal
                       </a>
                     </div>
                   </div>
                   
-                  <div className="contact-card">
-                    <div className="contact-icon">
-                      <i data-feather="message-square"></i>
-                    </div>
-                    <div className="contact-details">
-                      <h4>Live Chat</h4>
-                      <p>Chat with support during business hours</p>
-                      <button className="btn btn-primary btn-sm">
-                        Start Live Chat
-                      </button>
-                    </div>
-                  </div>
                 </div>
                 
-                                  <div className="support-hours">
+                <div className="support-hours">
                   <h4><i data-feather="clock"></i> Support Hours</h4>
                   <div className="hours-grid">
                     <div className="hours-item">
@@ -534,13 +518,17 @@ function CrispHelp({ isOpen, onClose, onNavigate }) {
                       </div>
                       <h4>{item.title}</h4>
                       <p>{item.description}</p>
-                      <button 
-                        className="help-link" 
-                        onClick={() => handleTutorialClick(item)}
-                      >
-                        <span>View {item.type}</span>
-                        <i data-feather="external-link"></i>
-                      </button>
+                      {/* Use a button with onClick handler */}
+                      {item.type && (
+                        <button 
+                          className="help-link"
+                          onClick={(e) => handleTutorialClick(item, e)}
+                          data-tutorial={item.title}
+                        >
+                          <span>View {item.type}</span>
+                          <i data-feather="external-link"></i>
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
