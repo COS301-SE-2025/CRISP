@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { loginUser } from './api.js'; // Import the API function
-import BlueVLogo from './BlueV.png';
-
+import BlueVLogo from './assets/BlueV.png';
+import CrispHelp from './crisp_help.jsx'; // Import the help component
 
 // Login Component that works with the AuthWrapper in main.jsx
 function CrispLogin({ onLoginSuccess, switchView }) {
@@ -9,6 +9,7 @@ function CrispLogin({ onLoginSuccess, switchView }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false); // State for help modal
 
   // Initialize Feather icons when component mounts
   useEffect(() => {
@@ -33,7 +34,7 @@ function CrispLogin({ onLoginSuccess, switchView }) {
     if (window.feather) {
       setTimeout(() => window.feather.replace(), 100);
     }
-  }, [error, isLoading]);
+  }, [error, isLoading, isHelpOpen]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -54,6 +55,14 @@ function CrispLogin({ onLoginSuccess, switchView }) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const openHelp = () => {
+    setIsHelpOpen(true);
+  };
+
+  const closeHelp = () => {
+    setIsHelpOpen(false);
   };
 
   return (
@@ -99,6 +108,18 @@ function CrispLogin({ onLoginSuccess, switchView }) {
           
           <div className="login-right">
             <div className="login-form-container">
+              {/* Help button in top right corner */}
+              <div className="login-header">
+                <button 
+                  className="help-button" 
+                  onClick={openHelp}
+                  title="Help & Support"
+                  type="button"
+                >
+                  <i data-feather="help-circle"></i>
+                </button>
+              </div>
+
               <h2>Welcome Back</h2>
               <p className="subtitle">Sign in to your account</p>
               
@@ -140,21 +161,36 @@ function CrispLogin({ onLoginSuccess, switchView }) {
                 disabled={isLoading}
               >
                 {isLoading ? 'Signing in...' : 'Sign In'}
-
               </button>
               
               <div className="login-footer">
                 <p>Don't have an account? Contact <a href="#" className="register-link">BlueVision ITM</a> for account registration.</p>
+                <div className="footer-links">
+                  <button 
+                    className="help-link" 
+                    onClick={openHelp}
+                    type="button"
+                  >
+                    <i data-feather="help-circle"></i>
+                    Need Help?
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Help Modal */}
+      <CrispHelp 
+        isOpen={isHelpOpen} 
+        onClose={closeHelp} 
+      />
     </>
   );
 }
 
-// CSS Styles for Login
+// CSS Styles for Login (with help button styles added)
 function CSSStyles() {
   return (
     <style>
@@ -240,7 +276,7 @@ function CSSStyles() {
             left: 0;
             right: 0;
             bottom: 0;
-            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MDAgODAwIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIj48ZyBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIG9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxLjUiPjxjaXJjbGUgcj0iMTAwIiBjeD0iNDAwIiBjeT0iNDAwIi8+PGNpcmNsZSByPSIyMDAiIGN4PSI0MDAiIGN5PSI0MDAiLz48Y2lyY2xlIHI9IjMwMCIgY3g9IjQwMCIgY3k9IjQwMCIvPjxjaXJjbGUgcj0iNDAwIiBjeD0iNDAwIiBjeT0iNDAwIi8+PC9nPjxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgb3BhY2l0eT0iMC4yIiBzdHJva2Utd2lkdGg9IjEiPjxwYXRoIGQ9Ik0yMDAgMjAwIEw2MDAgNjAwIE0yMDAgNjAwIEw2MDAgMjAwIE0zMDAgMTAwIEwzMDAgNzAwIE01MDAgMTAwIEw1MDAgNzAwIE0xMDAgMzAwIEw3MDAgMzAwIE0xMDAgNTAwIEw3MDAgNTAwIi8+PC9nPjxnIGZpbGw9IiNmZmYiIG9wYWNpdHk9IjAuMiI+PGNpcmNsZSByPSIzIiBjeD0iMjAwIiBjeT0iMjAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNDAwIiBjeT0iMjAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNjAwIiBjeT0iMjAwIi8+PGNpcmNsZSByPSIzIiBjeD0iMjAwIiBjeT0iNDAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNDAwIiBjeT0iNDAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNjAwIiBjeT0iNDAwIi8+PGNpcmNsZSByPSIzIiBjeD0iMjAwIiBjeT0iNjAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNDAwIiBjeT0iNjAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNjAwIiBjeT0iNjAwIi8+PC9nPjxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgb3BhY2l0eT0iMC4xIiBzdHJva2Utd2lkdGg9IjEiPjxwYXRoIGQ9Ik0zMDAgMzAwIEw1MDAgNTAwIE0zMDAgNTAwIEw1MDAgMzAwIi8+PC9nPjwvc3ZnPg=='), url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgMjQwIj48ZGVmcz48cGF0dGVybiBpZD0ic21hbGwtZ3JpZCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cmVjdCB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9Im5vbmUiLz48cGF0aCBkPSJNIDEwIDAgTCAwIDAgTCAwIDEwIiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMC41IiBvcGFjaXR5PSIwLjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjc21hbGwtZ3JpZCkiLz48L3N2Zz4=');
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MDAgODAwIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIj48ZyBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIG9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxLjUiPjxjaXJjbGUgcj0iMTAwIiBjeD0iNDAwIiBjeT0iNDAwIi8+PGNpcmNsZSByPSIyMDAiIGN4PSI0MDAiIGN5PSI0MDAiLz48Y2lyY2xlIHI9IjMwMCIgY3g9IjQwMCIgY3k9IjQwMCIvPjxjaXJjbGUgcj0iNDAwIiBjeD0iNDAwIiBjeT0iNDAwIi8+PC9nPjxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgb3BhY2l0eT0iMC4yIiBzdHJva2Utd2lkdGg9IjEiPjxwYXRoIGQ9Ik0yMDAgMjAwIEw2MDAgNjAwIE0yMDAgNjAwIEw2MDAgMjAwIE0zMDAgMTAwIEwzMDAgNzAwIE01MDAgMTAwIEw1MDAgNzAwIE0xMDAgMzAwIEw3MDAgMzAwIE0xMDAgNTAwIEw3MDAgNTAwIi8+PC9nPjxnIGZpbGw9IiNmZmYiIG9wYWNpdHk9IjAuMiI+PGNpcmNsZSByPSIzIiBjeD0iMjAwIiBjeT0iMjAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNDAwIiBjeT0iMjAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNjAwIiBjeT0iMjAwIi8+PGNpcmNsZSByPSIzIiBjeD0iMjAwIiBjeT0iNDAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNDAwIiBjeT0iNDAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNjAwIiBjeT0iNDAwIi8+PGNpcmNsZSByPSIzIiBjeD0iMjAwIiBjeT0iNjAwIi/+PGNpcmNsZSByPSIzIiBjeD0iNDAwIiBjeT0iNjAwIi8+PGNpcmNsZSByPSIzIiBjeD0iNjAwIiBjeT0iNjAwIi8+PC9nPjxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgb3BhY2l0eT0iMC4xIiBzdHJva2Utd2lkdGg9IjEiPjxwYXRoIGQ9Ik0zMDAgMzAwIEw1MDAgNTAwIE0zMDAgNTAwIEw1MDAgMzAwIi8+PC9nPjwvc3ZnPg=='), url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgMjQwIj48ZGVmcz48cGF0dGVybiBpZD0ic21hbGwtZ3JpZCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cmVjdCB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9Im5vbmUiLz48cGF0aCBkPSJNIDEwIDAgTCAwIDAgTCAwIDEwIiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMC41IiBvcGFjaXR5PSIwLjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjc21hbGwtZ3JpZCkiLz48L3N2Zz4=');
             background-blend-mode: overlay;
             opacity: 0.3;
         }
@@ -332,6 +368,40 @@ function CSSStyles() {
             width: 100%;
             max-width: 300px;
             padding: 1.5rem;
+            position: relative;
+        }
+
+        /* Login Header with Help Button */
+        .login-header {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 1rem;
+        }
+
+        .help-button {
+            background: var(--bg-light);
+            border: 1px solid var(--bg-medium);
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--primary-color);
+            transition: all 0.2s ease;
+            font-size: 0;
+        }
+
+        .help-button:hover {
+            background: var(--primary-color);
+            color: var(--text-light);
+            transform: scale(1.05);
+        }
+
+        .help-button i {
+            width: 18px;
+            height: 18px;
         }
         
         .login-form-container h2 {
@@ -359,7 +429,6 @@ function CSSStyles() {
         
         .input-with-icon {
             position: relative;
-            
         }
         
         .input-with-icon i {
@@ -380,7 +449,7 @@ function CSSStyles() {
             font-size: 1rem;
             background-color: var(--bg-light);
             transition: all 0.3s;
-            color: #000000; /* Ensuring text is black when user types */
+            color: #000000;
         }
         
         .input-with-icon input:focus {
@@ -388,7 +457,7 @@ function CSSStyles() {
             border-color: var(--primary-color);
             background-color: var(--text-light);
             box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1);
-            color: #000000; /* Ensuring text is black when focused */
+            color: #000000;
         }
         
         .btn-sign-in {
@@ -419,6 +488,36 @@ function CSSStyles() {
             text-align: center;
             color: var(--text-muted);
             font-size: 0.9rem;
+        }
+
+        .footer-links {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--bg-medium);
+        }
+
+        .help-link {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .help-link:hover {
+            color: var(--primary-dark);
+            text-decoration: underline;
+        }
+
+        .help-link i {
+            width: 14px;
+            height: 14px;
         }
         
         .demo-credentials {

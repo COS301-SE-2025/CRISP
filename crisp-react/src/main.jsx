@@ -6,7 +6,7 @@ import App from "./App.jsx";
 import AppRegister from "./AppRegister.jsx";
 import RegisterUser from "./RegisterUser.jsx";
 import CrispLogin from "./crisp_login.jsx";
-import "./index.css";
+import "./assets/index.css";
 
 // Import Font Awesome
 import "@fortawesome/fontawesome-free/css/all.min.css";

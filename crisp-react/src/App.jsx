@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
-import CSSStyles from './CSSStyles'; // Import the separate CSS file
-import logoImage from './BlueV2.png';
+import CSSStyles from './assets/CSSStyles'; // Import the separate CSS file
+import logoImage from './assets/BlueV2.png';
 
 
 function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthWrapper passes

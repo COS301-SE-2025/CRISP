@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { useNavigate } from 'react-router-dom';
-import CSSStyles from './CSSStyles';
-import logoImage from './BlueV2.png';
+import CSSStyles from './assets/CSSStyles';
+import logoImage from './assets/BlueV2.png';
 
 
 function AppRegister({ user, onLogout }) {
