@@ -4,6 +4,20 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR / '.env')
+except ImportError:
+    # If python-dotenv is not installed, manually load .env
+    env_file = BASE_DIR / '.env'
+    if env_file.exists():
+        with open(env_file) as f:
+            for line in f:
+                if '=' in line and not line.strip().startswith('#'):
+                    key, value = line.strip().split('=', 1)
+                    os.environ.setdefault(key, value)
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key-change-in-production-make-it-long-and-random')
 
@@ -23,6 +37,11 @@ if not DEBUG:
     X_FRAME_OPTIONS = 'DENY'
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+else:
+    # Development settings - disable HTTPS redirects
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
 
 # Application definition
 DJANGO_APPS = [

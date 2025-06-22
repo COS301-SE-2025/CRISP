@@ -17,3 +17,5 @@ drf-yasg==1.21.7
 celery==5.3.4
 redis==5.0.1
 gunicorn==21.2.0
+mixbox==1.0.5
+xmltodict==0.13.0

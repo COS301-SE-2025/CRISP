@@ -7,10 +7,11 @@ from stix2.base import _STIXBase
 from stix2.exceptions import InvalidValueError, MissingPropertiesError, ExtraPropertiesError
 from stix2patterns.validator import run_validator as validate_pattern
 from django.conf import settings
+from .version_handler import STIXVersionHandler, STIXVersion, STIXVersionDetector
 
 class STIXValidator:
     """
-    Validator for STIX 2.1 objects.
+    Multi-version STIX validator supporting STIX 1.x and 2.x.
     """
     def __init__(self):
         """
@@ -37,6 +38,9 @@ class STIXValidator:
             'opinion',
             'marking-definition'
         }
+        
+        self.version_detector = STIXVersionDetector()
+        self.version_handler = STIXVersionHandler()
     
     def validate(self, stix_data: Union[Dict[str, Any], _STIXBase]) -> Dict[str, Any]:
         """
@@ -289,3 +293,235 @@ class STIXValidator:
         # Check format: <type>--<uuid>
         ref_pattern = re.compile(r'^[a-z0-9-]+--[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
         return bool(ref_pattern.match(ref))
+    
+    def validate_multi_version(self, stix_data: Union[str, Dict[str, Any], bytes]) -> Dict[str, Any]:
+        """
+        Validate STIX data of any supported version.
+        
+        Args:
+            stix_data: STIX data in any supported format/version
+            
+        Returns:
+            Dictionary with validation results including version information
+        """
+        try:
+            # Detect version first
+            detected_version = self.version_detector.detect_version(stix_data)
+            
+            if detected_version == STIXVersion.UNKNOWN:
+                return {
+                    'valid': False,
+                    'errors': ["Unable to detect STIX version from input data"],
+                    'warnings': [],
+                    'detected_version': 'unknown',
+                    'converted_to_stix21': False
+                }
+            
+            # For STIX 1.x, validate basic structure then convert
+            if detected_version in [STIXVersion.STIX_1_0, STIXVersion.STIX_1_1, STIXVersion.STIX_1_2]:
+                return self._validate_stix1x(stix_data, detected_version)
+            
+            # For STIX 2.0, validate then convert to 2.1
+            elif detected_version == STIXVersion.STIX_2_0:
+                return self._validate_stix20(stix_data)
+            
+            # For STIX 2.1, validate directly
+            elif detected_version == STIXVersion.STIX_2_1:
+                if isinstance(stix_data, str):
+                    stix_data = json.loads(stix_data)
+                elif isinstance(stix_data, bytes):
+                    stix_data = json.loads(stix_data.decode('utf-8'))
+                
+                validation_result = self.validate(stix_data)
+                validation_result.update({
+                    'detected_version': detected_version.value,
+                    'converted_to_stix21': False
+                })
+                return validation_result
+            
+            else:
+                return {
+                    'valid': False,
+                    'errors': [f"Unsupported STIX version: {detected_version.value}"],
+                    'warnings': [],
+                    'detected_version': detected_version.value,
+                    'converted_to_stix21': False
+                }
+                
+        except Exception as e:
+            return {
+                'valid': False,
+                'errors': [f"Error during validation: {str(e)}"],
+                'warnings': [],
+                'detected_version': 'unknown',
+                'converted_to_stix21': False
+            }
+    
+    def _validate_stix1x(self, stix_data: Union[str, Dict[str, Any], bytes], version: STIXVersion) -> Dict[str, Any]:
+        """
+        Validate STIX 1.x data.
+        
+        Args:
+            stix_data: STIX 1.x data
+            version: Detected STIX 1.x version
+            
+        Returns:
+            Validation results
+        """
+        errors = []
+        warnings = []
+        
+        try:
+            # Basic XML structure validation for STIX 1.x
+            if isinstance(stix_data, (str, bytes)):
+                if isinstance(stix_data, bytes):
+                    stix_data = stix_data.decode('utf-8')
+                
+                # Check for basic XML structure
+                if not stix_data.strip().startswith('<?xml') and not stix_data.strip().startswith('<stix'):
+                    errors.append("STIX 1.x data must be valid XML")
+                    return {
+                        'valid': False,
+                        'errors': errors,
+                        'warnings': warnings,
+                        'detected_version': version.value,
+                        'converted_to_stix21': False
+                    }
+                
+                # Check for STIX namespace
+                if 'stix' not in stix_data.lower():
+                    warnings.append("STIX namespace not found in XML")
+            
+            # Try to convert to STIX 2.1 and validate
+            try:
+                processed_data = self.version_handler.process_stix_data(stix_data)
+                stix21_data = processed_data['stix_data']
+                
+                # Validate converted STIX 2.1 data
+                if stix21_data.get('type') == 'bundle':
+                    bundle_errors = []
+                    bundle_warnings = []
+                    
+                    for obj in stix21_data.get('objects', []):
+                        obj_validation = self.validate(obj)
+                        bundle_errors.extend(obj_validation['errors'])
+                        bundle_warnings.extend(obj_validation['warnings'])
+                    
+                    errors.extend(bundle_errors)
+                    warnings.extend(bundle_warnings)
+                else:
+                    validation_result = self.validate(stix21_data)
+                    errors.extend(validation_result['errors'])
+                    warnings.extend(validation_result['warnings'])
+                
+                # Add conversion notes as warnings
+                warnings.extend(processed_data.get('conversion_notes', []))
+                
+                return {
+                    'valid': len(errors) == 0,
+                    'errors': errors,
+                    'warnings': warnings,
+                    'detected_version': version.value,
+                    'converted_to_stix21': True,
+                    'conversion_notes': processed_data.get('conversion_notes', [])
+                }
+                
+            except Exception as e:
+                errors.append(f"Error converting STIX 1.x to 2.1: {str(e)}")
+                return {
+                    'valid': False,
+                    'errors': errors,
+                    'warnings': warnings,
+                    'detected_version': version.value,
+                    'converted_to_stix21': False
+                }
+            
+        except Exception as e:
+            return {
+                'valid': False,
+                'errors': [f"Error validating STIX 1.x data: {str(e)}"],
+                'warnings': warnings,
+                'detected_version': version.value,
+                'converted_to_stix21': False
+            }
+    
+    def _validate_stix20(self, stix_data: Union[str, Dict[str, Any], bytes]) -> Dict[str, Any]:
+        """
+        Validate STIX 2.0 data.
+        
+        Args:
+            stix_data: STIX 2.0 data
+            
+        Returns:
+            Validation results
+        """
+        errors = []
+        warnings = []
+        
+        try:
+            # Parse data if string/bytes
+            if isinstance(stix_data, (str, bytes)):
+                if isinstance(stix_data, bytes):
+                    stix_data = stix_data.decode('utf-8')
+                stix_data = json.loads(stix_data)
+            
+            # Basic STIX 2.0 validation
+            if not isinstance(stix_data, dict):
+                return {
+                    'valid': False,
+                    'errors': ["STIX 2.0 data must be a JSON object"],
+                    'warnings': [],
+                    'detected_version': '2.0',
+                    'converted_to_stix21': False
+                }
+            
+            # Check spec_version
+            if stix_data.get('spec_version') != '2.0':
+                warnings.append(f"Expected spec_version '2.0', found '{stix_data.get('spec_version')}'")
+            
+            # Try to convert to STIX 2.1 and validate
+            try:
+                processed_data = self.version_handler.process_stix_data(stix_data)
+                stix21_data = processed_data['stix_data']
+                
+                # Validate converted STIX 2.1 data
+                if stix21_data.get('type') == 'bundle':
+                    for obj in stix21_data.get('objects', []):
+                        obj_validation = self.validate(obj)
+                        errors.extend(obj_validation['errors'])
+                        warnings.extend(obj_validation['warnings'])
+                else:
+                    validation_result = self.validate(stix21_data)
+                    errors.extend(validation_result['errors'])
+                    warnings.extend(validation_result['warnings'])
+                
+                # Add conversion notes as warnings
+                warnings.extend(processed_data.get('conversion_notes', []))
+                
+                return {
+                    'valid': len(errors) == 0,
+                    'errors': errors,
+                    'warnings': warnings,
+                    'detected_version': '2.0',
+                    'converted_to_stix21': True,
+                    'conversion_notes': processed_data.get('conversion_notes', [])
+                }
+                
+            except Exception as e:
+                errors.append(f"Error converting STIX 2.0 to 2.1: {str(e)}")
+                return {
+                    'valid': False,
+                    'errors': errors,
+                    'warnings': warnings,
+                    'detected_version': '2.0',
+                    'converted_to_stix21': False
+                }
+            
+        except Exception as e:
+            return {
+                'valid': False,
+                'errors': [f"Error validating STIX 2.0 data: {str(e)}"],
+                'warnings': warnings,
+                'detected_version': '2.0',
+                'converted_to_stix21': False
+            }

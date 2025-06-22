@@ -29,6 +29,7 @@ from core.serializers import (
 
 from stix_factory.factory import STIXObjectFactoryRegistry
 from stix_factory.validators import STIXValidator
+from stix_factory.version_handler import STIXVersionHandler, STIXVersionDetector
 from anonymization.strategy import AnonymizationStrategyFactory
 from audit.models import AuditLog
 
@@ -437,58 +438,113 @@ class STIXObjectViewSet(viewsets.ModelViewSet):
     def _process_stix_objects(self, objects, organization, collection_id=None):
         """
         Process a list of STIX objects, creating them in the database.
+        Supports multi-version STIX input (1.x, 2.0, 2.1).
         """
         success_count = 0
         failures = []
         created_objects = []
         
+        # Initialize multi-version handler
+        factory_registry = STIXObjectFactoryRegistry()
+        validator = STIXValidator()
+        
         # Process each object
         for i, obj in enumerate(objects):
             try:
-                # Validate the object
-                validator = STIXValidator()
-                validation_results = validator.validate(obj)
+                # Use multi-version validation
+                validation_results = validator.validate_multi_version(obj)
                 
                 if not validation_results['valid']:
                     failures.append({
                         'index': i,
-                        'error': f"STIX validation failed: {validation_results['errors']}"
+                        'error': f"STIX validation failed: {validation_results['errors']}",
+                        'detected_version': validation_results.get('detected_version', 'unknown'),
+                        'conversion_attempted': validation_results.get('converted_to_stix21', False)
                     })
                     continue
                 
-                # Create the object
-                serializer = self.get_serializer(data={'stix_data': obj})
-                if serializer.is_valid():
-                    with transaction.atomic():
-                        stix_obj = serializer.save(
-                            created_by=self.request.user,
-                            source_organization=organization
-                        )
+                # Process through multi-version factory if needed
+                try:
+                    if validation_results.get('converted_to_stix21', False):
+                        # Object was converted, use the processed version
+                        processed_result = factory_registry.process_stix_input(obj)
                         
-                        # Add to collection if specified
-                        if collection_id:
-                            try:
-                                collection = Collection.objects.get(id=collection_id)
-                                # Check if user's organization owns the collection
-                                if collection.owner == organization:
-                                    CollectionObject.objects.create(
-                                        collection=collection,
-                                        stix_object=stix_obj
+                        # Create each converted object
+                        for stix_obj_data in processed_result['objects']:
+                            stix_data_dict = json.loads(stix_obj_data.serialize())
+                            
+                            # Create the object
+                            serializer = self.get_serializer(data={'stix_data': stix_data_dict})
+                            if serializer.is_valid():
+                                with transaction.atomic():
+                                    stix_obj = serializer.save(
+                                        created_by=self.request.user,
+                                        source_organization=organization
                                     )
-                            except Collection.DoesNotExist:
-                                pass
+                                    
+                                    # Add to collection if specified
+                                    if collection_id:
+                                        try:
+                                            collection = Collection.objects.get(id=collection_id)
+                                            # Check if user's organization owns the collection
+                                            if collection.owner == organization:
+                                                CollectionObject.objects.create(
+                                                    collection=collection,
+                                                    stix_object=stix_obj
+                                                )
+                                        except Collection.DoesNotExist:
+                                            pass
+                                    
+                                    created_objects.append(stix_obj)
+                                    success_count += 1
+                            else:
+                                failures.append({
+                                    'index': i,
+                                    'error': serializer.errors,
+                                    'conversion_notes': processed_result.get('conversion_notes', [])
+                                })
+                    else:
+                        # Object is already STIX 2.1, process normally
+                        serializer = self.get_serializer(data={'stix_data': obj})
+                        if serializer.is_valid():
+                            with transaction.atomic():
+                                stix_obj = serializer.save(
+                                    created_by=self.request.user,
+                                    source_organization=organization
+                                )
+                                
+                                # Add to collection if specified
+                                if collection_id:
+                                    try:
+                                        collection = Collection.objects.get(id=collection_id)
+                                        # Check if user's organization owns the collection
+                                        if collection.owner == organization:
+                                            CollectionObject.objects.create(
+                                                collection=collection,
+                                                stix_object=stix_obj
+                                            )
+                                    except Collection.DoesNotExist:
+                                        pass
+                                
+                                created_objects.append(stix_obj)
+                                success_count += 1
+                        else:
+                            failures.append({
+                                'index': i,
+                                'error': serializer.errors
+                            })
                         
-                        created_objects.append(stix_obj)
-                        success_count += 1
-                else:
+                except Exception as conversion_error:
                     failures.append({
                         'index': i,
-                        'error': serializer.errors
+                        'error': f"Error processing multi-version STIX: {str(conversion_error)}",
+                        'detected_version': validation_results.get('detected_version', 'unknown')
                     })
+                    
             except Exception as e:
                 failures.append({
                     'index': i,
-                    'error': str(e)
+                    'error': f"Unexpected error: {str(e)}"
                 })
         
         # Log the bulk upload
@@ -510,6 +566,168 @@ class STIXObjectViewSet(viewsets.ModelViewSet):
             'failures': failures,
             'created_objects': [obj.stix_id for obj in created_objects]
         }
+    
+    @action(detail=False, methods=['post'])
+    def validate_stix(self, request):
+        """
+        Validate STIX data of any supported version (1.x, 2.0, 2.1).
+        Returns validation results and version information.
+        """
+        stix_data = request.data.get('stix_data')
+        if not stix_data:
+            return Response(
+                {"error": "stix_data field is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Use multi-version validator
+        validator = STIXValidator()
+        validation_results = validator.validate_multi_version(stix_data)
+        
+        # Add additional metadata
+        validation_results['timestamp'] = timezone.now().isoformat()
+        validation_results['validation_notes'] = []
+        
+        # Add specific notes based on version
+        if validation_results.get('converted_to_stix21', False):
+            validation_results['validation_notes'].append(
+                f"Input STIX {validation_results['detected_version']} was automatically converted to STIX 2.1"
+            )
+        
+        if validation_results.get('conversion_notes'):
+            validation_results['validation_notes'].extend(validation_results['conversion_notes'])
+        
+        return Response(validation_results, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['post'])
+    def convert_stix(self, request):
+        """
+        Convert STIX data from any version to STIX 2.1.
+        """
+        stix_data = request.data.get('stix_data')
+        target_version = request.data.get('target_version', '2.1')
+        
+        if not stix_data:
+            return Response(
+                {"error": "stix_data field is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if target_version != '2.1':
+            return Response(
+                {"error": "Currently only conversion to STIX 2.1 is supported"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Use version handler for conversion
+            version_handler = STIXVersionHandler()
+            processed_data = version_handler.process_stix_data(stix_data)
+            
+            response_data = {
+                'original_version': processed_data['original_version'],
+                'target_version': processed_data['converted_version'],
+                'converted_data': processed_data['stix_data'],
+                'conversion_notes': processed_data['conversion_notes'],
+                'timestamp': timezone.now().isoformat()
+            }
+            
+            return Response(response_data, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {"error": f"Conversion failed: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    @action(detail=False, methods=['post'])
+    def process_multi_version(self, request):
+        """
+        Complete workflow: validate, convert, and optionally create STIX objects.
+        Supports STIX 1.x, 2.0, and 2.1 input.
+        """
+        stix_data = request.data.get('stix_data')
+        create_objects = request.data.get('create_objects', False)
+        collection_id = request.data.get('collection_id')
+        
+        if not stix_data:
+            return Response(
+                {"error": "stix_data field is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            organization = self.get_organization(request)
+            
+            # Step 1: Validate input
+            validator = STIXValidator()
+            validation_results = validator.validate_multi_version(stix_data)
+            
+            if not validation_results['valid']:
+                return Response({
+                    'validation': validation_results,
+                    'processing': {'status': 'skipped', 'reason': 'validation_failed'}
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Step 2: Process through factory
+            factory_registry = STIXObjectFactoryRegistry()
+            processing_result = factory_registry.process_stix_input(stix_data)
+            
+            response_data = {
+                'validation': validation_results,
+                'processing': {
+                    'status': 'success',
+                    'original_version': processing_result['original_version'],
+                    'converted_version': processing_result['converted_version'],
+                    'total_objects': processing_result['total_objects'],
+                    'conversion_notes': processing_result['conversion_notes']
+                },
+                'timestamp': timezone.now().isoformat()
+            }
+            
+            # Step 3: Optionally create objects in database
+            if create_objects:
+                try:
+                    # Convert STIX objects to serializable format for processing
+                    stix_objects_data = []
+                    for stix_obj in processing_result['objects']:
+                        stix_objects_data.append(json.loads(stix_obj.serialize()))
+                    
+                    # Use existing processing method
+                    creation_result = self._process_stix_objects(
+                        stix_objects_data, 
+                        organization, 
+                        collection_id
+                    )
+                    
+                    response_data['creation'] = creation_result
+                    
+                    # Log the action
+                    AuditLog.objects.create(
+                        user=request.user,
+                        organization=organization,
+                        action_type='process_multi_version_stix',
+                        object_id=None,
+                        details={
+                            'original_version': processing_result['original_version'],
+                            'objects_created': creation_result['success_count'],
+                            'objects_failed': creation_result['failure_count']
+                        }
+                    )
+                    
+                except Exception as creation_error:
+                    response_data['creation'] = {
+                        'status': 'failed',
+                        'error': str(creation_error)
+                    }
+            
+            return Response(response_data, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {"error": f"Processing failed: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class CollectionViewSet(viewsets.ModelViewSet):

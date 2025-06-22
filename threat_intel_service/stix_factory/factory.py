@@ -1,9 +1,10 @@
 import uuid
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List, Type
+from typing import Dict, Any, Optional, List, Type, Union
 import stix2
 from django.conf import settings
 from django.utils import timezone
+from .version_handler import STIXVersionHandler, STIXVersion
 
 class STIXObjectFactory(ABC):
     """
@@ -250,6 +251,7 @@ class RelationshipFactory(STIXObjectFactory):
 class STIXObjectFactoryRegistry:
     """
     Registry for managing and retrieving STIX object factories based on object type.
+    Supports multi-version STIX processing.
     """
     _factories: Dict[str, Type[STIXObjectFactory]] = {
         'indicator': IndicatorFactory,
@@ -259,6 +261,9 @@ class STIXObjectFactoryRegistry:
         'identity': IdentityFactory,
         'relationship': RelationshipFactory,
     }
+    
+    def __init__(self):
+        self.version_handler = STIXVersionHandler()
     
     @classmethod
     def register_factory(cls, object_type: str, factory_class: Type[STIXObjectFactory]):
@@ -288,3 +293,66 @@ class STIXObjectFactoryRegistry:
         
         factory = cls.get_factory(object_type)
         return factory.create_object(data)
+    
+    def process_stix_input(self, data: Union[str, Dict[str, Any], bytes]) -> Dict[str, Any]:
+        """
+        Process STIX input of any supported version and return STIX 2.1 objects.
+        
+        Args:
+            data: STIX data in any supported format/version
+            
+        Returns:
+            Dictionary containing processed STIX 2.1 objects and metadata
+        """
+        # Handle version detection and conversion
+        processed_data = self.version_handler.process_stix_data(data)
+        
+        stix21_data = processed_data['stix_data']
+        created_objects = []
+        
+        # Handle bundle or single object
+        if isinstance(stix21_data, dict):
+            if stix21_data.get('type') == 'bundle':
+                # Process bundle objects
+                for obj_data in stix21_data.get('objects', []):
+                    try:
+                        stix_obj = self.create_object(obj_data)
+                        created_objects.append(stix_obj)
+                    except Exception as e:
+                        # Log error but continue processing other objects
+                        print(f"Error creating STIX object: {e}")
+                        continue
+            else:
+                # Single object
+                try:
+                    stix_obj = self.create_object(stix21_data)
+                    created_objects.append(stix_obj)
+                except Exception as e:
+                    raise ValueError(f"Error creating STIX object: {e}")
+        
+        return {
+            'objects': created_objects,
+            'original_version': processed_data['original_version'],
+            'converted_version': processed_data['converted_version'],
+            'conversion_notes': processed_data['conversion_notes'],
+            'total_objects': len(created_objects)
+        }
+    
+    def create_stix_bundle(self, objects: List[stix2.v21.base._STIXBase]) -> stix2.v21.Bundle:
+        """
+        Create a STIX 2.1 bundle from a list of STIX objects.
+        
+        Args:
+            objects: List of STIX 2.1 objects
+            
+        Returns:
+            STIX 2.1 Bundle object
+        """
+        bundle_data = {
+            'type': 'bundle',
+            'id': f"bundle--{str(uuid.uuid4())}",
+            'spec_version': '2.1',
+            'objects': objects
+        }
+        
+        return stix2.v21.Bundle(**bundle_data)
