@@ -9,7 +9,7 @@ import ipaddress
 import re
 
 # Add the current directory to Python path to import our package
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.abspath('.'))
 
 from crisp_anonymization import (
     AnonymizationLevel,

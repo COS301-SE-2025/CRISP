@@ -7,7 +7,7 @@ import os
 import json
 
 # Add the parent directory to the Python path to import our package
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.abspath('.'))
 
 # Import from crisp_anonymization
 from crisp_anonymization.enums import AnonymizationLevel
