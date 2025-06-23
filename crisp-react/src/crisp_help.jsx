@@ -450,19 +450,6 @@ function CrispHelp({ isOpen, onClose, onNavigate }) {
                   
                   <div className="contact-card">
                     <div className="contact-icon">
-                      <i data-feather="phone"></i>
-                    </div>
-                    <div className="contact-details">
-                      <h4>Phone Support</h4>
-                      <p>Speak directly with our technical team</p>
-                      <a href="tel:+27123456789" className="contact-link">
-                        +27 (12) 345-6789
-                      </a>
-                    </div>
-                  </div>
-                  
-                  <div className="contact-card">
-                    <div className="contact-icon">
                       <i data-feather="globe"></i>
                     </div>
                     <div className="contact-details">
