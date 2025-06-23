@@ -1499,3 +1499,5 @@ INFO 2025-06-22 10:07:07,513 basehttp 1721 135867714754112 "GET /admin/jsi18n/ H
 INFO 2025-06-22 10:07:09,416 basehttp 1721 135867714754112 "GET /admin/crisp_threat_intel/collectionobject/ HTTP/1.1" 200 15944
 INFO 2025-06-22 10:07:09,623 basehttp 1721 135867714754112 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
 INFO 2025-06-22 10:08:06,063 feed_observers 2040 136156280344576 Connected feed observer signals
+INFO 2025-06-23 05:54:35,104 feed_observers 1880 123514318688256 Connected feed observer signals
+INFO 2025-06-23 05:54:47,891 feed_observers 1919 138392358400000 Connected feed observer signals

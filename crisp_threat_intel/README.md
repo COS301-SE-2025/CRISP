@@ -117,30 +117,30 @@ sudo -u postgres createdb crisp
 sudo -u postgres createuser admin
 
 # Run migrations
-python manage.py migrate
+python3 manage.py migrate
 
 # Create initial data and superuser
-python manage.py setup_crisp
+python3 manage.py setup_crisp
 ```
 
 ### 4. OTX Integration Setup
 
 ```bash
 # Test OTX connection
-python manage.py test_otx_connection
+python3 manage.py test_otx_connection
 
 # Set up OTX integration with automatic data fetching
-python manage.py setup_otx --fetch-data
+python3 manage.py setup_otx --fetch-data
 
 # Verify OTX setup
-python manage.py setup_otx --test-only
+python3 manage.py setup_otx --test-only
 ```
 
 ### 5. Start the Platform
 
 ```bash
 # Start Django development server
-python manage.py runserver
+python3 manage.py runserver
 
 # In another terminal, start Celery worker (for background tasks)
 celery -A crisp_threat_intel worker -l info
@@ -201,7 +201,7 @@ brew install redis
 
 3. **Test Connection:**
 ```bash
-python manage.py test_otx_connection --verbose
+python3 manage.py test_otx_connection --verbose
 ```
 
 ## 📋 Management Commands
@@ -209,63 +209,63 @@ python manage.py test_otx_connection --verbose
 ### Platform Setup
 ```bash
 # Complete platform setup with demo data
-python manage.py setup_crisp
+python3 manage.py setup_crisp
 
 # Skip superuser creation
-python manage.py setup_crisp --skip-superuser
+python3 manage.py setup_crisp --skip-superuser
 
 # Skip demo data
-python manage.py setup_crisp --skip-demo
+python3 manage.py setup_crisp --skip-demo
 ```
 
 ### OTX Integration
 ```bash
 # Set up OTX integration
-python manage.py setup_otx --api-key YOUR_API_KEY
+python3 manage.py setup_otx --api-key YOUR_API_KEY
 
 # Test connection only
-python manage.py setup_otx --test-only
+python3 manage.py setup_otx --test-only
 
 # Set up and fetch recent data
-python manage.py setup_otx --fetch-data
+python3 manage.py setup_otx --fetch-data
 
 # Test existing connection
-python manage.py test_otx_connection --verbose
+python3 manage.py test_otx_connection --verbose
 ```
 
 ### Feed Management
 ```bash
 # Publish all active feeds
-python manage.py publish_feeds --all
+python3 manage.py publish_feeds --all
 
 # Publish specific feed
-python manage.py publish_feeds --feed-id FEED_UUID
+python3 manage.py publish_feeds --feed-id FEED_UUID
 
 # Dry run (show what would be published)
-python manage.py publish_feeds --all --dry-run
+python3 manage.py publish_feeds --all --dry-run
 
 # Show feed status
-python manage.py publish_feeds
+python3 manage.py publish_feeds
 ```
 
 ### Testing
 ```bash
 # Run all tests with unified test runner
-python run_tests.py --all
+python3 run_tests.py --all
 
 # Run specific test suites
-python run_tests.py --django          # Django unit tests only
-python run_tests.py --functionality   # Functionality tests only
-python run_tests.py --comprehensive   # Full system tests
-python run_tests.py --otx             # OTX integration tests
-python run_tests.py --postgresql      # Database verification
-python run_tests.py --deployment      # Security checks
+python3 run_tests.py --django          # Django unit tests only
+python3 run_tests.py --functionality   # Functionality tests only
+python3 run_tests.py --comprehensive   # Full system tests
+python3 run_tests.py --otx             # OTX integration tests
+python3 run_tests.py --postgresql      # Database verification
+python3 run_tests.py --deployment      # Security checks
 
 # Run fast essential tests
-python run_tests.py --fast
+python3 run_tests.py --fast
 
 # Run with additional options
-python run_tests.py --django --verbosity=2 --failfast
+python3 run_tests.py --django --verbosity=2 --failfast
 ```
 
 ## 🌐 API Endpoints
@@ -294,14 +294,14 @@ python run_tests.py --django --verbosity=2 --failfast
 ### 1. Setup and Configuration
 ```bash
 # Complete setup
-python manage.py setup_crisp
-python manage.py setup_otx --api-key YOUR_OTX_KEY --fetch-data
+python3 manage.py setup_crisp
+python3 manage.py setup_otx --api-key YOUR_OTX_KEY --fetch-data
 ```
 
 ### 2. Access Web Interface
 ```bash
 # Start server
-python manage.py runserver
+python3 manage.py runserver
 
 # Access at http://localhost:8000
 # Login: admin / admin123
@@ -344,18 +344,18 @@ The platform includes a comprehensive test runner that covers all aspects:
 
 ```bash
 # Run all tests
-python run_tests.py --all
+python3 run_tests.py --all
 
 # Quick essential tests
-python run_tests.py --fast
+python3 run_tests.py --fast
 
 # Specific test categories
-python run_tests.py --django          # Unit tests
-python run_tests.py --functionality   # Feature verification
-python run_tests.py --comprehensive   # End-to-end testing
-python run_tests.py --postgresql      # Database validation
-python run_tests.py --otx             # OTX integration
-python run_tests.py --deployment      # Security checks
+python3 run_tests.py --django          # Unit tests
+python3 run_tests.py --functionality   # Feature verification
+python3 run_tests.py --comprehensive   # End-to-end testing
+python3 run_tests.py --postgresql      # Database validation
+python3 run_tests.py --otx             # OTX integration
+python3 run_tests.py --deployment      # Security checks
 ```
 
 ### Design Pattern Validation
@@ -370,15 +370,15 @@ The tests verify proper implementation of CRISP design patterns:
 
 ```bash
 # Individual test files (now organized in tests/ directory)
-python tests/test_functionality.py      # Core functionality
-python tests/comprehensive_test.py      # Complete system test
-python tests/verify_postgresql.py       # Database verification
+python3 tests/test_functionality.py      # Core functionality
+python3 tests/comprehensive_test.py      # Complete system test
+python3 tests/verify_postgresql.py       # Database verification
 
 # Django unit tests
-python manage.py test crisp_threat_intel.tests.test_full_workflow
+python3 manage.py test crisp_threat_intel.tests.test_full_workflow
 
 # OTX integration
-python manage.py test_otx_connection
+python3 manage.py test_otx_connection
 ```
 
 ### TAXII Compliance Tests
@@ -407,7 +407,7 @@ curl http://localhost:8000/api/status/ -u "admin:admin123"
 ### Feed Status
 ```bash
 # Check feed status
-python manage.py publish_feeds
+python3 manage.py publish_feeds
 
 # Monitor feed activity
 tail -f crisp_threat_intel.log
@@ -416,7 +416,7 @@ tail -f crisp_threat_intel.log
 ### Database Status
 ```bash
 # Django shell for database inspection
-python manage.py shell
+python3 manage.py shell
 
 # Check object counts
 >>> from crisp_threat_intel.models import *
@@ -494,7 +494,7 @@ sudo -u postgres psql -l | grep crisp
 2. **OTX API Issues:**
 ```bash
 # Test API key
-python manage.py test_otx_connection --verbose
+python3 manage.py test_otx_connection --verbose
 
 # Check API quota
 curl -H "X-OTX-API-KEY: YOUR_KEY" https://otx.alienvault.com/api/v1/user/me
@@ -512,8 +512,8 @@ curl -H "Accept: application/taxii+json;version=2.1" http://localhost:8000/taxii
 4. **Migration Issues:**
 ```bash
 # Reset migrations (development only!)
-python manage.py migrate crisp_threat_intel zero
-python manage.py migrate
+python3 manage.py migrate crisp_threat_intel zero
+python3 manage.py migrate
 ```
 
 ### Logs and Debugging
@@ -523,7 +523,7 @@ tail -f crisp_threat_intel.log
 
 # Enable debug logging
 export DEBUG=True
-python manage.py runserver
+python3 manage.py runserver
 
 # Database query logging
 # Add to settings.py for development:
@@ -659,21 +659,21 @@ For issues, questions, or contributions:
 ./scripts/setup_dev.sh
 
 # Run all tests
-python run_tests.py --all
+python3 run_tests.py --all
 
 # Start development server
-python manage.py runserver
+python3 manage.py runserver
 
 # Setup OTX integration
 export OTX_API_KEY=your-api-key
-python manage.py setup_otx --fetch-data
+python3 manage.py setup_otx --fetch-data
 
 # Publish feeds
-python manage.py publish_feeds --all
+python3 manage.py publish_feeds --all
 
 # Check system status
-python tests/verify_postgresql.py
-python manage.py check --deploy
+python3 tests/verify_postgresql.py
+python3 manage.py check --deploy
 ```
 
 **🛡️ The CRISP Threat Intelligence Platform is now production-ready with perfect design pattern implementation, 100% test coverage, and complete functional parity!**
