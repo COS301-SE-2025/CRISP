@@ -72,6 +72,15 @@ def run_otx_tests():
     result = subprocess.run(["python3", "manage.py", "test_otx_connection"], cwd=PROJECT_ROOT)
     return result.returncode == 0
 
+def run_stix_tests():
+    """Run comprehensive STIX 2.0/2.1 validation tests"""
+    print("=" * 80)
+    print("RUNNING STIX VALIDATION TESTS")
+    print("=" * 80)
+    
+    result = subprocess.run(["python3", "run_stix_tests.py"], cwd=PROJECT_ROOT)
+    return result.returncode == 0
+
 def run_deployment_check():
     """Run deployment security check"""
     print("=" * 80)
@@ -87,6 +96,7 @@ def main():
     parser.add_argument("--functionality", action="store_true", help="Run functionality tests only")
     parser.add_argument("--comprehensive", action="store_true", help="Run comprehensive tests only")
     parser.add_argument("--postgresql", action="store_true", help="Run PostgreSQL verification only")
+    parser.add_argument("--stix", action="store_true", help="Run STIX 2.0/2.1 validation tests only")
     parser.add_argument("--otx", action="store_true", help="Run OTX integration tests only")
     parser.add_argument("--deployment", action="store_true", help="Run deployment check only")
     parser.add_argument("--all", action="store_true", help="Run all tests")
@@ -102,9 +112,9 @@ def main():
     
     # Determine which tests to run
     if args.all:
-        tests_to_run = ['django', 'functionality', 'comprehensive', 'postgresql', 'otx', 'deployment']
+        tests_to_run = ['django', 'functionality', 'comprehensive', 'postgresql', 'stix', 'otx', 'deployment']
     elif args.fast:
-        tests_to_run = ['django', 'functionality']
+        tests_to_run = ['django', 'functionality', 'stix']
     else:
         tests_to_run = []
         if args.django:
@@ -115,6 +125,8 @@ def main():
             tests_to_run.append('comprehensive')
         if args.postgresql:
             tests_to_run.append('postgresql')
+        if args.stix:
+            tests_to_run.append('stix')
         if args.otx:
             tests_to_run.append('otx')
         if args.deployment:
@@ -146,6 +158,11 @@ def main():
     if 'postgresql' in tests_to_run:
         success = run_postgresql_verification()
         results.append(('PostgreSQL Verification', success))
+        print()
+    
+    if 'stix' in tests_to_run:
+        success = run_stix_tests()
+        results.append(('STIX Validation Tests', success))
         print()
     
     if 'otx' in tests_to_run:

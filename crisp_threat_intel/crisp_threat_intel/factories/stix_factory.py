@@ -19,28 +19,34 @@ class StixObjectCreator(ABC):
     """
     
     @abstractmethod
-    def create_object(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def create_object(self, data: Dict[str, Any], spec_version: str = "2.1") -> Dict[str, Any]:
         """
         Create a STIX object from input data.
         
         Args:
             data: Input data for creating the STIX object
+            spec_version: STIX specification version (2.0 or 2.1)
             
         Returns:
             STIX object dictionary
         """
         pass
     
-    def _ensure_common_properties(self, stix_obj: Dict[str, Any]) -> Dict[str, Any]:
+    def _ensure_common_properties(self, stix_obj: Dict[str, Any], spec_version: str = "2.1") -> Dict[str, Any]:
         """
         Ensure common STIX properties are set.
         
         Args:
             stix_obj: STIX object dictionary
+            spec_version: STIX specification version (2.0 or 2.1)
             
         Returns:
             STIX object with common properties ensured
         """
+        # Validate spec_version
+        if spec_version not in ["2.0", "2.1"]:
+            raise ValueError(f"Unsupported STIX spec_version: {spec_version}. Must be '2.0' or '2.1'")
+        
         current_time = stix2.utils.format_datetime(timezone.now())
         
         # Ensure required properties
@@ -48,7 +54,7 @@ class StixObjectCreator(ABC):
             stix_obj['id'] = f"{stix_obj['type']}--{str(uuid.uuid4())}"
         
         if 'spec_version' not in stix_obj:
-            stix_obj['spec_version'] = '2.1'
+            stix_obj['spec_version'] = spec_version
         
         if 'created' not in stix_obj:
             stix_obj['created'] = current_time
@@ -64,12 +70,13 @@ class StixIndicatorCreator(StixObjectCreator):
     Concrete factory for creating STIX Indicator objects.
     """
     
-    def create_object(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def create_object(self, data: Dict[str, Any], spec_version: str = "2.1") -> Dict[str, Any]:
         """
         Create a STIX Indicator object.
         
         Args:
             data: Input data containing indicator information
+            spec_version: STIX specification version (2.0 or 2.1)
             
         Returns:
             STIX Indicator object dictionary
@@ -101,14 +108,20 @@ class StixIndicatorCreator(StixObjectCreator):
         if 'created_by_ref' in data:
             stix_obj['created_by_ref'] = data['created_by_ref']
         
+        # Handle version-specific differences
+        if spec_version == "2.0":
+            # STIX 2.0 doesn't have 'pattern_type' field
+            if 'pattern_type' in stix_obj:
+                del stix_obj['pattern_type']
+        
         # Ensure common properties
-        stix_obj = self._ensure_common_properties(stix_obj)
+        stix_obj = self._ensure_common_properties(stix_obj, spec_version)
         
         # Validate required fields for indicators
-        if not stix_obj.get('pattern'):
+        if 'pattern' not in data or not data.get('pattern'):
             raise ValueError("Indicator objects must have a pattern")
         
-        if not stix_obj.get('labels'):
+        if 'labels' not in data or not data.get('labels'):
             raise ValueError("Indicator objects must have labels")
         
         logger.debug(f"Created STIX Indicator: {stix_obj['id']}")
@@ -120,12 +133,13 @@ class StixTTPCreator(StixObjectCreator):
     Concrete factory for creating STIX Attack Pattern objects (TTPs).
     """
     
-    def create_object(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def create_object(self, data: Dict[str, Any], spec_version: str = "2.1") -> Dict[str, Any]:
         """
         Create a STIX Attack Pattern object.
         
         Args:
             data: Input data containing TTP information
+            spec_version: STIX specification version (2.0 or 2.1)
             
         Returns:
             STIX Attack Pattern object dictionary
@@ -152,10 +166,10 @@ class StixTTPCreator(StixObjectCreator):
             stix_obj['created_by_ref'] = data['created_by_ref']
         
         # Ensure common properties
-        stix_obj = self._ensure_common_properties(stix_obj)
+        stix_obj = self._ensure_common_properties(stix_obj, spec_version)
         
         # Validate required fields for attack patterns
-        if not stix_obj.get('name'):
+        if 'name' not in data or not data.get('name'):
             raise ValueError("Attack Pattern objects must have a name")
         
         logger.debug(f"Created STIX Attack Pattern: {stix_obj['id']}")
@@ -167,12 +181,13 @@ class StixMalwareCreator(StixObjectCreator):
     Concrete factory for creating STIX Malware objects.
     """
     
-    def create_object(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def create_object(self, data: Dict[str, Any], spec_version: str = "2.1") -> Dict[str, Any]:
         """
         Create a STIX Malware object.
         
         Args:
             data: Input data containing malware information
+            spec_version: STIX specification version (2.0 or 2.1)
             
         Returns:
             STIX Malware object dictionary
@@ -200,15 +215,31 @@ class StixMalwareCreator(StixObjectCreator):
         if 'created_by_ref' in data:
             stix_obj['created_by_ref'] = data['created_by_ref']
         
+        # Handle version-specific differences
+        if spec_version == "2.0":
+            # STIX 2.0 doesn't have 'malware_types' field, uses 'labels' instead
+            if 'malware_types' in stix_obj:
+                stix_obj['labels'] = stix_obj.get('labels', []) + stix_obj['malware_types']
+                del stix_obj['malware_types']
+            
+            # STIX 2.0 doesn't have 'is_family' field
+            if 'is_family' in stix_obj:
+                del stix_obj['is_family']
+        
         # Ensure common properties
-        stix_obj = self._ensure_common_properties(stix_obj)
+        stix_obj = self._ensure_common_properties(stix_obj, spec_version)
         
         # Validate required fields for malware
-        if not stix_obj.get('name'):
+        if 'name' not in data or not data.get('name'):
             raise ValueError("Malware objects must have a name")
         
-        if not stix_obj.get('malware_types'):
-            raise ValueError("Malware objects must have malware_types")
+        # Version-specific validation
+        if spec_version == "2.1":
+            if 'malware_types' not in data or not data.get('malware_types'):
+                raise ValueError("STIX 2.1 Malware objects must have malware_types")
+        elif spec_version == "2.0":
+            if not stix_obj.get('labels'):
+                raise ValueError("STIX 2.0 Malware objects must have labels")
         
         logger.debug(f"Created STIX Malware: {stix_obj['id']}")
         return stix_obj
@@ -219,12 +250,13 @@ class StixIdentityCreator(StixObjectCreator):
     Concrete factory for creating STIX Identity objects.
     """
     
-    def create_object(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def create_object(self, data: Dict[str, Any], spec_version: str = "2.1") -> Dict[str, Any]:
         """
         Create a STIX Identity object.
         
         Args:
             data: Input data containing identity information
+            spec_version: STIX specification version (2.0 or 2.1)
             
         Returns:
             STIX Identity object dictionary
@@ -252,13 +284,13 @@ class StixIdentityCreator(StixObjectCreator):
             stix_obj['created_by_ref'] = data['created_by_ref']
         
         # Ensure common properties
-        stix_obj = self._ensure_common_properties(stix_obj)
+        stix_obj = self._ensure_common_properties(stix_obj, spec_version)
         
         # Validate required fields for identity
-        if not stix_obj.get('name'):
+        if 'name' not in data or not data.get('name'):
             raise ValueError("Identity objects must have a name")
         
-        if not stix_obj.get('identity_class'):
+        if 'identity_class' not in data or not data.get('identity_class'):
             raise ValueError("Identity objects must have an identity_class")
         
         logger.debug(f"Created STIX Identity: {stix_obj['id']}")
@@ -279,13 +311,14 @@ class STIXObjectFactory:
     }
     
     @classmethod
-    def create_object(cls, object_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    def create_object(cls, object_type: str, data: Dict[str, Any], spec_version: str = "2.1") -> Dict[str, Any]:
         """
         Create a STIX object using the appropriate factory.
         
         Args:
             object_type: Type of STIX object to create
             data: Input data for object creation
+            spec_version: STIX specification version (2.0 or 2.1)
             
         Returns:
             STIX object dictionary
@@ -297,7 +330,7 @@ class STIXObjectFactory:
             raise ValueError(f"Unsupported STIX object type: {object_type}")
         
         creator = cls._creators[object_type]()
-        return creator.create_object(data)
+        return creator.create_object(data, spec_version)
     
     @classmethod
     def register_creator(cls, object_type: str, creator_class: type):
@@ -323,24 +356,36 @@ class STIXObjectFactory:
             List of supported object types
         """
         return list(cls._creators.keys())
+    
+    @classmethod
+    def unregister_creator(cls, object_type: str):
+        """
+        Unregister a STIX object creator.
+        
+        Args:
+            object_type: STIX object type to unregister
+        """
+        if object_type in cls._creators:
+            del cls._creators[object_type]
+            logger.info(f"Unregistered STIX creator for type: {object_type}")
 
 
 # Convenience functions for backward compatibility
-def create_indicator(data: Dict[str, Any]) -> Dict[str, Any]:
+def create_indicator(data: Dict[str, Any], spec_version: str = "2.1") -> Dict[str, Any]:
     """Create a STIX indicator object."""
-    return STIXObjectFactory.create_object('indicator', data)
+    return STIXObjectFactory.create_object('indicator', data, spec_version)
 
 
-def create_attack_pattern(data: Dict[str, Any]) -> Dict[str, Any]:
+def create_attack_pattern(data: Dict[str, Any], spec_version: str = "2.1") -> Dict[str, Any]:
     """Create a STIX attack pattern object."""
-    return STIXObjectFactory.create_object('attack-pattern', data)
+    return STIXObjectFactory.create_object('attack-pattern', data, spec_version)
 
 
-def create_malware(data: Dict[str, Any]) -> Dict[str, Any]:
+def create_malware(data: Dict[str, Any], spec_version: str = "2.1") -> Dict[str, Any]:
     """Create a STIX malware object."""
-    return STIXObjectFactory.create_object('malware', data)
+    return STIXObjectFactory.create_object('malware', data, spec_version)
 
 
-def create_identity(data: Dict[str, Any]) -> Dict[str, Any]:
+def create_identity(data: Dict[str, Any], spec_version: str = "2.1") -> Dict[str, Any]:
     """Create a STIX identity object."""
-    return STIXObjectFactory.create_object('identity', data)
+    return STIXObjectFactory.create_object('identity', data, spec_version)
