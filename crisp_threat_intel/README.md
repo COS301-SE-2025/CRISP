@@ -68,15 +68,7 @@ pip install -r requirements.txt
 
 ### 2. Environment Configuration
 
-```bash
-# Copy environment template
-cp .env.example .env
-
-# Edit .env with your configuration
-nano .env
-```
-
-**Required Environment Variables:**
+**Set Required Environment Variables:**
 ```env
 # Database Configuration
 DEBUG=False
@@ -90,7 +82,7 @@ DB_HOST=localhost
 DB_PORT=5432
 
 # OTX Configuration (IMPORTANT!)
-OTX_API_KEY=e3c65c53199dbab88329fa84e9336926e94fcb3777beb5a8f7647229b61efa26
+OTX_API_KEY=your-otx-api-key-here
 OTX_ENABLED=True
 OTX_FETCH_INTERVAL=3600
 OTX_BATCH_SIZE=50
@@ -394,10 +386,16 @@ The tests verify proper implementation of CRISP design patterns:
 ### Legacy Test Commands
 
 ```bash
-# Individual test files (now organized in tests/ directory)
+# Individual test files (organized in tests/ directory)
 python3 tests/test_functionality.py      # Core functionality
 python3 tests/comprehensive_test.py      # Complete system test
 python3 tests/verify_postgresql.py       # Database verification
+
+# STIX validation test files
+python3 tests/test_stix_version_compatibility.py   # STIX 2.0/2.1 compatibility
+python3 tests/test_stix_object_creation.py         # Factory pattern tests
+python3 tests/test_stix_bundle_handling.py         # Bundle validation
+python3 tests/test_comprehensive_stix_suite.py     # Complete STIX integration
 
 # Django unit tests
 python3 manage.py test crisp_threat_intel.tests.test_full_workflow
@@ -551,7 +549,7 @@ export DEBUG=True
 python3 manage.py runserver
 
 # Database query logging
-# Add to settings.py for development:
+# Add to crisp_threat_intel/settings.py for development:
 LOGGING['loggers']['django.db.backends'] = {
     'level': 'DEBUG',
     'handlers': ['console'],
@@ -561,9 +559,10 @@ LOGGING['loggers']['django.db.backends'] = {
 ## 📚 Additional Resources
 
 ### Design Patterns Used
-- **Factory Pattern** - STIX object creation (`factories/stix_factory.py`)
-- **Strategy Pattern** - Anonymization algorithms (`strategies/anonymization.py`)
-- **Observer Pattern** - Feed update notifications (`observers/feed_observers.py`)
+- **Factory Pattern** - STIX object creation (`crisp_threat_intel/factories/stix_factory.py`)
+- **Strategy Pattern** - Anonymization algorithms (`crisp_threat_intel/strategies/anonymization.py`)
+- **Observer Pattern** - Feed update notifications (`crisp_threat_intel/observers/feed_observers.py`)
+- **Validator Pattern** - STIX validation utilities (`crisp_threat_intel/validators/stix_validators.py`)
 
 ### Key Dependencies
 - **Django 4.2.10** - Web framework
@@ -580,6 +579,9 @@ crisp_threat_intel/
 │   ├── utils.py                  # Core utilities
 │   ├── views.py                  # Web interface
 │   ├── admin.py                  # Django admin
+│   ├── settings.py               # Django configuration
+│   ├── urls.py                   # URL routing
+│   ├── wsgi.py                   # WSGI application
 │   ├── strategies/               # Strategy Pattern: Anonymization
 │   │   └── anonymization.py      # Trust-based anonymization strategies
 │   ├── factories/                # Factory Pattern: STIX Creation
@@ -588,17 +590,37 @@ crisp_threat_intel/
 │   │   └── feed_observers.py     # Feed update observers
 │   ├── services/                 # Business logic services
 │   │   └── otx_service.py        # OTX integration service
+│   ├── validators/               # STIX validation utilities
+│   │   └── stix_validators.py    # Comprehensive STIX 2.0/2.1 validation
 │   ├── taxii/                    # TAXII 2.1 API implementation
+│   │   ├── urls.py               # TAXII URL routing
+│   │   └── views.py              # TAXII API endpoints
 │   ├── management/               # Django management commands
+│   │   └── commands/             # Custom management commands
+│   │       ├── setup_crisp.py    # Platform setup command
+│   │       ├── setup_otx.py      # OTX integration setup
+│   │       ├── test_otx_connection.py  # OTX connection testing
+│   │       └── publish_feeds.py  # Feed publishing command
+│   ├── migrations/               # Database migrations
 │   └── tests/                    # Django unit tests
-├── tests/                        # Organized test suite
+│       └── test_full_workflow.py # Complete workflow tests
+├── tests/                        # Comprehensive test suite
 │   ├── test_functionality.py     # Core functionality tests
 │   ├── comprehensive_test.py     # End-to-end system tests
-│   └── verify_postgresql.py      # Database verification
+│   ├── verify_postgresql.py      # Database verification
+│   ├── test_stix_version_compatibility.py  # STIX version tests
+│   ├── test_stix_object_creation.py        # STIX factory tests
+│   ├── test_stix_bundle_handling.py        # STIX bundle tests
+│   └── test_comprehensive_stix_suite.py    # Complete STIX integration
 ├── scripts/                      # Utility scripts
-│   └── setup_dev.sh             # Automated development setup
+│   ├── setup_dev.sh             # Automated development setup
+│   ├── sync_migrations.sh       # Migration synchronization
+│   └── inspect_database.py      # Database inspection tool
+├── staticfiles/                  # Static files (Django admin, DRF)
 ├── run_tests.py                  # Unified test runner
-└── manage.py                     # Django management
+├── run_stix_tests.py            # STIX validation test runner
+├── manage.py                     # Django management
+└── requirements.txt              # Python dependencies
 ```
 
 ## 🎯 Success Criteria
@@ -652,23 +674,29 @@ STIX Validation: 101/101 tests passed (100% success rate)
 
 This implementation perfectly follows the CRISP design specification:
 
-### Factory Pattern (`factories/stix_factory.py`)
+### Factory Pattern (`crisp_threat_intel/factories/stix_factory.py`)
 - Abstract `StixObjectCreator` base class
 - Concrete creators: `StixIndicatorCreator`, `StixTTPCreator`, `StixMalwareCreator`, `StixIdentityCreator`
 - Factory registry: `STIXObjectFactory` with extensible type registration
 - Validates all STIX 2.1 requirements and common properties
 
-### Strategy Pattern (`strategies/anonymization.py`)
+### Strategy Pattern (`crisp_threat_intel/strategies/anonymization.py`)
 - Abstract `AnonymizationStrategy` interface
 - Concrete strategies: `DomainAnonymizationStrategy`, `IPAddressAnonymizationStrategy`, `EmailAnonymizationStrategy`
 - Context class: `AnonymizationContext` with runtime strategy switching
 - Trust-level based anonymization (High: none, Medium: partial, Low: full)
 
-### Observer Pattern (`observers/feed_observers.py`)
+### Observer Pattern (`crisp_threat_intel/observers/feed_observers.py`)
 - Abstract `Observer` and `Subject` interfaces
 - Concrete observers: `InstitutionObserver`, `AlertSystemObserver`
 - Django signals integration for loose coupling
 - Event types: feed_updated, feed_published, feed_error
+
+### Validator Pattern (`crisp_threat_intel/validators/stix_validators.py`)
+- Comprehensive STIX 2.0/2.1 validation utilities
+- `STIXValidator` class with version-specific validation rules
+- `STIXVersionConverter` for cross-version compatibility
+- Supports all STIX object types and bundle validation
 
 ## 👥 Support
 

@@ -2509,3 +2509,6 @@ INFO 2025-06-23 08:58:17,248 feed_observers 3377 134440181129216 Connected feed 
 INFO 2025-06-23 08:58:18,589 otx_service 3377 134440181129216 OTX API connection test successful
 INFO 2025-06-23 08:58:22,903 otx_service 3377 134440181129216 Retrieved 5 pulses from OTX
 INFO 2025-06-23 08:58:23,956 feed_observers 3378 134899691270144 Connected feed observer signals
+INFO 2025-06-23 09:56:16,446 feed_observers 3426 131583002058752 Connected feed observer signals
+INFO 2025-06-23 09:56:32,524 feed_observers 3451 138416393846784 Connected feed observer signals
+INFO 2025-06-23 09:57:04,235 feed_observers 3476 126289377599488 Connected feed observer signals
