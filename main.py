@@ -90,6 +90,10 @@ class ThreatIntelligenceProcessor:
         """
         anonymization_level = self.trust_levels.get(recipient_trust, AnonymizationLevel.FULL)
         
+        # Detect STIX version
+        stix_version = self.anonymization_context._detect_stix_version(stix_data)
+        print(f"Detected STIX version: {stix_version}")
+        
         # Process the STIX data
         processed_stix = self.anonymization_context.anonymize_stix_object(
             stix_data,
@@ -400,16 +404,15 @@ def main():
             with open(args.file, 'r') as f:
                 stix_data = json.load(f)
             
-            context = AnonymizationContext()
-            anonymization_level = getattr(AnonymizationLevel, args.trust.upper())
-            anonymized = context.anonymize_stix_object(stix_data, anonymization_level)
+            processor = ThreatIntelligenceProcessor()
+            anonymized = processor.process_stix_feed(stix_data, args.trust)
             
             if args.output:
                 with open(args.output, 'w') as f:
-                    f.write(anonymized)
+                    json.dump(anonymized, f, indent=2)
                 print(f"Anonymized STIX data written to {args.output}")
             else:
-                print(anonymized)
+                print(json.dumps(anonymized, indent=2))
         except Exception as e:
             print(f"Error processing STIX data: {e}")
     else:

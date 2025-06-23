@@ -1,10 +1,10 @@
 {
-  "id": "bundle--e88a59d6-db28-4d06-b8f1-bd3d018b02cf",
+  "id": "bundle--1fd8fd53-2808-4704-aab6-2e8dc9d0bc4c",
   "objects": [
     {
       "created": "2023-01-01T00:00:00.0000Z",
       "description": "This indicator contains IP 203.x.x.x and domain *.commercial",
-      "id": "indicator--9d4007eb-a68d-4095-ae42-6ed6766172b2",
+      "id": "indicator--24fefdb2-810d-480f-95a4-bf72b7c91195",
       "modified": "2023-01-01T00:00:00.0000Z",
       "name": "Test Indicator with Single IP and Domain",
       "pattern": "[ipv4-addr:value = '203.x.x.x'] AND [domain-name:value = '*.commercial']",
@@ -16,7 +16,7 @@
     {
       "created": "2023-01-03T00:00:00.0000Z",
       "description": "This indicator contains email user@*.commercial and URL https://*.commercial",
-      "id": "indicator--c930a530-34e9-4bf3-8de6-b6dfe26e6822",
+      "id": "indicator--592eaf51-eb41-47a4-902f-7e467eb3330f",
       "modified": "2023-01-03T00:00:00.0000Z",
       "name": "Test Indicator with Email and URL",
       "pattern": "[email-addr:value = 'user@*.commercial'] AND [url:value = 'https://*.commercial']",
@@ -28,7 +28,7 @@
     {
       "created": "2023-01-06T00:00:00.0000Z",
       "description": "This indicator contains domain *.organization",
-      "id": "indicator--1b12c6c3-8137-4c74-ae02-f253ee8c6247",
+      "id": "indicator--84ec9698-fa57-450d-951d-7a58508eee12",
       "modified": "2023-01-06T00:00:00.0000Z",
       "name": "Test Indicator with Custom Properties",
       "pattern": "[domain-name:value = '*.organization']",
@@ -49,7 +49,7 @@
     {
       "created": "2023-01-01T00:00:00.0000Z",
       "description": "This malware connects to C2 server at 192.x.x.x and exfiltrates data to *.organization",
-      "id": "malware--7471aa35-955a-4075-b44d-b32ff5c3528e",
+      "id": "malware--69c41d1e-ce91-4b71-ad11-4679b0f81c2e",
       "is_family": false,
       "malware_types": [
         "backdoor",
@@ -62,12 +62,12 @@
     },
     {
       "aliases": [
-        "alias-9393",
-        "alias-22"
+        "alias-9382",
+        "alias-8886"
       ],
       "created": "2023-01-01T00:00:00.0000Z",
       "description": "This group uses infrastructure at 203.x.x.x and 198.x.x.x, with domains including actor-domain.example.com and second-domain.example.org. They send phishing emails from addresses like user@*.commercial.",
-      "id": "threat-actor--cb1987ed-7238-4dd0-9729-46e606c98065",
+      "id": "threat-actor--996515e8-47c9-45c7-a899-401c105a863b",
       "modified": "2023-01-01T00:00:00.0000Z",
       "name": "Test Threat Actor",
       "primary_motivation": "financial-gain",
@@ -82,15 +82,15 @@
       "type": "threat-actor"
     },
     {
-      "id": "ipv4-addr--a319d048-8c25-4e27-bad6-3f1efca17216",
+      "id": "ipv4-addr--77c1c830-6685-42d7-ba86-cc50e9432ff9",
       "spec_version": "2.1",
       "type": "ipv4-addr",
       "value": "192.x.x.x"
     },
     {
-      "id": "domain-name--8cef29d6-8a93-4937-b9b3-3ce836e6ff54",
+      "id": "domain-name--86ef1dcc-c491-4710-849e-3d4be9b40b2d",
       "resolves_to_refs": [
-        "ipv4-addr--a319d048-8c25-4e27-bad6-3f1efca17216"
+        "ipv4-addr--77c1c830-6685-42d7-ba86-cc50e9432ff9"
       ],
       "spec_version": "2.1",
       "type": "domain-name",
@@ -98,13 +98,13 @@
     },
     {
       "display_name": "Security Team",
-      "id": "email-addr--9835b005-ad87-48c9-86a0-89b653574438",
+      "id": "email-addr--8bfab0e4-b8ff-424d-a79d-b2b9e7bdedb5",
       "spec_version": "2.1",
       "type": "email-addr",
       "value": "user@*.commercial"
     },
     {
-      "id": "url--2855ccd6-b3c2-46b2-8853-a878f7e38bf8",
+      "id": "url--b395e26e-e657-4a95-a068-32312c063c2b",
       "spec_version": "2.1",
       "type": "url",
       "value": "https://*.commercial"
@@ -112,34 +112,34 @@
     {
       "created": "2023-01-01T00:00:00.0000Z",
       "description": "This indicator pattern identifies C2 communication for the malware. The connection is made to 203.x.x.x from the infected host.",
-      "id": "relationship--9450a533-e3e9-4069-84bc-143a162c84ad",
+      "id": "relationship--09ffab8f-bd32-4094-a435-464b5ced7d12",
       "modified": "2023-01-01T00:00:00.0000Z",
       "relationship_type": "indicates",
-      "source_ref": "indicator--9d4007eb-a68d-4095-ae42-6ed6766172b2",
+      "source_ref": "indicator--24fefdb2-810d-480f-95a4-bf72b7c91195",
       "spec_version": "2.1",
-      "target_ref": "malware--7471aa35-955a-4075-b44d-b32ff5c3528e",
+      "target_ref": "malware--69c41d1e-ce91-4b71-ad11-4679b0f81c2e",
       "type": "relationship"
     },
     {
       "created": "2023-01-01T00:00:00.0000Z",
       "description": "The threat actor uses this malware in their operations. They deploy it through phishing emails sent from user@*.commercial.",
-      "id": "relationship--60488f65-0b16-4a73-bf39-efd4982ac138",
+      "id": "relationship--381138b4-3972-470b-9f34-5e2fd447acf1",
       "modified": "2023-01-01T00:00:00.0000Z",
       "relationship_type": "uses",
-      "source_ref": "threat-actor--cb1987ed-7238-4dd0-9729-46e606c98065",
+      "source_ref": "threat-actor--996515e8-47c9-45c7-a899-401c105a863b",
       "spec_version": "2.1",
-      "target_ref": "malware--7471aa35-955a-4075-b44d-b32ff5c3528e",
+      "target_ref": "malware--69c41d1e-ce91-4b71-ad11-4679b0f81c2e",
       "type": "relationship"
     },
     {
       "created": "2023-01-01T00:00:00.0000Z",
       "description": "The domain resolves to this IP address.",
-      "id": "relationship--3f83558f-3581-4501-b1b0-3a5cb913bcab",
+      "id": "relationship--9d327216-d83a-4a98-95ef-33dc85165969",
       "modified": "2023-01-01T00:00:00.0000Z",
       "relationship_type": "resolves-to",
-      "source_ref": "domain-name--8cef29d6-8a93-4937-b9b3-3ce836e6ff54",
+      "source_ref": "domain-name--86ef1dcc-c491-4710-849e-3d4be9b40b2d",
       "spec_version": "2.1",
-      "target_ref": "ipv4-addr--a319d048-8c25-4e27-bad6-3f1efca17216",
+      "target_ref": "ipv4-addr--77c1c830-6685-42d7-ba86-cc50e9432ff9",
       "type": "relationship"
     }
   ],
