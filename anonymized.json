@@ -1,13 +1,13 @@
 {
-  "id": "bundle--6a26cd7b-e8c9-4356-94c6-8a8b023b3e26",
+  "id": "bundle--e88a59d6-db28-4d06-b8f1-bd3d018b02cf",
   "objects": [
     {
       "created": "2023-01-01T00:00:00.0000Z",
-      "description": "This indicator contains IP 203.0.x.x and domain *.com",
-      "id": "indicator--1ef29053-766d-41a5-8f9f-639f55dd5f48",
+      "description": "This indicator contains IP 203.x.x.x and domain *.commercial",
+      "id": "indicator--9d4007eb-a68d-4095-ae42-6ed6766172b2",
       "modified": "2023-01-01T00:00:00.0000Z",
       "name": "Test Indicator with Single IP and Domain",
-      "pattern": "[ipv4-addr:value = '203.0.x.x'] AND [domain-name:value = '*.com']",
+      "pattern": "[ipv4-addr:value = '203.x.x.x'] AND [domain-name:value = '*.commercial']",
       "pattern_type": "stix",
       "spec_version": "2.1",
       "type": "indicator",
@@ -15,11 +15,11 @@
     },
     {
       "created": "2023-01-03T00:00:00.0000Z",
-      "description": "This indicator contains email user-21232f@*.*.com and URL https://*.com",
-      "id": "indicator--c0ea9b6f-39d5-4a32-bce7-166b6d3a4b25",
+      "description": "This indicator contains email user@*.commercial and URL https://*.commercial",
+      "id": "indicator--c930a530-34e9-4bf3-8de6-b6dfe26e6822",
       "modified": "2023-01-03T00:00:00.0000Z",
       "name": "Test Indicator with Email and URL",
-      "pattern": "[email-addr:value = 'user-21232f@*.malicious.com'] AND [url:value = 'https://*.com']",
+      "pattern": "[email-addr:value = 'user@*.commercial'] AND [url:value = 'https://*.commercial']",
       "pattern_type": "stix",
       "spec_version": "2.1",
       "type": "indicator",
@@ -27,29 +27,29 @@
     },
     {
       "created": "2023-01-06T00:00:00.0000Z",
-      "description": "This indicator contains domain *.org",
-      "id": "indicator--8c6c1f6a-4749-4b2e-94a2-3a4d657dba14",
+      "description": "This indicator contains domain *.organization",
+      "id": "indicator--1b12c6c3-8137-4c74-ae02-f253ee8c6247",
       "modified": "2023-01-06T00:00:00.0000Z",
       "name": "Test Indicator with Custom Properties",
-      "pattern": "[domain-name:value = '*.org']",
+      "pattern": "[domain-name:value = '*.organization']",
       "pattern_type": "stix",
       "spec_version": "2.1",
       "type": "indicator",
       "valid_from": "2023-01-06T00:00:00.0000Z",
       "x_additional_context": {
-        "attacker_email": "user-21232f@*.*.net",
+        "attacker_email": "user@*.organization",
         "c2_urls": [
-          "https://*.org",
-          "https://*.com"
+          "https://*.organization",
+          "https://*.commercial"
         ],
-        "victim_ip": "198.51.x.x"
+        "victim_ip": "198.x.x.x"
       },
-      "x_analyst_notes": "First seen communicating with IP 192.0.x.x and sending emails via user-924e50@*.*.org"
+      "x_analyst_notes": "First seen communicating with IP 192.x.x.x and sending emails via user@*.organization"
     },
     {
       "created": "2023-01-01T00:00:00.0000Z",
-      "description": "This malware connects to C2 server at 192.168.x.x and exfiltrates data to *.net",
-      "id": "malware--194f7e17-1cc2-4cf2-9ed2-c0e2e1ffbf89",
+      "description": "This malware connects to C2 server at 192.x.x.x and exfiltrates data to *.organization",
+      "id": "malware--7471aa35-955a-4075-b44d-b32ff5c3528e",
       "is_family": false,
       "malware_types": [
         "backdoor",
@@ -62,12 +62,12 @@
     },
     {
       "aliases": [
-        "alias-5441",
-        "alias-6898"
+        "alias-9393",
+        "alias-22"
       ],
       "created": "2023-01-01T00:00:00.0000Z",
-      "description": "This group uses infrastructure at 203.0.x.x and 198.51.x.x, with domains including *.com and *.org. They send phishing emails from addresses like user-fc7e98@*.*.com.",
-      "id": "threat-actor--f38f693a-7533-4639-b30a-3aabeb1de5bf",
+      "description": "This group uses infrastructure at 203.x.x.x and 198.x.x.x, with domains including actor-domain.example.com and second-domain.example.org. They send phishing emails from addresses like user@*.commercial.",
+      "id": "threat-actor--cb1987ed-7238-4dd0-9729-46e606c98065",
       "modified": "2023-01-01T00:00:00.0000Z",
       "name": "Test Threat Actor",
       "primary_motivation": "financial-gain",
@@ -82,64 +82,64 @@
       "type": "threat-actor"
     },
     {
-      "id": "ipv4-addr--dc794a7d-37d6-4fee-9616-6f82a72726fe",
+      "id": "ipv4-addr--a319d048-8c25-4e27-bad6-3f1efca17216",
       "spec_version": "2.1",
       "type": "ipv4-addr",
-      "value": "192.168.x.x"
+      "value": "192.x.x.x"
     },
     {
-      "id": "domain-name--85e249bf-d36e-4640-b62b-6ee563a7c692",
+      "id": "domain-name--8cef29d6-8a93-4937-b9b3-3ce836e6ff54",
       "resolves_to_refs": [
-        "ipv4-addr--dc794a7d-37d6-4fee-9616-6f82a72726fe"
+        "ipv4-addr--a319d048-8c25-4e27-bad6-3f1efca17216"
       ],
       "spec_version": "2.1",
       "type": "domain-name",
-      "value": "*.com"
+      "value": "*.commercial"
     },
     {
       "display_name": "Security Team",
-      "id": "email-addr--a01dc4ab-c45a-4ded-a0a1-9585b2836cb0",
+      "id": "email-addr--9835b005-ad87-48c9-86a0-89b653574438",
       "spec_version": "2.1",
       "type": "email-addr",
-      "value": "user-c19b19@*.example.com"
+      "value": "user@*.commercial"
     },
     {
-      "id": "url--51886714-0d0d-459e-874a-62e4c39c3a5c",
+      "id": "url--2855ccd6-b3c2-46b2-8853-a878f7e38bf8",
       "spec_version": "2.1",
       "type": "url",
-      "value": "https://*.com"
+      "value": "https://*.commercial"
     },
     {
       "created": "2023-01-01T00:00:00.0000Z",
-      "description": "This indicator pattern identifies C2 communication for the malware. The connection is made to 203.0.x.x from the infected host.",
-      "id": "relationship--7120abcb-64fb-4dbf-a6ed-2fc8068d749c",
+      "description": "This indicator pattern identifies C2 communication for the malware. The connection is made to 203.x.x.x from the infected host.",
+      "id": "relationship--9450a533-e3e9-4069-84bc-143a162c84ad",
       "modified": "2023-01-01T00:00:00.0000Z",
       "relationship_type": "indicates",
-      "source_ref": "indicator--1ef29053-766d-41a5-8f9f-639f55dd5f48",
+      "source_ref": "indicator--9d4007eb-a68d-4095-ae42-6ed6766172b2",
       "spec_version": "2.1",
-      "target_ref": "malware--194f7e17-1cc2-4cf2-9ed2-c0e2e1ffbf89",
+      "target_ref": "malware--7471aa35-955a-4075-b44d-b32ff5c3528e",
       "type": "relationship"
     },
     {
       "created": "2023-01-01T00:00:00.0000Z",
-      "description": "The threat actor uses this malware in their operations. They deploy it through phishing emails sent from user-c19b19@*.*.com.",
-      "id": "relationship--b3439f4d-5933-4456-9966-b81765829ade",
+      "description": "The threat actor uses this malware in their operations. They deploy it through phishing emails sent from user@*.commercial.",
+      "id": "relationship--60488f65-0b16-4a73-bf39-efd4982ac138",
       "modified": "2023-01-01T00:00:00.0000Z",
       "relationship_type": "uses",
-      "source_ref": "threat-actor--f38f693a-7533-4639-b30a-3aabeb1de5bf",
+      "source_ref": "threat-actor--cb1987ed-7238-4dd0-9729-46e606c98065",
       "spec_version": "2.1",
-      "target_ref": "malware--194f7e17-1cc2-4cf2-9ed2-c0e2e1ffbf89",
+      "target_ref": "malware--7471aa35-955a-4075-b44d-b32ff5c3528e",
       "type": "relationship"
     },
     {
       "created": "2023-01-01T00:00:00.0000Z",
       "description": "The domain resolves to this IP address.",
-      "id": "relationship--becd5ff9-7ef5-4e13-9251-80c69102b5a4",
+      "id": "relationship--3f83558f-3581-4501-b1b0-3a5cb913bcab",
       "modified": "2023-01-01T00:00:00.0000Z",
       "relationship_type": "resolves-to",
-      "source_ref": "domain-name--85e249bf-d36e-4640-b62b-6ee563a7c692",
+      "source_ref": "domain-name--8cef29d6-8a93-4937-b9b3-3ce836e6ff54",
       "spec_version": "2.1",
-      "target_ref": "ipv4-addr--dc794a7d-37d6-4fee-9616-6f82a72726fe",
+      "target_ref": "ipv4-addr--a319d048-8c25-4e27-bad6-3f1efca17216",
       "type": "relationship"
     }
   ],
