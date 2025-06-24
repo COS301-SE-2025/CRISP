@@ -1,148 +1,315 @@
 {
-  "id": "bundle--d5ccde6e-b73c-4cab-a6c8-2663b6ad77cc",
+  "id": "bundle--acdd0b1b-47cc-4b92-95a6-fe3e3383bf8a",
   "objects": [
     {
-      "created": "2023-01-01T00:00:00.0000Z",
-      "description": "This indicator contains IP 203.x.x.x and domain *.commercial",
-      "id": "indicator--41c5340f-dd2e-4a63-843b-554f1c9cb68b",
-      "modified": "2023-01-01T00:00:00.0000Z",
-      "name": "Test Indicator with Single IP and Domain",
-      "pattern": "[ipv4-addr:value = '203.x.x.x'] AND [domain-name:value = '*.commercial']",
-      "pattern_type": "stix",
-      "spec_version": "2.1",
-      "type": "indicator",
-      "valid_from": "2023-01-01T00:00:00.0000Z"
-    },
-    {
-      "created": "2023-01-03T00:00:00.0000Z",
-      "description": "This indicator contains email user@*.commercial and URL https://*.commercial",
-      "id": "indicator--2d2220e1-33d4-40aa-a5f7-83e346352dee",
-      "modified": "2023-01-03T00:00:00.0000Z",
-      "name": "Test Indicator with Email and URL",
-      "pattern": "[email-addr:value = 'user@*.commercial'] AND [url:value = 'https://*.commercial']",
-      "pattern_type": "stix",
-      "spec_version": "2.1",
-      "type": "indicator",
-      "valid_from": "2023-01-03T00:00:00.0000Z"
-    },
-    {
-      "created": "2023-01-06T00:00:00.0000Z",
-      "description": "This indicator contains domain *.organization",
-      "id": "indicator--afd9059e-709f-4dfb-8825-7fd20ba35c60",
-      "modified": "2023-01-06T00:00:00.0000Z",
-      "name": "Test Indicator with Custom Properties",
-      "pattern": "[domain-name:value = '*.organization']",
-      "pattern_type": "stix",
-      "spec_version": "2.1",
-      "type": "indicator",
-      "valid_from": "2023-01-06T00:00:00.0000Z",
-      "x_additional_context": {
-        "attacker_email": "user@*.organization",
-        "c2_urls": [
-          "https://*.organization",
-          "https://*.commercial"
-        ],
-        "victim_ip": "198.x.x.x"
-      },
-      "x_analyst_notes": "First seen communicating with IP 192.x.x.x and sending emails via user@*.organization"
-    },
-    {
-      "created": "2023-01-01T00:00:00.0000Z",
-      "description": "This malware connects to C2 server at 192.x.x.x and exfiltrates data to *.organization",
-      "id": "malware--0f636c50-a164-441f-a244-f420f5f19d49",
-      "is_family": false,
-      "malware_types": [
-        "backdoor",
-        "remote-access-trojan"
+      "created": "2017-01-01T12:34:56.000Z",
+      "created_by_ref": "identity--be9a2405-a74a-4b4c-b168-4a90b51bfc9a",
+      "description": "Command and Control server used by APT Group XYZ. This server hosts malware at the URL https://*.other/*.other and communicates on IP address 192.x.x.x.",
+      "id": "indicator--d3ca1f89-8322-4f23-b485-12b9e0b08cfd",
+      "labels": [
+        "malicious-activity",
+        "command-and-control",
+        "apt"
       ],
-      "modified": "2023-01-01T00:00:00.0000Z",
-      "name": "Test Malware",
-      "spec_version": "2.1",
+      "modified": "2017-01-01T12:34:56.000Z",
+      "name": "APT Group XYZ C2 Server",
+      "object_marking_refs": [
+        "marking-definition--69333f62-4598-4890-979c-e2fc84fa46a9"
+      ],
+      "pattern": "[ipv4-addr:value = '192.x.x.x'] OR [domain-name:value = '*.other'] OR [url:value = 'https://*.other']",
+      "spec_version": "2.0",
+      "type": "indicator",
+      "valid_from": "2017-01-01T00:00:00.000Z"
+    },
+    {
+      "created": "2017-01-01T12:34:56.000Z",
+      "created_by_ref": "identity--be9a2405-a74a-4b4c-b168-4a90b51bfc9a",
+      "description": "RIPTIDE is a remote access trojan (RAT) used by APT Group XYZ since 2016. It is typically delivered via spear-phishing emails containing malicious Word documents. The backdoor communicates with C2 servers at 192.x.x.x and exfiltrates data using steganography techniques.",
+      "id": "malware--04c1dce6-5ee9-4245-bd94-373674d986f7",
+      "labels": [
+        "remote-access-trojan",
+        "backdoor"
+      ],
+      "modified": "2017-01-01T12:34:56.000Z",
+      "name": "RIPTIDE",
+      "object_marking_refs": [
+        "marking-definition--69333f62-4598-4890-979c-e2fc84fa46a9"
+      ],
+      "spec_version": "2.0",
       "type": "malware"
     },
     {
+      "created": "2017-01-01T12:34:56.000Z",
+      "created_by_ref": "identity--be9a2405-a74a-4b4c-b168-4a90b51bfc9a",
+      "id": "relationship--13413e32-fc3d-4955-bebb-e59812d863c6",
+      "modified": "2017-01-01T12:34:56.000Z",
+      "object_marking_refs": [
+        "marking-definition--69333f62-4598-4890-979c-e2fc84fa46a9"
+      ],
+      "relationship_type": "indicates",
+      "source_ref": "indicator--d3ca1f89-8322-4f23-b485-12b9e0b08cfd",
+      "spec_version": "2.0",
+      "target_ref": "malware--04c1dce6-5ee9-4245-bd94-373674d986f7",
+      "type": "relationship"
+    },
+    {
+      "contact_information": "user@*.commercial, tel:+1-555-123-4567",
+      "created": "2017-01-01T12:34:56.000Z",
+      "id": "identity--be9a2405-a74a-4b4c-b168-4a90b51bfc9a",
+      "identity_class": "organization",
+      "modified": "2017-01-01T12:34:56.000Z",
+      "name": "ACME Cybersecurity",
+      "sectors": [
+        "technology"
+      ],
+      "spec_version": "2.0",
+      "type": "identity"
+    },
+    {
+      "created": "2017-01-01T12:34:56.000Z",
+      "definition": {
+        "tlp": "AMBER"
+      },
+      "definition_type": "tlp",
+      "id": "marking-definition--69333f62-4598-4890-979c-e2fc84fa46a9",
+      "spec_version": "2.0",
+      "type": "marking-definition"
+    },
+    {
       "aliases": [
-        "alias-6509",
-        "alias-2637"
+        "alias-2552",
+        "alias-2946"
       ],
-      "created": "2023-01-01T00:00:00.0000Z",
-      "description": "This group uses infrastructure at 203.x.x.x and 198.x.x.x, with domains including actor-domain.example.com and second-domain.example.org. They send phishing emails from addresses like user@*.commercial.",
-      "id": "threat-actor--a8e8c563-8524-4745-8efe-df7e7fa5ad89",
-      "modified": "2023-01-01T00:00:00.0000Z",
-      "name": "Test Threat Actor",
-      "primary_motivation": "financial-gain",
-      "resource_level": "organization",
+      "created": "2017-01-01T12:34:56.000Z",
+      "created_by_ref": "identity--be9a2405-a74a-4b4c-b168-4a90b51bfc9a",
+      "description": "Operation BlackWinter is a cyber espionage campaign targeting critical infrastructure organizations. Attackers use spear-phishing emails sent from compromised accounts like user@*.commercial and deploy the RIPTIDE malware to establish persistence.",
+      "first_seen": "2016-12-01T00:00:00.000Z",
+      "id": "campaign--3d829559-20f7-42be-b5a4-7f948d6f8900",
+      "modified": "2017-01-01T12:34:56.000Z",
+      "name": "Operation BlackWinter",
+      "object_marking_refs": [
+        "marking-definition--69333f62-4598-4890-979c-e2fc84fa46a9"
+      ],
+      "objective": "espionage",
+      "spec_version": "2.0",
+      "type": "campaign"
+    },
+    {
+      "created": "2017-01-01T12:34:56.000Z",
+      "created_by_ref": "identity--be9a2405-a74a-4b4c-b168-4a90b51bfc9a",
+      "id": "relationship--dd144d4a-79de-4955-b8bc-7e8e9ad53650",
+      "modified": "2017-01-01T12:34:56.000Z",
+      "object_marking_refs": [
+        "marking-definition--69333f62-4598-4890-979c-e2fc84fa46a9"
+      ],
+      "relationship_type": "uses",
+      "source_ref": "campaign--3d829559-20f7-42be-b5a4-7f948d6f8900",
+      "spec_version": "2.0",
+      "target_ref": "malware--04c1dce6-5ee9-4245-bd94-373674d986f7",
+      "type": "relationship"
+    },
+    {
+      "aliases": [
+        "alias-3522",
+        "alias-6287"
+      ],
+      "created": "2017-01-01T12:34:56.000Z",
+      "created_by_ref": "identity--be9a2405-a74a-4b4c-b168-4a90b51bfc9a",
+      "description": "APT Group XYZ is a sophisticated threat actor that has been active since at least 2015. The group primarily targets organizations in the energy, finance, and government sectors. They use spear-phishing emails with malicious attachments sent from spoofed addresses like user@*.commercial. Their infrastructure includes command and control servers at 192.x.x.x and 192.x.x.x.",
+      "goals": [
+        "espionage",
+        "intellectual property theft"
+      ],
+      "id": "threat-actor--07c57cce-acef-4e11-9e25-01c799b95c47",
+      "labels": [
+        "nation-state",
+        "apt"
+      ],
+      "modified": "2017-01-01T12:34:56.000Z",
+      "name": "APT Group XYZ",
+      "object_marking_refs": [
+        "marking-definition--69333f62-4598-4890-979c-e2fc84fa46a9"
+      ],
+      "primary_motivation": "organizational-gain",
+      "resource_level": "government",
       "roles": [
-        "director"
+        "agent"
       ],
-      "spec_version": "2.1",
-      "threat_actor_types": [
-        "crime-syndicate"
-      ],
+      "sophistication": "advanced",
+      "spec_version": "2.0",
       "type": "threat-actor"
     },
     {
-      "id": "ipv4-addr--fdc27409-8307-4f7d-9253-3f134ad8f097",
-      "spec_version": "2.1",
-      "type": "ipv4-addr",
-      "value": "192.x.x.x"
-    },
-    {
-      "id": "domain-name--904d6aaf-ed18-4715-b609-f95bf3bf137c",
-      "resolves_to_refs": [
-        "ipv4-addr--fdc27409-8307-4f7d-9253-3f134ad8f097"
+      "created": "2017-01-01T12:34:56.000Z",
+      "created_by_ref": "identity--be9a2405-a74a-4b4c-b168-4a90b51bfc9a",
+      "id": "relationship--51a26ca3-ee91-4690-a934-f9250abe5d0d",
+      "modified": "2017-01-01T12:34:56.000Z",
+      "object_marking_refs": [
+        "marking-definition--69333f62-4598-4890-979c-e2fc84fa46a9"
       ],
-      "spec_version": "2.1",
-      "type": "domain-name",
-      "value": "*.commercial"
-    },
-    {
-      "display_name": "Security Team",
-      "id": "email-addr--7304681b-cc4e-4d8e-9475-f0ba83ce720d",
-      "spec_version": "2.1",
-      "type": "email-addr",
-      "value": "user@*.commercial"
-    },
-    {
-      "id": "url--d67444ca-ad86-4fc1-84f1-15011cce5f78",
-      "spec_version": "2.1",
-      "type": "url",
-      "value": "https://*.commercial"
-    },
-    {
-      "created": "2023-01-01T00:00:00.0000Z",
-      "description": "This indicator pattern identifies C2 communication for the malware. The connection is made to 203.x.x.x from the infected host.",
-      "id": "relationship--befc5b90-6331-4cb8-a766-400858637dab",
-      "modified": "2023-01-01T00:00:00.0000Z",
-      "relationship_type": "indicates",
-      "source_ref": "indicator--41c5340f-dd2e-4a63-843b-554f1c9cb68b",
-      "spec_version": "2.1",
-      "target_ref": "malware--0f636c50-a164-441f-a244-f420f5f19d49",
+      "relationship_type": "attributed-to",
+      "source_ref": "campaign--3d829559-20f7-42be-b5a4-7f948d6f8900",
+      "spec_version": "2.0",
+      "target_ref": "threat-actor--07c57cce-acef-4e11-9e25-01c799b95c47",
       "type": "relationship"
     },
     {
-      "created": "2023-01-01T00:00:00.0000Z",
-      "description": "The threat actor uses this malware in their operations. They deploy it through phishing emails sent from user@*.commercial.",
-      "id": "relationship--f061d0dc-95cc-4523-b8e0-3edff4595a8b",
-      "modified": "2023-01-01T00:00:00.0000Z",
+      "created": "2017-01-01T12:34:56.000Z",
+      "created_by_ref": "identity--be9a2405-a74a-4b4c-b168-4a90b51bfc9a",
+      "description": "Adversaries may send spearphishing emails with a malicious attachment in an attempt to gain access to victim systems. Spearphishing attachments are different from other forms of spearphishing in that they employ malware attached to an email. The attachment may be an office document with embedded macros that connect to 192.x.x.x to download additional payloads.",
+      "external_references": [
+        {
+          "external_id": "EXT-2457",
+          "source_name": "Source-5617",
+          "url": "https://*.organization"
+        }
+      ],
+      "id": "attack-pattern--793ea069-1bff-4d1b-a47b-ed1b416c6cf5",
+      "kill_chain_phases": [
+        {
+          "kill_chain_name": "mitre-attack",
+          "phase_name": "initial-access"
+        }
+      ],
+      "modified": "2017-01-01T12:34:56.000Z",
+      "name": "Spearphishing Attachment",
+      "object_marking_refs": [
+        "marking-definition--69333f62-4598-4890-979c-e2fc84fa46a9"
+      ],
+      "spec_version": "2.0",
+      "type": "attack-pattern"
+    },
+    {
+      "created": "2017-01-01T12:34:56.000Z",
+      "created_by_ref": "identity--be9a2405-a74a-4b4c-b168-4a90b51bfc9a",
+      "id": "relationship--2eb5c050-8b05-4f62-89ad-7518f0de4f86",
+      "modified": "2017-01-01T12:34:56.000Z",
+      "object_marking_refs": [
+        "marking-definition--69333f62-4598-4890-979c-e2fc84fa46a9"
+      ],
       "relationship_type": "uses",
-      "source_ref": "threat-actor--a8e8c563-8524-4745-8efe-df7e7fa5ad89",
-      "spec_version": "2.1",
-      "target_ref": "malware--0f636c50-a164-441f-a244-f420f5f19d49",
+      "source_ref": "threat-actor--07c57cce-acef-4e11-9e25-01c799b95c47",
+      "spec_version": "2.0",
+      "target_ref": "attack-pattern--793ea069-1bff-4d1b-a47b-ed1b416c6cf5",
       "type": "relationship"
     },
     {
-      "created": "2023-01-01T00:00:00.0000Z",
-      "description": "The domain resolves to this IP address.",
-      "id": "relationship--184836dd-e9d3-4de5-a811-725566618dfd",
-      "modified": "2023-01-01T00:00:00.0000Z",
-      "relationship_type": "resolves-to",
-      "source_ref": "domain-name--904d6aaf-ed18-4715-b609-f95bf3bf137c",
-      "spec_version": "2.1",
-      "target_ref": "ipv4-addr--fdc27409-8307-4f7d-9253-3f134ad8f097",
+      "created": "2017-01-01T12:34:56.000Z",
+      "created_by_ref": "identity--be9a2405-a74a-4b4c-b168-4a90b51bfc9a",
+      "first_observed": "2017-01-01T00:00:00.000Z",
+      "id": "observed-data--41eb4b59-be5e-48f9-81e3-d3061e9a7911",
+      "last_observed": "2017-01-01T00:00:00.000Z",
+      "modified": "2017-01-01T12:34:56.000Z",
+      "number_observed": 1,
+      "object_marking_refs": [
+        "marking-definition--69333f62-4598-4890-979c-e2fc84fa46a9"
+      ],
+      "objects": {
+        "0": {
+          "hashes": {
+            "MD5": "11b25b4240f5046f6ccf574a4dcd6c61",
+            "SHA-1": "a0a1f8a71e634326cb933bec073f4a458118ba12",
+            "SHA-256": "2e7bc4c1d4291a023fce48d0a75dcfd142cae0b3fb0202affe7211ccb2f6d37a"
+          },
+          "name": "Invoice_January2017.doc",
+          "size": 245760,
+          "type": "file"
+        },
+        "1": {
+          "type": "email-addr",
+          "value": "user@*.commercial"
+        },
+        "2": {
+          "body_multipart": [
+            {
+              "content": "Please find attached our invoice for January 2017.",
+              "content_type": "text/plain"
+            },
+            {
+              "body_raw_ref": "0",
+              "content_disposition": "attachment; filename=\"Invoice_January2017.doc\"",
+              "content_type": "application/msword"
+            }
+          ],
+          "from_ref": "1",
+          "is_multipart": true,
+          "received_lines": [
+            "from *.commercial ([192.x.x.x]) by *.commercial with ESMTP"
+          ],
+          "subject": "January Invoice",
+          "type": "email-message"
+        }
+      },
+      "spec_version": "2.0",
+      "type": "observed-data"
+    },
+    {
+      "created": "2017-01-01T12:34:56.000Z",
+      "created_by_ref": "identity--be9a2405-a74a-4b4c-b168-4a90b51bfc9a",
+      "id": "relationship--dd517b1a-4a5e-49fe-88fa-57c657d3c56c",
+      "modified": "2017-01-01T12:34:56.000Z",
+      "object_marking_refs": [
+        "marking-definition--69333f62-4598-4890-979c-e2fc84fa46a9"
+      ],
+      "relationship_type": "uses",
+      "source_ref": "malware--04c1dce6-5ee9-4245-bd94-373674d986f7",
+      "spec_version": "2.0",
+      "target_ref": "attack-pattern--793ea069-1bff-4d1b-a47b-ed1b416c6cf5",
+      "type": "relationship"
+    },
+    {
+      "created": "2017-01-02T12:34:56.000Z",
+      "created_by_ref": "identity--be9a2405-a74a-4b4c-b168-4a90b51bfc9a",
+      "description": "This report provides analysis of the Operation BlackWinter campaign attributed to APT Group XYZ. The attackers used spear-phishing emails with malicious Word documents to deliver the RIPTIDE malware. Command and control infrastructure includes servers at 192.x.x.x, 192.x.x.x, and 192.x.x.x. Exfiltration was conducted through encrypted channels to domains *.other and *.other.",
+      "id": "report--a85c6065-4108-41aa-ab7d-b70c5b3a5a33",
+      "labels": [
+        "threat-report"
+      ],
+      "modified": "2017-01-02T12:34:56.000Z",
+      "name": "APT Group XYZ Campaign Analysis",
+      "object_marking_refs": [
+        "marking-definition--69333f62-4598-4890-979c-e2fc84fa46a9"
+      ],
+      "object_refs": [
+        "indicator--d3ca1f89-8322-4f23-b485-12b9e0b08cfd",
+        "malware--04c1dce6-5ee9-4245-bd94-373674d986f7",
+        "campaign--3d829559-20f7-42be-b5a4-7f948d6f8900",
+        "threat-actor--07c57cce-acef-4e11-9e25-01c799b95c47",
+        "attack-pattern--793ea069-1bff-4d1b-a47b-ed1b416c6cf5",
+        "observed-data--41eb4b59-be5e-48f9-81e3-d3061e9a7911"
+      ],
+      "published": "2017-01-02T00:00:00.000Z",
+      "spec_version": "2.0",
+      "type": "report"
+    },
+    {
+      "created": "2017-01-02T12:34:56.000Z",
+      "created_by_ref": "identity--be9a2405-a74a-4b4c-b168-4a90b51bfc9a",
+      "description": "Block outbound traffic to known C2 servers used by APT Group XYZ, including 192.x.x.x, 192.x.x.x, and 192.x.x.x. Also block DNS resolution for *.other and *.other.",
+      "id": "course-of-action--fbc92b76-256e-499e-90f3-636a2bf6258e",
+      "modified": "2017-01-02T12:34:56.000Z",
+      "name": "Block C2 Traffic",
+      "object_marking_refs": [
+        "marking-definition--69333f62-4598-4890-979c-e2fc84fa46a9"
+      ],
+      "spec_version": "2.0",
+      "type": "course-of-action"
+    },
+    {
+      "created": "2017-01-02T12:34:56.000Z",
+      "created_by_ref": "identity--be9a2405-a74a-4b4c-b168-4a90b51bfc9a",
+      "id": "relationship--3ac7c88f-7bc5-462e-b987-6611f1148b61",
+      "modified": "2017-01-02T12:34:56.000Z",
+      "object_marking_refs": [
+        "marking-definition--69333f62-4598-4890-979c-e2fc84fa46a9"
+      ],
+      "relationship_type": "mitigates",
+      "source_ref": "course-of-action--fbc92b76-256e-499e-90f3-636a2bf6258e",
+      "spec_version": "2.0",
+      "target_ref": "indicator--d3ca1f89-8322-4f23-b485-12b9e0b08cfd",
       "type": "relationship"
     }
   ],
-  "spec_version": "2.1",
+  "spec_version": "2.0",
   "type": "bundle"
 }

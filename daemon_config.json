@@ -1,0 +1,21 @@
+{
+  "input_queue": "stix_input",
+  "output_queue": "stix_anonymized", 
+  "error_queue": "stix_errors",
+  "redis_host": "localhost",
+  "redis_port": 6379,
+  "redis_db": 0,
+  "batch_size": 10,
+  "max_retries": 3,
+  "retry_delay": 5,
+  "poll_interval": 1.0,
+  "default_trust_level": "medium",
+  "trust_mapping": {
+    "partner_institution_1": "high",
+    "partner_institution_2": "medium", 
+    "external_feed": "low",
+    "untrusted_source": "untrusted"
+  },
+  "log_level": "INFO",
+  "log_file": "/var/log/crisp_anonymization_daemon.log"
+}
