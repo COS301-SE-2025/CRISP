@@ -67,7 +67,7 @@ class Command(BaseCommand):
                 self.stdout.write("-" * 40)
                 
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f"Error discovering collections: {str(e)}"))
+            self.stderr.write(self.style.ERROR(f"Error discovering collections: {str(e)}"))
     
     def consume_feed(self, options):
         """Consume a TAXII feed"""
@@ -80,7 +80,8 @@ class Command(BaseCommand):
             try:
                 feed = ThreatFeed.objects.get(id=feed_id)
             except ThreatFeed.DoesNotExist:
-                raise CommandError(f"Feed with ID {feed_id} does not exist")
+                self.stderr.write(self.style.ERROR(f"Feed with ID {feed_id} does not exist"))
+                return
             
             self.stdout.write(f"Consuming feed: {feed.name}")
             
@@ -95,7 +96,7 @@ class Command(BaseCommand):
             self.stdout.write(f"Errors: {stats['errors']}")
                 
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f"Error consuming feed: {str(e)}"))
+            self.stderr.write(self.style.ERROR(f"Error consuming feed: {str(e)}"))
     
     def add_feed(self, options):
         """Add a new TAXII feed"""

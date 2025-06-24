@@ -22,8 +22,18 @@ class StixIndicatorCreator(StixObjectCreator):
             Dictionary with CRISP Indicator properties
         """
         try:
-            # Extract the indicator type and value from the pattern
-            indicator_type, value = self._parse_indicator_pattern(stix_obj.pattern)
+            # Check if pattern is available
+            if not hasattr(stix_obj, 'pattern'):
+                return {'type': 'other', 'value': 'Unknown', 'confidence': 50}
+                
+            # Parse the pattern - handle both 2-value and 3-value returns
+            pattern_result = self._parse_indicator_pattern(stix_obj.pattern)
+            
+            if len(pattern_result) == 3:
+                indicator_type, value, hash_type = pattern_result
+            else:
+                indicator_type, value = pattern_result
+                hash_type = None
             
             # Convert STIX timestamps to datetime objects
             created = stix_obj.created.replace(tzinfo=pytz.UTC) if hasattr(stix_obj, 'created') else None
@@ -39,9 +49,13 @@ class StixIndicatorCreator(StixObjectCreator):
                 'first_seen': created,
                 'last_seen': modified,
                 'description': stix_obj.description if hasattr(stix_obj, 'description') else None,
-                'confidence': int(stix_obj.confidence * 100) if hasattr(stix_obj, 'confidence') else 50,
+                'confidence': int(stix_obj.confidence) if hasattr(stix_obj, 'confidence') and stix_obj.confidence is not None else 50,
                 'is_anonymized': False,
             }
+            
+            # Add hash_type if it's a file_hash
+            if indicator_type == 'file_hash' and hash_type:
+                indicator_data['hash_type'] = hash_type
             
             return indicator_data
             
@@ -54,23 +68,28 @@ class StixIndicatorCreator(StixObjectCreator):
         Create a STIX Indicator object from a CRISP Indicator entity.
         
         Args:
-            crisp_entity: CRISP Indicator model instance
+            crisp_entity: CRISP Indicator entity
             
         Returns:
             STIX Indicator object
         """
         try:
-            # Convert the CRISP Indicator type and value to a STIX pattern
+            # Create the STIX pattern based on indicator type and value
             pattern = self._create_stix_pattern(crisp_entity.type, crisp_entity.value)
+            
+            # Keep confidence as integer (0-100) - STIX 2.1 expects integer percentage
+            confidence_value = int(crisp_entity.confidence) if crisp_entity.confidence else 50
             
             # Create the STIX Indicator
             stix_indicator = StixIndicator(
-                type="indicator",
                 pattern=pattern,
                 pattern_type="stix",
-                valid_from=crisp_entity.first_seen or crisp_entity.created_at,
-                description=crisp_entity.description,
-                confidence=crisp_entity.confidence / 100 
+                labels=["malicious-activity"],
+                confidence=confidence_value,  # Pass as integer (80, not 0.8)
+                description=crisp_entity.description or "",
+                created=crisp_entity.created_at,
+                modified=crisp_entity.updated_at or crisp_entity.created_at,
+                valid_from=crisp_entity.first_seen or crisp_entity.created_at
             )
             
             return stix_indicator
@@ -80,26 +99,27 @@ class StixIndicatorCreator(StixObjectCreator):
             raise
     
     def _parse_indicator_pattern(self, pattern):
-        """
-        Parse a STIX indicator pattern to extract type and value.
-        
-        Example patterns:
-        - [ipv4-addr:value = '192.168.1.1']
-        - [domain-name:value = 'example.com']
-        
-        Args:
-            pattern: STIX indicator pattern
-            
-        Returns:
-            Tuple of (indicator_type, value)
-        """
         try:
             pattern = pattern.strip('[]')
             parts = pattern.split(':')
             
-            if len(parts) < 2:
-                return 'other', pattern
+            # Special handling for file hash patterns
+            if 'file' in parts[0] and 'hashes' in pattern:
+                indicator_type = 'file_hash'
+                
+                # Extract hash type if possible
+                hash_type = 'other'
+                if '.' in pattern:
+                    hash_type_section = pattern.split('.')[1].split(' ')[0]
+                    if hash_type_section.lower() in ['md5', 'sha1', 'sha-1', 'sha256', 'sha-256']:
+                        hash_type = hash_type_section
+                
+                # Extract value
+                value = pattern.split("'")[1] if "'" in pattern else pattern.split('"')[1]
+                
+                return indicator_type, value, hash_type
             
+            # Handle other pattern types
             stix_type = parts[0].strip()
             value_part = ':'.join(parts[1:])
             
@@ -111,50 +131,24 @@ class StixIndicatorCreator(StixObjectCreator):
                 'ipv6-addr': 'ip',
                 'domain-name': 'domain',
                 'url': 'url',
-                'file:hashes': 'file_hash',
                 'email-addr': 'email',
                 'user-agent': 'user_agent'
             }
             
             indicator_type = type_mapping.get(stix_type, 'other')
-            
-            # For file hashes, extract the hash type
-            if indicator_type == 'file_hash':
-                hash_part = value_part.lower()
-                if 'md5' in hash_part:
-                    hash_type = 'md5'
-                elif 'sha-1' in hash_part or 'sha1' in hash_part:
-                    hash_type = 'sha1'
-                elif 'sha-256' in hash_part or 'sha256' in hash_part:
-                    hash_type = 'sha256'
-                else:
-                    hash_type = 'other'
-                
-                return indicator_type, value, hash_type
-            
             return indicator_type, value
             
         except Exception as e:
             logger.error(f"Error parsing indicator pattern: {str(e)}")
             return 'other', pattern
     
-    def _create_stix_pattern(self, indicator_type, value):
-        """
-        Create a STIX pattern from a CRISP indicator type and value.
-        
-        Args:
-            indicator_type: CRISP indicator type
-            value: Indicator value
-            
-        Returns:
-            STIX pattern string
-        """
+    def _create_stix_pattern(self, indicator_type, value, hash_type='MD5'):
         # Map CRISP type to STIX type
         type_mapping = {
             'ip': 'ipv4-addr',  
             'domain': 'domain-name',
             'url': 'url',
-            'file_hash': 'file:hashes.MD5', 
+            'file_hash': 'file:hashes',
             'email': 'email-addr',
             'user_agent': 'user-agent',
             'other': 'x-custom-indicator'
@@ -163,6 +157,9 @@ class StixIndicatorCreator(StixObjectCreator):
         stix_type = type_mapping.get(indicator_type, 'x-custom-indicator')
         
         # Create the pattern
-        pattern = f"[{stix_type}:value = '{value}']"
+        if indicator_type == 'file_hash':
+            pattern = f"[file:hashes.{hash_type} = '{value}']"
+        else:
+            pattern = f"[{stix_type}:value = '{value}']"
         
         return pattern

@@ -145,4 +145,4 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
             "ttp_count": ttp_count,
             "latest_indicator_date": latest_date
         })
-
+    

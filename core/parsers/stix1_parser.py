@@ -99,18 +99,24 @@ class STIX1Parser:
         logger.info("Looking for indicators")
         
         # Find indicators by searching for namespace-qualified tags or without namespaces
-        indicators = []
+        # Use a set to avoid duplicates
+        found_indicators = set()
         
         for indicator_tag in ['{http://stix.mitre.org/Indicator-2}Indicator', 'Indicator']:
             found = self._find_elements_by_tag(stix_package, indicator_tag)
             if found:
-                indicators.extend(found)
+                # Add elements to set (using id() to ensure uniqueness by object identity)
+                for elem in found:
+                    found_indicators.add(elem)
                 logger.info(f"Found {len(found)} indicators with tag {indicator_tag}")
-                
+        
+        # Convert set back to list
+        indicators = list(found_indicators)
+        
         if not indicators:
             logger.info("No indicators found")
         else:
-            logger.info(f"Found total of {len(indicators)} indicators")
+            logger.info(f"Found total of {len(indicators)} unique indicators")
             
         # Process each indicator
         for indicator in indicators:
@@ -122,13 +128,18 @@ class STIX1Parser:
                 logger.error(traceback.format_exc())
                 stats['errors'] += 1
         
-        # Process TTPs
-        ttp_elements = []
+        # Process TTPs - use same deduplication approach
+        found_ttps = set()
         for ttp_tag in ['{http://stix.mitre.org/TTP-1}TTP', 'TTP']:
             found = self._find_elements_by_tag(stix_package, ttp_tag)
             if found:
-                ttp_elements.extend(found)
+                # Add elements to set (using id() to ensure uniqueness by object identity)
+                for elem in found:
+                    found_ttps.add(elem)
                 logger.info(f"Found {len(found)} TTPs with tag {ttp_tag}")
+        
+        # Convert set back to list
+        ttp_elements = list(found_ttps)
 
         for ttp in ttp_elements:
             try:
@@ -155,6 +166,55 @@ class STIX1Parser:
             
         return result
     
+    def _detect_indicator_type(self, value):
+        """
+        Detect the type of indicator based on its value.
+        
+        Args:
+            value (str): The indicator value to analyze
+            
+        Returns:
+            str: The detected indicator type
+        """
+        import re
+        
+        if not value:
+            return 'other'
+        
+        value = value.strip()
+        
+        # IP address patterns
+        ipv4_pattern = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
+        ipv6_pattern = r'^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::1$|^::$'
+        
+        # Hash patterns
+        md5_pattern = r'^[a-fA-F0-9]{32}$'
+        sha1_pattern = r'^[a-fA-F0-9]{40}$'
+        sha256_pattern = r'^[a-fA-F0-9]{64}$'
+        
+        # Domain pattern (simplified)
+        domain_pattern = r'^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.([a-zA-Z]{2,}|[a-zA-Z]{2,}\.[a-zA-Z]{2,})$'
+        
+        # Email pattern
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        
+        # URL pattern
+        url_pattern = r'^https?://'
+        
+        # Check patterns in order of specificity
+        if re.match(ipv4_pattern, value) or re.match(ipv6_pattern, value):
+            return 'ip'
+        elif re.match(url_pattern, value, re.IGNORECASE):
+            return 'url'
+        elif re.match(email_pattern, value):
+            return 'email'
+        elif re.match(md5_pattern, value) or re.match(sha1_pattern, value) or re.match(sha256_pattern, value):
+            return 'file_hash'
+        elif re.match(domain_pattern, value):
+            return 'domain'
+        else:
+            return 'other'
+    
     def _process_single_indicator(self, indicator, threat_feed, stats):
         """
         Process a single indicator element and create/update Indicator model.
@@ -176,14 +236,16 @@ class STIX1Parser:
         
         logger.info(f"Processing indicator: {indicator_id}")
         
-        # Extract indicator type and value
-        indicator_type = 'other'
+        # Extract indicator value first
         indicator_value = self._extract_observable_value(indicator)
         
         if not indicator_value:
             logger.warning(f"Could not extract value for indicator {indicator_id}, skipping")
             stats['skipped'] += 1
             return
+        
+        # Determine indicator type based on the extracted value
+        indicator_type = self._detect_indicator_type(indicator_value)
         
         # Create indicator data
         indicator_data = {
@@ -195,11 +257,27 @@ class STIX1Parser:
             'is_anonymized': False,
         }
         
+        # Set hash_type if it's a file hash
+        if indicator_type == 'file_hash':
+            if len(indicator_value) == 32:
+                indicator_data['hash_type'] = 'md5'
+            elif len(indicator_value) == 40:
+                indicator_data['hash_type'] = 'sha1'
+            elif len(indicator_value) == 64:
+                indicator_data['hash_type'] = 'sha256'
+            else:
+                indicator_data['hash_type'] = 'other'
+        
         # Log the indicator data
         logger.info(f"Extracted indicator data: {indicator_data}")
         
-        # Check if indicator already exists
-        existing = Indicator.objects.filter(stix_id=indicator_id).first()
+        # Check if indicator already exists ONLY within the same threat feed
+        existing = None
+        if threat_feed:
+            existing = Indicator.objects.filter(
+                stix_id=indicator_id, 
+                threat_feed=threat_feed  # ← Scope to same feed only
+            ).first()
         
         if existing:
             # Update existing indicator
@@ -296,8 +374,13 @@ class STIX1Parser:
         # Log the TTP data
         logger.info(f"Extracted TTP data: {ttp_data}")
         
-        # Check if TTP already exists
-        existing = TTPData.objects.filter(stix_id=ttp_id).first()
+        # Check if TTP already exists ONLY within the same threat feed
+        existing = None
+        if threat_feed:
+            existing = TTPData.objects.filter(
+                stix_id=ttp_id, 
+                threat_feed=threat_feed  # ← Scope to same feed only
+            ).first()
         
         if existing:
             # Update existing TTP
