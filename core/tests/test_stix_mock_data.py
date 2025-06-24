@@ -48,7 +48,7 @@ INVALID_XML = """
     This is not valid XML - missing closing tag
 """
 
-# Simplified TAXII 1.x content block
+# TAXII 1.x content block
 TAXII1_CONTENT_BLOCK = {
     'content': STIX1_INDICATOR_XML.encode('utf-8'),
     'timestamp': '2024-06-20T15:16:56Z',
@@ -145,7 +145,7 @@ STIX21_BUNDLE = {
     ]
 }
 
-# Sample TAXII 2.0/2.1 collection information
+# TAXII 2.0/2.1 collection information
 TAXII2_COLLECTIONS = [
     {
         "id": "91a7b528-80eb-42ed-a74d-c6fbd5a26116",

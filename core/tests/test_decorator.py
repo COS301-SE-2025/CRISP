@@ -1,5 +1,5 @@
 """
-Unit tests for STIX decorator pattern implementations in the CRISP platform.
+Unit tests for STIX decorator pattern implementations
 """
 import unittest
 from unittest.mock import patch, MagicMock
@@ -9,9 +9,9 @@ from core.patterns.decorator.stix_object_component import StixObjectComponent
 from core.patterns.decorator.stix_decorator import StixDecorator
 
 
-# Create a concrete implementation of StixObjectComponent for testing
+# Create a concrete implementation of StixObjectComponent
 class ConcreteStixObject(StixObjectComponent):
-    """Concrete implementation of StixObjectComponent for testing."""
+    """Concrete implementation of StixObjectComponent"""
     
     def __init__(self, stix_obj=None):
         """Initialize with an optional STIX object."""
@@ -21,35 +21,34 @@ class ConcreteStixObject(StixObjectComponent):
         self.exported = False
     
     def validate(self):
-        """Validate the STIX object."""
+        """Validate the STIX object"""
         self.validated = True
         return True
     
     def export_to_taxii(self, collection_url, api_root, username=None, password=None):
-        """Export the STIX object to a TAXII collection."""
+        """Export the STIX object to a TAXII collection"""
         self.exported = True
         return {'status': 'success', 'url': collection_url, 'api_root': api_root}
     
     def enrich(self):
-        """Enrich the STIX object."""
+        """Enrich the object"""
         self.enriched = True
         return self
     
     def get_stix_object(self):
-        """Get the underlying STIX object."""
+        """Get the underlying STIX object"""
         return self.stix_obj
 
 
 # Create concrete decorator implementations for testing
 class StixValidationDecorator(StixDecorator):
-    """Decorator for STIX validation."""
+    """Decorator for STIX validation"""
     
     def validate(self):
-        """Extended validation with additional checks."""
+        """Extended validation with additional checks"""
         # First validate with the component
         base_result = self._component.validate()
         
-        # Additional validation logic
         if base_result:
             # Perform additional validation
             stix_obj = self._component.get_stix_object()
@@ -61,10 +60,10 @@ class StixValidationDecorator(StixDecorator):
 
 
 class StixTaxiiExportDecorator(StixDecorator):
-    """Decorator for TAXII export."""
+    """Decorator for TAXII export"""
     
     def export_to_taxii(self, collection_url, api_root, username=None, password=None):
-        """Extended export with additional functionality."""
+        """Extended export with additional functionality"""
         # First export with the component
         result = self._component.export_to_taxii(collection_url, api_root, username, password)
         
@@ -76,10 +75,10 @@ class StixTaxiiExportDecorator(StixDecorator):
 
 
 class StixEnrichmentDecorator(StixDecorator):
-    """Decorator for STIX enrichment."""
+    """Decorator for STIX enrichment"""
     
     def enrich(self):
-        """Extended enrichment with additional information."""
+        """Extended enrichment with additional information"""
         # First enrich with the component
         component = self._component.enrich()
         
@@ -92,7 +91,7 @@ class StixEnrichmentDecorator(StixDecorator):
 
 
 class StixDecoratorTestCase(TestCase):
-    """Test cases for STIX decorator pattern."""
+    """Test cases"""
 
     def setUp(self):
         """Set up the test environment."""
@@ -105,7 +104,7 @@ class StixDecoratorTestCase(TestCase):
         self.concrete_component = ConcreteStixObject(self.mock_stix_obj)
 
     def test_base_decorator(self):
-        """Test the base decorator functionality."""
+        """Test the base decorator functionality"""
         # Create a decorator
         decorator = StixDecorator(self.concrete_component)
         
@@ -137,13 +136,13 @@ class StixDecoratorTestCase(TestCase):
         
         # Test validation with invalid object (no type)
         invalid_stix_obj = MagicMock()
-        del invalid_stix_obj.type  # Remove the type attribute
+        del invalid_stix_obj.type
         invalid_component = ConcreteStixObject(invalid_stix_obj)
         invalid_decorator = StixValidationDecorator(invalid_component)
         self.assertFalse(invalid_decorator.validate())
 
     def test_taxii_export_decorator(self):
-        """Test the TAXII export decorator functionality."""
+        """Test the TAXII export decorator functionality"""
         # Create a decorator
         decorator = StixTaxiiExportDecorator(self.concrete_component)
         
@@ -159,7 +158,7 @@ class StixDecoratorTestCase(TestCase):
         self.assertEqual(result['timestamp'], 'test-timestamp')
 
     def test_enrichment_decorator(self):
-        """Test the enrichment decorator functionality."""
+        """Test the enrichment decorator functionality"""
         # Create a decorator
         decorator = StixEnrichmentDecorator(self.concrete_component)
         
@@ -174,7 +173,7 @@ class StixDecoratorTestCase(TestCase):
         self.assertEqual(stix_obj.description, 'Test indicator (Enriched with additional context)')
 
     def test_combined_decorators(self):
-        """Test combining multiple decorators."""
+        """Test combining multiple decorators"""
         # Create a chain of decorators
         validator = StixValidationDecorator(self.concrete_component)
         exporter = StixTaxiiExportDecorator(validator)
@@ -188,12 +187,10 @@ class StixDecoratorTestCase(TestCase):
         self.assertEqual(result['status'], 'success')
         self.assertEqual(result['format_version'], '2.1')
         
-        # Enrich
         enriched = enricher.enrich()
         stix_obj = enriched.get_stix_object()
         self.assertEqual(stix_obj.description, 'Test indicator (Enriched with additional context)')
         
-        # The base component should have been called for all operations
         self.assertTrue(self.concrete_component.validated)
         self.assertTrue(self.concrete_component.exported)
         self.assertTrue(self.concrete_component.enriched)
