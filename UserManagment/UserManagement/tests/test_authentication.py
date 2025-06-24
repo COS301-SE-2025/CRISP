@@ -577,7 +577,7 @@ class PasswordSecurityTestCase(TestCase):
         
         # Test valid password
         try:
-            validator.validate('ValidPassword123!', self.user)
+            validator.validate('SecurePhrase47B!', self.user)
         except Exception as e:
             self.fail(f"Valid password failed validation: {e}")
         
