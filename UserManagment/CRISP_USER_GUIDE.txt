@@ -1,0 +1,1107 @@
+===============================================================================
+                    CRISP USER MANAGEMENT SYSTEM - COMPLETE USER GUIDE
+===============================================================================
+
+TABLE OF CONTENTS
+=================
+1. System Overview
+2. Technology Stack & Architecture  
+3. Installation & Setup
+4. React Frontend Integration
+5. Creating Institutions (Organizations)
+6. User Management & Roles
+7. Authentication & Security
+8. API Usage
+9. Testing & Validation
+10. Administrative Functions
+11. Additional Documentation
+12. Troubleshooting
+
+===============================================================================
+1. SYSTEM OVERVIEW
+===============================================================================
+
+The CRISP (Cyber Risk Information Sharing Platform) is a comprehensive full-stack
+cybersecurity threat intelligence platform with Django backend and React frontend, 
+designed for secure user authentication, authorization, and threat intelligence 
+management in cybersecurity environments.
+
+KEY FEATURES:
+- Full-stack architecture (Django + React)
+- Multi-tenant organization support
+- Role-based access control (RBAC)
+- Advanced authentication strategies
+- Comprehensive audit logging
+- STIX object permission management
+- RESTful API interface
+- Modern React frontend with D3.js visualizations
+- Enterprise-grade security controls
+- Threat intelligence feed management
+- IoC (Indicators of Compromise) tracking
+- TTP (Tactics, Techniques, Procedures) analysis
+
+SUPPORTED ROLES HIERARCHY:
+- viewer (lowest privileges)
+- publisher
+- BlueVisionAdmin (highest privileges)
+
+===============================================================================
+2. TECHNOLOGY STACK & ARCHITECTURE
+===============================================================================
+
+FULL-STACK ARCHITECTURE:
+
+BACKEND (Django):
+- Django 4.2+ Framework
+- Django REST Framework (DRF) for APIs
+- Django ORM for database operations
+- Django Admin for administrative interface
+- Django Authentication System (extended)
+- JWT token authentication with SimpleJWT
+- Custom middleware for security
+- Custom validators and permissions
+- Custom management commands
+
+FRONTEND (React):
+- React 18.2+ with modern hooks
+- React Router DOM 6.20+ for navigation
+- Vite build system for fast development
+- D3.js 7.9+ for data visualizations
+- FontAwesome 6.7+ for icons
+- Modern ES6+ JavaScript
+- Responsive CSS design
+- Jest testing framework
+
+DATABASE:
+- SQLite (default, for development)
+- PostgreSQL/MySQL (recommended for production)
+- All operations through Django ORM
+
+SECURITY FEATURES:
+- JWT token authentication with refresh tokens
+- Django's built-in CSRF protection
+- Custom security middleware
+- Rate limiting (5 attempts per 5 minutes)
+- Password validation
+- Account lockout mechanisms
+- Comprehensive audit logging
+
+API LAYER:
+- Django REST Framework serializers
+- ViewSets and API views
+- Token-based authentication
+- Permission classes
+- CORS support for frontend integration
+
+DEVELOPMENT TOOLS:
+- Vite for fast frontend development
+- ESLint for code quality
+- Babel for JavaScript compilation
+- Jest for testing
+- Coverage.py for test coverage
+
+SELF-CONTAINED SYSTEM:
+- No microservices required
+- No external authentication providers
+- Self-contained Django + React application
+- Can run entirely offline
+
+===============================================================================
+3. INSTALLATION & SETUP
+===============================================================================
+
+SYSTEM REQUIREMENTS:
+- Python 3.8+
+- Django 4.x
+- See requirements.txt for full dependencies
+
+INSTALLATION STEPS:
+
+1. Clone/Navigate to the project:
+   cd /path/to/CRISP/UserManagment
+
+2. Install dependencies:
+   pip install -r requirements.txt
+
+3. Run database migrations:
+   python3 manage.py makemigrations
+   python3 manage.py migrate
+
+4. Create superuser (system administrator):
+   python3 manage.py createsuperuser
+   
+   Follow prompts to create:
+   - Username
+   - Email
+   - Password
+
+5. Start the development server:
+   python3 manage.py runserver
+
+6. Access the system:
+   - Backend API: http://127.0.0.1:8000/api/
+   - Admin Interface: http://127.0.0.1:8000/admin/
+   - React Frontend: http://localhost:5173/ (after frontend setup)
+
+INITIAL SETUP VERIFICATION:
+   python3 manage.py test
+   python3 basic_system_test.py
+
+===============================================================================
+4. REACT FRONTEND INTEGRATION
+===============================================================================
+
+The CRISP platform includes a modern React frontend located in UI/crisp-react/ 
+that provides a comprehensive user interface for threat intelligence management.
+
+FRONTEND FEATURES:
+- Modern React 18+ with functional components and hooks
+- Interactive dashboard with D3.js visualizations
+- Threat feed management interface
+- IoC (Indicators of Compromise) management
+- TTP (Tactics, Techniques, Procedures) analysis
+- Institution management
+- Comprehensive reporting system
+- User authentication and registration
+- Responsive design for all devices
+
+FRONTEND SETUP:
+
+1. Navigate to frontend directory:
+   cd /path/to/CRISP/UI/crisp-react
+
+2. Install dependencies:
+   npm install
+
+3. Start development server:
+   npm run dev
+
+4. Build for production:
+   npm run build
+
+5. Run frontend tests:
+   npm test
+
+6. Access frontend:
+   http://localhost:5173/
+
+FRONTEND STRUCTURE:
+UI/crisp-react/
+├── src/
+│   ├── App.jsx                 # Main application component
+│   ├── api.js                  # API service layer
+│   ├── main.jsx               # Application entry point
+│   ├── assets/                # Images, CSS, and static assets
+│   ├── components/            # Reusable React components
+│   └── setupTests.js          # Jest test configuration
+├── package.json               # Dependencies and scripts
+├── vite.config.js            # Vite build configuration
+├── babel.config.js           # Babel configuration
+└── eslint.config.js          # ESLint configuration
+
+FRONTEND COMPONENTS:
+- Dashboard: Real-time threat intelligence overview with charts
+- Threat Feeds: Management of external and internal threat feeds
+- IoC Management: Indicators of Compromise tracking and analysis
+- TTP Analysis: Tactics, Techniques, and Procedures analysis
+- Institutions: Connected organizations and trust relationships
+- Reports: Comprehensive threat intelligence reporting
+
+API INTEGRATION:
+The frontend integrates with the Django backend through the api.js service:
+
+// Login example
+import { loginUser, getCurrentUser, authHeader } from './api.js';
+
+const user = await loginUser(username, password);
+const currentUser = getCurrentUser();
+const headers = authHeader(); // For authenticated requests
+
+ENVIRONMENT CONFIGURATION:
+The React frontend is pre-configured to connect to the Django backend:
+const API_URL = 'http://localhost:8000/api/';  // Development (default Django port)
+const API_URL = 'https://your-domain.com/api/'; // Production
+
+STARTUP SCRIPT:
+For easy startup of both backend and frontend, use the provided script:
+./start_crisp.sh
+This script will automatically start both Django backend and React frontend.
+
+FRONTEND TESTING:
+npm test              # Run Jest tests
+npm run test:watch    # Watch mode for development
+npm run test:coverage # Generate test coverage report
+
+FRONTEND BUILDING:
+npm run build         # Build for production
+npm run preview       # Preview production build
+
+===============================================================================
+5. CREATING INSTITUTIONS (ORGANIZATIONS)
+===============================================================================
+
+Organizations represent institutions, companies, or entities in the system.
+Each user belongs to exactly one organization.
+
+METHOD 1: DJANGO ADMIN INTERFACE (Recommended for beginners)
+------------------------------------------------------------
+
+1. Access admin interface:
+   http://127.0.0.1:8000/admin/
+
+2. Login with superuser credentials
+
+3. Navigate to "Organizations" section
+
+4. Click "Add Organization"
+
+5. Fill required fields:
+   - Name: Institution name (e.g., "ACME Cybersecurity Corp")
+   - Domain: Email domain (e.g., "acmecyber.com")
+   - Description: Optional description
+   - Is Active: Check this box (default)
+
+6. Click "Save"
+
+METHOD 2: DJANGO SHELL (Programmatic)
+--------------------------------------
+
+1. Access Django shell:
+   python3 manage.py shell
+
+2. Create organization:
+   from UserManagement.models import Organization
+   
+   # Method A: Direct creation
+   org = Organization.objects.create(
+       name="CyberDefense Institute",
+       domain="cyberdef.org",
+       description="Leading cybersecurity research institution"
+   )
+   print(f"Created organization: {org.name} with ID: {org.id}")
+   
+   # Method B: Safe creation (prevents duplicates)
+   org, created = Organization.objects.get_or_create(
+       name="Threat Intelligence Corp",
+       defaults={
+           'domain': 'threatintel.com',
+           'description': 'Commercial threat intelligence provider'
+       }
+   )
+   print(f"Organization: {org.name} ({'created' if created else 'already exists'})")
+
+3. Exit shell:
+   exit()
+
+METHOD 3: MANAGEMENT COMMAND (Create this for easy use)
+-------------------------------------------------------
+
+Create file: UserManagement/management/commands/create_org.py
+
+from django.core.management.base import BaseCommand
+from UserManagement.models import Organization
+
+class Command(BaseCommand):
+    help = 'Create a new organization'
+
+    def add_arguments(self, parser):
+        parser.add_argument('name', type=str, help='Organization name')
+        parser.add_argument('domain', type=str, help='Organization domain')
+        parser.add_argument('--description', type=str, help='Organization description')
+
+    def handle(self, *args, **options):
+        try:
+            org, created = Organization.objects.get_or_create(
+                name=options['name'],
+                defaults={
+                    'domain': options['domain'],
+                    'description': options.get('description', '')
+                }
+            )
+            
+            if created:
+                self.stdout.write(self.style.SUCCESS(f'Created: {org.name}'))
+            else:
+                self.stdout.write(self.style.WARNING(f'Exists: {org.name}'))
+                
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f'Error: {str(e)}'))
+
+Usage:
+python3 manage.py create_org "ACME Security" "acme.com" --description="Enterprise security"
+
+VIEWING ORGANIZATIONS:
+---------------------
+
+Django Shell:
+from UserManagement.models import Organization
+
+# List all organizations
+for org in Organization.objects.all():
+    print(f"Name: {org.name}, Domain: {org.domain}, Users: {org.customuser_set.count()}")
+
+Admin Interface:
+- Go to http://127.0.0.1:8000/admin/
+- Click "Organizations" to view all
+
+===============================================================================
+5. USER MANAGEMENT & ROLES
+===============================================================================
+
+ROLE HIERARCHY (from lowest to highest privileges):
+1. viewer      - Can view threat intelligence data
+2. publisher   - Can publish threat intelligence
+3. BlueVisionAdmin - System-wide administrator
+
+CREATING USERS:
+
+METHOD 1: DJANGO ADMIN INTERFACE
+--------------------------------
+
+1. Access: http://127.0.0.1:8000/admin/
+2. Go to "Users" section
+3. Click "Add User"
+4. Fill required fields:
+   - Username: Unique username
+   - Email: Valid email address
+   - Password: Strong password
+   - Organization: Select from dropdown
+   - Role: Choose appropriate role
+   - First/Last Name: Optional
+   - Is Active: Check (default)
+   - Is Verified: Check for immediate access
+
+METHOD 2: USER FACTORY (Programmatic)
+-------------------------------------
+
+Django Shell:
+python3 manage.py shell
+
+from UserManagement.models import Organization, CustomUser
+from UserManagement.factories.user_factory import UserFactory
+
+# Get organization
+org = Organization.objects.get(name="Your Organization Name")
+
+# Create different types of users
+
+# 1. Standard Viewer User
+user_data = {
+    'username': 'john.viewer',
+    'email': 'john@yourorg.com',
+    'password': 'SecurePass123!',
+    'first_name': 'John',
+    'last_name': 'Doe',
+    'organization': org,
+    'created_by': None,  # or specify creating user
+    'auto_generate_password': False
+}
+
+viewer = UserFactory.create_user('viewer', user_data, created_by=None)
+print(f"Created viewer: {viewer.username}")
+
+# 2. Publisher User
+publisher_data = {
+    'username': 'jane.publisher',
+    'email': 'jane@yourorg.com',
+    'password': 'PublisherPass456!',
+    'first_name': 'Jane',
+    'last_name': 'Smith',
+    'organization': org
+}
+
+publisher = UserFactory.create_user('publisher', publisher_data)
+print(f"Created publisher: {publisher.username}")
+
+# 3. BlueVision Admin User
+admin_data = {
+    'username': 'admin.user',
+    'email': 'admin@yourorg.com',
+    'password': 'AdminPass789!',
+    'organization': org
+}
+
+admin = UserFactory.create_user('BlueVisionAdmin', admin_data)
+print(f"Created BlueVision admin: {admin.username}")
+
+METHOD 3: DIRECT MODEL CREATION
+-------------------------------
+
+from UserManagement.models import Organization, CustomUser
+
+org = Organization.objects.get(name="Your Organization")
+
+# Create user directly
+user = CustomUser.objects.create_user(
+    username='direct.user',
+    email='direct@yourorg.com',
+    password='DirectPass123!',
+    organization=org,
+    role='publisher',
+    is_verified=True,
+    is_active=True
+)
+
+ROLE-SPECIFIC PERMISSIONS:
+
+VIEWER:
+- Can view STIX objects within organization
+- Read-only access to threat intelligence
+- Cannot publish or modify data
+
+PUBLISHER:
+- All viewer permissions
+- Can publish threat intelligence
+- Can create and share STIX objects
+- Can moderate content
+
+BLUEVISIONADMIN:
+- All publisher permissions across ALL organizations
+- Can manage all users and organizations
+- Can create/modify organizations
+- System-wide administrative access
+- Can access any user or data
+
+VIEWING USERS:
+
+Django Shell:
+from UserManagement.models import CustomUser
+
+# List all users
+for user in CustomUser.objects.all():
+    print(f"{user.username} ({user.role}) - {user.organization.name}")
+
+# Users by role
+viewers = CustomUser.objects.filter(role='viewer')
+publishers = CustomUser.objects.filter(role='publisher')
+blue_vision_admins = CustomUser.objects.filter(role='BlueVisionAdmin')
+
+# Users by organization
+org_users = CustomUser.objects.filter(organization__name="Your Org Name")
+
+===============================================================================
+6. AUTHENTICATION & SECURITY
+===============================================================================
+
+AUTHENTICATION METHODS:
+
+1. STANDARD AUTHENTICATION (Username/Password)
+2. TWO-FACTOR AUTHENTICATION (TOTP)
+3. TRUSTED DEVICE AUTHENTICATION
+
+LOGIN PROCESS:
+
+WEB INTERFACE:
+1. Navigate to: http://127.0.0.1:8000/api/auth/login/
+2. Provide credentials
+3. Receive JWT token for API access
+
+API AUTHENTICATION:
+curl -X POST http://127.0.0.1:8000/api/auth/login/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "your.username",
+    "password": "your.password"
+  }'
+
+Response:
+{
+  "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+  "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+  "user": {
+    "id": "uuid",
+    "username": "your.username",
+    "role": "viewer",
+    "organization": "Your Organization"
+  }
+}
+
+USING JWT TOKENS:
+Include in API requests:
+Authorization: Bearer YOUR_ACCESS_TOKEN
+
+SECURITY FEATURES:
+
+1. Password Requirements:
+   - Minimum 12 characters
+   - At least 1 uppercase letter
+   - At least 1 lowercase letter
+   - At least 2 digits
+   - At least 1 special character
+   - No common patterns (123, abc, password, etc.)
+   - No personal information
+
+2. Rate Limiting:
+   - Login attempts: 5 per IP per minute
+   - API calls: Configurable per endpoint
+   - Password reset: Limited attempts
+
+3. Account Locking:
+   - After 5 failed login attempts
+   - Automatic unlock after time period
+   - Admin can manually unlock
+
+4. Session Management:
+   - JWT token expiration
+   - Session timeout
+   - Device tracking
+   - IP address logging
+
+5. Audit Logging:
+   - All authentication events logged
+   - Failed login attempts tracked
+   - Administrative actions recorded
+   - Security events monitored
+
+===============================================================================
+7. API USAGE
+===============================================================================
+
+The system provides RESTful APIs for all operations.
+
+BASE URL: http://127.0.0.1:8000/api/
+
+API ROOT ENDPOINT (accessible via browser):
+GET /api/
+This endpoint provides an overview of all available API endpoints and can be 
+accessed directly in your browser at: http://127.0.0.1:8000/api/
+
+IMPORTANT NOTES:
+- Most authentication endpoints require POST requests (not accessible via browser GET)
+- Use tools like curl, Postman, or the React frontend for API testing
+- Browser GET requests to POST-only endpoints will return "Method Not Allowed" (405)
+
+AUTHENTICATION ENDPOINTS:
+------------------------
+
+Login:
+POST /api/auth/login/
+{
+  "username": "user",
+  "password": "pass"
+}
+Response: 
+{
+  "success": true,
+  "tokens": {
+    "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+    "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+    "access_expires": "2025-06-23T19:00:00Z",
+    "refresh_expires": "2025-06-30T18:00:00Z"
+  },
+  "user": {
+    "id": "uuid",
+    "username": "user",
+    "role": "viewer",
+    "organization": "Organization Name"
+  }
+}
+
+Register (Admin only):
+POST /api/auth/register/
+Headers: Authorization: Bearer TOKEN (Admin required)
+{
+  "username": "newuser",
+  "password": "password",
+  "confirm_password": "password",
+  "full_name": "Full Name",
+  "organization": "org_id",
+  "role": "viewer"
+}
+
+Profile:
+GET /api/auth/profile/
+Headers: Authorization: Bearer TOKEN
+
+Logout:
+POST /api/auth/logout/
+Headers: Authorization: Bearer TOKEN
+
+Password Change:
+POST /api/auth/change-password/
+Headers: Authorization: Bearer TOKEN
+{
+  "old_password": "current",
+  "new_password": "new",
+  "confirm_password": "new"
+}
+
+Token Refresh:
+POST /api/auth/token/refresh/
+{
+  "refresh": "refresh_token"
+}
+
+USER MANAGEMENT ENDPOINTS:
+-------------------------
+
+List Users (organization-scoped):
+GET /api/users/
+Headers: Authorization: Bearer TOKEN
+
+Get User Profile:
+GET /api/users/profile/
+Headers: Authorization: Bearer TOKEN
+
+Update Profile:
+PUT /api/users/profile/
+Headers: Authorization: Bearer TOKEN
+{
+  "first_name": "John",
+  "last_name": "Doe"
+}
+
+ADMIN ENDPOINTS (admin+ role required):
+--------------------------------------
+
+List All Users:
+GET /api/admin/users/
+Headers: Authorization: Bearer TOKEN
+
+Create User:
+POST /api/admin/users/
+Headers: Authorization: Bearer TOKEN
+{
+  "username": "newuser",
+  "email": "new@org.com",
+  "password": "SecurePass123!",
+  "role": "viewer",
+  "organization_id": "org-uuid"
+}
+
+Update User:
+PUT /api/admin/users/{user_id}/
+Headers: Authorization: Bearer TOKEN
+{
+  "role": "publisher",
+  "is_active": true
+}
+
+Delete User:
+DELETE /api/admin/users/{user_id}/
+Headers: Authorization: Bearer TOKEN
+
+EXAMPLE API WORKFLOW:
+--------------------
+
+# 1. Check API status (accessible via browser)
+curl -X GET http://127.0.0.1:8000/api/
+# Or visit: http://127.0.0.1:8000/api/ in your browser
+
+# 2. Login (POST only)
+curl -X POST http://127.0.0.1:8000/api/auth/login/ \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "admin123"}'
+
+# Save the access_token from response
+
+# 3. Get user profile (GET - works with token)
+curl -X GET http://127.0.0.1:8000/api/auth/profile/ \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+# 4. Get user dashboard (GET - works with token)
+curl -X GET http://127.0.0.1:8000/api/user/dashboard/ \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+# 5. List users (admin only)
+curl -X GET http://127.0.0.1:8000/api/admin/users/ \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+# 6. Create new user (admin required, POST only)
+curl -X POST http://127.0.0.1:8000/api/admin/users/ \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "newuser",
+    "email": "new@yourorg.com",
+    "password": "SecurePass123!",
+    "role": "viewer"
+  }'
+
+ENDPOINTS ACCESSIBLE VIA BROWSER (GET):
+- http://127.0.0.1:8000/api/ (API overview)
+- http://127.0.0.1:8000/admin/ (Django admin interface)
+
+ENDPOINTS REQUIRING CURL/TOOLS (POST):
+- All authentication operations (login, logout, password change)
+- User creation and modification
+- Most administrative operations
+
+===============================================================================
+8. TESTING & VALIDATION
+===============================================================================
+
+BUILT-IN TEST SUITE:
+The system includes comprehensive tests covering all functionality.
+
+QUICK SYSTEM VALIDATION:
+python3 basic_system_test.py        # Complete system health check
+python3 test_system.py              # API integration test  
+python3 test_api_endpoints.py       # API endpoint verification test
+python3 validate_files.py           # File structure validation
+
+RUN ALL TESTS:
+./run_all_tests.sh                  # Complete test suite (if available)
+python3 manage.py test UserManagement
+
+SPECIFIC TEST SUITES:
+
+Authentication Tests:
+python3 manage.py test UserManagement.tests.test_authentication
+
+User Management Tests:
+python3 manage.py test UserManagement.tests.test_user_management
+
+Security Tests:
+python3 manage.py test UserManagement.tests.test_security
+
+Integration Tests:
+python3 manage.py test UserManagement.tests.test_integration
+
+INDIVIDUAL TEST FILES:
+python3 test_admin_functionality.py     # Admin functionality tests
+python3 test_admin_verification.py      # Admin verification tests
+python3 test_api.py                     # API endpoint tests
+python3 test_jwt_simple.py              # JWT token tests
+python3 test_login.py                   # Login functionality tests
+python3 test_session_management.py      # Session management tests
+python3 test_viewer_login.py            # Viewer role tests
+python3 working_tests.py                # Additional working tests
+
+FRONTEND TESTS:
+cd UI/crisp-react/
+npm test                               # Run React component tests
+npm run test:watch                     # Watch mode for development
+npm run test:coverage                  # Generate test coverage report
+
+MANUAL TESTING PROCEDURES:
+
+1. ORGANIZATION TESTING:
+   python3 manage.py shell -c "
+   from UserManagement.models import Organization
+   org = Organization.objects.create(name='Test Corp', domain='test.com')
+   print(f'Created: {org.name}')
+   "
+
+2. USER CREATION TESTING:
+   python3 manage.py shell -c "
+   from UserManagement.models import Organization, CustomUser
+   org = Organization.objects.get(name='Test Corp')
+   user = CustomUser.objects.create_user(
+       username='testuser',
+       email='test@test.com',
+       password='TestPass123!',
+       organization=org
+   )
+   print(f'Created user: {user.username}')
+   "
+
+3. AUTHENTICATION TESTING:
+   python3 test_system.py
+
+4. API TESTING:
+   Use the API examples above to test endpoints
+
+VALIDATION CHECKLIST:
+- [ ] Organizations can be created
+- [ ] Users can be created with different roles
+- [ ] Authentication works correctly
+- [ ] Role-based permissions are enforced
+- [ ] API endpoints respond correctly
+- [ ] Security features are active
+- [ ] Audit logging is working
+
+===============================================================================
+9. ADMINISTRATIVE FUNCTIONS
+===============================================================================
+
+DJANGO ADMIN INTERFACE:
+Access: http://127.0.0.1:8000/admin/
+
+AVAILABLE ADMIN FUNCTIONS:
+- User management (create, edit, delete, activate/deactivate)
+- Organization management
+- Role assignment
+- Permission management
+- Authentication log viewing
+- Session management
+
+MANAGEMENT COMMANDS:
+
+Create Superuser:
+python3 manage.py createsuperuser
+
+Database Operations:
+python3 manage.py makemigrations
+python3 manage.py migrate
+
+System Check:
+python3 manage.py check
+
+Shell Access:
+python3 manage.py shell
+
+Custom Commands (if created):
+python3 manage.py create_org "Name" "domain.com"
+python3 manage.py audit_users
+python3 manage.py setup_auth
+
+BULK OPERATIONS:
+
+Bulk User Creation (Django Shell):
+from UserManagement.models import Organization, CustomUser
+
+org = Organization.objects.get(name="Your Org")
+users_data = [
+    ('user1', 'user1@org.com', 'viewer'),
+    ('user2', 'user2@org.com', 'publisher'),
+    ('user3', 'user3@org.com', 'BlueVisionAdmin'),
+]
+
+for username, email, role in users_data:
+    user = CustomUser.objects.create_user(
+        username=username,
+        email=email,
+        password='DefaultPass123!',
+        organization=org,
+        role=role
+    )
+    print(f"Created: {username} as {role}")
+
+MONITORING:
+
+View Authentication Logs:
+from UserManagement.models import AuthenticationLog
+
+recent_logins = AuthenticationLog.objects.filter(
+    action='login',
+    success=True
+).order_by('-timestamp')[:10]
+
+for log in recent_logins:
+    print(f"{log.username} logged in from {log.ip_address} at {log.timestamp}")
+
+Security Events:
+failed_logins = AuthenticationLog.objects.filter(
+    success=False
+).order_by('-timestamp')[:10]
+
+===============================================================================
+11. ADDITIONAL DOCUMENTATION
+===============================================================================
+
+COMPREHENSIVE DOCUMENTATION:
+The CRISP platform includes extensive documentation located in the docs/ directory:
+
+MAIN DOCUMENTATION FILES:
+- docs/README_COMPLETE.md           # Complete technical documentation
+- docs/QUICK_START.md               # Fast setup and testing guide  
+- docs/COMPREHENSIVE_TESTING_GUIDE.md  # Detailed testing instructions
+- docs/TESTING_COMMANDS_SUMMARY.md # Quick reference for all test commands
+- docs/setup_guide.md               # Detailed setup instructions
+
+SPECIALIZED GUIDES:
+- test_backend/USER_MANAGEMENT_AUTHENTICATION_PROMPT.md  # Authentication details
+- test_backend/REMOTE_PI_SETUP_PROMPT.md                # Remote deployment guide
+- test_backend/CRISP - Cyber Risk Information Sharing Platform (1).md  # Platform overview
+
+QUICK START WORKFLOW:
+1. Read QUICK_START.md for fastest setup
+2. Run python3 basic_system_test.py for health check
+3. Use COMPREHENSIVE_TESTING_GUIDE.md for detailed testing
+4. Reference README_COMPLETE.md for complete technical details
+
+DOCUMENTATION LINKS BY TASK:
+
+For Setup:
+- QUICK_START.md - Fastest way to get running
+- setup_guide.md - Detailed installation steps
+
+For Development:
+- README_COMPLETE.md - Complete system architecture and code walkthrough
+- Includes API examples, authentication flows, and component details
+
+For Testing:
+- COMPREHENSIVE_TESTING_GUIDE.md - Every possible test scenario
+- TESTING_COMMANDS_SUMMARY.md - Quick command reference
+- basic_system_test.py - Automated health check
+
+For Deployment:
+- REMOTE_PI_SETUP_PROMPT.md - Remote server deployment
+- Platform overview document for architecture planning
+
+FRONTEND DOCUMENTATION:
+- UI/crisp-react/README.md - React frontend setup and usage
+- Component documentation within source files
+- API integration examples in src/api.js
+
+HELPFUL COMMANDS SUMMARY:
+# Easy startup (both backend + frontend)
+./start_crisp.sh
+
+# Individual startup commands
+python3 UserManagment/manage.py runserver     # Backend only
+cd UI/crisp-react && npm run dev              # Frontend only
+
+# System health check
+python3 UserManagment/basic_system_test.py
+
+# API endpoint verification
+python3 UserManagment/test_api_endpoints.py
+
+# Complete API test
+python3 UserManagment/test_system.py
+
+# File structure validation
+python3 UserManagment/validate_files.py
+
+# Run comprehensive tests
+python3 UserManagment/manage.py test UserManagement
+
+WORKING LINKS SUMMARY:
+# Browser accessible endpoints
+http://127.0.0.1:8000/api/           # API overview and endpoint documentation
+http://127.0.0.1:8000/admin/         # Django admin interface
+http://localhost:5173/               # React frontend (after npm install && npm run dev)
+
+# Requires curl/tools for POST operations
+All authentication endpoints (login, logout, password change, user creation)
+
+FRONTEND LOGIN FIX:
+If you encounter "fail to fetch" errors in the React frontend, ensure:
+1. Django server is running on port 8000
+2. React server is running on port 5173
+3. CORS is configured (included in latest settings)
+4. API token structure matches (fixed in api.js)
+
+===============================================================================
+12. TROUBLESHOOTING
+===============================================================================
+
+COMMON ISSUES AND SOLUTIONS:
+
+1. "ModuleNotFoundError" when starting:
+   Solution: Install requirements
+   pip install -r requirements.txt
+
+2. "Database is locked" error:
+   Solution: Check for running processes
+   ps aux | grep python
+   Kill any hanging Django processes
+
+3. "Permission denied" on API calls:
+   Solution: Check JWT token is valid and user has required role
+   Verify token in Authorization header
+
+4. "Organization does not exist" error:
+   Solution: Create organization first
+   python3 manage.py shell -c "
+   from UserManagement.models import Organization
+   Organization.objects.create(name='Default Org', domain='default.com')
+   "
+
+5. Password validation errors:
+   Solution: Ensure password meets requirements:
+   - 12+ characters
+   - Mixed case letters
+   - Numbers and special characters
+   - No common patterns
+
+6. Users can see other organizations' data:
+   Solution: Check user role and organization assignment
+   System admins can see all data (this is intentional)
+
+7. Tests failing:
+   Solution: Run individual test suites to identify issues
+   python3 manage.py test UserManagement.tests.test_authentication -v 2
+
+8. Server won't start:
+   Solution: Check for port conflicts
+   python3 manage.py runserver 8001  # Use different port
+
+9. Database migration issues:
+   Solution: Reset migrations (development only)
+   rm UserManagement/migrations/0*.py
+   python3 manage.py makemigrations UserManagement
+   python3 manage.py migrate
+
+10. JWT token expired:
+    Solution: Use refresh token or re-authenticate
+    POST /api/auth/token/refresh/ with refresh_token
+
+LOGGING AND DEBUGGING:
+
+Enable Debug Mode (development only):
+In crisp_project/settings.py:
+DEBUG = True
+
+View Django Logs:
+python3 manage.py runserver --verbosity=2
+
+Database Query Debugging:
+In Django shell:
+import logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger('django.db.backends')
+logger.setLevel(logging.DEBUG)
+logger.addHandler(logging.StreamHandler())
+
+GETTING HELP:
+
+1. Check Django documentation: https://docs.djangoproject.com/
+2. Check Django REST Framework docs: https://www.django-rest-framework.org/
+3. Review test files for usage examples
+4. Use Django shell for debugging
+5. Check authentication logs for security issues
+
+===============================================================================
+CONCLUSION
+===============================================================================
+
+The CRISP (Cyber Risk Information Sharing Platform) is a comprehensive, 
+full-stack cybersecurity threat intelligence platform combining Django backend 
+with React frontend for modern threat intelligence management.
+
+KEY POINTS:
+- Full-stack architecture (Django + React)
+- Modern React frontend with D3.js visualizations
+- Complete role-based access control (5 roles)
+- Multi-tenant organization support
+- Enterprise-grade security features
+- RESTful API interface with JWT authentication
+- Comprehensive testing suite (backend + frontend)
+- Production-ready architecture
+- Threat intelligence feed management
+- IoC and TTP analysis capabilities
+- Real-time dashboard and reporting
+
+DEPLOYMENT OPTIONS:
+- Standalone full-stack application
+- Backend-only API service
+- Integration into larger cybersecurity platforms
+- Self-contained system (no external dependencies)
+
+ARCHITECTURE BENEFITS:
+- Scalable Django backend with DRF APIs
+- Modern React frontend for excellent user experience
+- JWT-based authentication with refresh tokens
+- Comprehensive audit logging and security
+- Multi-platform compatibility
+- Extensive documentation and testing
+
+QUICK START SUMMARY:
+1. Backend: cd UserManagment && python3 manage.py runserver
+2. Frontend: cd UI/crisp-react && npm install && npm run dev
+3. Test: python3 basic_system_test.py
+4. Access: Backend API (port 8000), Frontend UI (port 5173)
+
+For additional support, customization, or detailed technical information,
+refer to the extensive documentation suite:
+- docs/README_COMPLETE.md (complete technical guide)
+- docs/QUICK_START.md (fastest setup)
+- docs/COMPREHENSIVE_TESTING_GUIDE.md (all test scenarios)
+
+The system is production-ready and suitable for cybersecurity organizations
+requiring secure, scalable threat intelligence sharing platforms.
+
+===============================================================================

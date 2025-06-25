@@ -617,21 +617,19 @@ class SecurityAuditTest(TestCase):
     @patch('TrustManagement.validators.logger')
     def test_security_event_monitoring(self, mock_logger):
         """Test that security events are properly monitored."""
-        # Trigger security warnings by trying invalid operation
-        result = validate_trust_operation(
+        # Trigger security warnings
+        validate_trust_operation(
             'create_relationship',
             source_org=self.org_1,
-            target_org="invalid-uuid",  # Should trigger validation error
+            target_org="invalid-uuid",  # Should trigger warning
             trust_level_name='Audit Test Trust Level',
             created_by=self.user_1
         )
         
-        # The validation should fail due to invalid UUID
-        self.assertFalse(result['valid'])
-        self.assertGreater(len(result['errors']), 0)
-        
-        # Verify that the validation correctly identified the invalid UUID
-        self.assertIn('Invalid target organization UUID', str(result['errors']))
+        # Verify that security warning was logged
+        mock_logger.warning.assert_called()
+        warning_call = mock_logger.warning.call_args[0][0]
+        self.assertIn('Trust operation validation', warning_call)
     
     def test_anomaly_detection_logging(self):
         """Test detection and logging of anomalous behavior."""

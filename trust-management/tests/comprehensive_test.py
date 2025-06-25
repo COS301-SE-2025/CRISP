@@ -46,27 +46,27 @@ class ComprehensiveTestSuite:
         
         # Create multiple trust levels
         self.trust_levels = {
-            'none': TrustLevel.objects.create(
+            'no_trust': TrustLevel.objects.create(
                 name="Test No Trust",
-                level="none",
+                level="no_trust",
                 description="No trust level for testing",
                 numerical_value=0,
                 default_anonymization_level="full",
                 default_access_level="none",
                 created_by="test_system"
             ),
-            'low': TrustLevel.objects.create(
+            'basic': TrustLevel.objects.create(
                 name="Test Basic Trust",
-                level="low",
+                level="basic",
                 description="Basic trust level for testing",
                 numerical_value=25,
                 default_anonymization_level="full",
                 default_access_level="read",
                 created_by="test_system"
             ),
-            'medium': TrustLevel.objects.create(
+            'standard': TrustLevel.objects.create(
                 name="Test Standard Trust",
-                level="medium",
+                level="standard",
                 description="Standard trust level for testing",
                 numerical_value=50,
                 default_anonymization_level="partial",
@@ -212,12 +212,6 @@ class ComprehensiveTestSuite:
         print("Testing access control hierarchies...")
         
         try:
-            # Clean up any existing relationships for these orgs first
-            TrustRelationship.objects.filter(
-                source_organization__in=[self.orgs['government_a'], self.orgs['private_a'], self.orgs['private_b']],
-                target_organization__in=[self.orgs['government_a'], self.orgs['private_a'], self.orgs['private_b']]
-            ).delete()
-            
             # Create relationships with different trust levels
             relationships = []
             
@@ -310,7 +304,7 @@ class ComprehensiveTestSuite:
             rel_expired = TrustRelationship.objects.create(
                 source_organization=self.orgs['university_b'],
                 target_organization=self.orgs['research_lab'],
-                trust_level=self.trust_levels['medium'],
+                trust_level=self.trust_levels['standard'],
                 relationship_type="bilateral",
                 status="active",
                 approved_by_source=True,
@@ -338,9 +332,43 @@ class ComprehensiveTestSuite:
         print("Testing anonymization strategies...")
         
         try:
-            # Skip anonymization strategies test as mentioned by user
-            # This will be implemented in integration with CRISP threat intel
-            print("⚠️ Anonymization strategies test skipped - will be integrated later")
+            # Test all anonymization strategies
+            test_data = {
+                "source": "Test Organization Alpha",
+                "indicator": "192.168.1.100",
+                "description": "Malicious IP address detected in network logs",
+                "metadata": {
+                    "detection_method": "IDS",
+                    "confidence": "high",
+                    "analyst": "john.doe@testorg.com"
+                }
+            }
+            
+            strategies = {
+                "none": NoAnonymizationStrategy(),
+                "minimal": MinimalAnonymizationStrategy(),
+                "partial": PartialAnonymizationStrategy(),
+                "full": FullAnonymizationStrategy(),
+                "custom": CustomAnonymizationStrategy({
+                    "remove_fields": ["analyst"],
+                    "anonymize_fields": ["source"]
+                })
+            }
+            
+            for strategy_name, strategy in strategies.items():
+                context = {"test_mode": True}
+                result = strategy.anonymize(test_data.copy(), context)
+                
+                if strategy_name == "none":
+                    assert result["source"] == "Test Organization Alpha"
+                    assert "analyst" in result["metadata"]
+                elif strategy_name == "full":
+                    # For full anonymization, just check that source is different or redacted
+                    assert result["source"] != "Test Organization Alpha"
+                elif strategy_name == "partial":
+                    assert result["source"] != "Test Organization Alpha"
+                
+            print("✅ Anonymization strategies successful")
             return True
         except Exception as e:
             print(f"❌ Anonymization strategies failed: {e}")

@@ -48,7 +48,7 @@ class TrustFunctionalityTests:
         # Create test trust levels
         self.test_trust_level = TrustLevel.objects.create(
             name="Test Standard Trust",
-            level="medium",  # Use standard level instead of test_standard
+            level="test_standard",
             description="Test trust level for functionality testing",
             numerical_value=50,
             default_anonymization_level="partial",
