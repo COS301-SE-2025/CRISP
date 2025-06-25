@@ -21,8 +21,8 @@ class IsSystemAdmin(BasePermission):
 
 class IsOrganizationAdmin(BasePermission):
     """
-    Permission class to check if user is an organization administrator
-    (includes system admins and organization admins)
+    Permission class to check if user can manage users in their organization
+    (BlueVisionAdmin can manage all organizations, Publisher can manage their own organization)
     """
     
     def has_permission(self, request, view):
@@ -31,7 +31,7 @@ class IsOrganizationAdmin(BasePermission):
             request.user and 
             request.user.is_authenticated and 
             isinstance(request.user, CustomUser) and
-            request.user.role == 'BlueVisionAdmin' and
+            request.user.role in ['BlueVisionAdmin', 'publisher'] and
             request.user.is_active and
             request.user.is_verified
         )

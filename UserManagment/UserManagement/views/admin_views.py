@@ -150,7 +150,7 @@ class AdminUserDetailView(APIView):
             # Check permissions
             if request.user.role == 'BlueVisionAdmin':
                 return user
-            elif request.user.role == 'admin' and user.organization == request.user.organization:
+            elif request.user.role == 'publisher' and user.organization == request.user.organization:
                 return user
             else:
                 return None
@@ -272,21 +272,21 @@ class AdminUserDetailView(APIView):
     
     def _can_assign_role(self, admin_user, role):
         """Check if admin can assign this role"""
-        if admin_user.role == 'system_admin':
+        if admin_user.role == 'BlueVisionAdmin':
             return True
-        elif admin_user.role == 'admin':
-            # Regular admins can assign viewer, analyst, publisher roles
-            return role in ['viewer', 'analyst', 'publisher']
+        elif admin_user.role == 'publisher':
+            # Publishers can assign viewer and publisher roles within their organization
+            return role in ['viewer', 'publisher']
         return False
     
     def _can_delete_user(self, admin_user, target_user):
         """Check if admin can delete this user"""
-        if admin_user.role == 'system_admin':
+        if admin_user.role == 'BlueVisionAdmin':
             return True
-        elif admin_user.role == 'admin':
-            # Regular admins can delete non-admin users in their organization
+        elif admin_user.role == 'publisher':
+            # Publishers can delete non-admin users in their organization
             return (target_user.organization == admin_user.organization and 
-                   target_user.role not in ['admin', 'system_admin'])
+                   target_user.role != 'BlueVisionAdmin')
         return False
     
     def _get_client_ip(self, request):
@@ -311,7 +311,7 @@ class AdminUserUnlockView(APIView):
             # Check permissions
             if request.user.role == 'BlueVisionAdmin':
                 pass  # System admins can unlock any user
-            elif (request.user.role == 'admin' and 
+            elif (request.user.role == 'publisher' and 
                   user.organization == request.user.organization):
                 pass  # Organization admins can unlock users in their org
             else:
@@ -474,7 +474,7 @@ class AdminUserSessionView(APIView):
             # Check permissions
             if request.user.role == 'BlueVisionAdmin':
                 pass  # System admins can terminate any session
-            elif (request.user.role == 'admin' and 
+            elif (request.user.role == 'publisher' and 
                   session.user.organization == request.user.organization):
                 pass  # Organization admins can terminate sessions in their org
             else:

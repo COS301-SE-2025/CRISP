@@ -23,7 +23,9 @@
       "Bash(npm run dev:*)",
       "Bash(git restore:*)",
       "Bash(rm:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(rg:*)",
+      "Bash(python manage.py test:*)"
     ],
     "deny": []
   }

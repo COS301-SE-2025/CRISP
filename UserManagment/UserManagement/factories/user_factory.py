@@ -268,7 +268,14 @@ class UserFactory:
         if created_by.role == 'BlueVisionAdmin':
             return
         
-        # Non-admin users cannot create users
+        # Publishers can create viewer and publisher users within their organization
+        if created_by.role == 'publisher':
+            if role in ['viewer', 'publisher']:
+                return
+            else:
+                raise ValidationError("Publishers can only create viewer and publisher users")
+        
+        # Viewers cannot create users
         raise ValidationError("Insufficient permissions to create users")
     
     @classmethod

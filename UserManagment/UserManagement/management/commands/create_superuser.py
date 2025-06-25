@@ -208,7 +208,7 @@ class Command(BaseCommand):
             }
             
             # Create system administrator using factory
-            user = UserFactory.create_user('system_admin', user_data)
+            user = UserFactory.create_user('BlueVisionAdmin', user_data)
             
             # Set additional superuser properties
             user.is_staff = True

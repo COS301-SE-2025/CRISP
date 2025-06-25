@@ -8,10 +8,9 @@ So that the platform can securely manage user access to threat intelligence data
 
 ## User Roles
 
-**System Administrator (BlueVisionAdmin)**: Platform-wide administrators who manage system settings, organizations, and have unrestricted access to all user management functions
-**Organization Administrator**: Institution representatives who manage users within their organization and configure organization-specific policies
-**Publisher**: Users who can create and share threat intelligence feeds with appropriate permissions
-**Viewer**: Standard users who can access and consume threat intelligence data based on their permissions
+**BlueVisionAdmin**: Platform-wide administrators who can access and change everything across all organizations
+**Publisher**: Institution heads who can create users within their institution and have all viewer functionality
+**Viewer**: Standard users who can consume threat feeds but cannot create, remove or edit any users or institutions
 
 ## Narrative
 
@@ -22,10 +21,11 @@ The CRISP platform requires a comprehensive user management system that supports
 ### 1. User Account Management
 
 #### AC1.1 - Multi-Tenant User Creation and Management (Functional)
-As a System Administrator, I can create and manage users across all organizations
-As an Organization Administrator, I can create and manage users within my organization only
+As a BlueVisionAdmin, I can create and manage users across all organizations
+As a Publisher, I can create and manage users (viewer and publisher roles) within my organization
+As a Viewer, I can view my own profile but cannot manage other users
 Users are automatically associated with their organization based on email domain or explicit assignment
-User creation includes role assignment (Viewer, Publisher, BlueVisionAdmin) with appropriate validation
+User creation includes role assignment (viewer, publisher, BlueVisionAdmin) with appropriate validation
 I can set user verification status and account activation state
 Generated passwords can be auto-created for new users with secure random generation
 
@@ -33,8 +33,9 @@ Generated passwords can be auto-created for new users with secure random generat
 Users can update their own profile information (name, contact details, preferences)
 Password change functionality with current password verification
 Profile updates are logged in the audit trail
-Organization administrators can update user profiles within their organization
-System administrators can update any user profile
+BlueVisionAdmins can update any user profile across all organizations
+Publishers can update profiles for users within their organization
+Viewers can only update their own profiles
 
 #### AC1.3 - User Account Security Controls (Functional)
 Account lockout after 5 consecutive failed login attempts
@@ -61,11 +62,10 @@ Session-based token tracking for enhanced security
 
 #### AC2.3 - Role-Based Access Control (Functional)
 Granular permission system with multiple permission classes:
-- System Admin permissions for platform-wide access
-- Organization Admin permissions for organization-specific management
-- Publisher permissions for threat intelligence creation/sharing
-- Verified User permissions for basic platform access
-- Object-level permissions for STIX objects and feeds
+- BlueVisionAdmin permissions for platform-wide access and management across all organizations
+- Publisher permissions for user management within their organization and threat intelligence creation/sharing
+- Viewer permissions for threat intelligence consumption only
+- Object-level permissions for STIX objects and feeds based on user role and organization
 Permission inheritance and role-based restriction enforcement
 
 ### 3. Session Management
@@ -85,8 +85,9 @@ Trusted device flagging reduces security requirements for known devices
 Concurrent session limits with configurable restrictions
 
 #### AC3.3 - Session Administrative Controls (Functional)
-Administrators can view active sessions for users in their scope
-Force logout capability for administrators
+BlueVisionAdmins can view active sessions for all users across all organizations
+Publishers can view active sessions for users within their organization
+Force logout capability for BlueVisionAdmins and Publishers (within their organization)
 Session filtering and search by user, IP address, or device
 Bulk session termination for security incidents
 
@@ -110,8 +111,9 @@ Export capabilities for external audit systems
 Log retention policies with configurable duration
 
 #### AC4.3 - Administrative Audit Views (Functional)
-System administrators can view all audit logs
-Organization administrators can view logs for their organization users
+BlueVisionAdmins can view all audit logs across all organizations
+Publishers can view audit logs for users within their organization
+Viewers can view their own authentication logs only
 Filtering by user, action type, success/failure, IP address, and date range
 Real-time monitoring capabilities for security events
 
@@ -125,8 +127,9 @@ Hierarchical access control based on organization membership
 Organization activation/deactivation capabilities
 
 #### AC5.2 - Organization-Based User Isolation (Functional)
-Users can only see and interact with users from their organization (except system admins)
-Organization administrators cannot access users from other organizations
+Users can only see and interact with users from their organization (except BlueVisionAdmins)
+Publishers can manage users within their organization
+Viewers cannot access or manage users from any organization
 Data and permissions are scoped to organization boundaries
 Cross-organization data sharing requires explicit permissions
 
@@ -179,11 +182,11 @@ Soft delete users while preserving audit data
 Bulk operations for user management tasks
 
 #### AC8.2 - Administrative Actions (Functional)
-Account unlock functionality for locked users
-Force password reset for security incidents
-Session termination for active user sessions
-User verification status management
-Role and permission updates with audit trails
+Account unlock functionality for locked users (BlueVisionAdmin and Publisher within their org)
+Force password reset for security incidents (BlueVisionAdmin and Publisher within their org)
+Session termination for active user sessions (BlueVisionAdmin and Publisher within their org)
+User verification status management (BlueVisionAdmin and Publisher within their org)
+Role and permission updates with audit trails (BlueVisionAdmin can assign any role, Publisher can assign viewer/publisher roles)
 
 #### AC8.3 - Management Commands (Functional)
 Django management commands for administrative tasks:
