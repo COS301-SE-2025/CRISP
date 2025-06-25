@@ -75,25 +75,20 @@ jobs:
         
         if [ "$SETTINGS_FOUND" = "false" ]; then
           echo "Creating minimal Django settings for testing..."
-          cat > test_settings.py << 'EOF'
-SECRET_KEY = 'test-key-for-ci'
-DEBUG = True
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'crisp_test',
-        'USER': 'postgres',
-        'PASSWORD': 'postgres',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
-}
-INSTALLED_APPS = [
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-]
-USE_TZ = True
-EOF
+          echo "SECRET_KEY = 'test-key-for-ci'" > test_settings.py
+          echo "DEBUG = True" >> test_settings.py
+          echo "DATABASES = {" >> test_settings.py
+          echo "    'default': {" >> test_settings.py
+          echo "        'ENGINE': 'django.db.backends.postgresql'," >> test_settings.py
+          echo "        'NAME': 'crisp_test'," >> test_settings.py
+          echo "        'USER': 'postgres'," >> test_settings.py
+          echo "        'PASSWORD': 'postgres'," >> test_settings.py
+          echo "        'HOST': 'localhost'," >> test_settings.py
+          echo "        'PORT': '5432'," >> test_settings.py
+          echo "    }" >> test_settings.py
+          echo "}" >> test_settings.py
+          echo "INSTALLED_APPS = ['django.contrib.auth', 'django.contrib.contenttypes']" >> test_settings.py
+          echo "USE_TZ = True" >> test_settings.py
         fi
         
         # Try to run Django tests with various fallbacks

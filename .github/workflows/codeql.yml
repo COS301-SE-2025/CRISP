@@ -12,13 +12,7 @@
 name: "CodeQL Advanced"
 
 on:
-  # Disabled until actual code exists
-  # push:
-  #   branches: [ "main" ]
-  # pull_request:
-  #   branches: [ "main" ]
-  # schedule:
-  #   - cron: '41 20 * * 1'
+  workflow_dispatch: # Manual trigger only until code exists
 
 jobs:
   analyze:
