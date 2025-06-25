@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(python3 manage.py test:*)",
+      "Bash(python3:*)",
+      "Bash(curl:*)",
+      "Bash(bash:*)",
+      "Bash(echo \"Exit code: $?\")",
+      "Bash(./run_all_tests.sh)",
+      "Bash(echo:*)",
+      "Bash(echo $?)",
+      "Bash(cat:*)",
+      "Bash(chmod:*)",
+      "Bash(./run_all_tests_fixed.sh)",
+      "Bash(dos2unix:*)",
+      "Bash(cp:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(./test_login_curl.sh)",
+      "Bash(mv:*)"
+    ],
+    "deny": []
+  }
+}

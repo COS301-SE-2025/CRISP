@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.db.models import Count
 from django.contrib.admin import SimpleListFilter
 
-from .models import CustomUser, UserSession, AuthenticationLog, STIXObjectPermission
+from .models import CustomUser, UserSession, AuthenticationLog, STIXObjectPermission, Organization
 
 
 class AccountStatusFilter(SimpleListFilter):
@@ -487,6 +487,77 @@ class STIXObjectPermissionAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         """Optimize queryset"""
         return super().get_queryset(request).select_related('user', 'granted_by')
+
+
+@admin.register(Organization)
+class OrganizationAdmin(admin.ModelAdmin):
+    """Admin interface for Organization"""
+    
+    list_display = [
+        'name', 'domain', 'user_count', 'is_active', 'created_at_display'
+    ]
+    
+    list_filter = [
+        'is_active', 'created_at'
+    ]
+    
+    search_fields = [
+        'name', 'domain', 'description'
+    ]
+    
+    readonly_fields = [
+        'id', 'created_at', 'updated_at', 'user_count_display'
+    ]
+    
+    fieldsets = (
+        (None, {
+            'fields': ('id', 'name', 'domain')
+        }),
+        ('Details', {
+            'fields': ('description', 'is_active')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at')
+        }),
+        ('Statistics', {
+            'fields': ('user_count_display',)
+        })
+    )
+    
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('name', 'domain', 'description', 'is_active'),
+        }),
+    )
+    
+    def user_count(self, obj):
+        """Display user count for organization"""
+        return obj.users.count()
+    user_count.short_description = 'Users'
+    user_count.admin_order_field = 'users__count'
+    
+    def user_count_display(self, obj):
+        """Display detailed user count"""
+        if obj.id:
+            total = obj.users.count()
+            active = obj.users.filter(is_active=True).count()
+            verified = obj.users.filter(is_verified=True).count()
+            return f"Total: {total}, Active: {active}, Verified: {verified}"
+        return "Save organization first"
+    user_count_display.short_description = 'User Statistics'
+    
+    def created_at_display(self, obj):
+        """Display creation time"""
+        return obj.created_at.strftime('%Y-%m-%d %H:%M:%S')
+    created_at_display.short_description = 'Created'
+    created_at_display.admin_order_field = 'created_at'
+    
+    def get_queryset(self, request):
+        """Optimize queryset with annotations"""
+        return super().get_queryset(request).annotate(
+            user_count=Count('users')
+        )
 
 
 # Admin site customization

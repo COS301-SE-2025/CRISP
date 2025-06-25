@@ -27,10 +27,13 @@ class UserFactoryTestCase(TestCase):
     
     def create_test_organization(self):
         """Create test organization"""
-        from unittest.mock import MagicMock
-        org = MagicMock()
-        org.id = '123e4567-e89b-12d3-a456-426614174000'
-        org.name = 'Test Organization'
+        org, created = Organization.objects.get_or_create(
+            name='Test Organization',
+            defaults={
+                'description': 'Test organization for unit tests',
+                'domain': 'test.example.com'
+            }
+        )
         return org
     
     def test_standard_user_creation(self):
@@ -151,10 +154,13 @@ class UserCreatorTestCase(TestCase):
     
     def create_test_organization(self):
         """Create test organization"""
-        from unittest.mock import MagicMock
-        org = MagicMock()
-        org.id = '123e4567-e89b-12d3-a456-426614174000'
-        org.name = 'Test Organization'
+        org, created = Organization.objects.get_or_create(
+            name='Test Organization',
+            defaults={
+                'description': 'Test organization for unit tests',
+                'domain': 'test.example.com'
+            }
+        )
         return org
     
     def test_standard_user_creator(self):
@@ -263,10 +269,13 @@ class UserPermissionTestCase(TestCase):
     
     def create_test_organization(self):
         """Create test organization"""
-        from unittest.mock import MagicMock
-        org = MagicMock()
-        org.id = '123e4567-e89b-12d3-a456-426614174000'
-        org.name = 'Test Organization'
+        org, created = Organization.objects.get_or_create(
+            name='Test Organization',
+            defaults={
+                'description': 'Test organization for unit tests',
+                'domain': 'test.example.com'
+            }
+        )
         return org
     
     def test_can_publish_feeds(self):
@@ -342,10 +351,13 @@ class UserSerializerTestCase(TestCase):
     
     def create_test_organization(self):
         """Create test organization"""
-        from unittest.mock import MagicMock
-        org = MagicMock()
-        org.id = '123e4567-e89b-12d3-a456-426614174000'
-        org.name = 'Test Organization'
+        org, created = Organization.objects.get_or_create(
+            name='Test Organization',
+            defaults={
+                'description': 'Test organization for unit tests',
+                'domain': 'test.example.com'
+            }
+        )
         return org
     
     def test_user_registration_serializer_valid(self):
@@ -361,7 +373,7 @@ class UserSerializerTestCase(TestCase):
             'role': 'viewer'
         }
         
-        with patch('UserManagement.serializers.Organization') as mock_org:
+        with patch('UserManagement.models.Organization') as mock_org:
             mock_org.objects.get.return_value = self.organization
             
             serializer = UserRegistrationSerializer(data=data)
@@ -395,7 +407,7 @@ class UserSerializerTestCase(TestCase):
             'is_verified': True
         }
         
-        with patch('UserManagement.serializers.Organization') as mock_org:
+        with patch('UserManagement.models.Organization') as mock_org:
             mock_org.objects.get.return_value = self.organization
             
             serializer = AdminUserCreateSerializer(data=data)
@@ -434,10 +446,13 @@ class UserModelTestCase(TestCase):
     
     def create_test_organization(self):
         """Create test organization"""
-        from unittest.mock import MagicMock
-        org = MagicMock()
-        org.id = '123e4567-e89b-12d3-a456-426614174000'
-        org.name = 'Test Organization'
+        org, created = Organization.objects.get_or_create(
+            name='Test Organization',
+            defaults={
+                'description': 'Test organization for unit tests',
+                'domain': 'test.example.com'
+            }
+        )
         return org
     
     def test_user_string_representation(self):
@@ -494,10 +509,13 @@ class UserBulkOperationsTestCase(TestCase):
     
     def create_test_organization(self):
         """Create test organization"""
-        from unittest.mock import MagicMock
-        org = MagicMock()
-        org.id = '123e4567-e89b-12d3-a456-426614174000'
-        org.name = 'Test Organization'
+        org, created = Organization.objects.get_or_create(
+            name='Test Organization',
+            defaults={
+                'description': 'Test organization for unit tests',
+                'domain': 'test.example.com'
+            }
+        )
         return org
     
     def test_bulk_user_creation(self):

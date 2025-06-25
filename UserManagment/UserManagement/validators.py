@@ -194,12 +194,17 @@ class EmailValidator:
         """Validate email format and security"""
         errors = []
         
-        # Basic email format validation (Django's EmailField handles most of this)
+        # Basic email format validation
         if not email or '@' not in email:
             errors.append(_("Enter a valid email address."))
-            return
+            raise ValidationError(errors)
         
         local_part, domain = email.rsplit('@', 1)
+        
+        # Check for empty local part or domain
+        if not local_part or not domain:
+            errors.append(_("Enter a valid email address."))
+            raise ValidationError(errors)
         
         # Check for suspicious patterns
         if '..' in email:

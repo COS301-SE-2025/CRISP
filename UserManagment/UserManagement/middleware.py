@@ -5,7 +5,9 @@ from django.core.cache import cache
 from django.conf import settings
 from django.utils.deprecation import MiddlewareMixin
 from django.contrib.auth.models import AnonymousUser
-from .models import AuthenticationLog
+from django.utils import timezone
+from datetime import timedelta
+from .models import AuthenticationLog, UserSession
 from .services.auth_service import AuthenticationService
 
 
@@ -284,3 +286,107 @@ class SessionTimeoutMiddleware(MiddlewareMixin):
                         }, status=401)
         
         return None
+
+
+class SessionActivityMiddleware(MiddlewareMixin):
+    """Middleware to track session activity and handle automatic cleanup"""
+    
+    def __init__(self, get_response):
+        self.get_response = get_response
+        super().__init__(get_response)
+    
+    def process_request(self, request):
+        """Update session activity for authenticated users"""
+        # Only process for authenticated API requests
+        if hasattr(request, 'user') and request.user.is_authenticated:
+            self._update_session_activity(request)
+            self._cleanup_expired_sessions_periodically()
+        
+        return None
+    
+    def _update_session_activity(self, request):
+        """Update last activity for the current session"""
+        try:
+            # Get JWT token from Authorization header
+            auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+            if not auth_header.startswith('Bearer '):
+                return
+            
+            token = auth_header.split(' ')[1]
+            
+            # Find the session with this token
+            try:
+                session = UserSession.objects.get(
+                    session_token=token,
+                    user=request.user,
+                    is_active=True
+                )
+                
+                # Update last activity
+                now = timezone.now()
+                
+                # Check if session has been inactive for too long
+                max_inactive_hours = getattr(settings, 'SESSION_MAX_INACTIVE_HOURS', 24)
+                inactive_threshold = now - timedelta(hours=max_inactive_hours)
+                
+                if session.last_activity < inactive_threshold:
+                    # Session has been inactive too long, deactivate it
+                    session.is_active = False
+                    session.save(update_fields=['is_active'])
+                    
+                    # Log the automatic deactivation
+                    AuthenticationLog.log_authentication_event(
+                        user=request.user,
+                        action='session_auto_deactivated',
+                        ip_address=self._get_client_ip(request),
+                        user_agent=request.META.get('HTTP_USER_AGENT', 'Unknown'),
+                        success=True,
+                        additional_data={
+                            'session_id': str(session.id),
+                            'inactive_hours': max_inactive_hours,
+                            'last_activity': session.last_activity.isoformat(),
+                            'reason': 'max_inactive_time_exceeded'
+                        }
+                    )
+                else:
+                    # Update last activity timestamp
+                    session.last_activity = now
+                    session.save(update_fields=['last_activity'])
+                
+            except UserSession.DoesNotExist:
+                pass
+                
+        except Exception as e:
+            logger.error(f"Error updating session activity: {str(e)}")
+    
+    def _cleanup_expired_sessions_periodically(self):
+        """Periodically clean up expired sessions"""
+        try:
+            cache_key = 'session_cleanup_last_run'
+            last_cleanup = cache.get(cache_key)
+            now = timezone.now()
+            
+            if not last_cleanup or (now - last_cleanup).total_seconds() > 300:  # 5 minutes
+                expired_sessions = UserSession.objects.filter(
+                    expires_at__lt=now,
+                    is_active=True
+                )
+                
+                expired_count = expired_sessions.count()
+                if expired_count > 0:
+                    expired_sessions.update(is_active=False)
+                    logger.info(f"Cleaned up {expired_count} expired sessions")
+                
+                cache.set(cache_key, now, 600)
+                
+        except Exception as e:
+            logger.error(f"Error during periodic session cleanup: {str(e)}")
+    
+    def _get_client_ip(self, request):
+        """Get client IP address"""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR', '127.0.0.1')
+        return ip

@@ -34,6 +34,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'UserManagement.middleware.SessionActivityMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'UserManagement.middleware.SecurityAuditMiddleware',
@@ -102,6 +103,10 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # JWT Configuration
+# Session Management Settings
+SESSION_MAX_INACTIVE_HOURS = 24  # Mark sessions inactive after 24 hours of no activity
+SESSION_CLEANUP_INTERVAL_MINUTES = 5  # How often to run automatic cleanup
+
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),

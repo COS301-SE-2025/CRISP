@@ -35,6 +35,14 @@ class UserCreator(ABC):
             if field not in user_data or not user_data[field]:
                 raise ValidationError(f"'{field}' is required")
         
+        # Validate email format
+        from ..validators import EmailValidator
+        email_validator = EmailValidator()
+        try:
+            email_validator.validate(user_data['email'])
+        except ValidationError as e:
+            raise ValidationError(f"Email validation failed: {'; '.join(e.messages)}")
+        
         # Validate username uniqueness
         if CustomUser.objects.filter(username=user_data['username']).exists():
             raise ValidationError("Username already exists")
@@ -94,7 +102,7 @@ class StandardUserCreator(UserCreator):
                 user_agent=user_data.get('user_agent', 'System'),
                 success=True,
                 additional_data={
-                    'created_by': user_data.get('created_by'),
+                    'created_by': user_data.get('created_by').username if user_data.get('created_by') else None,
                     'role': 'viewer',
                     'auto_generated_password': user_data.get('auto_generate_password', False)
                 }
@@ -132,7 +140,7 @@ class PublisherUserCreator(UserCreator):
                 user_agent=user_data.get('user_agent', 'System'),
                 success=True,
                 additional_data={
-                    'created_by': user_data.get('created_by'),
+                    'created_by': user_data.get('created_by').username if user_data.get('created_by') else None,
                     'role': 'publisher',
                     'publisher_privileges': True
                 }
@@ -183,7 +191,7 @@ class AdminUserCreator(UserCreator):
                 user_agent=user_data.get('user_agent', 'System'),
                 success=True,
                 additional_data={
-                    'created_by': user_data.get('created_by'),
+                    'created_by': user_data.get('created_by').username if user_data.get('created_by') else None,
                     'role': user.role,
                     'admin_privileges': True,
                     'staff_access': True

@@ -51,7 +51,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'password': e.messages})
         
         # Check organization exists
-        from auth_api.models import Organization
+        from .models import Organization
         try:
             organization = Organization.objects.get(id=attrs['organization_id'])
             attrs['organization'] = organization
@@ -216,7 +216,7 @@ class AdminUserCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({'password': e.messages})
         
         # Validate organization
-        from auth_api.models import Organization
+        from .models import Organization
         try:
             organization = Organization.objects.get(id=attrs['organization_id'])
             attrs['organization'] = organization
@@ -241,7 +241,7 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
         """Validate admin user update"""
         # Validate organization if provided
         if 'organization_id' in attrs:
-            from auth_api.models import Organization
+            from .models import Organization
             try:
                 organization = Organization.objects.get(id=attrs['organization_id'])
                 attrs['organization'] = organization

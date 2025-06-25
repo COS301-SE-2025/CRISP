@@ -9,6 +9,8 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import logout
 from django.utils import timezone
 from django.core.cache import cache
+from django.shortcuts import render
+from django.views.generic import TemplateView
 import secrets
 import hashlib
 from datetime import timedelta
@@ -483,3 +485,33 @@ class TrustedDeviceView(APIView):
         else:
             ip = request.META.get('REMOTE_ADDR', '127.0.0.1')
         return ip
+
+
+class LoginPageView(TemplateView):
+    """Web-based login page"""
+    template_name = 'auth/login.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'CRISP User Management - Login'
+        return context
+
+
+class ViewerDashboardView(TemplateView):
+    """Viewer dashboard page"""
+    template_name = 'viewer_dashboard.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'CRISP Viewer Dashboard'
+        return context
+
+
+class DebugAuthView(TemplateView):
+    """Debug authentication page"""
+    template_name = 'debug_auth.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Debug Authentication'
+        return context

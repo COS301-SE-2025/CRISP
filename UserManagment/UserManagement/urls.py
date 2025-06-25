@@ -6,6 +6,9 @@ app_name = 'usermanagement'
 # Authentication URLs
 auth_urlpatterns = [
     path('login/', auth_views.CustomTokenObtainPairView.as_view(), name='login'),
+    path('login-page/', auth_views.LoginPageView.as_view(), name='login_page'),
+    path('dashboard/', auth_views.ViewerDashboardView.as_view(), name='viewer_dashboard'),
+    path('debug/', auth_views.DebugAuthView.as_view(), name='debug_auth'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('refresh/', auth_views.CustomTokenRefreshView.as_view(), name='token_refresh'),
     path('verify/', auth_views.CustomTokenVerifyView.as_view(), name='token_verify'),
