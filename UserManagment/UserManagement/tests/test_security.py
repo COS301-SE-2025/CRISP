@@ -444,18 +444,18 @@ class PermissionTestCase(TestCase):
         """Test IsOrganizationAdmin permission"""
         permission = IsOrganizationAdmin()
         
-        # Test with system admin
+        # Test with system admin (BlueVisionAdmin)
         request = self.factory.get('/')
         request.user = self.system_admin
         self.assertTrue(permission.has_permission(request, None))
         
-        # Test with org admin (should fail as it's now a publisher)
+        # Test with org admin (publisher role - should now pass)
         request.user = self.org_admin
-        self.assertFalse(permission.has_permission(request, None))
+        self.assertTrue(permission.has_permission(request, None))
         
-        # Test with publisher
+        # Test with publisher (should pass)
         request.user = self.publisher
-        self.assertFalse(permission.has_permission(request, None))
+        self.assertTrue(permission.has_permission(request, None))
         
         # Test with viewer
         request.user = self.viewer
