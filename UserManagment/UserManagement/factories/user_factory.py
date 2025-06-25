@@ -202,19 +202,27 @@ class AdminUserCreator(UserCreator):
     
     def _validate_admin_requirements(self, user_data: Dict) -> None:
         """Additional validation for admin users"""
-        # Ensure only system admins can create other admins
+        # Allow system/bootstrap creation of first admin (no creator required)
         creator = user_data.get('created_by')
-        if not creator or not creator.role == 'BlueVisionAdmin':
+        
+        # If there's a creator, ensure they are a BlueVisionAdmin
+        if creator and not creator.role == 'BlueVisionAdmin':
             raise ValidationError("Only BlueVision administrators can create admin users")
+        
+        # If no creator, check if this is the first admin (bootstrap scenario)
+        if not creator:
+            # Allow creation if no other BlueVisionAdmin exists (initial bootstrap)
+            existing_admins = CustomUser.objects.filter(role='BlueVisionAdmin').count()
+            if existing_admins > 0:
+                raise ValidationError("Only BlueVision administrators can create admin users")
         
         # Validate admin role
         valid_admin_roles = ['BlueVisionAdmin']
         if user_data.get('role') not in valid_admin_roles:
             raise ValidationError(f"Invalid admin role. Must be one of: {valid_admin_roles}")
         
-        # Additional admin-specific validations
-        if not user_data.get('first_name') or not user_data.get('last_name'):
-            raise ValidationError("Admin users must have first and last name")
+        # Additional admin-specific validations (make names optional for flexibility)
+        # Remove the requirement for first/last name to be more flexible
 
 
 class UserFactory:

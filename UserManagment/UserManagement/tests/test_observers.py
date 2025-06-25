@@ -9,7 +9,8 @@ import sys
 from ..models import CustomUser, Organization
 from ..observers.auth_observers import (
     AuthenticationObserver, SecurityAuditObserver, AccountLockoutObserver, 
-    NotificationObserver, auth_event_subject
+    NotificationObserver, SecurityAlertObserver, ConsoleLoggingObserver,
+    NewLocationAlertObserver, auth_event_subject
 )
 from ..factories.user_factory import UserFactory
 
@@ -301,7 +302,7 @@ class AuthEventSubjectTestCase(TestCase):
             auth_event_subject.notify_observers('test_event', self.test_user, {'test': 'data'})
             
             # Check that observer was called
-            mock_observer.update.assert_called_once_with('test_event', self.test_user, {'test': 'data'})
+            mock_observer.notify.assert_called_once_with('test_event', self.test_user, {'test': 'data'})
         finally:
             auth_event_subject.unregister_observer(mock_observer)
     
@@ -318,8 +319,8 @@ class AuthEventSubjectTestCase(TestCase):
             auth_event_subject.notify_observers('test_event', self.test_user, {})
             
             # Check that both observers were called
-            mock_observer1.update.assert_called_once()
-            mock_observer2.update.assert_called_once()
+            mock_observer1.notify.assert_called_once()
+            mock_observer2.notify.assert_called_once()
         finally:
             auth_event_subject.unregister_observer(mock_observer1)
             auth_event_subject.unregister_observer(mock_observer2)
@@ -330,7 +331,7 @@ class AuthEventSubjectTestCase(TestCase):
         mock_observer2 = Mock()
         
         # Make first observer raise exception
-        mock_observer1.update.side_effect = Exception("Test exception")
+        mock_observer1.notify.side_effect = Exception("Test exception")
         
         auth_event_subject.register_observer(mock_observer1)
         auth_event_subject.register_observer(mock_observer2)
@@ -340,7 +341,7 @@ class AuthEventSubjectTestCase(TestCase):
             auth_event_subject.notify_observers('test_event', self.test_user, {})
             
             # Second observer should still be called despite first one failing
-            mock_observer2.update.assert_called_once()
+            mock_observer2.notify.assert_called_once()
         finally:
             auth_event_subject.unregister_observer(mock_observer1)
             auth_event_subject.unregister_observer(mock_observer2)

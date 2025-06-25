@@ -30,7 +30,6 @@ class FullWorkflowTest(TestCase):
         self.organization = Organization.objects.create(
             name='Test University',
             description='Test educational institution',
-            identity_class='organization',
         )
         # Create test user with organization
         User = get_user_model()

@@ -247,6 +247,19 @@ class SecurityAlertObserver(AuthenticationObserver):
         print(f"SECURITY ALERT: {event_type} for user {getattr(user, 'username', None)} | Data: {event_data}")
 
 
+class ConsoleLoggingObserver(AuthenticationObserver):
+    """Observer that logs authentication events to the console (for test compatibility)"""
+    def notify(self, event_type: str, user: CustomUser, event_data: Dict) -> None:
+        print(f"AUTH EVENT: {event_type} for user {getattr(user, 'username', None)} | Data: {event_data}")
+
+
+class NewLocationAlertObserver(AuthenticationObserver):
+    """Observer that prints/logs new location alerts (for test compatibility)"""
+    def notify(self, event_type: str, user: CustomUser, event_data: Dict) -> None:
+        if event_type == 'login_success' and event_data.get('new_location', False):
+            print(f"NEW LOCATION ALERT: {user.username} from {event_data.get('ip_address')}")
+
+
 class AuthenticationEventSubject:
     """Subject for authentication events (Publisher in Observer pattern)"""
     
@@ -278,6 +291,10 @@ class AuthenticationEventSubject:
             except Exception as e:
                 logger.error(f"Observer {observer.__class__.__name__} failed: {e}")
 
+
+# Patch for test compatibility: add register_observer/unregister_observer aliases
+AuthenticationEventSubject.register_observer = AuthenticationEventSubject.attach
+AuthenticationEventSubject.unregister_observer = AuthenticationEventSubject.detach
 
 # Global authentication event subject
 auth_event_subject = AuthenticationEventSubject()

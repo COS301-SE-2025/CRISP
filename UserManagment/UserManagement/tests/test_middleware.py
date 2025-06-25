@@ -1,10 +1,11 @@
 """
 Tests for middleware functionality
 """
-from django.test import TestCase, RequestFactory
+from django.test import TestCase, RequestFactory, override_settings
 from django.http import HttpResponse
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.core.cache import cache
 from datetime import timedelta
 from unittest.mock import Mock, patch
 
@@ -58,6 +59,7 @@ class RateLimitMiddlewareTestCase(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
         self.middleware = RateLimitMiddleware(get_response=lambda r: HttpResponse())
+        cache.clear()  # Clear cache before each test
     
     def test_rate_limiting_under_threshold(self):
         """Test that requests under threshold are allowed"""
@@ -91,7 +93,7 @@ class RateLimitMiddlewareTestCase(TestCase):
         self.assertEqual(response1.status_code, 200)
         self.assertEqual(response2.status_code, 200)
     
-    @patch('django.conf.settings.RATELIMIT_ENABLE', False)
+    @override_settings(RATELIMIT_ENABLE=False)
     def test_rate_limiting_disabled(self):
         """Test that rate limiting can be disabled"""
         request = self.factory.post('/api/auth/login/')

@@ -292,6 +292,7 @@ class OrganizationSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     name = serializers.CharField(read_only=True)
     description = serializers.CharField(read_only=True)
+    domain = serializers.CharField(read_only=True)
     contact_email = serializers.EmailField(read_only=True)
     website = serializers.URLField(read_only=True)
     created_at = serializers.DateTimeField(read_only=True)

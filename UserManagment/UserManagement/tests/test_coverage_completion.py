@@ -38,14 +38,25 @@ class AdminTestCase(TestCase):
             name='Test Organization',
             domain='test.com'
         )
-        
+        # Create a root BlueVisionAdmin (self-created for test purposes)
+        self.root_admin = UserFactory.create_user('BlueVisionAdmin', {
+            'username': 'rootadmin',
+            'email': 'rootadmin@test.com',
+            'password': 'RootAdminPassword123!',
+            'organization': self.organization,
+            'is_staff': True,
+            'is_superuser': True,
+            'created_by': None  # Allow self-creation for the very first admin in tests
+        })
+        # Now create the actual admin user with root_admin as creator
         self.admin_user = UserFactory.create_user('BlueVisionAdmin', {
             'username': 'admin',
             'email': 'admin@test.com',
             'password': 'AdminPassword123!',
             'organization': self.organization,
             'is_staff': True,
-            'is_superuser': True
+            'is_superuser': True,
+            'created_by': self.root_admin
         })
         
         self.test_user = UserFactory.create_user('viewer', {
@@ -167,7 +178,7 @@ class SerializerTestCase(TestCase):
     def test_password_change_serializer(self):
         """Test PasswordChangeSerializer"""
         data = {
-            'old_password': 'TestPassword123!',
+            'current_password': 'TestPassword123!',
             'new_password': 'NewPassword123!',
             'new_password_confirm': 'NewPassword123!'
         }
@@ -191,7 +202,8 @@ class SerializerTestCase(TestCase):
         """Test PasswordResetConfirmSerializer"""
         data = {
             'token': 'test_token',
-            'new_password': 'NewPassword123!'
+            'new_password': 'NewPassword123!',
+            'new_password_confirm': 'NewPassword123!'
         }
         
         serializer = PasswordResetConfirmSerializer(data=data)
@@ -223,7 +235,7 @@ class SerializerTestCase(TestCase):
             'email': 'newuser@test.com',
             'password': 'NewUserPassword123!',
             'role': 'viewer',
-            'organization': str(self.organization.id)
+            'organization_id': str(self.organization.id)
         }
         
         serializer = AdminUserCreateSerializer(data=data)
@@ -284,13 +296,13 @@ class ValidatorTestCase(TestCase):
     
     def test_password_validator_valid(self):
         """Test password validator with valid passwords"""
-        valid_passwords = ['Password123!', 'ValidPass1@', 'SecureP@ssw0rd']
+        valid_passwords = ['P@ssw0rd2024', 'ValidP@ss8!', 'SecureP@ss9$']
         
         for password in valid_passwords:
             try:
                 self.password_validator.validate(password)
-            except Exception:
-                self.fail(f"Password should be valid")
+            except Exception as e:
+                self.fail(f"Password '{password}' should be valid but got error: {e}")
     
     def test_password_validator_invalid(self):
         """Test password validator with invalid passwords"""
