@@ -13,20 +13,32 @@ DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 # Application definition
-INSTALLED_APPS = [
+DJANGO_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+]
+
+THIRD_PARTY_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
-    'UserManagement',
+    'corsheaders',
 ]
 
+LOCAL_APPS = [
+    'UserManagement',
+    'crisp_threat_intel',
+    'trust_management_app',
+]
+
+INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
+
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'UserManagement.middleware.SecurityHeadersMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -192,6 +204,40 @@ LOGGING = {
         },
     },
 }
+
+# CORS Configuration
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5173').split(',')
+CORS_ALLOW_CREDENTIALS = True
+
+# OTX Configuration
+OTX_SETTINGS = {
+    'API_KEY': os.getenv('OTX_API_KEY', ''),
+    'ENABLED': os.getenv('OTX_ENABLED', 'True').lower() == 'true',
+    'FETCH_INTERVAL': int(os.getenv('OTX_FETCH_INTERVAL', '3600')),
+    'BATCH_SIZE': int(os.getenv('OTX_BATCH_SIZE', '50')),
+    'MAX_AGE_DAYS': int(os.getenv('OTX_MAX_AGE_DAYS', '30')),
+}
+
+# TAXII Server Configuration
+TAXII_SETTINGS = {
+    'DISCOVERY_TITLE': os.getenv('TAXII_SERVER_TITLE', 'CRISP Threat Intelligence Platform'),
+    'DISCOVERY_DESCRIPTION': os.getenv('TAXII_SERVER_DESCRIPTION', 'Educational threat intelligence sharing platform'),
+    'DISCOVERY_CONTACT': os.getenv('TAXII_CONTACT_EMAIL', 'admin@crisp.edu'),
+    'MEDIA_TYPE_TAXII': 'application/taxii+json;version=2.1',
+    'MEDIA_TYPE_STIX': 'application/stix+json;version=2.1',
+    'MAX_CONTENT_LENGTH': 104857600,  # 100MB
+}
+
+# Celery Configuration
+CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+# Trust Management Configuration
+TRUST_MANAGEMENT_SECRET_KEY = os.getenv('TRUST_MANAGEMENT_SECRET_KEY', 'trust-management-hmac-secret-key-change-in-production')
 
 # Security settings
 SESSION_COOKIE_SECURE = not DEBUG

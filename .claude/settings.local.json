@@ -43,7 +43,14 @@
       "Bash(timeout 90 DJANGO_SETTINGS_MODULE=test_settings python3 manage.py test TrustManagement.tests.test_trust_services --keepdb --verbosity=0)",
       "Bash(timeout 90 python3 manage.py test:*)",
       "Bash(timeout 30 python3 manage.py test:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(true)",
+      "Bash(ls:*)",
+      "Bash(mv:*)",
+      "Bash(touch:*)",
+      "Bash(tree:*)",
+      "Bash(cp:*)",
+      "Bash(rg:*)"
     ],
     "deny": []
   }

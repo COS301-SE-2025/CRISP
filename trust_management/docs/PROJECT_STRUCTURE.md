@@ -9,7 +9,8 @@ trust_management/
 ├── docs/                              # Documentation
 │   ├── README.md                      # Main project documentation
 │   ├── TESTING_GUIDE.md              # Testing guidelines
-│   └── TRUST_MANAGEMENT_SECURITY_GUIDE.md
+│   ├── TRUST_MANAGEMENT_SECURITY_GUIDE.md
+│   └── PROJECT_STRUCTURE.md          # This file
 │
 ├── config/                            # Configuration files
 │   ├── pytest.ini                    # pytest configuration
@@ -30,6 +31,22 @@ trust_management/
 │   ├── integration/                 # Integration tests
 │   ├── api/                         # API endpoint tests
 │   └── utils/                       # Test utilities
+│
+├── coverage/                         # Coverage reports and config
+│   ├── .coveragerc                  # Coverage configuration
+│   ├── htmlcov/                     # HTML coverage reports (generated)
+│   └── coverage.xml                 # XML coverage reports (generated)
+│
+├── logs/                            # Application logs
+│   └── trust_management.log        # Main application log
+│
+├── cache/                           # Cache files
+│   ├── __pycache__/                # Python bytecode cache
+│   └── .pytest_cache/              # Pytest cache
+│
+├── reports/                         # Generated reports
+│   ├── bandit_report.json          # Security analysis reports
+│   └── safety_report.json          # Dependency security reports
 │
 ├── trust_management_app/             # Main Django application
 │   ├── core/                        # Core business logic
@@ -63,7 +80,6 @@ trust_management/
 ├── manage.py                        # Django management script
 ├── Makefile                         # Build automation
 ├── pyproject.toml                   # Python project configuration
-├── .coveragerc                      # Coverage configuration
 └── .env                            # Environment variables
 ```
 

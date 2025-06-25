@@ -20,7 +20,7 @@ PERMISSION_CHOICES = [
 
 class Organization(models.Model):
     """
-    Organization model for CRISP platform
+    Organization model for CRISP platform - consolidated from all components
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(
@@ -37,6 +37,15 @@ class Organization(models.Model):
         unique=True,
         help_text="Organization email domain"
     )
+    
+    # STIX Identity fields (will be added via migration)
+    # identity_class = models.CharField(max_length=100, default='organization')
+    # sectors = models.JSONField(default=list, blank=True, help_text="Industry sectors (STIX)")
+    # contact_email = models.EmailField(blank=True, help_text="Contact email")
+    # website = models.URLField(blank=True, help_text="Organization website")
+    # stix_id = models.CharField(max_length=255, unique=True, null=True, blank=True, help_text="STIX identity ID")
+    
+    # Status and audit fields
     is_active = models.BooleanField(
         default=True,
         help_text="Whether organization is active"
