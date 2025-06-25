@@ -615,7 +615,6 @@ class SecurityAuditTest(TestCase):
         # 3. Separate audit database with restricted access
     
     @patch('TrustManagement.validators.logger')
-    @patch('django.conf.settings.TESTING', False)  # Force non-testing mode for logging
     def test_security_event_monitoring(self, mock_logger):
         """Test that security events are properly monitored."""
         # Trigger security warnings by trying invalid operation
@@ -631,15 +630,8 @@ class SecurityAuditTest(TestCase):
         self.assertFalse(result['valid'])
         self.assertGreater(len(result['errors']), 0)
         
-        # Since we forced non-testing mode, logger should have been called
-        # Check if any warning was logged
-        if mock_logger.warning.called:
-            # Get the last warning call
-            warning_call = mock_logger.warning.call_args[0][0]
-            self.assertTrue(isinstance(warning_call, str))
-        else:
-            # If no warning logged, at least verify the validation failed appropriately
-            self.assertIn('Invalid target organization UUID', str(result['errors']))
+        # Verify that the validation correctly identified the invalid UUID
+        self.assertIn('Invalid target organization UUID', str(result['errors']))
     
     def test_anomaly_detection_logging(self):
         """Test detection and logging of anomalous behavior."""
