@@ -20,32 +20,9 @@ jobs:
     - name: Check for project files
       id: check
       run: |
-        # Check for backend code (Python files in backend/ or root, or manage.py)
-        if [ -d backend ] && find backend -name "*.py" | head -1 | grep -q .; then
-          echo "has-backend=true" >> $GITHUB_OUTPUT
-        elif [ -f manage.py ]; then
-          echo "has-backend=true" >> $GITHUB_OUTPUT
-        elif find . -maxdepth 2 -name "*.py" -not -path "./.*" | head -1 | grep -q .; then
-          echo "has-backend=true" >> $GITHUB_OUTPUT
-        else
-          echo "has-backend=false" >> $GITHUB_OUTPUT
-        fi
-        
-        # Check for frontend code (JS/TS files in frontend/ or package.json)
-        if [ -d frontend ] && (find frontend -name "*.js" -o -name "*.ts" -o -name "*.jsx" -o -name "*.tsx" -o -name "package.json") | head -1 | grep -q .; then
-          echo "has-frontend=true" >> $GITHUB_OUTPUT
-        elif [ -f package.json ]; then
-          echo "has-frontend=true" >> $GITHUB_OUTPUT
-        else
-          echo "has-frontend=false" >> $GITHUB_OUTPUT
-        fi
-        
-        # Check for Docker files
-        if [ -f docker-compose.yml ] || [ -f Dockerfile ]; then
-          echo "has-docker=true" >> $GITHUB_OUTPUT
-        else
-          echo "has-docker=false" >> $GITHUB_OUTPUT
-        fi
+        echo "has-backend=$([ -f manage.py ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+        echo "has-frontend=$([ -f package.json ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+        echo "has-docker=$([ -f docker-compose.yml ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
 
   backend-tests:
     name: Backend Tests & Security
@@ -90,16 +67,6 @@ jobs:
       env:
         DATABASE_URL: postgres://postgres:postgres@localhost:5432/crisp_test
       run: |
-        # Find Django project directory
-        DJANGO_DIR="."
-        if [ -d backend ] && [ -f backend/manage.py ]; then
-          DJANGO_DIR="backend"
-        elif [ -f manage.py ]; then
-          DJANGO_DIR="."
-        fi
-        
-        cd $DJANGO_DIR
-        
         # Create minimal Django settings if none exist
         SETTINGS_FOUND=false
         if [ -f settings.py ] || [ -f */settings.py ] || [ -d */settings ] || [ -f */*/settings.py ]; then
@@ -163,17 +130,6 @@ jobs:
 
     - name: Install frontend dependencies
       run: |
-        # Determine frontend directory
-        if [ -d frontend ] && [ -f frontend/package.json ]; then
-          FRONTEND_DIR="frontend"
-        elif [ -f package.json ]; then
-          FRONTEND_DIR="."
-        else
-          echo "No package.json found"
-          exit 1
-        fi
-        
-        cd $FRONTEND_DIR
         if [ -f package-lock.json ]; then
           npm ci
         elif [ -f yarn.lock ]; then
@@ -184,17 +140,6 @@ jobs:
 
     - name: Run frontend tests
       run: |
-        # Determine frontend directory
-        if [ -d frontend ] && [ -f frontend/package.json ]; then
-          FRONTEND_DIR="frontend"
-        elif [ -f package.json ]; then
-          FRONTEND_DIR="."
-        else
-          echo "No package.json found"
-          exit 1
-        fi
-        
-        cd $FRONTEND_DIR
         # Check if test script exists in package.json
         if [ -f package.json ] && grep -q '"test"' package.json; then
           # Check if it's the default "no test" script
@@ -210,17 +155,6 @@ jobs:
 
     - name: Build frontend
       run: |
-        # Determine frontend directory
-        if [ -d frontend ] && [ -f frontend/package.json ]; then
-          FRONTEND_DIR="frontend"
-        elif [ -f package.json ]; then
-          FRONTEND_DIR="."
-        else
-          echo "No package.json found"
-          exit 1
-        fi
-        
-        cd $FRONTEND_DIR
         # Check if build script exists and is not the default
         if [ -f package.json ] && grep -q '"build"' package.json; then
           npm run build 2>/dev/null || echo "⚠️ Build completed with warnings"
