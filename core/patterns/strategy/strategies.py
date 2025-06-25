@@ -69,7 +69,7 @@ class AnonymizationStrategy(ABC):
 
 
 class IPAddressAnonymizationStrategy(AnonymizationStrategy):
-    """Strategy for anonymizing IP addresses"""
+    """Strategy for anonymizing IP addresses (both IPv4 and IPv6)"""
     
     def anonymize(self, data: str, level: AnonymizationLevel = AnonymizationLevel.MEDIUM) -> str:
         """
@@ -119,8 +119,9 @@ class IPAddressAnonymizationStrategy(AnonymizationStrategy):
                 elif level == AnonymizationLevel.HIGH:
                     return f"{octets[0]}.x.x.x"
                 elif level == AnonymizationLevel.FULL:
+                    # Use consistent prefix for both IPv4 and IPv6
                     hash_obj = hashlib.md5(str(ip).encode())
-                    return f"anon-ipv4-{hash_obj.hexdigest()[:8]}"
+                    return f"anon-ip-{hash_obj.hexdigest()[:8]}"
             
             # Handle IPv6 addresses
             else:
@@ -140,8 +141,9 @@ class IPAddressAnonymizationStrategy(AnonymizationStrategy):
                     # Keep only first 64 bits (first four segments)
                     result = ':'.join(segments[:4]) + '::xxxx'
                 elif level == AnonymizationLevel.FULL:
+                    # Use consistent prefix for both IPv4 and IPv6
                     hash_obj = hashlib.md5(str(ip).encode())
-                    result = f"anon-ipv6-{hash_obj.hexdigest()[:8]}"
+                    result = f"anon-ip-{hash_obj.hexdigest()[:8]}"
                 else:
                     result = str(ip)
                 

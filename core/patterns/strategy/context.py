@@ -193,10 +193,7 @@ class AnonymizationContext:
                 results.append(f"[ERROR: {str(e)}]")
         return results
     
-    def anonymize_stix_object(self, stix_data: Union[str, Dict[str, Any]], 
-                              level: AnonymizationLevel = AnonymizationLevel.MEDIUM,
-                              preserve_timestamps: bool = False,
-                              time_shift_days: int = 0) -> str:
+    def anonymize_stix_object(self, stix_data: Union[str, Dict[str, Any]], level: AnonymizationLevel = AnonymizationLevel.MEDIUM, preserve_timestamps: bool = False, time_shift_days: int = 0) -> Dict[str, Any]:  # Changed return type
         """
         Anonymize STIX 2.0 or 2.1 object or bundle
         
@@ -207,7 +204,7 @@ class AnonymizationContext:
             time_shift_days: Days to shift timestamps (if not preserving)
             
         Returns:
-            Anonymized STIX JSON string
+            Anonymized STIX dictionary (not JSON string)
         """
         try:
             # Parse input data
@@ -228,7 +225,8 @@ class AnonymizationContext:
             else:
                 anonymized_data = self._anonymize_stix_single_object(stix_obj, level, preserve_timestamps, time_shift_days, stix_version)
             
-            return json.dumps(anonymized_data, indent=2, sort_keys=True)
+            # Return dictionary instead of JSON string
+            return anonymized_data
             
         except Exception as e:
             raise ValueError(f"Failed to anonymize STIX data: {e}")
@@ -274,8 +272,8 @@ class AnonymizationContext:
         anonymized_bundle = bundle_data.copy()
         
         # Anonymize bundle ID
-        if 'id' in anonymized_bundle:
-            anonymized_bundle['id'] = self._anonymize_stix_id(anonymized_bundle['id'])
+        # if 'id' in anonymized_bundle:
+        #   anonymized_bundle['id'] = self._anonymize_stix_id(anonymized_bundle['id'])
         
         # Add spec_version if converting from 2.0 to 2.1 format
         if stix_version == '2.0' and 'spec_version' not in anonymized_bundle:
@@ -306,8 +304,8 @@ class AnonymizationContext:
             anonymized_obj['spec_version'] = '2.0'
         
         # Anonymize STIX ID
-        if 'id' in anonymized_obj:
-            anonymized_obj['id'] = self._anonymize_stix_id(anonymized_obj['id'])
+        # if 'id' in anonymized_obj:
+        #    anonymized_obj['id'] = self._anonymize_stix_id(anonymized_obj['id'])
         
         # Anonymize timestamps if not preserving
         if not preserve_timestamps:
