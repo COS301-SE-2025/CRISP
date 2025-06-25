@@ -25,7 +25,15 @@
       "Bash(rm:*)",
       "Bash(pkill:*)",
       "Bash(rg:*)",
-      "Bash(python manage.py test:*)"
+      "Bash(python manage.py test:*)",
+      "Bash(source:*)",
+      "Bash(venv/Scripts/python.exe manage.py test:*)",
+      "Bash(coverage report:*)",
+      "Bash(coverage erase:*)",
+      "Bash(coverage run:*)",
+      "Bash(DJANGO_SETTINGS_MODULE=crisp_project.settings python -m pytest UserManagement/tests/test_simple_coverage.py -v --tb=short)",
+      "Bash(DJANGO_SETTINGS_MODULE=crisp_project.settings python -m django test UserManagement.tests.test_simple_coverage --verbosity=2)",
+      "Bash(pip3 install:*)"
     ],
     "deny": []
   }
