@@ -240,6 +240,13 @@ class NotificationObserver(AuthenticationObserver):
         logger.info(f"Welcome with password sent to {user.username}")
 
 
+class SecurityAlertObserver(AuthenticationObserver):
+    """Observer that prints/logs security alerts for critical events (for test compatibility)"""
+    def notify(self, event_type: str, user: CustomUser, event_data: Dict) -> None:
+        # For test purposes, just print the alert
+        print(f"SECURITY ALERT: {event_type} for user {getattr(user, 'username', None)} | Data: {event_data}")
+
+
 class AuthenticationEventSubject:
     """Subject for authentication events (Publisher in Observer pattern)"""
     

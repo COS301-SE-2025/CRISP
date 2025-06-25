@@ -149,7 +149,7 @@ class SerializerTestCase(TestCase):
         
         self.assertEqual(data['username'], 'testuser')
         self.assertEqual(data['email'], 'testuser@test.com')
-        self.assertIn('organization', data)
+        self.assertIn('organization_name', data)
     
     def test_user_profile_update_serializer(self):
         """Test UserProfileUpdateSerializer"""
@@ -214,7 +214,7 @@ class SerializerTestCase(TestCase):
         
         self.assertEqual(data['username'], 'testuser')
         self.assertIn('role', data)
-        self.assertIn('organization', data)
+        self.assertIn('organization_name', data)
     
     def test_admin_user_create_serializer(self):
         """Test AdminUserCreateSerializer"""

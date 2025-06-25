@@ -22,6 +22,20 @@ class UserViewsTestCase(APITestCase):
             description='Test organization for user views'
         )
         
+        # Create a BlueVisionAdmin user to act as creator
+        self.admin_creator = CustomUser.objects.create_user(
+            username='admin_creator',
+            email='admin_creator@test.com',
+            password='AdminCreatorPassword123!',
+            first_name='Admin',
+            last_name='Creator',
+            organization=self.organization,
+            role='BlueVisionAdmin',
+            is_verified=True,
+            is_active=True,
+            is_staff=True,
+            is_superuser=True
+        )
         # Create test users
         self.admin_user = UserFactory.create_user('BlueVisionAdmin', {
             'username': 'admin',
@@ -30,7 +44,9 @@ class UserViewsTestCase(APITestCase):
             'first_name': 'Admin',
             'last_name': 'User',
             'organization': self.organization,
-            'is_verified': True
+            'is_verified': True,
+            'created_by': self.admin_creator,
+            'role': 'BlueVisionAdmin'
         })
         
         self.publisher_user = UserFactory.create_user('publisher', {

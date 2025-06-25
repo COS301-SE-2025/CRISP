@@ -5,7 +5,7 @@ Tests the complete workflow: Organization -> STIX Objects -> Collection -> Feed 
 import json
 import uuid
 from django.test import TestCase
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from crisp_threat_intel.models import Organization, STIXObject, Collection, CollectionObject, Feed
@@ -26,21 +26,19 @@ class FullWorkflowTest(TestCase):
     
     def setUp(self):
         """Set up test data"""
-        # Create test user
-        self.user = User.objects.create_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpass123'
-        )
-        
         # Create test organization
         self.organization = Organization.objects.create(
             name='Test University',
             description='Test educational institution',
             identity_class='organization',
-            sectors=['education'],
-            contact_email='security@testuni.edu',
-            created_by=self.user
+        )
+        # Create test user with organization
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123',
+            organization=self.organization
         )
         
         # Create test collection
