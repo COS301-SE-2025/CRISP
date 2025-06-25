@@ -21,6 +21,24 @@ class StixTaxiiService:
     def __init__(self):
         self.indicator_creator = StixIndicatorCreator()
         self.ttp_creator = StixTTPCreator()
+        self._indicator_service = None
+        self._ttp_service = None
+    
+    @property
+    def indicator_service(self):
+        """Lazy loading of indicator service to avoid circular imports"""
+        if self._indicator_service is None:
+            from core.services.indicator_service import IndicatorService
+            self._indicator_service = IndicatorService()
+        return self._indicator_service
+    
+    @property
+    def ttp_service(self):
+        """Lazy loading of TTP service to avoid circular imports"""
+        if self._ttp_service is None:
+            from core.services.ttp_service import TTPService
+            self._ttp_service = TTPService()
+        return self._ttp_service
     
     def discover_collections(self, server_url, api_root_path, username=None, password=None):
         """
@@ -124,20 +142,18 @@ class StixTaxiiService:
     def _process_indicator(self, stix_indicator, threat_feed, stats):
         """
         Process a STIX Indicator object and create/update CRISP Indicator.
+        Now using IndicatorService instead of directly using the repository.
         """
         try:
             # Check if the indicator already exists
-            existing = Indicator.objects.filter(stix_id=stix_indicator.id).first()
+            existing = self.indicator_service.get_indicator_by_stix_id(stix_indicator.id)
             
             if existing:
                 # Use the factory to convert
                 indicator_data = self.indicator_creator.create_from_stix(stix_indicator)
                 
-                for key, value in indicator_data.items():
-                    setattr(existing, key, value)
-                
-                existing.updated_at = timezone.now()
-                existing.save()
+                # Update the indicator using the service
+                self.indicator_service.update_indicator(existing.id, indicator_data)
                 stats['indicators_updated'] += 1
             else:
                 # Create a new indicator
@@ -146,8 +162,8 @@ class StixTaxiiService:
                 # Add the threat feed relation
                 indicator_data['threat_feed'] = threat_feed
                 
-                # Create the indicator
-                Indicator.objects.create(**indicator_data)
+                # Create the indicator using the service
+                self.indicator_service.create_indicator(indicator_data)
                 stats['indicators_created'] += 1
                 
         except Exception as e:
@@ -157,6 +173,7 @@ class StixTaxiiService:
     def _process_attack_pattern(self, stix_attack_pattern, threat_feed, stats):
         """
         Process a STIX Attack Pattern object and create/update CRISP TTP.
+        Now using TTPService instead of directly using the repository.
         
         Args:
             stix_attack_pattern: STIX Attack Pattern object
@@ -165,18 +182,14 @@ class StixTaxiiService:
         """
         try:
             # Check if the TTP already exists
-            existing = TTPData.objects.filter(stix_id=stix_attack_pattern.id).first()
+            existing = self.ttp_service.get_ttp_by_stix_id(stix_attack_pattern.id)
             
             if existing:
                 # Update the existing TTP
                 ttp_data = self.ttp_creator.create_from_stix(stix_attack_pattern)
                 
-                # Update fields
-                for key, value in ttp_data.items():
-                    setattr(existing, key, value)
-                
-                existing.updated_at = timezone.now()
-                existing.save()
+                # Update the TTP using the service
+                self.ttp_service.update_ttp(existing.id, ttp_data)
                 stats['ttp_updated'] += 1
             else:
                 # Create a new TTP
@@ -185,8 +198,8 @@ class StixTaxiiService:
                 # Add the threat feed relation
                 ttp_data['threat_feed'] = threat_feed
                 
-                # Create the TTP
-                TTPData.objects.create(**ttp_data)
+                # Create the TTP using the service
+                self.ttp_service.create_ttp(ttp_data)
                 stats['ttp_created'] += 1
                 
         except Exception as e:
