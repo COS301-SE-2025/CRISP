@@ -276,6 +276,52 @@ class TrustService:
         return queryset.select_related('trust_level', 'trust_group').order_by('-created_at')
 
     @staticmethod
+    def get_organization_trust_summary(organization) -> Dict[str, Any]:
+        """
+        Get trust relationship summary for an organization.
+        
+        Args:
+            organization: Organization object or ID
+            
+        Returns:
+            Dictionary with trust statistics
+        """
+        try:
+            # Handle both organization objects and IDs
+            org_id = getattr(organization, 'id', organization)
+            
+            # Get all relationships for this organization
+            initiated_relationships = TrustRelationship.objects.filter(
+                source_organization=org_id,
+                is_active=True
+            ).count()
+            
+            received_relationships = TrustRelationship.objects.filter(
+                target_organization=org_id,
+                is_active=True
+            ).count()
+            
+            # Get organization name
+            org_name = getattr(organization, 'name', f'Organization {org_id}')
+            
+            return {
+                'organization_name': org_name,
+                'initiated_relationships': initiated_relationships,
+                'received_relationships': received_relationships,
+                'total_relationships': initiated_relationships + received_relationships
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting trust summary for organization {organization}: {e}")
+            return {
+                'organization_name': 'Unknown',
+                'initiated_relationships': 0,
+                'received_relationships': 0,
+                'total_relationships': 0,
+                'error': str(e)
+            }
+
+    @staticmethod
     def check_trust_level(
         source_org: str,
         target_org: str

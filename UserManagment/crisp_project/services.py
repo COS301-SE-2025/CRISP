@@ -45,12 +45,12 @@ class CRISPIntegrationService:
             return True, 'full', {'trust_level': 'complete', 'same_org': True}
         
         # Check trust relationship
-        trust_info = TrustService.check_trust_level(user_org, target_organization)
+        trust_info = TrustService.check_trust_level(user_org.id, target_organization.id)
         
-        if not trust_info or len(trust_info) == 0:
+        if not trust_info:
             return False, 'none', {'error': 'No trust relationship found'}
         
-        trust_relationship, trust_level = trust_info[0], trust_info[1] if len(trust_info) > 1 else None
+        trust_level, trust_relationship = trust_info
         
         if not trust_level or not trust_level.is_active:
             return False, 'none', {'error': 'Trust relationship not active'}
@@ -202,9 +202,9 @@ class CRISPIntegrationService:
         return {
             'organization_id': str(organization.id),
             'organization_name': organization.name,
-            'initiated_relationships': trust_stats.get('initiated_count', 0),
-            'received_relationships': trust_stats.get('received_count', 0),
-            'active_relationships': trust_stats.get('active_count', 0),
+            'initiated_relationships': trust_stats.get('initiated_relationships', 0),
+            'received_relationships': trust_stats.get('received_relationships', 0),
+            'total_relationships': trust_stats.get('total_relationships', 0),
             'trust_groups': organization.trust_group_memberships.filter(is_active=True).count(),
             'accessible_organizations': len([
                 rel for rel in organization.initiated_trust_relationships.filter(status='active')
