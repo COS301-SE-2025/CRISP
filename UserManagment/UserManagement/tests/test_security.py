@@ -380,7 +380,7 @@ class PermissionTestCase(TestCase):
             email='sysadmin@example.com',
             password='SysAdminPassword123!',
             organization=self.organization,
-            role='system_admin',
+            role='BlueVisionAdmin',
             is_verified=True
         )
         
@@ -389,7 +389,7 @@ class PermissionTestCase(TestCase):
             email='orgadmin@example.com',
             password='OrgAdminPassword123!',
             organization=self.organization,
-            role='admin',
+            role='publisher',
             is_verified=True
         )
         
@@ -449,9 +449,9 @@ class PermissionTestCase(TestCase):
         request.user = self.system_admin
         self.assertTrue(permission.has_permission(request, None))
         
-        # Test with org admin
+        # Test with org admin (should fail as it's now a publisher)
         request.user = self.org_admin
-        self.assertTrue(permission.has_permission(request, None))
+        self.assertFalse(permission.has_permission(request, None))
         
         # Test with publisher
         request.user = self.publisher
@@ -470,7 +470,7 @@ class PermissionTestCase(TestCase):
         request.user = self.publisher
         self.assertTrue(permission.has_permission(request, None))
         
-        # Test with admin (who should also be publisher)
+        # Test with BlueVision admin (who should also be publisher)
         self.org_admin.is_publisher = True
         self.org_admin.save()
         request.user = self.org_admin
@@ -513,9 +513,9 @@ class PermissionTestCase(TestCase):
         # Test user accessing other user's data
         self.assertFalse(permission.has_object_permission(request, None, self.publisher))
         
-        # Test admin accessing other user's data in same org
+        # Test publisher accessing other user's data in same org (should fail)
         request.user = self.org_admin
-        self.assertTrue(permission.has_object_permission(request, None, self.viewer))
+        self.assertFalse(permission.has_object_permission(request, None, self.viewer))
         
         # Test system admin accessing any user's data
         request.user = self.system_admin
@@ -542,7 +542,7 @@ class STIXObjectPermissionTestCase(TestCase):
             email='sysadmin@example.com',
             password='SysAdminPassword123!',
             organization=self.organization,
-            role='system_admin',
+            role='BlueVisionAdmin',
             is_verified=True
         )
     

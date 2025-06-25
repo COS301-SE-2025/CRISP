@@ -18,7 +18,12 @@
       "Bash(find:*)",
       "Bash(ls:*)",
       "Bash(./test_login_curl.sh)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(npm install)",
+      "Bash(npm run dev:*)",
+      "Bash(git restore:*)",
+      "Bash(rm:*)",
+      "Bash(pkill:*)"
     ],
     "deny": []
   }

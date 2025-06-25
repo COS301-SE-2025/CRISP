@@ -7,10 +7,8 @@ from datetime import timedelta
 
 USER_ROLE_CHOICES = [
     ('viewer', 'Viewer'),
-    ('analyst', 'Analyst'),
     ('publisher', 'Publisher'),
-    ('admin', 'Administrator'),
-    ('system_admin', 'System Administrator'),
+    ('BlueVisionAdmin', 'BlueVision Admin'),
 ]
 
 PERMISSION_CHOICES = [
@@ -166,11 +164,11 @@ class CustomUser(AbstractUser):
 
     def can_publish_feeds(self):
         """Check if user can publish threat intelligence feeds"""
-        return self.is_publisher and self.role in ['publisher', 'admin', 'system_admin']
+        return self.is_publisher and self.role in ['publisher', 'BlueVisionAdmin']
 
     def is_organization_admin(self):
         """Check if user is admin within their organization"""
-        return self.role in ['admin', 'system_admin']
+        return self.role == 'BlueVisionAdmin'
 
 
 class UserSession(models.Model):

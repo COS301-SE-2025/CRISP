@@ -21,7 +21,7 @@ class UserFactoryTestCase(TestCase):
             email='admin@example.com',
             password='AdminPassword123!',
             organization=self.organization,
-            role='system_admin',
+            role='BlueVisionAdmin',
             is_verified=True
         )
     
@@ -81,13 +81,13 @@ class UserFactoryTestCase(TestCase):
             'first_name': 'New',
             'last_name': 'Admin',
             'organization': self.organization,
-            'role': 'admin'
+            'role': 'BlueVisionAdmin'
         }
         
-        user = UserFactory.create_user('admin', user_data, self.admin_user)
+        user = UserFactory.create_user('BlueVisionAdmin', user_data, self.admin_user)
         
         self.assertEqual(user.username, 'newadmin')
-        self.assertEqual(user.role, 'admin')
+        self.assertEqual(user.role, 'BlueVisionAdmin')
         self.assertTrue(user.is_publisher)
         self.assertTrue(user.is_verified)
         self.assertTrue(user.is_staff)
@@ -205,7 +205,7 @@ class UserCreatorTestCase(TestCase):
             email='sysadmin@example.com',
             password='SysAdminPassword123!',
             organization=self.organization,
-            role='system_admin',
+            role='BlueVisionAdmin',
             is_verified=True
         )
         
@@ -218,13 +218,13 @@ class UserCreatorTestCase(TestCase):
             'first_name': 'Admin',
             'last_name': 'User',
             'organization': self.organization,
-            'role': 'admin',
+            'role': 'BlueVisionAdmin',
             'created_by': system_admin
         }
         
         user = creator.create_user(user_data)
         
-        self.assertEqual(user.role, 'admin')
+        self.assertEqual(user.role, 'BlueVisionAdmin')
         self.assertTrue(user.is_staff)
     
     def test_creator_validation_errors(self):
@@ -291,13 +291,13 @@ class UserPermissionTestCase(TestCase):
         )
         self.assertTrue(publisher.can_publish_feeds())
         
-        # Admin should be able to publish
+        # BlueVision Admin should be able to publish
         admin = CustomUser.objects.create_user(
             username='admin',
             email='admin@example.com',
             password='AdminPassword123!',
             organization=self.organization,
-            role='admin',
+            role='BlueVisionAdmin',
             is_publisher=True
         )
         self.assertTrue(admin.can_publish_feeds())
@@ -320,7 +320,7 @@ class UserPermissionTestCase(TestCase):
             email='admin@example.com',
             password='AdminPassword123!',
             organization=self.organization,
-            role='admin'
+            role='BlueVisionAdmin'
         )
         self.assertTrue(admin.is_organization_admin())
         
@@ -329,7 +329,7 @@ class UserPermissionTestCase(TestCase):
             email='sysadmin@example.com',
             password='SysAdminPassword123!',
             organization=self.organization,
-            role='system_admin'
+            role='BlueVisionAdmin'
         )
         self.assertTrue(system_admin.is_organization_admin())
         
@@ -402,7 +402,7 @@ class UserSerializerTestCase(TestCase):
             'first_name': 'Admin',
             'last_name': 'User',
             'organization_id': str(self.organization.id),
-            'role': 'admin',
+            'role': 'BlueVisionAdmin',
             'is_publisher': True,
             'is_verified': True
         }
@@ -480,7 +480,7 @@ class UserModelTestCase(TestCase):
     
     def test_user_role_hierarchy(self):
         """Test user role hierarchy"""
-        roles = ['viewer', 'analyst', 'publisher', 'admin', 'system_admin']
+        roles = ['viewer', 'publisher', 'BlueVisionAdmin']
         
         for role in roles:
             user = CustomUser.objects.create_user(
@@ -503,7 +503,7 @@ class UserBulkOperationsTestCase(TestCase):
             email='admin@example.com',
             password='AdminPassword123!',
             organization=self.organization,
-            role='system_admin',
+            role='BlueVisionAdmin',
             is_verified=True
         )
     

@@ -23,7 +23,7 @@ class AuthenticationAPIIntegrationTestCase(APITestCase):
             email='admin@example.com',
             password='AdminPassword123!',
             organization=self.organization,
-            role='system_admin',
+            role='BlueVisionAdmin',
             is_verified=True
         )
         
@@ -172,7 +172,7 @@ class UserManagementAPIIntegrationTestCase(APITestCase):
             email='admin@example.com',
             password='AdminPassword123!',
             organization=self.organization,
-            role='system_admin',
+            role='BlueVisionAdmin',
             is_verified=True
         )
         
@@ -319,7 +319,7 @@ class OrganizationIntegrationTestCase(TestCase):
             email='orgadmin@example.com',
             password='OrgAdminPassword123!',
             organization=self.organization,
-            role='admin'
+            role='BlueVisionAdmin'
         )
         
         regular_user = CustomUser.objects.create_user(
@@ -364,7 +364,7 @@ class STIXObjectIntegrationTestCase(TestCase):
             email='stixadmin@example.com',
             password='StixAdminPassword123!',
             organization=self.organization,
-            role='system_admin',
+            role='BlueVisionAdmin',
             is_verified=True
         )
     

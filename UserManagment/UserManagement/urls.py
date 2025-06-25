@@ -1,7 +1,45 @@
 from django.urls import path, include
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 from .views import auth_views, admin_views, user_views
 
 app_name = 'usermanagement'
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def api_root(request):
+    """
+    API Root endpoint - provides overview of available endpoints
+    """
+    return Response({
+        'message': 'CRISP User Management API',
+        'version': '1.0',
+        'endpoints': {
+            'authentication': {
+                'login': '/api/auth/login/ (POST)',
+                'profile': '/api/auth/profile/ (GET)',
+                'logout': '/api/auth/logout/ (POST)',
+                'refresh_token': '/api/auth/refresh/ (POST)',
+                'change_password': '/api/auth/change-password/ (POST)',
+            },
+            'admin': {
+                'users': '/api/admin/users/ (GET, POST)',
+                'user_detail': '/api/admin/users/{id}/ (GET, PUT, DELETE)',
+                'logs': '/api/admin/logs/ (GET)',
+                'sessions': '/api/admin/sessions/ (GET)',
+            },
+            'user': {
+                'dashboard': '/api/user/dashboard/ (GET)',
+                'sessions': '/api/user/sessions/ (GET)',
+                'activity': '/api/user/activity/ (GET)',
+                'stats': '/api/user/stats/ (GET)',
+            }
+        },
+        'authentication_required': 'Most endpoints require JWT token in Authorization header: Bearer <token>',
+        'admin_interface': '/admin/',
+        'status': 'operational'
+    })
 
 # Authentication URLs
 auth_urlpatterns = [
@@ -41,6 +79,7 @@ user_urlpatterns = [
 ]
 
 urlpatterns = [
+    path('', api_root, name='api_root'),
     path('auth/', include(auth_urlpatterns)),
     path('admin/', include(admin_urlpatterns)),
     path('user/', include(user_urlpatterns)),

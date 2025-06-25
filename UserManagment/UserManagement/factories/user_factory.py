@@ -175,12 +175,12 @@ class AdminUserCreator(UserCreator):
                 first_name=user_data.get('first_name', ''),
                 last_name=user_data.get('last_name', ''),
                 organization=user_data['organization'],
-                role=user_data.get('role', 'admin'),
+                role=user_data.get('role', 'BlueVisionAdmin'),
                 is_publisher=True,
                 is_verified=True,
                 is_active=True,
                 is_staff=True,  # Django admin access
-                is_superuser=user_data.get('role') == 'system_admin'
+                is_superuser=user_data.get('role') == 'BlueVisionAdmin'
             )
             
             # Log user creation
@@ -204,11 +204,11 @@ class AdminUserCreator(UserCreator):
         """Additional validation for admin users"""
         # Ensure only system admins can create other admins
         creator = user_data.get('created_by')
-        if not creator or not creator.role == 'system_admin':
-            raise ValidationError("Only system administrators can create admin users")
+        if not creator or not creator.role == 'BlueVisionAdmin':
+            raise ValidationError("Only BlueVision administrators can create admin users")
         
         # Validate admin role
-        valid_admin_roles = ['admin', 'system_admin']
+        valid_admin_roles = ['BlueVisionAdmin']
         if user_data.get('role') not in valid_admin_roles:
             raise ValidationError(f"Invalid admin role. Must be one of: {valid_admin_roles}")
         
@@ -222,10 +222,8 @@ class UserFactory:
     
     _creators = {
         'viewer': StandardUserCreator,
-        'analyst': StandardUserCreator,
         'publisher': PublisherUserCreator,
-        'admin': AdminUserCreator,
-        'system_admin': AdminUserCreator,
+        'BlueVisionAdmin': AdminUserCreator,
     }
     
     @classmethod
@@ -234,7 +232,7 @@ class UserFactory:
         Create user with specified role
         
         Args:
-            role: User role ('viewer', 'analyst', 'publisher', 'admin', 'system_admin')
+            role: User role ('viewer', 'publisher', 'BlueVisionAdmin')
             user_data: User data dictionary
             created_by: User creating this user (for authorization checks)
             
@@ -266,16 +264,9 @@ class UserFactory:
         if not created_by:
             return  # System creation
         
-        # System admins can create any user
-        if created_by.role == 'system_admin':
+        # BlueVision admins can create any user
+        if created_by.role == 'BlueVisionAdmin':
             return
-        
-        # Regular admins can create viewers, analysts, and publishers
-        if created_by.role == 'admin':
-            if role in ['viewer', 'analyst', 'publisher']:
-                return
-            else:
-                raise ValidationError("Admins cannot create other admin users")
         
         # Non-admin users cannot create users
         raise ValidationError("Insufficient permissions to create users")

@@ -22,7 +22,7 @@ class AdminUserListView(APIView):
     def get(self, request):
         """List users with filtering and pagination"""
         # Filter users based on admin permissions
-        if request.user.role == 'system_admin':
+        if request.user.role == 'BlueVisionAdmin':
             # System admins can see all users
             queryset = CustomUser.objects.all()
         else:
@@ -148,7 +148,7 @@ class AdminUserDetailView(APIView):
             user = CustomUser.objects.get(id=user_id)
             
             # Check permissions
-            if request.user.role == 'system_admin':
+            if request.user.role == 'BlueVisionAdmin':
                 return user
             elif request.user.role == 'admin' and user.organization == request.user.organization:
                 return user
@@ -309,7 +309,7 @@ class AdminUserUnlockView(APIView):
             user = CustomUser.objects.get(id=user_id)
             
             # Check permissions
-            if request.user.role == 'system_admin':
+            if request.user.role == 'BlueVisionAdmin':
                 pass  # System admins can unlock any user
             elif (request.user.role == 'admin' and 
                   user.organization == request.user.organization):
@@ -364,7 +364,7 @@ class AdminAuthenticationLogView(APIView):
     def get(self, request):
         """Get authentication logs with filtering"""
         # Filter logs based on admin permissions
-        if request.user.role == 'system_admin':
+        if request.user.role == 'BlueVisionAdmin':
             queryset = AuthenticationLog.objects.all()
         else:
             # Organization admins can only see logs for their organization users
@@ -430,7 +430,7 @@ class AdminUserSessionView(APIView):
     def get(self, request):
         """Get active user sessions"""
         # Filter sessions based on admin permissions
-        if request.user.role == 'system_admin':
+        if request.user.role == 'BlueVisionAdmin':
             queryset = UserSession.objects.filter(is_active=True)
         else:
             # Organization admins can only see sessions for their organization users
@@ -472,7 +472,7 @@ class AdminUserSessionView(APIView):
             session = UserSession.objects.get(id=session_id, is_active=True)
             
             # Check permissions
-            if request.user.role == 'system_admin':
+            if request.user.role == 'BlueVisionAdmin':
                 pass  # System admins can terminate any session
             elif (request.user.role == 'admin' and 
                   session.user.organization == request.user.organization):

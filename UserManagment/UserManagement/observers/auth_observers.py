@@ -156,7 +156,7 @@ class AccountLockoutObserver(AuthenticationObserver):
             
         org_admins = CustomUser.objects.filter(
             organization=user.organization,
-            role__in=['admin', 'system_admin'],
+            role='BlueVisionAdmin',
             is_active=True
         )
         

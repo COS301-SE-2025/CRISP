@@ -13,7 +13,7 @@ class IsSystemAdmin(BasePermission):
             request.user and 
             request.user.is_authenticated and 
             isinstance(request.user, CustomUser) and
-            request.user.role == 'system_admin' and
+            request.user.role == 'BlueVisionAdmin' and
             request.user.is_active and
             request.user.is_verified
         )
@@ -31,7 +31,7 @@ class IsOrganizationAdmin(BasePermission):
             request.user and 
             request.user.is_authenticated and 
             isinstance(request.user, CustomUser) and
-            request.user.role in ['admin', 'system_admin'] and
+            request.user.role == 'BlueVisionAdmin' and
             request.user.is_active and
             request.user.is_verified
         )
@@ -49,7 +49,7 @@ class IsPublisher(BasePermission):
             request.user.is_authenticated and 
             isinstance(request.user, CustomUser) and
             request.user.is_publisher and
-            request.user.role in ['publisher', 'admin', 'system_admin'] and
+            request.user.role in ['publisher', 'BlueVisionAdmin'] and
             request.user.is_active and
             request.user.is_verified
         )
@@ -97,12 +97,9 @@ class IsSameUserOrAdmin(BasePermission):
             return True
         
         # Allow access if user is an admin
-        if request.user.role in ['admin', 'system_admin']:
-            # System admins can access any object
-            if request.user.role == 'system_admin':
-                return True
-            
-            # Organization admins can access objects within their organization
+        if request.user.role == 'BlueVisionAdmin':
+            # BlueVision admins can access any object
+            return True
             if hasattr(obj, 'organization') and obj.organization == request.user.organization:
                 return True
             
@@ -124,7 +121,7 @@ class CanManageOrganization(BasePermission):
             request.user and 
             request.user.is_authenticated and 
             isinstance(request.user, CustomUser) and
-            request.user.role == 'system_admin' and  # Only system admins can manage organizations
+            request.user.role == 'BlueVisionAdmin' and  # Only system admins can manage organizations
             request.user.is_active and
             request.user.is_verified
         )
@@ -149,8 +146,8 @@ class CanAccessSTIXObject(BasePermission):
         """Check STIX object specific permissions"""
         from .models import STIXObjectPermission
         
-        # System admins have access to all STIX objects
-        if request.user.role == 'system_admin':
+        # BlueVision admins have access to all STIX objects
+        if request.user.role == 'BlueVisionAdmin':
             return True
         
         # Check specific STIX object permissions
@@ -207,8 +204,8 @@ class CanPublishFeed(BasePermission):
     
     def has_object_permission(self, request, view, obj):
         """Check feed-specific publishing permissions"""
-        # System admins can publish any feed
-        if request.user.role == 'system_admin':
+        # BlueVision admins can publish any feed
+        if request.user.role == 'BlueVisionAdmin':
             return True
         
         # Check if feed belongs to user's organization
@@ -257,8 +254,8 @@ def check_stix_object_permission(user, stix_object, permission_type='read'):
     if not isinstance(user, CustomUser) or not user.is_active or not user.is_verified:
         return False
     
-    # System admins have all permissions
-    if user.role == 'system_admin':
+    # BlueVision admins have all permissions
+    if user.role == 'BlueVisionAdmin':
         return True
     
     # Check explicit permissions
@@ -291,7 +288,7 @@ def check_stix_object_permission(user, stix_object, permission_type='read'):
                 return True
             elif permission_type == 'write' and user.is_publisher:
                 return True
-            elif permission_type == 'admin' and user.role in ['admin', 'system_admin']:
+            elif permission_type == 'admin' and user.role == 'BlueVisionAdmin':
                 return True
     
     return False
@@ -311,8 +308,8 @@ def check_feed_publish_permission(user, feed):
     if not isinstance(user, CustomUser) or not user.can_publish_feeds():
         return False
     
-    # System admins can publish any feed
-    if user.role == 'system_admin':
+    # BlueVision admins can publish any feed
+    if user.role == 'BlueVisionAdmin':
         return True
     
     # Check organization ownership
