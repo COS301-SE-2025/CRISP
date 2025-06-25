@@ -2,13 +2,6 @@
 
 This directory contains the React frontend code for CRISP.
 
-## Getting Started
-
-1. Place your React project files here
-2. Include `package.json` in this directory
-3. Add your components, styles, and assets
-4. The CI/CD pipeline will automatically detect and test your code
-
 ## Structure
 ```
 frontend/
