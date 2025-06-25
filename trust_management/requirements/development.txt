@@ -1,0 +1,20 @@
+# Development dependencies
+# Include base requirements
+-r base.txt
+
+# Additional development tools
+django-debug-toolbar>=4.1.0
+django-extensions>=3.2.3
+
+# Testing utilities
+pytest-mock>=3.11.1
+pytest-xdist>=3.3.1
+tox>=4.6.0
+
+# Code quality and linting
+pre-commit>=3.3.3
+bandit>=1.7.5
+safety>=2.3.4
+
+# Documentation
+sphinx-autodoc-typehints>=1.23.0

@@ -1,0 +1,17 @@
+# Production dependencies
+# Include base requirements
+-r base.txt
+
+# Production server
+gunicorn>=21.2.0
+uvicorn>=0.22.0
+
+# Production database
+psycopg2>=2.9.6
+
+# Monitoring and logging
+sentry-sdk>=1.28.0
+
+# Security
+django-cors-headers>=4.1.0
+django-ratelimit>=4.0.0
