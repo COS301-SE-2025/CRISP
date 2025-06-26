@@ -1,8 +1,8 @@
 # Software Requirements Specification (SRS)
 ## CRISP - Cyber Risk Information Sharing Platform
 
-**Version:** 1.2  
-**Date:** June 26, 2025  
+**Version:** 1.1  
+**Date:** May 26, 2025  
 **Prepared by:** Data Defenders  
 **Client:** BlueVision ITM
 
@@ -35,10 +35,6 @@ CRISP will provide a web-based platform for BlueVision ITM to serve their client
 - Real-time threat alerting and notification systems
 - Trust-based access control and data sharing between Institutions
 - Autonomous sharing between distributed CRISP instances
-- **Comprehensive multi-tenant user management with advanced authentication**
-- **Role-based access control with organization-specific permissions**
-- **Advanced session management and security controls**
-- **Comprehensive audit trails and compliance features**
 
 The platform will facilitate both consumption of external threat feeds and publication of anonymized threat data, ensuring confidentiality while maximizing the benefit of shared intelligence.
 
@@ -49,9 +45,6 @@ The platform will facilitate both consumption of external threat feeds and publi
 - **IoC**: Indicators of Compromise
 - **TTP**: Tactics, Techniques, and Procedures
 - **CTI**: Cyber Threat Intelligence
-- **2FA**: Two-Factor Authentication
-- **TOTP**: Time-based One-Time Password
-- **JWT**: JSON Web Token
 
 ### 1.4 Team Members
 - **Armand van der Colf** - u22574982 (Full Stack Developer & Security)
@@ -66,106 +59,89 @@ The platform will facilitate both consumption of external threat feeds and publi
 
 ### 2.1 User Hierarchy and Roles
 
-#### BlueVision ITM System Administrator (BlueVisionAdmin)
-- **Role**: Platform-wide administrators with comprehensive system access across all organizations
-- **Purpose**: Manage the entire CRISP platform, onboard new client Institutions, maintain system health, and oversee all user management activities
-- **Permissions**: Full access to all organizations, users, system configuration, and administrative functions
+#### BlueVision ITM System Administrator
+- **Role**: Platform administrator with full system access
+- **Purpose**: Manage the entire CRISP platform, onboard new client Institutions, and maintain system health
 
-#### Institution Publisher (Publisher)
-- **Role**: Organization heads who can manage users within their institution and have full viewer functionality
-- **Purpose**: Represent educational institutions with publishing rights and user management capabilities within their organization
-- **Permissions**: User management within their organization, threat intelligence publishing, and all viewer capabilities
+#### Institution Publisher (Client Institutions)
+- **Role**: BlueVision ITM clients who have publishing rights
+- **Purpose**: Represent educational institutions that can both publish and consume threat intelligence
 
-#### Institution Users (Viewer)
-- **Role**: Standard users who can consume threat feeds but cannot create, remove, or edit users or institutions
-- **Purpose**: Security analysts and IT staff who need access to threat intelligence for consumption only
-- **Permissions**: Read-only access to authorized threat intelligence data and personal profile management
+#### Institution Users (Viewers)
+- **Role**: Users within client Institutions with viewing rights only
+- **Purpose**: Security analysts and IT staff who need access to threat intelligence but cannot publish
 
-### 2.2 Enhanced User Stories
+### 2.2 User Stories
 
 #### BlueVision ITM System Administrator Stories
-- As a BlueVisionAdmin, I want to create and manage users across all organizations so that I can maintain platform-wide user access control
-- As a BlueVisionAdmin, I want to register new client Institutions with automatic domain-based user assignment so that user management is streamlined
-- As a BlueVisionAdmin, I want to view and manage active sessions for all users across all organizations so that I can monitor security and force logout when necessary
-- As a BlueVisionAdmin, I want to access comprehensive audit logs for all authentication events so that I can track system usage and investigate security incidents
-- As a BlueVisionAdmin, I want to configure global security policies (password complexity, session timeouts, lockout policies) so that I can maintain consistent security standards
-- As a BlueVisionAdmin, I want to manage trust relationships between Institutions so that I can control data sharing permissions
-- As a BlueVisionAdmin, I want to unlock user accounts and force password resets across all organizations so that I can resolve security issues quickly
-- As a BlueVisionAdmin, I want to monitor system health and usage statistics so that I can ensure platform reliability and optimize performance
+- As a System Administrator, I want to register new client Institutions so that they can join the threat sharing community
+- As a System Administrator, I want to manage Institution accounts and their settings so that I can control platform access and configurations
+- As a System Administrator, I want to monitor system health and usage statistics so that I can ensure platform reliability and optimize performance
+- As a System Administrator, I want to configure global anonymization policies so that sensitive data is properly protected across all Institutions
+- As a System Administrator, I want to manage trust relationships between Institutions so that I can control data sharing permissions
+- As a System Administrator, I want to access comprehensive audit logs so that I can track system usage and investigate security incidents
 
 #### Institution Publisher (Client) Stories
-- As a Publisher, I want to create and manage users (viewer and publisher roles) within my organization so that I can control team access to threat intelligence
-- As a Publisher, I want to invite users to my organization via email with automatic role assignment so that onboarding is efficient and secure
-- As a Publisher, I want to view active sessions for users within my organization so that I can monitor security and manage access
-- As a Publisher, I want to access audit logs for users within my organization so that I can track authentication events and investigate issues
-- As a Publisher, I want to unlock accounts and force password resets for users in my organization so that I can resolve access problems
-- As a Publisher, I want to publish threat intelligence about attacks on my institution so that I can help protect other educational Institutions
-- As a Publisher, I want to configure what types of threats my Institution shares so that I can control our data sharing policies
-- As a Publisher, I want to set anonymization levels for different types of data so that I can protect sensitive institutional information
-- As a Publisher, I want to consume threat feeds from other Institutions so that I can stay informed about relevant threats
-- As a Publisher, I want to receive alerts about threats targeting educational institutions so that I can proactively defend my Institution
-- As a Publisher, I want to upload threat intelligence in bulk via CSV/JSON so that I can efficiently share large datasets
+- As an Institution Publisher, I want to publish threat intelligence about attacks on my institution so that I can help protect other educational Institutions
+- As an Institution Publisher, I want to add users from my Institution via email invitation so that my team can access relevant threat intelligence
+- As an Institution Publisher, I want to configure what types of threats my Institution shares so that I can control our data sharing policies
+- As an Institution Publisher, I want to set anonymization levels for different types of data so that I can protect sensitive institutional information
+- As an Institution Publisher, I want to consume threat feeds from other Institutions so that I can stay informed about relevant threats
+- As an Institution Publisher, I want to receive alerts about threats targeting educational institutions so that I can proactively defend my Institution
+- As an Institution Publisher, I want to manage my Institution's users and their permissions so that I can control who has access to what information
+- As an Institution Publisher, I want to upload threat intelligence in bulk via CSV/JSON so that I can efficiently share large datasets
 
 #### Institution User (Viewer) Stories
-- As a Viewer, I want to securely authenticate using multiple methods (standard login, 2FA, trusted devices) so that I can access the system securely
-- As a Viewer, I want to manage my trusted devices so that I can reduce authentication friction on known devices while maintaining security
-- As a Viewer, I want to view my own authentication logs and active sessions so that I can monitor my account security
-- As a Viewer, I want to update my profile information and change my password securely so that I can maintain my account
-- As a Viewer, I want to view threat intelligence relevant to my institution so that I can understand current threat landscape
-- As a Viewer, I want to receive real-time alerts about high-priority threats so that I can respond quickly to emerging risks
-- As a Viewer, I want to search and filter threat intelligence by type, date, and severity so that I can find relevant information quickly
-- As a Viewer, I want to export threat data for integration with our security tools so that I can enhance our defensive capabilities
-- As a Viewer, I want to view threat trends and analytics so that I can understand attack patterns targeting educational institutions
-- As a Viewer, I want to access threat intelligence via API so that I can integrate with existing security systems
+- As an Institution User, I want to view threat intelligence relevant to my institution so that I can understand current threat landscape
+- As an Institution User, I want to receive real-time alerts about high-priority threats so that I can respond quickly to emerging risks
+- As an Institution User, I want to search and filter threat intelligence by type, date, and severity so that I can find relevant information quickly
+- As an Institution User, I want to export threat data for integration with our security tools so that I can enhance our defensive capabilities
+- As an Institution User, I want to view threat trends and analytics so that I can understand attack patterns targeting educational institutions
+- As an Institution User, I want to access threat intelligence via API so that I can integrate with existing security systems
 
-#### Security and Compliance Stories
-- As a Security Officer, I want comprehensive audit trails for all user management activities so that I can ensure compliance with security policies
-- As a Compliance Manager, I want to export authentication logs and user data so that I can meet regulatory reporting requirements
-- As a System Integrator, I want RESTful APIs for all user management operations so that I can integrate with existing identity management systems
+#### External API User Stories
+- As an External System, I want to consume threat intelligence via TAXII-compliant endpoints so that I can integrate with existing security tools
+- As an External System, I want to authenticate securely via JWT tokens so that I can access authorized threat data programmatically
+- As an External System, I want to receive standardized STIX-formatted data so that I can easily process threat intelligence
 
 ---
 
 ## 3. Domain Model
 
 ### 3.1 UML Class Diagram
-![Domain Model](Domain%20Model%20Diagram/COS%20301%20CRISP%20Domain%20Model_2.png)
+![Domain Model](Domain%20Model%20Diagram/COS%20301%20CRISP%20Domain%20Model.png)
 
 ### 3.2 Core Domain Entities Description
-- **CustomUser**: Enhanced Django user model with organization association, security features, and multi-tenant capabilities
-- **Organization**: Multi-tenant organization management with domain-based user assignment and hierarchical access control
-- **UserSession**: Comprehensive session management with device tracking, trusted device support, and security monitoring
-- **AuthenticationLog**: Detailed audit logging for all authentication events including login attempts, password changes, and administrative actions
-- **TrustedDevice**: Device fingerprinting and trusted device management for enhanced security and user experience
-- **Institution**: Client institutions with publishing capabilities and user management (enhanced from original)
+- **User**: System users with different roles (Admin, Publisher, Viewer) and authentication details
+- **Institution**: Client institutions with publishing capabilities and user management
 - **ThreatIntelligence**: Core threat data including IoCs, TTPs, with anonymization metadata
 - **Feed**: External and internal threat intelligence sources and subscriptions
 - **Alert**: Notifications for high-priority threats with customizable criteria
 - **TrustRelationship**: Defines sharing permissions and anonymization levels between Institutions
 - **AnonymizationPolicy**: Rules for protecting sensitive data while preserving analytical value
-- **STIXObjectPermission**: Fine-grained permissions for threat intelligence objects based on user role and organization
 
 ---
 
 ## 4. Use Cases
 
 ### 4.1 Use Case Diagrams
-The following six essential use case diagrams illustrate the core functionality and interactions within the CRISP system:
+The following five essential use case diagrams illustrate the core functionality and interactions within the CRISP system:
 
 1. **System Overview** - High-level view of all major actors and primary use cases
 
 ![System Overview Use Case Diagram](Domain Model Diagram/COS 301 CRISP Domain Model.png)
 
-2. **Enhanced User and Institution Management** - Comprehensive user management with multi-tenant support
-
-![Enhanced User and Institution Management Use Case Diagram](Use%20Case%20Diagrams/U4%20-%20User%20and%20Institution%20Management.png)
-
-3. **Threat Intelligence Publication and Sharing** - Core value creation through threat data sharing
+2. **Threat Intelligence Publication and Sharing** - Core value creation through threat data sharing
 
 ![Threat Intelligence Publication and Sharing Use Case Diagram](Use%20Case%20Diagrams/U2%20-%20Threat%20Intelligence%20Publication%20and%20Sharing.png)
 
-4. **Threat Intelligence Consumption and Alerts** - Core value consumption and notification system
+3. **Threat Intelligence Consumption and Alerts** - Core value consumption and notification system
 
 ![Threat Intelligence Consumption and Alerts Use Case Diagram](Use%20Case%20Diagrams/U3%20-%20Threat%20Intelligence%20Consumption%20and%20Alerts.png)
+
+4. **User and Institution Management** - Foundation user and Institution administration
+
+![User and Institution Management Use Case Diagram](Use%20Case%20Diagrams/U4%20-%20User%20and%20Institution%20Management.png)
 
 5. **Data Validation and Quality Assurance** - Ensuring data integrity and STIX compliance
 
@@ -175,535 +151,188 @@ The following six essential use case diagrams illustrate the core functionality 
 
 ![Anonymization and Trust Management Use Case Diagram](Use%20Case%20Diagrams/Anon.png)
 
-### 4.2 Enhanced Use Case Relationships
+### 4.2 Use Case Relationships
 
 #### 4.2.1 Actor Relationships
-- **BlueVisionAdmin** has comprehensive access to all system functions across all organizations
-- **Publisher** inherits all Viewer capabilities plus user management within their organization and publishing rights
-- **Viewer** has read-only access to authorized threat intelligence and personal account management
+- **System Administrator** has administrative access to all system functions
+- **Institution Publisher** inherits Institution User capabilities plus publishing rights
+- **Institution User** has read-only access to authorized threat intelligence
 
 ### 4.3 Use Case Priorities
 
 #### 4.3.1 Critical Use Cases (Must Have)
-1. **Multi-Tenant User Authentication and Authorization** - Foundation for secure multi-organization access
-2. **Organization-Based User Management** - Essential for multi-tenant architecture
-3. **Comprehensive Session Management** - Critical for security and user experience
-4. **Threat Intelligence Publication** - Core value creation functionality
-5. **Threat Intelligence Consumption** - Core value consumption functionality
-6. **Data Validation and STIX Compliance** - Required for standards compliance
+1. **User Authentication and Authorization** - Foundation for all system access
+2. **Threat Intelligence Publication** - Core value creation functionality
+3. **Threat Intelligence Consumption** - Core value consumption functionality
+4. **Institution Management** - Essential for multi-tenant architecture
+5. **Data Validation and STIX Compliance** - Required for standards compliance
 
 #### 4.3.2 Important Use Cases (Should Have)
-1. **Advanced Authentication Strategies (2FA, Trusted Devices)** - Enhances security and user experience
-2. **Comprehensive Audit Trail Management** - Critical for compliance and security monitoring
-3. **Real-time Alert System** - Enhances threat response capabilities
-4. **Trust Relationship Management** - Enables controlled data sharing
-5. **Bulk Data Upload** - Improves operational efficiency
-6. **External Feed Integration** - Enriches threat intelligence sources
+1. **Real-time Alert System** - Enhances threat response capabilities
+2. **Trust Relationship Management** - Enables controlled data sharing
+3. **Bulk Data Upload** - Improves operational efficiency
+4. **External Feed Integration** - Enriches threat intelligence sources
+5. **Data Anonymization** - Protects sensitive Institutional information
 
 #### 4.3.3 Enhancement Use Cases (Could Have)
 1. **Advanced Analytics and Reporting** - Provides deeper threat insights
 2. **API Rate Limiting and Throttling** - Protects system resources
-3. **System Health Monitoring** - Improves operational visibility
-4. **Data Export Capabilities** - Supports integration requirements
-5. **Progressive Account Lockout** - Enhanced security features
+3. **Audit Trail Management** - Enhances security and compliance
+4. **System Health Monitoring** - Improves operational visibility
+5. **Data Export Capabilities** - Supports integration requirements
 
+### 4.4 Cross-Functional Use Cases
+
+#### 4.4.1 Security Use Cases
+- **Secure Authentication** - Multi-factor authentication for administrative accounts
+- **Data Encryption** - End-to-end encryption for sensitive threat intelligence
+- **Access Control** - Role-based permissions with principle of least privilege
+- **Audit Logging** - Comprehensive logging for security monitoring
+
+#### 4.4.2 Integration Use Cases
+- **STIX/TAXII Compliance** - Standards-based threat intelligence exchange
+- **External API Integration** - RESTful API for third-party tool integration
+- **Feed Syndication** - Automated consumption of external threat feeds
+- **Data Format Conversion** - Support for multiple import/export formats
+
+#### 4.4.3 Operational Use Cases
+- **System Monitoring** - Real-time system health and performance monitoring
+- **Backup and Recovery** - Automated data protection and disaster recovery
+- **Configuration Management** - Centralized system configuration and deployment
+- **Performance Optimization** - Query optimization and caching strategies
 ---
 
 ## 5. Functional Requirements
 
-### R1. Enhanced Authentication and User Management
+### R1. Authentication and User Management
 
-#### R1.1 Multi-Strategy Authentication
-- **R1.1.1** CRISP shall provide standard username and password authentication with comprehensive security checks
-- **R1.1.2** CRISP shall support Two-Factor Authentication (2FA) using TOTP codes for enhanced security
-- **R1.1.3** CRISP shall implement trusted device authentication that bypasses 2FA for recognized devices
-- **R1.1.4** CRISP shall perform device fingerprinting based on browser characteristics for device recognition
-- **R1.1.5** CRISP shall allow authentication strategy selection based on user preferences and security requirements
-- **R1.1.6** CRISP shall enforce password policies (minimum 8 characters, mixed case, numbers, special characters)
-- **R1.1.7** CRISP shall implement progressive account lockout (5 failed attempts within 15 minutes)
-- **R1.1.8** CRISP shall provide secure password reset functionality with time-limited tokens (1-hour expiration)
+#### R1.1 User Authentication
+- **R1.1.1** CRISP shall provide secure username and password authentication for all user types
+- **R1.1.2** CRISP shall enforce password policies (minimum 8 characters, mixed case, numbers, special characters)
+- **R1.1.3** CRISP shall provide password reset functionality via email verification
+- **R1.1.4** CRISP shall implement account lockout after 5 failed login attempts within 15 minutes
+- **R1.1.5** CRISP shall log all authentication activities for audit purposes
+- **R1.1.6** CRISP shall implement session timeout after 60 minutes of inactivity
 
-#### R1.2 JWT Token Management
-- **R1.2.1** CRISP shall generate secure JWT tokens with custom claims (role, organization, permissions)
-- **R1.2.2** CRISP shall implement access token and refresh token lifecycle management
-- **R1.2.3** CRISP shall handle token expiration with automatic refresh capability
-- **R1.2.4** CRISP shall support token revocation on logout or security events
-- **R1.2.5** CRISP shall track tokens in sessions for enhanced security monitoring
+#### R1.2 User Management
+- **R1.2.1** CRISP shall allow System Administrators to create and manage Institution accounts
+- **R1.2.2** CRISP shall allow Institution Publishers to invite users via email to their Institution
+- **R1.2.3** CRISP shall support three user roles: System Admin, Institution Publisher, Institution User
+- **R1.2.4** CRISP shall allow Institution Publishers to manage their Institution's user permissions
+- **R1.2.5** CRISP shall allow System Administrators to deactivate user accounts across all Institutions
 
-#### R1.3 Multi-Tenant User Management
-- **R1.3.1** CRISP shall support BlueVisionAdmin role with platform-wide access across all organizations
-- **R1.3.2** CRISP shall support Publisher role with user management capabilities within their organization
-- **R1.3.3** CRISP shall support Viewer role with read-only access to authorized threat intelligence
-- **R1.3.4** CRISP shall enable BlueVisionAdmins to create and manage users across all organizations
-- **R1.3.5** CRISP shall enable Publishers to create and manage users (viewer and publisher roles) within their organization
-- **R1.3.6** CRISP shall allow user invitation via email with automatic role assignment and organization association
-- **R1.3.7** CRISP shall support domain-based user assignment during registration process
-- **R1.3.8** CRISP shall implement soft delete for user accounts preserving historical data and audit trails
+#### R1.3 Institution Management
+- **R1.3.1** CRISP shall allow System Administrators to register new client Institutions
+- **R1.3.2** CRISP shall associate each Institution with a primary Institution Publisher account
+- **R1.3.3** CRISP shall allow Institutions to manage their profile information and settings
 
-#### R1.4 Organization Management
-- **R1.4.1** CRISP shall support multi-tenant organization structure with unique identifiers and email domains
-- **R1.4.2** CRISP shall enable automatic user assignment based on email domain during registration
-- **R1.4.3** CRISP shall implement organization-specific user management and permissions
-- **R1.4.4** CRISP shall support hierarchical access control based on organization membership
-- **R1.4.5** CRISP shall provide organization activation/deactivation capabilities for BlueVisionAdmins
+### R2. Threat Intelligence Publication
 
-#### R1.5 Role-Based Access Control
-- **R1.5.1** CRISP shall implement granular permission system with multiple permission classes
-- **R1.5.2** CRISP shall enforce BlueVisionAdmin permissions for platform-wide access and management
-- **R1.5.3** CRISP shall enforce Publisher permissions for user management within organization and threat intelligence creation
-- **R1.5.4** CRISP shall enforce Viewer permissions for threat intelligence consumption only
-- **R1.5.5** CRISP shall implement object-level permissions for STIX objects and feeds based on user role and organization
-- **R1.5.6** CRISP shall support permission inheritance and role-based restriction enforcement
+#### R2.1 Data Publication
+- **R2.1.1** CRISP shall support manual entry of threat intelligence through web forms by Institution Publishers
+- **R2.1.2** CRISP shall support bulk import via CSV and JSON file uploads for Institution Publishers
+- **R2.1.3** CRISP shall validate threat intelligence data for completeness, format, and STIX compliance
+- **R2.1.4** CRISP shall automatically tag threat intelligence with metadata (timestamp, source Institution, threat type)
+- **R2.1.5** CRISP shall require Institution Publishers to categorize threats by type (Malware, IP, Domain, Hash, Email, etc.)
 
-### R2. Comprehensive Session Management
+#### R2.2 Data Anonymization
+- **R2.2.1** CRISP shall mask IP addresses (e.g., 192.168.1.x becomes 192.168.1.XXX) in shared data
+- **R2.2.2** CRISP shall mask email addresses (e.g., user@domain.com becomes user@XXX.com) in shared data
+- **R2.2.3** CRISP shall remove or redact Institution-specific identifiers before sharing
+- **R2.2.4** CRISP shall apply configurable anonymization levels based on trust relationships
+- **R2.2.5** CRISP shall preserve the analytical value of threat intelligence after anonymization (95% effectiveness target)
+- **R2.2.6** CRISP shall allow Institution Publishers to preview anonymized data before publication
 
-#### R2.1 Session Tracking and Security
-- **R2.1.1** CRISP shall create tracked user sessions for every successful authentication
-- **R2.1.2** CRISP shall capture session data including device information, IP address, and activity timestamps
-- **R2.1.3** CRISP shall implement configurable session expiration based on timeout periods (default 60 minutes)
-- **R2.1.4** CRISP shall support active session monitoring with last activity tracking
-- **R2.1.5** CRISP shall enable multi-device session support with individual session management
-- **R2.1.6** CRISP shall implement automatic session cleanup for expired sessions
+#### R2.3 Intelligence Distribution
+- **R2.3.1** CRISP shall export threat intelligence in STIX 2.1 format for standards compliance
+- **R2.3.2** CRISP shall provide TAXII 2.1 compliant API endpoints for threat sharing
+- **R2.3.3** CRISP shall support selective sharing based on trust relationships between Institutions
+- **R2.3.4** CRISP shall notify subscribed Institutions when new relevant intelligence is published
 
-#### R2.2 Session Administrative Controls
-- **R2.2.1** CRISP shall enable BlueVisionAdmins to view active sessions for all users across all organizations
-- **R2.2.2** CRISP shall enable Publishers to view active sessions for users within their organization
-- **R2.2.3** CRISP shall provide force logout capability for BlueVisionAdmins and Publishers (within their organization)
-- **R2.2.4** CRISP shall support session filtering and search by user, IP address, or device
-- **R2.2.5** CRISP shall enable bulk session termination for security incidents
+### R3. Threat Feed Consumption
 
-#### R2.3 Trusted Device Management
-- **R2.3.1** CRISP shall allow users to mark devices as trusted to reduce authentication friction
-- **R2.3.2** CRISP shall bypass 2FA requirements for trusted devices
-- **R2.3.3** CRISP shall enable device trust revocation by users or administrators
-- **R2.3.4** CRISP shall implement automatic device trust expiration (configurable duration)
-- **R2.3.5** CRISP shall maintain audit logging for all trusted device operations
+#### R3.1 External Feed Integration
+- **R3.1.1** CRISP shall consume STIX/TAXII feeds from external threat intelligence sources
+- **R3.1.2** CRISP shall validate incoming threat data for format compliance and authenticity
+- **R3.1.3** CRISP shall normalize external data to internal schema for consistent processing
+- **R3.1.4** CRISP shall support automated polling of external feeds at configurable intervals
 
-### R3. Audit and Compliance Management
+#### R3.2 Data Processing
+- **R3.2.1** CRISP shall categorize threat data by type (Malware, IP, Domain, Hash, Email, etc.)
+- **R3.2.2** CRISP shall tag threat data with education sector relevance indicators
+- **R3.2.3** CRISP shall detect and handle duplicate threat intelligence entries across sources
+- **R3.2.4** CRISP shall maintain version history of threat intelligence updates
 
-#### R3.1 Comprehensive Authentication Logging
-- **R3.1.1** CRISP shall log all authentication events with detailed information including timestamp, user, IP address, user agent, and result
-- **R3.1.2** CRISP shall log login success/failure events with specific failure reasons
-- **R3.1.3** CRISP shall log password changes and reset activities
-- **R3.1.4** CRISP shall log account locks/unlocks and administrative actions
-- **R3.1.5** CRISP shall log session creation/termination events
-- **R3.1.6** CRISP shall log user creation, updates, and deletion activities
-- **R3.1.7** CRISP shall log trusted device additions/removals
+#### R3.3 Alerting System
+- **R3.3.1** CRISP shall generate alerts for high-priority threat intelligence based on configurable criteria
+- **R3.3.2** CRISP shall support customizable alert thresholds per Institution and threat type
+- **R3.3.3** CRISP shall deliver alerts via email and web interface notifications
+- **R3.3.4** CRISP shall allow users to subscribe to specific threat categories, sources, or severity levels
+- **R3.3.5** CRISP shall generate alerts within 60 seconds of triggering conditions
 
-#### R3.2 Audit Trail Management
-- **R3.2.1** CRISP shall preserve authentication logs even after user deletion
-- **R3.2.2** CRISP shall provide searchable and filterable audit logs with pagination
-- **R3.2.3** CRISP shall support date range filtering for compliance reporting
-- **R3.2.4** CRISP shall enable audit log export capabilities for external audit systems
-- **R3.2.5** CRISP shall implement configurable log retention policies (minimum 12 months)
+### R4. Trust Relationship Management
 
-#### R3.3 Administrative Audit Views
-- **R3.3.1** CRISP shall enable BlueVisionAdmins to view all audit logs across all organizations
-- **R3.3.2** CRISP shall enable Publishers to view audit logs for users within their organization
-- **R3.3.3** CRISP shall enable Viewers to view their own authentication logs only
-- **R3.3.4** CRISP shall support filtering by user, action type, success/failure, IP address, and date range
-- **R3.3.5** CRISP shall provide real-time monitoring capabilities for security events
+#### R4.1 Trust Configuration
+- **R4.1.1** CRISP shall support three trust levels: Public, Trusted, Restricted
+- **R4.1.2** CRISP shall allow System Administrators to configure Institution trust relationships
+- **R4.1.3** CRISP shall support community groups for multi-Institution trust relationships
+- **R4.1.4** CRISP shall enable bilateral trust agreements between Institutions
 
-### R4. Threat Intelligence Publication (Enhanced)
+#### R4.2 Access Control
+- **R4.2.1** CRISP shall filter shared intelligence based on established trust relationships
+- **R4.2.2** CRISP shall apply appropriate anonymization levels based on trust level
+- **R4.2.3** CRISP shall log all access to shared intelligence for audit purposes
+- **R4.2.4** CRISP shall support immediate trust relationship revocation with effect on data sharing
 
-#### R4.1 Data Publication
-- **R4.1.1** CRISP shall support manual entry of threat intelligence through web forms by Publishers
-- **R4.1.2** CRISP shall support bulk import via CSV and JSON file uploads for Publishers
-- **R4.1.3** CRISP shall validate threat intelligence data for completeness, format, and STIX compliance
-- **R4.1.4** CRISP shall automatically tag threat intelligence with metadata (timestamp, source Institution, threat type)
-- **R4.1.5** CRISP shall require Publishers to categorize threats by type (Malware, IP, Domain, Hash, Email, etc.)
-- **R4.1.6** CRISP shall implement organization-based access control for threat intelligence publishing
+### R5. System Administration
 
-#### R4.2 Data Anonymization
-- **R4.2.1** CRISP shall mask IP addresses (e.g., 192.168.1.x becomes 192.168.1.XXX) in shared data
-- **R4.2.2** CRISP shall mask email addresses (e.g., user@domain.com becomes user@XXX.com) in shared data
-- **R4.2.3** CRISP shall remove or redact Institution-specific identifiers before sharing
-- **R4.2.4** CRISP shall apply configurable anonymization levels based on trust relationships
-- **R4.2.5** CRISP shall preserve the analytical value of threat intelligence after anonymization (95% effectiveness target)
-- **R4.2.6** CRISP shall allow Publishers to preview anonymized data before publication
+#### R5.1 Monitoring and Statistics
+- **R5.1.1** CRISP shall provide system health monitoring dashboard for administrators
+- **R5.1.2** CRISP shall generate usage reports (users, Institutions, data volume, API calls)
+- **R5.1.3** CRISP shall implement API rate limiting (100 requests/minute per user)
+- **R5.1.4** CRISP shall maintain comprehensive audit logs for 12 months
+- **R5.1.5** CRISP shall provide real-time system performance metrics
 
-#### R4.3 Intelligence Distribution
-- **R4.3.1** CRISP shall export threat intelligence in STIX 2.1 format for standards compliance
-- **R4.3.2** CRISP shall provide TAXII 2.1 compliant API endpoints for threat sharing
-- **R4.3.3** CRISP shall support selective sharing based on trust relationships between Institutions
-- **R4.3.4** CRISP shall notify subscribed Institutions when new relevant intelligence is published
-
-### R5. Threat Feed Consumption (Enhanced with Access Control)
-
-#### R5.1 External Feed Integration
-- **R5.1.1** CRISP shall consume STIX/TAXII feeds from external threat intelligence sources
-- **R5.1.2** CRISP shall validate incoming threat data for format compliance and authenticity
-- **R5.1.3** CRISP shall normalize external data to internal schema for consistent processing
-- **R5.1.4** CRISP shall support automated polling of external feeds at configurable intervals
-- **R5.1.5** CRISP shall implement organization-based access control for feed consumption
-
-#### R5.2 Data Processing
-- **R5.2.1** CRISP shall categorize threat data by type (Malware, IP, Domain, Hash, Email, etc.)
-- **R5.2.2** CRISP shall tag threat data with education sector relevance indicators
-- **R5.2.3** CRISP shall detect and handle duplicate threat intelligence entries across sources
-- **R5.2.4** CRISP shall maintain version history of threat intelligence updates
-- **R5.2.5** CRISP shall apply organization-specific filtering and access controls
-
-#### R5.3 Alerting System
-- **R5.3.1** CRISP shall generate alerts for high-priority threat intelligence based on configurable criteria
-- **R5.3.2** CRISP shall support customizable alert thresholds per Institution and threat type
-- **R5.3.3** CRISP shall deliver alerts via email and web interface notifications
-- **R5.3.4** CRISP shall allow users to subscribe to specific threat categories, sources, or severity levels
-- **R5.3.5** CRISP shall generate alerts within 60 seconds of triggering conditions
-- **R5.3.6** CRISP shall implement role-based alert distribution and access control
-
-### R6. Trust Relationship Management (Enhanced)
-
-#### R6.1 Trust Configuration
-- **R6.1.1** CRISP shall support three trust levels: Public, Trusted, Restricted
-- **R6.1.2** CRISP shall allow BlueVisionAdmins to configure Institution trust relationships
-- **R6.1.3** CRISP shall support community groups for multi-Institution trust relationships
-- **R6.1.4** CRISP shall enable bilateral trust agreements between Institutions
-- **R6.1.5** CRISP shall implement organization-specific trust relationship management
-
-#### R6.2 Access Control
-- **R6.2.1** CRISP shall filter shared intelligence based on established trust relationships
-- **R6.2.2** CRISP shall apply appropriate anonymization levels based on trust level
-- **R6.2.3** CRISP shall log all access to shared intelligence for audit purposes
-- **R6.2.4** CRISP shall support immediate trust relationship revocation with effect on data sharing
-- **R6.2.5** CRISP shall implement granular access control based on user roles and organization membership
-
-### R7. Enhanced System Administration
-
-#### R7.1 User Administrative Functions
-- **R7.1.1** CRISP shall provide comprehensive user management interface with filtering, searching, and pagination
-- **R7.1.2** CRISP shall enable user creation with role assignment and organization selection
-- **R7.1.3** CRISP shall support user information updates including roles and permissions
-- **R7.1.4** CRISP shall implement soft delete for users while preserving audit data
-- **R7.1.5** CRISP shall provide bulk operations for user management tasks
-- **R7.1.6** CRISP shall enable account unlock functionality for locked users
-- **R7.1.7** CRISP shall support force password reset for security incidents
-
-#### R7.2 Monitoring and Statistics
-- **R7.2.1** CRISP shall provide system health monitoring dashboard for administrators
-- **R7.2.2** CRISP shall generate usage reports (users, Institutions, data volume, API calls)
-- **R7.2.3** CRISP shall implement API rate limiting (100 requests/minute per user)
-- **R7.2.4** CRISP shall maintain comprehensive audit logs for 12 months minimum
-- **R7.2.5** CRISP shall provide real-time system performance metrics
-- **R7.2.6** CRISP shall implement organization-specific monitoring and reporting
-
-#### R7.3 System Management
-- **R7.3.1** CRISP shall support Docker containerized deployment for easy installation
-- **R7.3.2** CRISP shall provide automated database backup and restore functionality
-- **R7.3.3** CRISP shall support configuration via environment variables
-- **R7.3.4** CRISP shall include system health check endpoints for monitoring
-- **R7.3.5** CRISP shall provide Django management commands for administrative tasks
+#### R5.2 System Management
+- **R5.2.1** CRISP shall support Docker containerized deployment for easy installation
+- **R5.2.2** CRISP shall provide automated database backup and restore functionality
+- **R5.2.3** CRISP shall support configuration via environment variables
+- **R5.2.4** CRISP shall include system health check endpoints for monitoring
 
 ---
 
 ## 6. Service Contracts
 
-### 6.1 Enhanced REST API Contracts
+### 6.1 REST API Contracts
 
 #### 6.1.1 Authentication Service
 ```
 POST /api/auth/login
 Request: { 
   "username": string, 
-  "password": string,
-  "totp_code": string (optional),
-  "device_fingerprint": string (optional)
+  "password": string 
 }
 Response: { 
-  "access_token": string,
-  "refresh_token": string,
+  "token": string, 
   "user": {
     "id": string,
     "username": string,
-    "email": string,
     "role": string,
-    "organization_id": string,
-    "organization_name": string,
-    "requires_2fa": boolean,
-    "trusted_device": boolean
+    "Institution_id": string
   },
-  "expires_in": number,
-  "session_id": string
+  "expires_in": number
 }
 Error Response: {
   "error": string,
-  "message": string,
-  "requires_2fa": boolean (optional),
-  "account_locked": boolean (optional),
-  "lockout_duration": number (optional)
-}
-
-POST /api/auth/refresh
-Request: {
-  "refresh_token": string
-}
-Response: {
-  "access_token": string,
-  "expires_in": number
-}
-
-POST /api/auth/logout
-Request: {
-  "refresh_token": string,
-  "session_id": string (optional)
-}
-Response: {
-  "status": "logged_out"
-}
-
-POST /api/auth/password-reset
-Request: {
-  "email": string
-}
-Response: {
-  "status": "reset_email_sent"
-}
-
-POST /api/auth/password-reset/confirm
-Request: {
-  "token": string,
-  "new_password": string
-}
-Response: {
-  "status": "password_reset_complete"
+  "message": string
 }
 ```
 
-#### 6.1.2 Enhanced User Management Service
+#### 6.1.2 Institution Management Service
 ```
-GET /api/users/
-Query Parameters: {
-  "organization_id": string (optional, admin only),
-  "role": string (optional),
-  "active": boolean (optional),
-  "search": string (optional),
-  "page": number (optional),
-  "page_size": number (optional)
-}
-Response: {
-  "users": [
-    {
-      "id": string,
-      "username": string,
-      "email": string,
-      "role": string,
-      "organization_id": string,
-      "organization_name": string,
-      "is_active": boolean,
-      "last_login": datetime,
-      "created_at": datetime,
-      "verified": boolean
-    }
-  ],
-  "pagination": {
-    "total": number,
-    "page": number,
-    "page_size": number,
-    "total_pages": number
-  }
-}
-
-POST /api/users/
-Request: {
-  "username": string,
-  "email": string,
-  "password": string (optional, auto-generated if not provided),
-  "role": string,
-  "organization_id": string,
-  "send_invitation": boolean
-}
-Response: {
-  "id": string,
-  "username": string,
-  "email": string,
-  "role": string,
-  "organization_id": string,
-  "generated_password": string (if auto-generated),
-  "status": "created"
-}
-
-PUT /api/users/{id}/
-Request: {
-  "username": string (optional),
-  "email": string (optional),
-  "role": string (optional),
-  "is_active": boolean (optional)
-}
-Response: {
-  "id": string,
-  "status": "updated",
-  "changes": [string]
-}
-
-POST /api/users/{id}/unlock
-Response: {
-  "status": "account_unlocked",
-  "user_id": string
-}
-
-POST /api/users/{id}/force-password-reset
-Response: {
-  "status": "password_reset_forced",
-  "reset_token": string
-}
-
-DELETE /api/users/{id}/
-Response: {
-  "status": "user_deactivated",
-  "user_id": string
-}
-```
-
-#### 6.1.3 Session Management Service
-```
-GET /api/sessions/
-Query Parameters: {
-  "user_id": string (optional),
-  "organization_id": string (optional, admin only),
-  "active": boolean (optional),
-  "page": number (optional)
-}
-Response: {
-  "sessions": [
-    {
-      "id": string,
-      "user_id": string,
-      "username": string,
-      "device_fingerprint": string,
-      "ip_address": string,
-      "user_agent": string,
-      "created_at": datetime,
-      "last_activity": datetime,
-      "is_trusted_device": boolean,
-      "is_active": boolean
-    }
-  ],
-  "pagination": PaginationObject
-}
-
-DELETE /api/sessions/{id}/
-Response: {
-  "status": "session_terminated",
-  "session_id": string
-}
-
-POST /api/sessions/bulk-terminate
-Request: {
-  "user_id": string (optional),
-  "organization_id": string (optional),
-  "exclude_current": boolean
-}
-Response: {
-  "status": "sessions_terminated",
-  "terminated_count": number
-}
-
-GET /api/sessions/current
-Response: {
-  "session": SessionObject,
-  "user": UserObject
-}
-```
-
-#### 6.1.4 Trusted Device Management Service
-```
-GET /api/trusted-devices/
-Response: {
-  "devices": [
-    {
-      "id": string,
-      "device_fingerprint": string,
-      "device_name": string,
-      "created_at": datetime,
-      "last_used": datetime,
-      "is_current": boolean
-    }
-  ]
-}
-
-POST /api/trusted-devices/
-Request: {
-  "device_fingerprint": string,
-  "device_name": string
-}
-Response: {
-  "id": string,
-  "status": "device_trusted"
-}
-
-DELETE /api/trusted-devices/{id}/
-Response: {
-  "status": "device_trust_revoked",
-  "device_id": string
-}
-```
-
-#### 6.1.5 Audit Log Service
-```
-GET /api/audit/authentication/
-Query Parameters: {
-  "user_id": string (optional),
-  "organization_id": string (optional, admin only),
-  "action": string (optional),
-  "success": boolean (optional),
-  "date_from": date (optional),
-  "date_to": date (optional),
-  "ip_address": string (optional),
-  "page": number (optional)
-}
-Response: {
-  "logs": [
-    {
-      "id": string,
-      "user_id": string,
-      "username": string,
-      "action": string,
-      "success": boolean,
-      "ip_address": string,
-      "user_agent": string,
-      "timestamp": datetime,
-      "details": object,
-      "organization_id": string
-    }
-  ],
-  "pagination": PaginationObject
-}
-
-GET /api/audit/export/
-Query Parameters: {
-  "format": "csv" | "json",
-  "date_from": date,
-  "date_to": date,
-  "organization_id": string (optional)
-}
-Response: File download or {
-  "download_url": string,
-  "expires_at": datetime
-}
-```
-
-#### 6.1.6 Organization Management Service
-```
-GET /api/organizations/
-Response: {
-  "organizations": [
-    {
-      "id": string,
-      "name": string,
-      "domain": string,
-      "contact_email": string,
-      "institution_type": string,
-      "is_active": boolean,
-      "created_at": datetime,
-      "user_count": number
-    }
-  ]
-}
-
-POST /api/organizations/
+POST /api/Institutions/
 Request: {
   "name": string,
-  "domain": string,
   "contact_email": string,
   "institution_type": string,
   "publisher_user": {
@@ -715,29 +344,34 @@ Request: {
 Response: {
   "id": string,
   "name": string,
-  "publisher_user_id": string,
   "status": "created"
 }
 
-GET /api/organizations/{id}/users/
+GET /api/Institutions/{id}/users/
 Response: {
-  "users": [UserObject],
-  "pagination": PaginationObject
+  "users": [
+    {
+      "id": string,
+      "username": string,
+      "email": string,
+      "role": string,
+      "created_at": datetime
+    }
+  ]
 }
 
-POST /api/organizations/{id}/invite-user/
+POST /api/Institutions/{id}/users/invite/
 Request: {
   "email": string,
-  "role": "viewer" | "publisher"
+  "role": "viewer"
 }
 Response: {
   "status": "invitation_sent",
-  "invitation_id": string,
   "email": string
 }
 ```
 
-#### 6.1.7 Enhanced Threat Intelligence Service
+#### 6.1.3 Threat Intelligence Service
 ```
 GET /api/threats/
 Query Parameters: {
@@ -745,14 +379,16 @@ Query Parameters: {
   "severity": string (optional),
   "date_from": date (optional),
   "date_to": date (optional),
-  "organization_id": string (optional),
   "limit": number (optional),
   "offset": number (optional)
 }
 Response: {
   "threats": [ThreatIntelligenceObject],
-  "pagination": PaginationObject,
-  "access_level": string
+  "pagination": {
+    "total": number,
+    "limit": number,
+    "offset": number
+  }
 }
 
 POST /api/threats/
@@ -762,40 +398,73 @@ Request: {
   "description": string,
   "severity": string,
   "ttps": [string],
-  "anonymization_level": string,
-  "sharing_policy": object
+  "anonymization_level": string
 }
 Response: {
   "id": string,
   "status": "created",
   "anonymized_preview": ThreatIntelligenceObject
 }
+
+POST /api/threats/bulk-upload/
+Request: multipart/form-data with file (CSV/JSON)
+Response: {
+  "processed": number,
+  "created": number,
+  "errors": [string]
+}
 ```
 
-### 6.2 TAXII 2.1 API Contracts (Enhanced with Authentication)
+#### 6.1.4 Alert Service
+```
+GET /api/alerts/
+Response: {
+  "alerts": [
+    {
+      "id": string,
+      "threat_id": string,
+      "severity": string,
+      "message": string,
+      "created_at": datetime,
+      "read": boolean
+    }
+  ]
+}
+
+POST /api/alerts/subscribe/
+Request: {
+  "threat_types": [string],
+  "severity_levels": [string],
+  "notification_methods": [string]
+}
+Response: {
+  "subscription_id": string,
+  "status": "created"
+}
+
+PUT /api/alerts/{id}/read/
+Response: {
+  "status": "marked_as_read"
+}
+```
+
+### 6.2 TAXII 2.1 API Contracts
 
 #### 6.2.1 Discovery Service
 ```
 GET /taxii2/
-Headers: {
-  "Authorization": "Bearer {jwt_token}"
-}
 Response: {
   "title": "CRISP TAXII 2.1 Server",
   "description": "Cyber Risk Information Sharing Platform",
   "contact": string,
   "default": "/taxii2/collections/",
-  "api_roots": ["/taxii2/"],
-  "x-organization-access": [string]
+  "api_roots": ["/taxii2/"]
 }
 ```
 
 #### 6.2.2 Collections Service
 ```
 GET /taxii2/collections/
-Headers: {
-  "Authorization": "Bearer {jwt_token}"
-}
 Response: {
   "collections": [
     {
@@ -804,83 +473,59 @@ Response: {
       "description": string,
       "can_read": boolean,
       "can_write": boolean,
-      "media_types": ["application/stix+json;version=2.1"],
-      "x-organization-scope": string,
-      "x-trust-level": string
+      "media_types": ["application/stix+json;version=2.1"]
     }
   ]
 }
-```
 
-### 6.3 Enhanced Internal Service Interfaces
-
-#### 6.3.1 AuthenticationService
-```
-interface AuthenticationService {
-  authenticate(credentials: AuthCredentials, strategy: AuthStrategy): AuthResult
-  generateTokens(user: User, session: Session): TokenPair
-  validateToken(token: string): ValidationResult
-  refreshToken(refreshToken: string): TokenPair
-  revokeToken(token: string): boolean
-  logAuthenticationEvent(event: AuthEvent): void
+GET /taxii2/collections/{id}/objects/
+Query Parameters: {
+  "added_after": datetime (optional),
+  "limit": number (optional),
+  "match[type]": string (optional)
+}
+Response: {
+  "more": boolean,
+  "next": string (optional),
+  "objects": [STIX2.1Objects]
 }
 ```
 
-#### 6.3.2 UserService
+### 6.3 Internal Service Interfaces
+
+#### 6.3.1 AnonymizationService
 ```
-interface UserService {
-  createUser(userData: UserData, createdBy: User): User
-  updateUser(userId: string, updates: UserUpdates, updatedBy: User): User
-  deactivateUser(userId: string, deactivatedBy: User): boolean
-  inviteUser(email: string, role: string, organizationId: string): Invitation
-  unlockAccount(userId: string, unlockedBy: User): boolean
-  forcePasswordReset(userId: string, forcedBy: User): string
-  getUsersByOrganization(organizationId: string, filters: UserFilters): User[]
+interface AnonymizationService {
+  anonymize(data: ThreatData, level: AnonymizationLevel): AnonymizedThreatData
+  preview(data: ThreatData, level: AnonymizationLevel): AnonymizedThreatData
+  validateEffectiveness(original: ThreatData, anonymized: AnonymizedThreatData): number
 }
 ```
 
-#### 6.3.3 SessionService
+#### 6.3.2 TrustService
 ```
-interface SessionService {
-  createSession(user: User, deviceInfo: DeviceInfo): Session
-  getActiveSessions(userId: string): Session[]
-  terminateSession(sessionId: string, terminatedBy: User): boolean
-  bulkTerminateSessions(criteria: SessionCriteria): number
-  updateSessionActivity(sessionId: string): void
-  cleanupExpiredSessions(): number
+interface TrustService {
+  evaluateAccess(requesting_org: string, target_org: string, data_type: string): AccessLevel
+  getAnonymizationLevel(trust_relationship: TrustLevel): AnonymizationLevel
+  updateTrustRelationship(org1: string, org2: string, level: TrustLevel): boolean
 }
 ```
 
-#### 6.3.4 TrustedDeviceService
+#### 6.3.3 AlertService
 ```
-interface TrustedDeviceService {
-  trustDevice(userId: string, deviceFingerprint: string, deviceName: string): TrustedDevice
-  isDeviceTrusted(userId: string, deviceFingerprint: string): boolean
-  revokeTrustedDevice(deviceId: string, revokedBy: User): boolean
-  getUserTrustedDevices(userId: string): TrustedDevice[]
-  cleanupExpiredTrustedDevices(): number
+interface AlertService {
+  generateAlert(threat: ThreatIntelligence, criteria: AlertCriteria): Alert
+  notifySubscribers(alert: Alert): void
+  manageSubscription(user_id: string, subscription: AlertSubscription): boolean
 }
 ```
 
-#### 6.3.5 AuditService
+#### 6.3.4 FeedService
 ```
-interface AuditService {
-  logAuthenticationEvent(event: AuthEvent): void
-  logUserManagementEvent(event: UserEvent): void
-  logSessionEvent(event: SessionEvent): void
-  getAuditLogs(filters: AuditFilters): AuditLog[]
-  exportAuditLogs(filters: AuditFilters, format: string): ExportResult
-}
-```
-
-#### 6.3.6 OrganizationService
-```
-interface OrganizationService {
-  createOrganization(orgData: OrganizationData): Organization
-  getUserOrganization(userId: string): Organization
-  getOrganizationUsers(organizationId: string): User[]
-  assignUserToOrganization(userId: string, organizationId: string): boolean
-  canUserAccessOrganization(userId: string, organizationId: string): boolean
+interface FeedService {
+  consumeFeed(feed_url: string, format: string): ThreatIntelligence[]
+  normalizeFeedData(external_data: any, source_format: string): ThreatIntelligence
+  validateFeedData(data: ThreatIntelligence): ValidationResult
 }
 ```
 
@@ -888,313 +533,226 @@ interface OrganizationService {
 
 ## 7. Architectural Requirements
 
-### 7.1 Enhanced Quality Requirements
+### 7.1 Quality Requirements
 
 #### 7.1.1 Performance Requirements
-- **P1.1** Authentication API endpoints shall respond within 1 second for 95% of requests under normal load
-- **P1.2** User management operations shall complete within 2 seconds for 95% of requests
-- **P1.3** Session lookup and validation shall complete within 500ms for all requests
-- **P1.4** Web pages shall load within 3 seconds for standard broadband connections
-- **P1.5** Threat feed processing shall handle up to 1,000 IoCs per minute
-- **P1.6** Real-time alerts shall be generated and delivered within 60 seconds of triggering conditions
-- **P1.7** System shall support 100 concurrent users without performance degradation
-- **P1.8** Authentication logs and audit queries shall support pagination for 100,000+ records
-- **P1.9** Bulk user operations shall process 50 users per second
-- **P1.10** Data anonymization shall process 100 threat records per second
+- **P1.1** API endpoints shall respond within 2 seconds for 95% of requests under normal load
+- **P1.2** Web pages shall load within 3 seconds for standard broadband connections
+- **P1.3** Threat feed processing shall handle up to 1,000 IoCs per minute
+- **P1.4** Real-time alerts shall be generated and delivered within 60 seconds of triggering conditions
+- **P1.5** System shall support 20 concurrent users without performance degradation
+- **P1.6** Bulk threat intelligence uploads shall process 100 records per second
+- **P1.7** Data anonymization shall process 100 threat records per second
 
-#### 7.1.2 Enhanced Security Requirements
-- **SEC1.1** All user sessions shall timeout after 60 minutes of inactivity (configurable)
-- **SEC1.2** Two-factor authentication shall be available for all user accounts
-- **SEC1.3** Trusted device management shall reduce authentication friction while maintaining security
-- **SEC1.4** Progressive account lockout shall protect against brute force attacks
-- **SEC1.5** JWT tokens shall expire within 24 hours with secure refresh capability
-- **SEC1.6** Role-based access control with principle of least privilege enforcement
-- **SEC1.7** Multi-tenant data isolation with organization-based access controls
-- **SEC1.8** All data in transit encrypted using TLS 1.2 or higher
-- **SEC1.9** Sensitive data at rest encrypted using AES-256 encryption
-- **SEC1.10** Password storage using bcrypt with minimum 12 rounds
-- **SEC1.11** Comprehensive audit logs retained for 12 months with tamper-proof storage
-- **SEC1.12** Input validation and sanitization for all user inputs to prevent injection attacks
-- **SEC1.13** CSRF protection implemented for all state-changing operations
-- **SEC1.14** Device fingerprinting shall not expose personally identifiable information
-- **SEC1.15** API rate limiting per user and per organization to prevent abuse
+#### 7.1.2 Reliability Requirements
+- **R1.1** System uptime target of 99% (approximately 7 hours downtime per month)
+- **R1.2** Planned maintenance windows not to exceed 4 hours per month
+- **R1.3** System recovery time objective (RTO) of 30 minutes for critical failures
+- **R1.4** Data recovery point objective (RPO) of 4 hours for database recovery
+- **R1.5** System shall gracefully handle invalid input data without crashing
+- **R1.6** System shall provide meaningful error messages to users for all failure scenarios
+- **R1.7** System shall automatically retry failed external API calls (maximum 3 attempts with exponential backoff)
 
 #### 7.1.3 Scalability Requirements
-- **S1.1** Architecture shall support scaling from 5 to 100 client organizations
-- **S1.2** User management shall handle growth from 50 to 10,000 users
-- **S1.3** Session management shall support 1,000 concurrent active sessions
-- **S1.4** Database shall handle growth from 100MB to 50GB including audit logs
-- **S1.5** System shall support horizontal scaling with load balancer for increased user load
-- **S1.6** API shall support rate limiting and throttling per organization
-- **S1.7** Audit log storage shall support efficient archival and retrieval
+- **S1.1** Architecture shall support scaling from 5 to 50 client Institutions
+- **S1.2** Database shall handle growth from 100MB to 10GB of threat intelligence data
+- **S1.3** System shall support horizontal scaling with load balancer for increased user load
+- **S1.4** API shall support rate limiting and throttling to prevent abuse
+- **S1.5** System shall support distributed deployment across multiple CRISP instances
 
-#### 7.1.4 Reliability Requirements
-- **R1.1** System uptime target of 99.5% (approximately 3.5 hours downtime per month)
-- **R1.2** Authentication service availability of 99.9% (critical for system access)
-- **R1.3** User session data recovery point objective (RPO) of 1 hour
-- **R1.4** System recovery time objective (RTO) of 15 minutes for authentication services
-- **R1.5** Audit log integrity shall be maintained even during system failures
-- **R1.6** Session cleanup shall be resilient to system interruptions
-- **R1.7** Token refresh shall handle network interruptions gracefully
+#### 7.1.4 Security Requirements
+- **SEC1.1** All user sessions shall timeout after 60 minutes of inactivity
+- **SEC1.2** Administrative accounts should implement two-factor authentication capability
+- **SEC1.3** API authentication via JWT tokens with 24-hour expiration and refresh capability
+- **SEC1.4** Role-based access control with principle of least privilege enforcement
+- **SEC1.5** All data in transit encrypted using TLS 1.2 or higher
+- **SEC1.6** Sensitive data at rest encrypted using AES-256 encryption
+- **SEC1.7** Data anonymization effectiveness target of 95% (analytical value preserved)
+- **SEC1.8** Comprehensive audit logs retained for 12 months with tamper-proof storage
+- **SEC1.9** Input validation and sanitization for all user inputs to prevent injection attacks
+- **SEC1.10** CSRF protection implemented for all state-changing operations
 
 #### 7.1.5 Usability Requirements
-- **U1.1** New user onboarding completable within 10 minutes including account setup
-- **U1.2** Authentication process shall complete within 3 clicks for trusted devices
-- **U1.3** User management tasks achievable within 5 clicks from dashboard
-- **U1.4** Mobile-responsive design supporting tablets and smartphones (viewport ≥ 768px)
-- **U1.5** Context-sensitive help available for all user management functions
-- **U1.6** Clear feedback for all authentication and user management actions within 1 second
-- **U1.7** Multi-language support for authentication interface (English, Spanish, French)
+- **U1.1** Web interface compatible with Chrome, Firefox, Safari, Edge (latest 2 versions)
+- **U1.2** Mobile-responsive design supporting tablets and smartphones (viewport ≥ 768px)
+- **U1.3** New Institution Publisher onboarding completable within 2 hours including user setup
+- **U1.4** Common threat intelligence tasks achievable within 5 clicks from dashboard
+- **U1.5** Context-sensitive help and documentation available throughout interface
+- **U1.6** System shall provide clear feedback for all user actions within 1 second
 
-#### 7.1.6 Enhanced Compliance Requirements
-- **C1.1** Full GDPR compliance for user data processing and retention
-- **C1.2** SOC 2 Type II compliance for security controls
-- **C1.3** Complete audit trail for all user data access and modifications
-- **C1.4** Data export capabilities for regulatory compliance
-- **C1.5** Data anonymization capabilities for privacy protection
-- **C1.6** User consent management for data processing
-- **C1.7** Right to erasure implementation for user data deletion
+#### 7.1.6 Compliance Requirements
+- **C1.1** Full STIX 2.1 specification compliance for threat intelligence format and structure
+- **C1.2** Complete TAXII 2.1 specification compliance for threat intelligence sharing protocols
+- **C1.3** RESTful API design following OpenAPI 3.0 specification with comprehensive documentation
+- **C1.4** Support for data export in JSON, CSV, and STIX formats for interoperability
 
-### 7.2 Enhanced Architectural Patterns
+### 7.2 Architectural Patterns
 
 #### 7.2.1 Primary Architectural Patterns
-- **Multi-Tenant Architecture**: Complete data and user isolation per organization with shared infrastructure
 - **Three-Tier Architecture**: Clear separation between presentation (React), application (Django), and data (PostgreSQL) layers
 - **Model-View-Controller (MVC)**: Django framework enforces MVC pattern for organized code structure
 - **RESTful API Architecture**: Stateless, resource-based API design for client-server communication
-- **Microservices Architecture**: Modular services for authentication, user management, threat processing, anonymization, alerting, and external integrations
-- **Event-Driven Architecture**: Asynchronous processing for audit logging, session management, and user notifications using RabbitMQ
+- **Microservices Architecture**: Modular services for threat processing, anonymization, alerting, and external integrations
+- **Event-Driven Architecture**: Asynchronous processing for threat feed consumption and alert generation using RabbitMQ
 
-#### 7.2.2 Security Patterns
-- **JWT Token Pattern**: Stateless authentication with secure token management
-- **Role-Based Access Control (RBAC)**: Hierarchical permission system with organization boundaries
-- **Multi-Factor Authentication Pattern**: Flexible authentication strategies with device trust
-- **Audit Trail Pattern**: Immutable logging of all security-relevant events
-- **Session Management Pattern**: Secure session lifecycle with device tracking
-
-#### 7.2.3 Integration Patterns
+#### 7.2.2 Integration Patterns
 - **API Gateway Pattern**: Centralized entry point for all external API requests with authentication and rate limiting
 - **Repository Pattern**: Data access abstraction layer isolating business logic from database implementation
 - **Service Layer Pattern**: Business logic encapsulation in dedicated service classes
 - **Facade Pattern**: Simplified interface to complex subsystem interactions
-- **Observer Pattern**: Event-driven notifications for authentication and user management events
 
-### 7.3 Enhanced Design Patterns
+### 7.3 Design Patterns
 
-#### 7.3.1 Strategy Pattern (Enhanced)
-- **Implementation**: AuthenticationStrategy with concrete strategies for Standard, 2FA, and TrustedDevice authentication
-- **Purpose**: Flexible authentication approaches based on user preferences and security requirements
-- **Benefits**: Runtime strategy selection, encapsulated algorithms, easy extensibility
-
-#### 7.3.2 Factory Method Pattern (Enhanced)
-- **Implementation**: UserFactory and SessionFactory for creating users and sessions with proper validation and audit logging
-- **Purpose**: Encapsulates creation logic with organization-specific configurations
+#### 7.3.1 Factory Method Pattern
+- **Implementation**: StixObjectCreator with concrete creators for different STIX object types
+- **Purpose**: Encapsulates creation logic for converting CRISP entities to standardized STIX objects
 - **Benefits**: Ensures consistency, enables extensibility, maintains standardization
 
-#### 7.3.3 Observer Pattern (Enhanced)
-- **Implementation**: AuthEventObserver with concrete observers for AuditLogger, SecurityMonitor, and NotificationService
-- **Purpose**: Real-time notifications for authentication events and security incidents
+#### 7.3.2 Observer Pattern
+- **Implementation**: ThreatFeed as subject with InstitutionObserver and AlertSystemObserver
+- **Purpose**: Real-time notifications when threat intelligence is updated
 - **Benefits**: Loose coupling, broadcast updates, dynamic subscription management
 
-#### 7.3.4 Decorator Pattern (Enhanced)
-- **Implementation**: UserPermissionDecorator with organization-specific and role-based decorators
-- **Purpose**: Dynamic enhancement of user objects with permissions and access controls
+#### 7.3.3 Strategy Pattern
+- **Implementation**: AnonymizationStrategy with concrete strategies for different data types
+- **Purpose**: Flexible anonymization approaches based on data type and trust level
+- **Benefits**: Runtime algorithm selection, encapsulated algorithms, easy extensibility
+
+#### 7.3.4 Adapter Pattern
+- **Implementation**: ThreatIntelligenceSource interface with adapters for external sources
+- **Purpose**: Unified interface for various external threat intelligence sources
+- **Benefits**: Isolation from external changes, simplified integration, format conversion
+
+#### 7.3.5 Decorator Pattern
+- **Implementation**: StixObjectDecorator with validation, export, and enrichment decorators
+- **Purpose**: Dynamic enhancement of STIX objects with additional capabilities
 - **Benefits**: Composable functionality, single responsibility, open/closed principle
 
-#### 7.3.5 Command Pattern
-- **Implementation**: UserManagementCommand with concrete commands for Create, Update, Delete, and Bulk operations
-- **Purpose**: Encapsulate user management operations with audit logging and rollback capabilities
-- **Benefits**: Undo/redo support, queuing operations, audit trail
+#### 7.3.6 Facade Pattern
+- **Implementation**: CRISPFacade providing simplified interface to complex subsystems
+- **Purpose**: Hide complexity of interactions between different services
+- **Benefits**: Simplified client interface, reduced dependencies, clear system boundaries
 
-#### 7.3.6 Chain of Responsibility Pattern
-- **Implementation**: AuthenticationChain with handlers for validation, 2FA, device trust, and audit logging
-- **Purpose**: Process authentication requests through multiple validation steps
-- **Benefits**: Flexible processing pipeline, easy to add/remove steps, clear separation of concerns
+### 7.4 Constraints
 
-### 7.4 Enhanced Constraints
+#### 7.4.1 Technology Constraints
+- **TC1.1** Must use open-source technologies to minimize licensing costs
+- **TC1.2** Backend must be implemented in Python using Django framework
+- **TC1.3** Frontend must use React.js for consistency with team expertise
+- **TC1.4** Database must be PostgreSQL for production reliability and security features
+- **TC1.5** Containerization must use Docker for consistent deployment environments
 
-#### 7.4.1 Security Constraints
-- **SEC1.1** No storage of unencrypted user credentials anywhere in the system
-- **SEC1.2** All user management communications must use HTTPS/TLS encryption
+#### 7.4.2 Standards Compliance Constraints
+- **SC1.1** Must fully comply with STIX 2.1 specification for threat intelligence format
+- **SC1.2** Must fully comply with TAXII 2.1 specification for threat sharing protocols
+- **SC1.3** API must follow RESTful design principles and OpenAPI 3.0 specification
+- **SC1.4** Must support JSON-based data exchange for interoperability
+
+#### 7.4.3 Security Constraints
+- **SEC1.1** No storage of unencrypted sensitive data anywhere in the system
+- **SEC1.2** All external communications must use HTTPS/TLS encryption
 - **SEC1.3** User passwords must be hashed using bcrypt with minimum 12 rounds
-- **SEC1.4** JWT secrets and API keys must be stored in secure configuration management
+- **SEC1.4** API keys and secrets must be stored in secure configuration management
 - **SEC1.5** Audit logging must be immutable and tamper-resistant
-- **SEC1.6** Multi-tenant data isolation must be enforced at all levels
-- **SEC1.7** Session tokens must be cryptographically secure and unique
-- **SEC1.8** Device fingerprinting must not compromise user privacy
 
-#### 7.4.2 Compliance Constraints
-- **CC1.1** User data processing must comply with GDPR requirements
-- **CC1.2** Audit logs must support regulatory compliance reporting
-- **CC1.3** User consent must be obtained for data processing activities
-- **CC1.4** Data retention policies must be configurable and enforceable
-- **CC1.5** Right to erasure must be implemented for user data deletion
+#### 7.4.4 Business Constraints
+- **BC1.1** Development must be completed within academic project timeline (semester duration)
+- **BC1.2** Solution must be deployable on standard Linux server infrastructure
+- **BC1.3** System must support BlueVision ITM's client base of educational institutions
+- **BC1.4** Platform must be cost-effective for small to medium educational institutions
 
-#### 7.4.3 Technology Constraints (Enhanced)
-- **TC1.1** Must use Django's built-in user model as base with extensions
-- **TC1.2** Must leverage Django REST Framework for API consistency
-- **TC1.3** PostgreSQL must be used for ACID compliance and audit integrity
-- **TC1.4** Redis must be used for session caching and rate limiting
-- **TC1.5** RabbitMQ must be used for asynchronous audit logging
-
-#### 7.4.4 Operational Constraints
-- **OC1.1** User management must be operable by IT staff with standard security training
-- **OC1.2** Backup procedures must include encrypted user data and audit logs
-- **OC1.3** System monitoring must include authentication and session metrics
-- **OC1.4** Documentation must cover all user management and security procedures
-- **OC1.5** Multi-tenant operations must not affect other organizations
+#### 7.4.5 Operational Constraints
+- **OC1.1** System must be operable by IT staff with standard cybersecurity knowledge
+- **OC1.2** Backup and recovery procedures must be automated and reliable
+- **OC1.3** System monitoring and alerting must be built-in for operational visibility
+- **OC1.4** Documentation must be comprehensive for both users and administrators
 
 ---
 
 ## 8. Technology Requirements
 
-### 8.1 Enhanced Backend Technologies
+### 8.1 Backend Technologies
 
 #### 8.1.1 Core Framework
-- **Python 3.9+**: Primary development language with robust cybersecurity and authentication libraries
-- **Django 4.2+ with Django REST Framework**: Secure web framework with built-in user management and authentication
-- **PostgreSQL 13+**: Primary database with advanced security, ACID compliance, and audit capabilities
-- **Redis 6+**: Caching layer, session storage, and rate limiting for improved performance and security
+- **Python 3.9+**: Primary development language with robust cybersecurity libraries
+- **Django 4.2+ with Django REST Framework**: Secure web framework with batteries-included approach
+- **PostgreSQL 13+**: Primary database with advanced security and querying capabilities
+- **Redis 6+**: Caching layer and session storage for improved performance
 
-#### 8.1.2 Authentication and Security Libraries
-- **PyJWT**: JSON Web Token implementation for stateless authentication
-- **django-otp**: Two-factor authentication with TOTP support
-- **bcrypt**: Secure password hashing with configurable rounds
-- **cryptography**: Encryption libraries for data protection and token security
-- **django-ratelimit**: API rate limiting and throttling protection
-- **django-extensions**: Enhanced Django management commands
+#### 8.1.2 Message Queue and Processing
+- **RabbitMQ**: Message broker for distributed communication between CRISP instances
+- **Celery**: Asynchronous task processing for threat feed consumption and alert generation
 
-#### 8.1.3 Message Queue and Processing
-- **RabbitMQ**: Message broker for distributed communication and audit event processing
-- **Celery**: Asynchronous task processing for user notifications, audit logging, and cleanup tasks
+### 8.2 Threat Intelligence and Security
 
-### 8.2 Enhanced Frontend Technologies
+#### 8.2.1 Standards Implementation
+- **python-stix2**: Python library for STIX 2.1 object creation and manipulation
+- **taxii2-client**: Client library for TAXII 2.1 protocol implementation
+- **OpenCTI Integration**: Integration capabilities with open source threat intelligence platform
 
-#### 8.2.1 Core Framework
+#### 8.2.2 Security Libraries
+- **PyJWT**: JSON Web Token implementation for API authentication
+- **bcrypt**: Secure password hashing
+- **cryptography**: Encryption libraries for data protection
+
+### 8.3 Frontend Technologies
+
+#### 8.3.1 Core Framework
 - **React.js 18+**: Modern frontend library with component-based architecture
-- **Material-UI (MUI)**: UI component library for consistent design and accessibility
-- **React Router**: Client-side routing for single-page application navigation
-- **Axios**: HTTP client for API communication with authentication token management
+- **Material-UI**: UI component library for consistent design
+- **D3.js**: Advanced data visualization for threat intelligence dashboards
 
-#### 8.2.2 State Management and Authentication
-- **React Context API**: State management for user authentication and global state
-- **React Hook Form**: Form validation and management for user input
-- **js-cookie**: Client-side cookie management for authentication tokens
-- **react-query**: Data fetching and caching for improved performance
+#### 8.3.2 State Management and Routing
+- **React Router**: Client-side routing for single-page application
+- **Context API**: State management for user authentication and global state
 
-### 8.3 Enhanced DevOps and Infrastructure
+### 8.4 DevOps and Infrastructure
 
-#### 8.3.1 Containerization and Deployment
-- **Docker**: Application containerization with multi-stage builds for security
-- **Docker Compose**: Multi-container orchestration for development and testing
-- **Nginx**: Web server, reverse proxy, and SSL termination for production
-- **Let's Encrypt**: Automated SSL certificate management
+#### 8.4.1 Containerization
+- **Docker**: Application containerization for consistent environments
+- **Docker Compose**: Multi-container orchestration for development and deployment
+- **Nginx**: Web server and reverse proxy for production deployment
 
-#### 8.3.2 Development and Testing Tools
-- **Git**: Version control with GitHub for collaboration and code review
-- **GitHub Actions**: Continuous integration with automated testing and security scanning
-- **pytest**: Python testing framework with coverage reporting
-- **Jest**: JavaScript testing framework for frontend components
-- **Selenium**: End-to-end testing for user authentication flows
+#### 8.4.2 Development Tools
+- **Git**: Version control with GitHub for collaboration
+- **GitHub Actions**: Continuous integration and automated testing
+- **pytest**: Python testing framework for comprehensive test coverage
 
-### 8.4 Enhanced Security and Monitoring Tools
+### 8.5 Security and Monitoring Tools
 
-#### 8.4.1 Security Testing and Analysis
+#### 8.5.1 Security Testing
 - **OWASP ZAP**: Automated security vulnerability scanning
 - **Bandit**: Python security linter for identifying common security issues
 - **Safety**: Python dependency vulnerability checking
-- **ESLint Security Plugin**: JavaScript security analysis
-- **SonarQube**: Code quality and security analysis
 
-#### 8.4.2 Monitoring and Logging
-- **Prometheus**: Metrics collection for authentication and user management
-- **Grafana**: Metrics visualization and authentication monitoring dashboards
-- **ELK Stack (Elasticsearch, Logstash, Kibana)**: Centralized logging and audit trail analysis
-- **Sentry**: Error tracking and performance monitoring
-- **Django Debug Toolbar**: Development debugging and performance analysis
-
-#### 8.4.3 Database and Data Protection
-- **PostgreSQL Extensions**: pgcrypto for encryption, pg_audit for audit logging
-- **Database Connection Pooling**: pgbouncer for efficient connection management
-- **Backup Solutions**: pg_dump with encryption for secure data backup
-- **Migration Tools**: Django migrations with data integrity checks
+#### 8.5.2 Monitoring and Logging
+- **Prometheus**: Metrics collection and monitoring
+- **Grafana**: Metrics visualization and dashboards
+- **Structured Logging**: JSON-based logging for better analysis and monitoring
 
 ---
 
 ## 9. Appendices
 
-### 9.1 Enhanced Glossary
+### 9.1 Glossary
 - **Anonymization**: Process of removing or masking identifying information while preserving analytical value
-- **Authentication Strategy**: Method used to verify user identity (standard, 2FA, trusted device)
-- **BlueVisionAdmin**: Platform-wide administrator with access to all organizations and system functions
 - **CRISP Instance**: Individual deployment of the CRISP platform serving specific Institutions
-- **Device Fingerprinting**: Technique to identify devices based on browser and system characteristics
 - **Educational Institution**: Universities, colleges, schools, and other learning Institutions
-- **JWT Token**: JSON Web Token used for stateless authentication and authorization
-- **Multi-Tenant Architecture**: System design supporting multiple organizations with data isolation
-- **Organization**: Entity representing an educational institution with associated users and data
-- **Publisher**: Institution-level administrator with user management and publishing capabilities
-- **Session Management**: System for tracking and controlling user login sessions
+- **Institution Publisher**: Primary user account for client Institutions with publishing rights
 - **Threat Actor**: Individual or group responsible for cyber attacks and malicious activities
 - **Trust Relationship**: Defined level of data sharing permission between Institutions
-- **Trusted Device**: Recognized device that bypasses additional authentication requirements
-- **Two-Factor Authentication (2FA)**: Security method requiring two forms of user verification
-- **Viewer**: Standard user role with read-only access to threat intelligence data
 
-### 9.2 Enhanced References
+### 9.2 References
 - STIX 2.1 Specification: https://docs.oasis-open.org/cti/stix/v2.1/
 - TAXII 2.1 Specification: https://docs.oasis-open.org/cti/taxii/v2.1/
 - NIST Cybersecurity Framework: https://www.nist.gov/cyberframework
 - Django Documentation: https://docs.djangoproject.com/
-- Django REST Framework: https://www.django-rest-framework.org/
 - React Documentation: https://react.dev/
-- JWT Specification: https://tools.ietf.org/html/rfc7519
-- OWASP Authentication Guidelines: https://owasp.org/www-project-authentication-cheat-sheet/
-- GDPR Compliance Guide: https://gdpr-info.eu/
-- NIST Authentication Guidelines: https://pages.nist.gov/800-63-3/
 
-### 9.3 Enhanced Revision History
+### 9.3 Revision History
 | Version | Date | Changes | Author/s |
 |---------|------|---------|--------|
 | 1.0 | May 24, 2025 | Initial version | Dreas Vermaak |
-| 1.1 | May 26, 2025 | Restructured to match specification requirements | Armand van der Colf |
-| 1.2 | June 26, 2025 | User management, Authentication, session management | Dreas Vermaak |
-
-### 9.4 User Management Implementation Checklist
-
-#### 9.4.1 Core Authentication Features
-- [ ] Multi-strategy authentication (Standard, 2FA, Trusted Device)
-- [ ] JWT token management with refresh capability
-- [ ] Progressive account lockout protection
-- [ ] Secure password reset with time-limited tokens
-- [ ] Device fingerprinting and trusted device management
-
-#### 9.4.2 User Management Features
-- [ ] Multi-tenant user management with organization isolation
-- [ ] Role-based access control (BlueVisionAdmin, Publisher, Viewer)
-- [ ] User invitation system with email verification
-- [ ] Bulk user operations with audit trails
-- [ ] User profile management and password changes
-
-#### 9.4.3 Session Management Features
-- [ ] Comprehensive session tracking with device information
-- [ ] Session timeout and cleanup mechanisms
-- [ ] Multi-device session support
-- [ ] Administrative session management and force logout
-- [ ] Trusted device bypass for known devices
-
-#### 9.4.4 Audit and Compliance Features
-- [ ] Comprehensive authentication event logging
-- [ ] Immutable audit trails with search and filtering
-- [ ] Organization-scoped audit log access
-- [ ] Audit log export for compliance reporting
-- [ ] Real-time security event monitoring
-
-#### 9.4.5 Organization Management Features
-- [ ] Multi-tenant organization structure
-- [ ] Domain-based user assignment
-- [ ] Organization-specific user management
-- [ ] Cross-organization data sharing controls
-- [ ] Organization activation and deactivation
+| 1.1 | May 26, 2025 | Restructured to match specification requirements | Armand van der Colf|
 
 ---
