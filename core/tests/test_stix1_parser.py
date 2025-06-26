@@ -135,11 +135,11 @@ class STIX1ParserTestCase(TestCase):
         # No indicators should be created
         self.assertEqual(Indicator.objects.count(), 0)
 
-    @patch('core.parsers.stix1_parser.ET.parse')
-    def test_handle_parse_exception(self, mock_parse):
+    @patch('core.parsers.stix1_parser.ET.fromstring')
+    def test_handle_parse_exception(self, mock_fromstring):
         """Test handling of exceptions during parsing."""
-        # Mock the ET.parse to raise an exception
-        mock_parse.side_effect = ET.ParseError("Test parse error")
+        # Mock the ET.fromstring to raise an exception
+        mock_fromstring.side_effect = ET.ParseError("Test parse error")
         
         # Attempt to parse
         stats = self.parser.parse_content_block(STIX1_INDICATOR_XML, self.threat_feed)

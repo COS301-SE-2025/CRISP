@@ -14,7 +14,7 @@ from stix2 import Report, Bundle, Indicator, Identity
 from dateutil.parser import isoparse
 
 from core.models.stix_object import STIXObject, Collection, CollectionObject
-from UserManagement.models import Organization
+from core.models import Organization
 from core.patterns.factory.stix_object_creator import STIXObjectCreator as STIXObjectFactory
 
 logger = logging.getLogger(__name__)

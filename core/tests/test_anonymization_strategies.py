@@ -6,9 +6,9 @@ from unittest.mock import patch, MagicMock
 from django.test import TestCase
 import hashlib
 import re
-from core.patterns.strategy.enums import AnonymizationLevel, DataType
+from core.strategies.enums import AnonymizationLevel, DataType
 
-from core.patterns.strategy.strategies import (
+from core.strategies.strategies import (
     AnonymizationStrategy,
     IPAddressAnonymizationStrategy,
     DomainAnonymizationStrategy,
@@ -16,8 +16,8 @@ from core.patterns.strategy.strategies import (
     URLAnonymizationStrategy
 )
 
-from core.patterns.strategy.context import AnonymizationContext
-from core.patterns.strategy.exceptions import DataValidationError
+from core.strategies.context import AnonymizationContext
+from core.strategies.exceptions import DataValidationError
 
 class IPAddressAnonymizationStrategyTestCase(TestCase):
     """Test cases for the IPAddressAnonymizationStrategy."""

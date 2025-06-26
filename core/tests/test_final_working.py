@@ -101,7 +101,7 @@ def test_patterns():
     """Test design patterns"""
     print("\n🧪 Test 5: Design Patterns")
     try:
-        from core.patterns.strategy.enums import AnonymizationLevel
+        from core.strategies.enums import AnonymizationLevel
         from core.patterns.observer.threat_feed import ThreatFeed
         
         print(f"✅ AnonymizationLevel enum: {AnonymizationLevel.__name__}")

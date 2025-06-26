@@ -59,7 +59,7 @@ def main():
     # Test 4: Pattern System
     print("🧪 Test 4: Design Patterns")
     try:
-        from core.patterns.strategy.enums import AnonymizationLevel
+        from core.strategies.enums import AnonymizationLevel
         from core.patterns.observer.threat_feed import ThreatFeed
         print(f"✅ AnonymizationLevel: {AnonymizationLevel.__name__}")
         print(f"✅ ThreatFeed: {ThreatFeed.__name__}")

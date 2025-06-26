@@ -55,7 +55,7 @@ class AuthenticationAPIIntegrationTestCase(APITestCase):
             'password': 'TestPassword123!'
         }
         
-        with patch('UserManagement.views.auth_views.AuthenticationService') as mock_service:
+        with patch('core.views.auth_views.AuthenticationService') as mock_service:
             mock_service_instance = mock_service.return_value
             mock_service_instance.authenticate_user.return_value = {
                 'success': True,
@@ -83,7 +83,7 @@ class AuthenticationAPIIntegrationTestCase(APITestCase):
         self.client.force_authenticate(user=self.regular_user)
         
         # Mock the profile endpoint
-        with patch('UserManagement.views.auth_views.UserProfileSerializer') as mock_serializer:
+        with patch('core.views.auth_views.UserProfileSerializer') as mock_serializer:
             mock_serializer.return_value.data = {
                 'id': str(self.regular_user.id),
                 'username': self.regular_user.username,
@@ -105,7 +105,7 @@ class AuthenticationAPIIntegrationTestCase(APITestCase):
         # Admin user should access admin endpoints
         self.client.force_authenticate(user=self.admin_user)
         
-        with patch('UserManagement.views.admin_views.CustomUser.objects') as mock_objects:
+        with patch('core.views.admin_views.CustomUser.objects') as mock_objects:
             # Create a mock queryset that supports order_by
             mock_queryset = MagicMock()
             mock_queryset.order_by.return_value = CustomUser.objects.filter(id=self.regular_user.id)
@@ -137,19 +137,22 @@ class AuthenticationAPIIntegrationTestCase(APITestCase):
         self.client.force_authenticate(user=self.regular_user)
         
         # Create a session
+        from django.utils import timezone
+        from datetime import datetime
+        
         session = UserSession.objects.create(
             user=self.regular_user,
             session_token='test_token',
             refresh_token='test_refresh',
             ip_address='127.0.0.1',
-            expires_at='2024-12-31 23:59:59'
+            expires_at=timezone.make_aware(datetime(2024, 12, 31, 23, 59, 59))
         )
         
         logout_data = {
             'session_id': str(session.id)
         }
         
-        with patch('UserManagement.views.auth_views.AuthenticationService') as mock_service:
+        with patch('core.views.auth_views.AuthenticationService') as mock_service:
             mock_service_instance = mock_service.return_value
             mock_service_instance.logout_user.return_value = {
                 'success': True,
@@ -202,7 +205,7 @@ class UserManagementAPIIntegrationTestCase(APITestCase):
             'is_verified': True
         }
         
-        with patch('UserManagement.views.admin_views.UserFactory') as mock_factory:
+        with patch('core.views.admin_views.UserFactory') as mock_factory:
             mock_user = CustomUser(
                 username='newuser',
                 email='newuser@example.com',

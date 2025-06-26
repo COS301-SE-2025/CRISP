@@ -190,7 +190,7 @@ class SessionTimeoutMiddlewareTestCase(TestCase):
         request.META['HTTP_AUTHORIZATION'] = 'Bearer valid_token'
         
         # Mock the auth service verify_token method
-        with patch('UserManagement.middleware.AuthenticationService.verify_token') as mock_verify:
+        with patch('core.middleware.AuthenticationService.verify_token') as mock_verify:
             mock_verify.return_value = {'success': True, 'user': self.test_user}
             
             response = self.middleware(request)
@@ -203,7 +203,7 @@ class SessionTimeoutMiddlewareTestCase(TestCase):
         request.META['HTTP_AUTHORIZATION'] = 'Bearer invalid_token'
         
         # Mock the auth service verify_token method
-        with patch('UserManagement.middleware.AuthenticationService.verify_token') as mock_verify:
+        with patch('core.middleware.AuthenticationService.verify_token') as mock_verify:
             mock_verify.return_value = {'success': False, 'message': 'Invalid token'}
             
             response = self.middleware(request)
@@ -228,7 +228,7 @@ class SessionTimeoutMiddlewareTestCase(TestCase):
         original_activity = session.last_activity
         
         # Mock the auth service verify_token method
-        with patch('UserManagement.middleware.AuthenticationService.verify_token') as mock_verify:
+        with patch('core.middleware.AuthenticationService.verify_token') as mock_verify:
             mock_verify.return_value = {'success': True, 'user': self.test_user}
             
             response = self.middleware(request)

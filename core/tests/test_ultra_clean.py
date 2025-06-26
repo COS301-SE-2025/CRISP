@@ -92,7 +92,7 @@ def test_patterns():
     print("\n🧪 Testing Design Patterns...")
     
     try:
-        from core.patterns.strategy.enums import AnonymizationLevel, DataType
+        from core.strategies.enums import AnonymizationLevel, DataType
         print("✅ Strategy patterns imported successfully")
         
         from core.patterns.observer.threat_feed import ThreatFeed

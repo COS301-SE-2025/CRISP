@@ -30,7 +30,7 @@ class AuthViewsTestCase(APITestCase):
         self.test_user = UserFactory.create_user('viewer', {
             'username': 'testuser',
             'email': 'testuser@test.com',
-            'password': 'TestPassword123!',
+            'password': 'ComplexTestPass2024!@#$',
             'first_name': 'Test',
             'last_name': 'User',
             'organization': self.organization,
@@ -41,7 +41,7 @@ class AuthViewsTestCase(APITestCase):
         """Test custom JWT token generation"""
         login_data = {
             'username': 'testuser',
-            'password': 'TestPassword123!'
+            'password': 'ComplexTestPass2024!@#$'
         }
         
         response = self.client.post('/api/auth/login/', login_data)
@@ -90,7 +90,7 @@ class AuthViewsTestCase(APITestCase):
         
         login_data = {
             'username': 'testuser',
-            'password': 'TestPassword123!'
+            'password': 'ComplexTestPass2024!@#$'
         }
         
         response = self.client.post('/api/auth/login/', login_data)
@@ -105,14 +105,14 @@ class AuthViewsTestCase(APITestCase):
         unverified_user = UserFactory.create_user('viewer', {
             'username': 'unverified',
             'email': 'unverified@test.com',
-            'password': 'UnverifiedPassword123!',
+            'password': 'ComplexUnverifiedPass2024!@#$',
             'organization': self.organization,
             'is_verified': False
         })
         
         login_data = {
             'username': 'unverified',
-            'password': 'UnverifiedPassword123!'
+            'password': 'ComplexUnverifiedPass2024!@#$'
         }
         
         response = self.client.post('/api/auth/login/', login_data)
@@ -123,7 +123,7 @@ class AuthViewsTestCase(APITestCase):
         # First login to get tokens
         login_data = {
             'username': 'testuser',
-            'password': 'TestPassword123!'
+            'password': 'ComplexTestPass2024!@#$'
         }
         
         login_response = self.client.post('/api/auth/login/', login_data)
@@ -170,7 +170,7 @@ class AuthViewsTestCase(APITestCase):
         # First login to get token
         login_data = {
             'username': 'testuser',
-            'password': 'TestPassword123!'
+            'password': 'ComplexTestPass2024!@#$'
         }
         
         login_response = self.client.post('/api/auth/login/', login_data)
@@ -217,7 +217,7 @@ class AuthViewsTestCase(APITestCase):
         # First login
         login_data = {
             'username': 'testuser',
-            'password': 'TestPassword123!'
+            'password': 'ComplexTestPass2024!@#$'
         }
         
         login_response = self.client.post('/api/auth/login/', login_data)
@@ -281,9 +281,9 @@ class AuthViewsTestCase(APITestCase):
         self.client.force_authenticate(user=self.test_user)
         
         password_data = {
-            'old_password': 'TestPassword123!',
-            'new_password': 'NewTestPassword123!',
-            'new_password_confirm': 'NewTestPassword123!'
+            'old_password': 'ComplexTestPass2024!@#$',
+            'new_password': 'NewComplexTestPass2024!@#$',
+            'new_password_confirm': 'NewComplexTestPass2024!@#$'
         }
         
         response = self.client.post('/api/auth/change-password/', password_data)
@@ -294,7 +294,7 @@ class AuthViewsTestCase(APITestCase):
         
         # Verify password was changed
         self.test_user.refresh_from_db()
-        self.assertTrue(self.test_user.check_password('NewTestPassword123!'))
+        self.assertTrue(self.test_user.check_password('NewComplexTestPass2024!@#$'))
     
     def test_password_change_with_wrong_old_password(self):
         """Test password change with wrong old password"""
@@ -302,8 +302,8 @@ class AuthViewsTestCase(APITestCase):
         
         password_data = {
             'old_password': 'WrongOldPassword',
-            'new_password': 'NewTestPassword123!',
-            'new_password_confirm': 'NewTestPassword123!'
+            'new_password': 'NewComplexTestPass2024!@#$',
+            'new_password_confirm': 'NewComplexTestPass2024!@#$'
         }
         
         response = self.client.post('/api/auth/change-password/', password_data)

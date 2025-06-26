@@ -7,8 +7,8 @@ from copy import deepcopy
 
 from core.models.indicator import Indicator
 from core.repositories.indicator_repository import IndicatorRepository
-from core.patterns.strategy.context import AnonymizationContext
-from core.patterns.strategy.enums import AnonymizationLevel, DataType
+from core.strategies.context import AnonymizationContext
+from core.strategies.enums import AnonymizationLevel, DataType
 
 logger = logging.getLogger(__name__)
 

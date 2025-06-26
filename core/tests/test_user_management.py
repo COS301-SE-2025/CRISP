@@ -373,7 +373,7 @@ class UserSerializerTestCase(TestCase):
             'role': 'viewer'
         }
         
-        with patch('UserManagement.models.Organization') as mock_org:
+        with patch('core.models.Organization') as mock_org:
             mock_org.objects.get.return_value = self.organization
             
             serializer = UserRegistrationSerializer(data=data)
@@ -407,7 +407,7 @@ class UserSerializerTestCase(TestCase):
             'is_verified': True
         }
         
-        with patch('UserManagement.models.Organization') as mock_org:
+        with patch('core.models.Organization') as mock_org:
             mock_org.objects.get.return_value = self.organization
             
             serializer = AdminUserCreateSerializer(data=data)

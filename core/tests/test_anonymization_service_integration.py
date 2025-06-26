@@ -6,8 +6,8 @@ from unittest.mock import patch, MagicMock, call
 from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 
-from core.patterns.strategy.enums import AnonymizationLevel, DataType
-from core.patterns.strategy.context import AnonymizationContext
+from core.strategies.enums import AnonymizationLevel, DataType
+from core.strategies.context import AnonymizationContext
 from core.models.indicator import Indicator
 from core.models.ttp_data import TTPData
 from core.models.threat_feed import ThreatFeed
@@ -57,7 +57,7 @@ class IndicatorServiceAnonymizationTestCase(TestCase):
             stix_id='indicator-test-3'
         )
         
-    @patch('core.patterns.strategy.context.AnonymizationContext.execute_anonymization')
+    @patch('core.strategies.context.AnonymizationContext.execute_anonymization')
     def test_create_anonymized_indicator(self, mock_execute_anonymization):
         """Test creating an anonymized indicator."""
         # Mock the anonymization function
@@ -81,7 +81,7 @@ class IndicatorServiceAnonymizationTestCase(TestCase):
         self.assertEqual(indicator.value, "anonymized-10.0.0.1")
         self.assertEqual(indicator.is_anonymized, True)
         
-    @patch('core.patterns.strategy.context.AnonymizationContext.execute_anonymization')
+    @patch('core.strategies.context.AnonymizationContext.execute_anonymization')
     def test_share_indicator_with_anonymization(self, mock_execute_anonymization):
         """Test sharing an indicator with anonymization."""
         # Mock the anonymization function
@@ -105,7 +105,7 @@ class IndicatorServiceAnonymizationTestCase(TestCase):
         self.assertEqual(shared_indicator.is_anonymized, True)
         self.assertNotEqual(shared_indicator.id, self.indicator1.id)  # Should be a new instance
         
-    @patch('core.patterns.strategy.context.AnonymizationContext.auto_detect_and_anonymize')
+    @patch('core.strategies.context.AnonymizationContext.auto_detect_and_anonymize')
     def test_anonymize_indicator_description(self, mock_auto_detect):
         """Test anonymizing the description of an indicator."""
         # Set up description with sensitive information
@@ -129,7 +129,7 @@ class IndicatorServiceAnonymizationTestCase(TestCase):
         expected_description = "This indicator was observed from IP 10.0.0.x and domain *.com"
         self.assertEqual(updated_indicator.description, expected_description)
         
-    @patch('core.patterns.strategy.context.AnonymizationContext.execute_anonymization')
+    @patch('core.strategies.context.AnonymizationContext.execute_anonymization')
     def test_bulk_anonymize_indicators(self, mock_execute_anonymization):
         """Test bulk anonymization of indicators."""
         # Mock the anonymization function
@@ -187,7 +187,7 @@ class TTPServiceAnonymizationTestCase(TestCase):
             stix_id='ttp-test-2'
         )
         
-    @patch('core.patterns.strategy.context.AnonymizationContext.auto_detect_and_anonymize')
+    @patch('core.strategies.context.AnonymizationContext.auto_detect_and_anonymize')
     def test_anonymize_ttp_description(self, mock_auto_detect):
         """Test anonymizing the description of a TTP."""
         # Mock the auto-detection anonymization to replace IPs and domains
@@ -211,7 +211,7 @@ class TTPServiceAnonymizationTestCase(TestCase):
         expected_description = "This TTP was used by attackers from 192.168.1.x"
         self.assertEqual(updated_ttp.description, expected_description)
         
-    @patch('core.patterns.strategy.context.AnonymizationContext.auto_detect_and_anonymize')
+    @patch('core.strategies.context.AnonymizationContext.auto_detect_and_anonymize')
     def test_share_ttp_with_anonymization(self, mock_auto_detect):
         """Test sharing a TTP with anonymization."""
         # Mock the auto-detection anonymization to replace IPs and domains
@@ -236,7 +236,7 @@ class TTPServiceAnonymizationTestCase(TestCase):
         self.assertEqual(shared_ttp.is_anonymized, True)
         self.assertNotEqual(shared_ttp.id, self.ttp1.id)  # Should be a new instance
         
-    @patch('core.patterns.strategy.context.AnonymizationContext.auto_detect_and_anonymize')
+    @patch('core.strategies.context.AnonymizationContext.auto_detect_and_anonymize')
     def test_bulk_anonymize_ttps(self, mock_auto_detect):
         """Test bulk anonymization of TTPs."""
         # Mock the auto-detection anonymization

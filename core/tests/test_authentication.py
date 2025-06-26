@@ -24,7 +24,7 @@ class AuthenticationStrategyTestCase(TestCase):
         self.user = CustomUser.objects.create_user(
             username='testuser',
             email='test@example.com',
-            password='TestPassword123!',
+            password='ComplexTestPass2024!@#$',
             organization=self.organization,
             is_verified=True
         )
@@ -49,7 +49,7 @@ class AuthenticationStrategyTestCase(TestCase):
             'HTTP_USER_AGENT': 'Test Browser'
         }
         
-        result = strategy.authenticate('testuser', 'TestPassword123!', request)
+        result = strategy.authenticate('testuser', 'ComplexTestPass2024!@#$', request)
         
         self.assertTrue(result['success'])
         self.assertEqual(result['user'], self.user)
@@ -64,7 +64,7 @@ class AuthenticationStrategyTestCase(TestCase):
             'HTTP_USER_AGENT': 'Test Browser'
         }
         
-        result = strategy.authenticate('invaliduser', 'TestPassword123!', request)
+        result = strategy.authenticate('invaliduser', 'ComplexTestPass2024!@#$', request)
         
         self.assertFalse(result['success'])
         self.assertIsNone(result['user'])
@@ -100,7 +100,7 @@ class AuthenticationStrategyTestCase(TestCase):
             'HTTP_USER_AGENT': 'Test Browser'
         }
         
-        result = strategy.authenticate('testuser', 'TestPassword123!', request)
+        result = strategy.authenticate('testuser', 'ComplexTestPass2024!@#$', request)
         
         self.assertFalse(result['success'])
         self.assertIn('locked', result['message'].lower())
@@ -117,7 +117,7 @@ class AuthenticationStrategyTestCase(TestCase):
             'HTTP_USER_AGENT': 'Test Browser'
         }
         
-        result = strategy.authenticate('testuser', 'TestPassword123!', request)
+        result = strategy.authenticate('testuser', 'ComplexTestPass2024!@#$', request)
         
         self.assertFalse(result['success'])
         self.assertIn('inactive', result['message'].lower())
@@ -134,7 +134,7 @@ class AuthenticationStrategyTestCase(TestCase):
             'HTTP_USER_AGENT': 'Test Browser'
         }
         
-        result = strategy.authenticate('testuser', 'TestPassword123!', request)
+        result = strategy.authenticate('testuser', 'ComplexTestPass2024!@#$', request)
         
         self.assertFalse(result['success'])
         self.assertIn('verified', result['message'].lower())
@@ -151,7 +151,7 @@ class AuthenticationStrategyTestCase(TestCase):
         }
         
         # Test with remember_device=True
-        result = strategy.authenticate('testuser', 'TestPassword123!', request, remember_device=True)
+        result = strategy.authenticate('testuser', 'ComplexTestPass2024!@#$', request, remember_device=True)
         
         self.assertTrue(result['success'])
         
@@ -168,7 +168,7 @@ class AuthenticationServiceTestCase(TestCase):
         self.user = CustomUser.objects.create_user(
             username='testuser',
             email='test@example.com',
-            password='TestPassword123!',
+            password='ComplexTestPass2024!@#$',
             organization=self.organization,
             is_verified=True
         )
@@ -193,7 +193,7 @@ class AuthenticationServiceTestCase(TestCase):
             'HTTP_USER_AGENT': 'Test Browser'
         }
         
-        result = self.auth_service.authenticate_user('testuser', 'TestPassword123!', request)
+        result = self.auth_service.authenticate_user('testuser', 'ComplexTestPass2024!@#$', request)
         
         self.assertTrue(result['success'])
         self.assertEqual(result['user'], self.user)
@@ -213,7 +213,7 @@ class AuthenticationServiceTestCase(TestCase):
         self.assertFalse(result['success'])
         self.assertNotIn('tokens', result)
     
-    @patch('UserManagement.services.auth_service.RefreshToken')
+    @patch('core.services.auth_service.RefreshToken')
     def test_refresh_token_success(self, mock_refresh_token):
         """Test successful token refresh"""
         # Mock refresh token
@@ -266,7 +266,7 @@ class AuthenticationServiceTestCase(TestCase):
         session.refresh_from_db()
         self.assertFalse(session.is_active)
     
-    @patch('UserManagement.services.auth_service.AccessToken')
+    @patch('core.services.auth_service.AccessToken')
     def test_verify_token_success(self, mock_access_token):
         """Test successful token verification"""
         # Mock access token
@@ -290,7 +290,7 @@ class AccountLockoutTestCase(TestCase):
         self.user = CustomUser.objects.create_user(
             username='testuser',
             email='test@example.com',
-            password='TestPassword123!',
+            password='ComplexTestPass2024!@#$',
             organization=self.organization,
             is_verified=True
         )
@@ -359,7 +359,7 @@ class AuthenticationLogTestCase(TestCase):
         self.user = CustomUser.objects.create_user(
             username='testuser',
             email='test@example.com',
-            password='TestPassword123!',
+            password='ComplexTestPass2024!@#$',
             organization=self.organization,
             is_verified=True
         )
@@ -428,7 +428,7 @@ class UserSessionTestCase(TestCase):
         self.user = CustomUser.objects.create_user(
             username='testuser',
             email='test@example.com',
-            password='TestPassword123!',
+            password='ComplexTestPass2024!@#$',
             organization=self.organization,
             is_verified=True
         )
@@ -508,7 +508,7 @@ class TrustedDeviceTestCase(TestCase):
         self.user = CustomUser.objects.create_user(
             username='testuser',
             email='test@example.com',
-            password='TestPassword123!',
+            password='ComplexTestPass2024!@#$',
             organization=self.organization,
             is_verified=True
         )
@@ -553,7 +553,7 @@ class PasswordSecurityTestCase(TestCase):
         self.user = CustomUser.objects.create_user(
             username='testuser',
             email='test@example.com',
-            password='TestPassword123!',
+            password='ComplexTestPass2024!@#$',
             organization=self.organization,
             is_verified=True
         )

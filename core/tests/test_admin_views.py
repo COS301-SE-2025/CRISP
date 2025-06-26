@@ -31,7 +31,7 @@ class AdminViewsTestCase(APITestCase):
         self.admin_user = UserFactory.create_user('BlueVisionAdmin', {
             'username': 'admin',
             'email': 'admin@test.com',
-            'password': 'AdminPassword123!',
+            'password': 'ComplexAdminPass2024!@#$',
             'first_name': 'Admin',
             'last_name': 'User',
             'organization': self.organization,
@@ -41,7 +41,7 @@ class AdminViewsTestCase(APITestCase):
         self.publisher_user = UserFactory.create_user('publisher', {
             'username': 'publisher',
             'email': 'publisher@test.com',
-            'password': 'PublisherPassword123!',
+            'password': 'PublisherComplexSecurePass2024!@#$',
             'first_name': 'Publisher',
             'last_name': 'User',
             'organization': self.organization,
@@ -51,7 +51,7 @@ class AdminViewsTestCase(APITestCase):
         self.viewer_user = UserFactory.create_user('viewer', {
             'username': 'viewer',
             'email': 'viewer@test.com',
-            'password': 'ViewerPassword123!',
+            'password': 'ViewerComplexSecurePass2024!@#$',
             'first_name': 'Viewer',
             'last_name': 'User',
             'organization': self.organization,
@@ -104,7 +104,7 @@ class AdminViewsTestCase(APITestCase):
         user_data = {
             'username': 'newuser',
             'email': 'newuser@test.com',
-            'password': 'NewUserPassword123!',
+            'password': 'NewUserComplexSecurePass2024!@#$',
             'first_name': 'New',
             'last_name': 'User',
             'role': 'viewer',
@@ -176,7 +176,7 @@ class AdminViewsTestCase(APITestCase):
         user_to_delete = UserFactory.create_user('viewer', {
             'username': 'todelete',
             'email': 'todelete@test.com',
-            'password': 'ToDeletePassword123!',
+            'password': 'ToDeleteComplexSecurePass2024!@#$',
             'organization': self.organization
         })
         
@@ -289,7 +289,7 @@ class AdminViewsTestCase(APITestCase):
         user_data = {
             'username': 'pubcreated',
             'email': 'pubcreated@test.com',
-            'password': 'PubCreatedPassword123!',
+            'password': 'PubCreatedComplexSecurePass2024!@#$',
             'first_name': 'Pub',
             'last_name': 'Created',
             'role': 'viewer',
@@ -309,7 +309,7 @@ class AdminViewsTestCase(APITestCase):
         user_data = {
             'username': 'badmin',
             'email': 'badmin@test.com',
-            'password': 'BadminPassword123!',
+            'password': 'BadminComplexSecurePass2024!@#$',
             'first_name': 'Bad',
             'last_name': 'Admin',
             'role': 'BlueVisionAdmin',
@@ -332,14 +332,14 @@ class AdminViewPermissionsTestCase(TestCase):
         self.admin_user = UserFactory.create_user('BlueVisionAdmin', {
             'username': 'admin',
             'email': 'admin@test.com',
-            'password': 'AdminPassword123!',
+            'password': 'AdminComplexSecurePass2024!@#$',
             'organization': self.organization
         })
         
         self.publisher_user = UserFactory.create_user('publisher', {
             'username': 'publisher',
             'email': 'publisher@test.com',
-            'password': 'PublisherPassword123!',
+            'password': 'PublisherComplexSecurePass2024!@#$',
             'first_name': 'Publisher',
             'last_name': 'User',
             'organization': self.organization
@@ -348,7 +348,7 @@ class AdminViewPermissionsTestCase(TestCase):
         self.viewer_user = UserFactory.create_user('viewer', {
             'username': 'viewer',
             'email': 'viewer@test.com',
-            'password': 'ViewerPassword123!',
+            'password': 'ViewerComplexSecurePass2024!@#$',
             'organization': self.organization
         })
     
