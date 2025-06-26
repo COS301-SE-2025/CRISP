@@ -9,7 +9,7 @@ from django.test import TestCase
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
-from core.patterns.observer.threat_feed import ThreatFeed
+from core.models.threat_feed import ThreatFeed
 from core.models.institution import Institution
 from core.management.commands.taxii_operations import Command as TaxiiOperationsCommand
 from core.management.commands.test_taxii import Command as TestTaxiiCommand

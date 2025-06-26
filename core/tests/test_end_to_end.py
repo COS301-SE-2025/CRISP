@@ -14,7 +14,7 @@ from rest_framework import status
 
 from core.services.stix_taxii_service import StixTaxiiService
 from core.services.otx_taxii_service import OTXTaxiiService
-from core.patterns.observer.threat_feed import ThreatFeed
+from core.models.threat_feed import ThreatFeed
 from core.models.indicator import Indicator
 from core.models.ttp_data import TTPData
 from core.models.institution import Institution

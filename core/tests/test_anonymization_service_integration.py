@@ -10,7 +10,7 @@ from core.patterns.strategy.enums import AnonymizationLevel, DataType
 from core.patterns.strategy.context import AnonymizationContext
 from core.models.indicator import Indicator
 from core.models.ttp_data import TTPData
-from core.patterns.observer.threat_feed import ThreatFeed
+from core.models.threat_feed import ThreatFeed
 from core.services.indicator_service import IndicatorService
 from core.services.ttp_service import TTPService
 from core.repositories.indicator_repository import IndicatorRepository

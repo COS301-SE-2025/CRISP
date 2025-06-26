@@ -13,7 +13,7 @@ from core.patterns.factory.stix_indicator_creator import StixIndicatorCreator
 from core.patterns.factory.stix_ttp_creator import StixTTPCreator
 from core.models.indicator import Indicator
 from core.models.ttp_data import TTPData
-from core.patterns.observer.threat_feed import ThreatFeed
+from core.models.threat_feed import ThreatFeed
 from core.tests.test_stix_mock_data import STIX20_BUNDLE, STIX21_BUNDLE
 
 

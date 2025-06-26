@@ -1,33 +1,16 @@
-from django.db import models
-from django.utils import timezone
+"""
+Observer pattern implementation for ThreatFeed updates.
+This module provides observer functionality without duplicating the model.
+"""
 
-class ThreatFeed(models.Model):
+class ThreatFeedSubject:
     """
-    Model representing a threat feed that can be imported from or exported to TAXII servers.
-    Implements the Subject interface from Observer pattern to notify subscribers on updates.
+    Subject class for ThreatFeed Observer pattern implementation.
+    This avoids model conflicts by providing observer functionality separately.
     """
-    name = models.CharField(max_length=255)
-    description = models.TextField(blank=True, null=True)
-    owner = models.ForeignKey('core.Institution', on_delete=models.CASCADE, related_name='owned_feeds', null=True)
-    created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True)
-    is_public = models.BooleanField(default=False)
-    taxii_collection_id = models.CharField(max_length=255, blank=True, null=True)
-    taxii_server_url = models.URLField(blank=True, null=True)
-    taxii_api_root = models.CharField(max_length=255, blank=True, null=True)
-    taxii_username = models.CharField(max_length=255, blank=True, null=True)
-    taxii_password = models.CharField(max_length=255, blank=True, null=True)
-    last_sync = models.DateTimeField(null=True, blank=True)
-    is_external = models.BooleanField(default=False)
     
-    # For Observer pattern implementation
-    _observers = []
-    
-    class Meta:
-        db_table = 'threat_feeds'
-        
-    def __str__(self):
-        return self.name
+    def __init__(self):
+        self._observers = []
     
     def attach(self, observer):
         """Attach an observer to the subject."""
@@ -41,18 +24,21 @@ class ThreatFeed(models.Model):
         except ValueError:
             pass
     
-    def notify(self):
+    def notify(self, threat_feed=None):
         """Notify all observers about an event."""
         for observer in self._observers:
-            observer.update(self)
+            observer.update(threat_feed)
+
+
+class ThreatFeedObserver:
+    """
+    Abstract base class for ThreatFeed observers.
+    """
     
-    def is_subscribed_by(self, institution):
-        """Check if an institution is subscribed to this feed."""
-        return self.subscriptions.filter(institution=institution).exists()
-    
-    def save(self, *args, **kwargs):
-        """Override save to notify observers on update."""
-        is_new = self.pk is None
-        super().save(*args, **kwargs)
-        if not is_new:
-            self.notify()
+    def update(self, threat_feed):
+        """Called when the ThreatFeed subject notifies observers."""
+        raise NotImplementedError("Subclasses must implement update()")
+
+
+# Global subject instance for ThreatFeed events
+threat_feed_subject = ThreatFeedSubject()

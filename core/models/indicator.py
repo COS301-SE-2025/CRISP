@@ -1,6 +1,6 @@
 from django.db import models
 from django.utils import timezone
-from core.patterns.observer.threat_feed import ThreatFeed
+from .threat_feed import ThreatFeed
 
 class Indicator(models.Model):
     """

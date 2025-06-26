@@ -9,7 +9,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from core.parsers.stix1_parser import STIX1Parser
-from core.patterns.observer.threat_feed import ThreatFeed
+from core.models.threat_feed import ThreatFeed
 from core.models.indicator import Indicator
 from core.models.ttp_data import TTPData
 from core.tests.test_stix_mock_data import STIX1_INDICATOR_XML, STIX1_TTP_XML, TAXII1_CONTENT_BLOCK, INVALID_XML

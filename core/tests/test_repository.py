@@ -9,7 +9,7 @@ from django.utils import timezone
 from core.repositories.threat_feed_repository import ThreatFeedRepository
 from core.repositories.indicator_repository import IndicatorRepository
 from core.repositories.ttp_repository import TTPRepository
-from core.patterns.observer.threat_feed import ThreatFeed
+from core.models.threat_feed import ThreatFeed
 from core.models.indicator import Indicator
 from core.models.ttp_data import TTPData
 

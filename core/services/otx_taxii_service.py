@@ -5,7 +5,7 @@ from cabby import create_client
 from django.conf import settings
 from django.utils import timezone
 
-from core.patterns.observer.threat_feed import ThreatFeed
+from core.models.threat_feed import ThreatFeed
 from core.repositories.threat_feed_repository import ThreatFeedRepository
 from core.parsers.stix1_parser import STIX1Parser
 

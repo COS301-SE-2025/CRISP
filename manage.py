@@ -2,14 +2,14 @@
 import os
 import sys
 
+# Add project root to Python path for ultra-clean structure
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
 def main():
     """Run administrative tasks."""
-<<<<<<<< HEAD:crisp_threat_intel/manage.py
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crisp_threat_intel.settings')
-========
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crisp.settings')
->>>>>>>> 9b1b65c42fb53c6d10298d1f08a45c5b03bf43a5:manage.py
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:

@@ -1,1 +1,0 @@
-# Observer pattern implementation package

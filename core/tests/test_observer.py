@@ -6,7 +6,7 @@ from unittest.mock import patch, MagicMock, call
 from django.test import TestCase
 from django.utils import timezone
 
-from core.patterns.observer.threat_feed import ThreatFeed
+from core.models.threat_feed import ThreatFeed
 from core.models.institution import Institution
 
 

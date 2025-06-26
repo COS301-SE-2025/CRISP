@@ -6,9 +6,9 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
-from core.patterns.observer.threat_feed import ThreatFeed
+from core.models.threat_feed import ThreatFeed
 from core.services.otx_taxii_service import OTXTaxiiService
-from core.serializers.threat_feed_serializer import ThreatFeedSerializer
+from core.threat_feed_serializer import ThreatFeedSerializer
 from core.models.indicator import Indicator  
 from core.models.ttp_data import TTPData     
 
@@ -145,4 +145,3 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
             "ttp_count": ttp_count,
             "latest_indicator_date": latest_date
         })
-    

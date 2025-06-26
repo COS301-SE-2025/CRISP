@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from core.services.stix_taxii_service import StixTaxiiService
 from core.services.otx_taxii_service import OTXTaxiiService
-from core.patterns.observer.threat_feed import ThreatFeed
+from core.models.threat_feed import ThreatFeed
 from core.models.indicator import Indicator
 from core.models.ttp_data import TTPData
 from core.repositories.threat_feed_repository import ThreatFeedRepository
