@@ -213,18 +213,28 @@ The following five essential use case diagrams illustrate the core functionality
 - **R1.1.4** CRISP shall implement account lockout after 5 failed login attempts within 15 minutes
 - **R1.1.5** CRISP shall log all authentication activities for audit purposes
 - **R1.1.6** CRISP shall implement session timeout after 60 minutes of inactivity
+- **R1.1.7** CRISP shall provide automatic token refresh capability and token revocation on logout or security events
+- **R1.1.8** CRISP shall protect against username enumeration attacks
+- **R1.1.9** CRISP shall create tracked user sessions for every authentication with device information, IP address, and activity timestamps
 
 #### R1.2 User Management
 - **R1.2.1** CRISP shall allow System Administrators to create and manage Institution accounts
 - **R1.2.2** CRISP shall allow Institution Publishers to invite users via email to their Institution
-- **R1.2.3** CRISP shall support three user roles: System Admin, Institution Publisher, Institution User
+- **R1.2.3** CRISP shall support three user roles: System Admin, Institution Publisher, Institution Viewer
 - **R1.2.4** CRISP shall allow Institution Publishers to manage their Institution's user permissions
 - **R1.2.5** CRISP shall allow System Administrators to deactivate user accounts across all Institutions
+- **R1.2.6** CRISP shall support bulk operations for user management tasks
+- **R1.2.7** CRISP shall allow trusted device management including marking devices as trusted, revoking device trust, and automatic device trust expiration
+- **R1.2.8** CRISP shall provide comprehensive audit logging for all authentication events, user management actions, and security events
 
 #### R1.3 Institution Management
 - **R1.3.1** CRISP shall allow System Administrators to register new client Institutions
 - **R1.3.2** CRISP shall associate each Institution with a primary Institution Publisher account
 - **R1.3.3** CRISP shall allow Institutions to manage their profile information and settings
+- **R1.3.4** CRISP shall provide organization-specific user management and permissions with hierarchical access control
+- **R1.3.5** CRISP shall restrict users to see and interact only with users from their organization (except BlueVisionAdmins)
+- **R1.3.6** CRISP shall prevent Viewers from accessing or managing users from any organization
+- **R1.3.7** CRISP shall scope data and permissions to organization boundaries
 
 ### R2. Threat Intelligence Publication
 
