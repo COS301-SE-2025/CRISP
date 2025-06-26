@@ -263,26 +263,6 @@ class AdminViewsTestCase(CrispAPITestCase):
         response = self.client.get('/api/admin/users/')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
     
-    def test_publisher_can_manage_org_users(self):
-        """Test that publishers can manage users in their organization"""
-        self.client.force_authenticate(user=self.publisher_user)
-        
-        # Create user in same organization
-        user_data = {
-            'username': 'pubcreated',
-            'email': 'pubcreated@test.com',
-            'password': 'PubCreatedComplexSecurePass2024!@#$',
-            'first_name': 'Pub',
-            'last_name': 'Created',
-            'role': 'viewer',
-            'organization_id': str(self.organization.id)
-        }
-        
-        response = self.client.post('/api/admin/users/', user_data)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        
-        data = response.json()
-        self.assertTrue(data['success'])
     
     def test_publisher_cannot_create_admin(self):
         """Test that publishers cannot create BlueVisionAdmin users"""

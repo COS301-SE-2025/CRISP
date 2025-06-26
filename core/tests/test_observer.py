@@ -7,16 +7,17 @@ from django.test import TestCase
 from django.utils import timezone
 
 from core.models.threat_feed import ThreatFeed
-from core.models.institution import Institution
+from core.models.auth import Organization
+from .test_base import CrispTestCase
 
 
 # Create Observer implementations for testing
-class InstitutionObserver:
-    """Observer for institutions to receive feed updates"""
+class OrganizationObserver:
+    """Observer for organizations to receive feed updates"""
     
-    def __init__(self, institution):
-        """Initialize with an institution"""
-        self.institution = institution
+    def __init__(self, organization):
+        """Initialize with an organization"""
+        self.organization = organization
         self.update_count = 0
         self.last_update_feed = None
     
@@ -42,38 +43,32 @@ class AlertSystemObserver:
         })
 
 
-class ObserverPatternTestCase(TestCase):
+class ObserverPatternTestCase(CrispTestCase):
     """Test cases for Observer pattern"""
 
     def setUp(self):
         """Set up the test environment"""
+        super().setUp()
 
-        self.institution1 = Institution.objects.create(
-            name="Institution 1",
-            description="Test Institution 1"
-        )
+        self.organization1 = self.create_unique_organization("Organization 1")
+        self.organization2 = self.create_unique_organization("Organization 2")
         
-        self.institution2 = Institution.objects.create(
-            name="Institution 2",
-            description="Test Institution 2"
-        )
-        
-        # Create a test threat feed
+        # Create a test threat feed with Organization owner
         self.feed = ThreatFeed.objects.create(
             name="Test Feed",
             description="Test Feed for Observer Pattern",
-            owner=self.institution1,
+            owner=self.organization1,
             is_public=True
         )
         
         # Create observers
-        self.institution_observer1 = InstitutionObserver(self.institution1)
-        self.institution_observer2 = InstitutionObserver(self.institution2)
+        self.organization_observer1 = OrganizationObserver(self.organization1)
+        self.organization_observer2 = OrganizationObserver(self.organization2)
         self.alert_observer = AlertSystemObserver()
         
         # Attach observers
-        self.feed.attach(self.institution_observer1)
-        self.feed.attach(self.institution_observer2)
+        self.feed.attach(self.organization_observer1)
+        self.feed.attach(self.organization_observer2)
         self.feed.attach(self.alert_observer)
         
         # Store original _observers to restore after each test
@@ -87,7 +82,7 @@ class ObserverPatternTestCase(TestCase):
     def test_attach_observer(self):
         """Test attaching an observer"""
         # Create a new observer
-        new_observer = InstitutionObserver(MagicMock())
+        new_observer = OrganizationObserver(MagicMock())
         
         # Initial state
         observer_count = len(self.feed._observers)
@@ -107,14 +102,14 @@ class ObserverPatternTestCase(TestCase):
         """Test detaching an observer"""
         # Initial state
         observer_count = len(self.feed._observers)
-        self.assertIn(self.institution_observer1, self.feed._observers)
+        self.assertIn(self.organization_observer1, self.feed._observers)
         
         # Detach an observer
-        self.feed.detach(self.institution_observer1)
+        self.feed.detach(self.organization_observer1)
         
         # Check that the observer was detached
         self.assertEqual(len(self.feed._observers), observer_count - 1)
-        self.assertNotIn(self.institution_observer1, self.feed._observers)
+        self.assertNotIn(self.organization_observer1, self.feed._observers)
         
         # Detaching a non-attached observer
         self.feed.detach(MagicMock())
@@ -122,67 +117,67 @@ class ObserverPatternTestCase(TestCase):
     def test_notify_observers(self):
         """Test notifying observers"""
         # Initial state
-        self.assertEqual(self.institution_observer1.update_count, 0)
-        self.assertEqual(self.institution_observer2.update_count, 0)
+        self.assertEqual(self.organization_observer1.update_count, 0)
+        self.assertEqual(self.organization_observer2.update_count, 0)
         self.assertEqual(len(self.alert_observer.alerts), 0)
         
         # Notify observers
         self.feed.notify()
         
         # Check that observers were notified
-        self.assertEqual(self.institution_observer1.update_count, 1)
-        self.assertEqual(self.institution_observer2.update_count, 1)
+        self.assertEqual(self.organization_observer1.update_count, 1)
+        self.assertEqual(self.organization_observer2.update_count, 1)
         self.assertEqual(len(self.alert_observer.alerts), 1)
         
         # Check that the correct feed was passed to the observers
-        self.assertEqual(self.institution_observer1.last_update_feed, self.feed)
-        self.assertEqual(self.institution_observer2.last_update_feed, self.feed)
+        self.assertEqual(self.organization_observer1.last_update_feed, self.feed)
+        self.assertEqual(self.organization_observer2.last_update_feed, self.feed)
         self.assertEqual(self.alert_observer.alerts[0]['feed_id'], self.feed.id)
         self.assertEqual(self.alert_observer.alerts[0]['feed_name'], self.feed.name)
 
     def test_save_triggers_notify(self):
         """Test that saving a ThreatFeed triggers notification."""
         # Initial state
-        self.assertEqual(self.institution_observer1.update_count, 0)
+        self.assertEqual(self.organization_observer1.update_count, 0)
         
         # Update the feed
         self.feed.name = "Updated Feed Name"
         self.feed.save()
         
         # Check that observers were notified
-        self.assertEqual(self.institution_observer1.update_count, 1)
-        self.assertEqual(self.institution_observer1.last_update_feed, self.feed)
+        self.assertEqual(self.organization_observer1.update_count, 1)
+        self.assertEqual(self.organization_observer1.last_update_feed, self.feed)
         
         # New feeds should not trigger notifications during creation
         new_feed = ThreatFeed.objects.create(
             name="New Feed",
             description="New Test Feed",
-            owner=self.institution2
+            owner=self.organization2
         )
         
         # Update count should still be 1 (no new notifications)
-        self.assertEqual(self.institution_observer1.update_count, 1)
+        self.assertEqual(self.organization_observer1.update_count, 1)
 
     def test_is_subscribed_by(self):
-        """Test checking if an institution is subscribed to a feed"""
+        """Test checking if an organization is subscribed to a feed"""
         # Create a mock FeedSubscription model 
         class MockFeedSubscription:
-            def __init__(self, feed, institution):
+            def __init__(self, feed, organization):
                 self.feed = feed
-                self.institution = institution
+                self.organization = organization
         
         # Mock the subscriptions manager on the ThreatFeed model
         self.feed.subscriptions = MagicMock()
         
-        # Test when institution is subscribed
+        # Test when organization is subscribed
         self.feed.subscriptions.filter.return_value.exists.return_value = True
-        self.assertTrue(self.feed.is_subscribed_by(self.institution1))
-        self.feed.subscriptions.filter.assert_called_with(institution=self.institution1)
+        self.assertTrue(self.feed.is_subscribed_by(self.organization1))
+        self.feed.subscriptions.filter.assert_called_with(institution=self.organization1)
         
-        # Test when institution is not subscribed
+        # Test when organization is not subscribed
         self.feed.subscriptions.filter.return_value.exists.return_value = False
-        self.assertFalse(self.feed.is_subscribed_by(self.institution2))
-        self.feed.subscriptions.filter.assert_called_with(institution=self.institution2)
+        self.assertFalse(self.feed.is_subscribed_by(self.organization2))
+        self.feed.subscriptions.filter.assert_called_with(institution=self.organization2)
 
 
 # This test uses the patched_feed_save decorator to test the notification behavior
@@ -211,27 +206,21 @@ def patched_feed_save(func):
     return wrapper
 
 
-class ObserverIntegrationTestCase(TestCase):
+class ObserverIntegrationTestCase(CrispTestCase):
     """Integration test cases for Observer pattern"""
 
     def setUp(self):
         """Set up the test environment."""
-        # Create test institutions
-        self.institution1 = Institution.objects.create(
-            name="Institution 1",
-            description="Test Institution 1"
-        )
-        
-        self.institution2 = Institution.objects.create(
-            name="Institution 2",
-            description="Test Institution 2"
-        )
+        super().setUp()
+        # Create test organizations
+        self.organization1 = self.create_unique_organization("Organization 1")
+        self.organization2 = self.create_unique_organization("Organization 2")
         
         # Create a test threat feed
         self.feed = ThreatFeed.objects.create(
             name="Test Feed",
             description="Test Feed for Observer Pattern",
-            owner=self.institution1,
+            owner=self.organization1,
             is_public=True
         )
 

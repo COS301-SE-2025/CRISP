@@ -1,7 +1,7 @@
 import logging
 from django.core.management.base import BaseCommand, CommandError
 from core.models.threat_feed import ThreatFeed
-from core.models.institution import Institution
+from core.models.auth import Organization
 from core.services.stix_taxii_service import StixTaxiiService
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ class Command(BaseCommand):
         add_parser.add_argument('--server', type=str, required=True, help='TAXII server URL')
         add_parser.add_argument('--api-root', type=str, required=True, help='API root path')
         add_parser.add_argument('--collection-id', type=str, required=True, help='Collection ID')
-        add_parser.add_argument('--owner-id', type=int, required=True, help='Owner institution ID')
+        add_parser.add_argument('--owner-id', type=str, required=True, help='Owner organization ID')
 
     def handle(self, *args, **options):
         command = options.get('command')
@@ -109,7 +109,7 @@ class Command(BaseCommand):
         
         try:
             # Check if owner exists
-            owner = Institution.objects.get(id=owner_id)
+            owner = Organization.objects.get(id=owner_id)
             
             # Create the threat feed
             feed = ThreatFeed.objects.create(
@@ -127,8 +127,8 @@ class Command(BaseCommand):
             self.stdout.write(f"  Server: {feed.taxii_server_url}")
             self.stdout.write(f"  Collection: {feed.taxii_collection_id}")
             
-        except Institution.DoesNotExist:
-            error_msg = f"Institution with ID {owner_id} does not exist"
+        except Organization.DoesNotExist:
+            error_msg = f"Organization with ID {owner_id} does not exist"
             logger.error(error_msg)
             self.stderr.write(self.style.ERROR(error_msg))
         except Exception as e:

@@ -10,7 +10,6 @@ This project follows a clean, organized structure with all files properly contai
 CRISP/
 ├── .git/              # Git version control
 ├── .venv/             # Python virtual environment  
-├── .claude/           # Claude AI workspace files
 ├── backup/            # Archived components
 ├── README.md          # Main project documentation
 ├── core/              # 🎯 ALL APPLICATION CODE

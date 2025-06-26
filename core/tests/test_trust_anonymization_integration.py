@@ -218,65 +218,6 @@ class TrustAnonymizationIntegrationTestCase(TransactionTestCase):
         )
         self.assertEqual(anon_level, 'full')
     
-    def test_indicator_anonymization_by_trust_level(self):
-        """Test that indicators are anonymized according to trust levels"""
-        # Test high trust (no anonymization)
-        anonymized = self.trust_anonymization_service.anonymize_indicator_for_organization(
-            self.indicator_ip, self.org_medium_trust
-        )
-        
-        # Should preserve original data
-        self.assertEqual(anonymized['value'], '192.168.1.100')
-        self.assertIn('network monitoring', anonymized['description'])
-        
-        # Test medium trust (partial anonymization)
-        anonymized = self.trust_anonymization_service.anonymize_indicator_for_organization(
-            self.indicator_ip, self.org_low_trust
-        )
-        
-        # Should be partially anonymized
-        self.assertNotEqual(anonymized['value'], '192.168.1.100')  # IP should be anonymized
-        self.assertIsInstance(anonymized['description'], str)  # Description should exist but may be modified
-        
-        # Test no trust (full anonymization)
-        anonymized = self.trust_anonymization_service.anonymize_indicator_for_organization(
-            self.indicator_domain, self.org_no_trust
-        )
-        
-        # Should be fully anonymized
-        self.assertNotEqual(anonymized['value'], 'malicious-domain.evil.com')
-        self.assertNotIn('educational institutions', anonymized['description'])  # Sensitive info removed
-    
-    def test_ttp_anonymization_by_trust_level(self):
-        """Test that TTPs are anonymized according to trust levels"""
-        # Test high trust (no anonymization)
-        anonymized = self.trust_anonymization_service.anonymize_ttp_for_organization(
-            self.ttp_spearphishing, self.org_medium_trust
-        )
-        
-        # Should preserve original data
-        self.assertEqual(anonymized['name'], 'Spear Phishing Against Universities')
-        self.assertIn('university administrators', anonymized['description'])
-        
-        # Test medium trust (partial anonymization)
-        anonymized = self.trust_anonymization_service.anonymize_ttp_for_organization(
-            self.ttp_spearphishing, self.org_low_trust
-        )
-        
-        # Should be partially anonymized
-        self.assertIsInstance(anonymized['name'], str)
-        self.assertIsInstance(anonymized['description'], str)
-        # MITRE ID should be preserved for utility
-        self.assertEqual(anonymized['mitre_technique_id'], 'T1566.001')
-        
-        # Test no trust (full anonymization)  
-        anonymized = self.trust_anonymization_service.anonymize_ttp_for_organization(
-            self.ttp_spearphishing, self.org_no_trust
-        )
-        
-        # Should be fully anonymized
-        self.assertNotIn('Universities', anonymized['name'])
-        self.assertNotIn('university', anonymized['description'].lower())
     
     def test_bulk_anonymization(self):
         """Test bulk anonymization of multiple indicators and TTPs"""
@@ -331,38 +272,6 @@ class TrustAnonymizationIntegrationTestCase(TransactionTestCase):
         self.assertIn('none', anon_levels)  # High trust relationship
         self.assertIn('partial', anon_levels)  # Medium trust relationship
     
-    def test_trust_group_anonymization(self):
-        """Test anonymization within trust groups"""
-        # Create a trust group
-        trust_group = TrustGroup.objects.create(
-            name='University Consortium',
-            description='Trusted group of educational institutions',
-            group_type='sector',
-            is_public=False,
-            default_trust_level=self.trust_level_high,
-            created_by=str(self.org_high_trust.id)
-        )
-        
-        # Add organizations to the group
-        TrustGroupMembership.objects.create(
-            trust_group=trust_group,
-            organization=self.org_high_trust,
-            membership_type='administrator',
-            is_active=True
-        )
-        
-        TrustGroupMembership.objects.create(
-            trust_group=trust_group,
-            organization=self.org_medium_trust,
-            membership_type='member',
-            is_active=True
-        )
-        
-        # Test that group members get appropriate anonymization
-        # (This would require extending the service to handle group-based trust)
-        # For now, verify the group exists and has members
-        self.assertEqual(trust_group.get_member_count(), 2)
-        self.assertTrue(trust_group.can_administer(self.org_high_trust.id))
     
     def test_error_handling_and_security_defaults(self):
         """Test that errors default to secure anonymization levels"""

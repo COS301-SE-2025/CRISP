@@ -10,24 +10,21 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 
 from core.models.threat_feed import ThreatFeed
-from core.models.institution import Institution
+from core.models.auth import Organization
 from core.management.commands.taxii_operations import Command as TaxiiOperationsCommand
 from core.management.commands.test_taxii import Command as TestTaxiiCommand
 from core.tests.test_stix_mock_data import TAXII2_COLLECTIONS
+from core.tests.test_base import CrispTestCase
 
 
-class TaxiiOperationsCommandTestCase(TestCase):
+class TaxiiOperationsCommandTestCase(CrispTestCase):
     """Test cases for the 'taxii_operations' management command"""
 
     def setUp(self):
         """Set up the test environment"""
 
         super().setUp()
-        # Create an Institution to use as the owner for ThreatFeeds
-        self.institution = Institution.objects.create(
-            name="Test Institution",
-            description="Test description"
-        )
+        # Use organization from CrispTestCase
 
         # Create a test threat feed
         self.feed = ThreatFeed.objects.create(
@@ -168,7 +165,7 @@ class TaxiiOperationsCommandTestCase(TestCase):
                     server='https://new.example.com/taxii',
                     api_root='api2',
                     collection_id='collection2',
-                    owner_id=self.institution.id,
+                    owner_id=self.organization.id,
                     stdout=out,
                     stderr=err)
         
@@ -191,17 +188,13 @@ class TaxiiOperationsCommandTestCase(TestCase):
             call_command('taxii_operations', 'invalid_command')
 
 
-class TestTaxiiCommandTestCase(TestCase):
+class TestTaxiiCommandTestCase(CrispTestCase):
     """Test cases for the 'test_taxii' management command"""
 
     def setUp(self):
         """Set up the test environment"""
         super().setUp()
-        # Create an Institution
-        self.institution = Institution.objects.create(
-            name="Test Institution",
-            description="Test description"
-        )
+        # Use organization from CrispTestCase
 
         # Create the command instance
         self.command = TestTaxiiCommand()

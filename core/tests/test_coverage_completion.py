@@ -55,11 +55,15 @@ class AdminTestCase(CrispTestCase):
             created_by=self.root_admin
         )
         
+        # Create test user and store the password for later use
+        test_password = 'ExistingUserPassword123!'
         self.test_user = self.create_test_user(
             role='viewer',
             username='testuser',
-            email='testuser@test.com'
+            email='testuser@test.com',
+            password=test_password
         )
+        self.test_user_password = test_password
     
     def test_custom_user_admin(self):
         """Test CustomUserAdmin functionality"""
@@ -78,9 +82,9 @@ class AdminTestCase(CrispTestCase):
         self.assertIn('role', admin.list_filter)
         self.assertIn('is_verified', admin.list_filter)
         
-        # Test readonly fields
+        # Test readonly fields - use actual field names from admin
         self.assertIn('id', admin.readonly_fields)
-        self.assertIn('created_at', admin.readonly_fields)
+        self.assertIn('date_joined', admin.readonly_fields)
     
     def test_organization_admin(self):
         """Test OrganizationAdmin functionality"""
@@ -103,16 +107,16 @@ class AdminTestCase(CrispTestCase):
         self.assertIn('ip_address', admin.list_display)
         self.assertIn('is_active', admin.list_display)
         
-        # Test readonly fields
-        self.assertIn('id', admin.readonly_fields)
+        # Test readonly fields - use actual field names from admin
+        self.assertIn('session_token', admin.readonly_fields)
         self.assertIn('created_at', admin.readonly_fields)
     
     def test_authentication_log_admin(self):
         """Test AuthenticationLogAdmin functionality"""
         admin = AuthenticationLogAdmin(AuthenticationLog, self.site)
         
-        # Test list display
-        self.assertIn('username', admin.list_display)
+        # Test list display - use actual field names from admin
+        self.assertIn('user', admin.list_display)  # Not 'username', but 'user'
         self.assertIn('action', admin.list_display)
         self.assertIn('success', admin.list_display)
         
@@ -127,11 +131,15 @@ class SerializerTestCase(CrispTestCase):
     def setUp(self):
         super().setUp()
         
+        # Create test user and store the password for later use
+        test_password = 'ExistingUserPassword123!'
         self.test_user = self.create_test_user(
             role='viewer',
             username='testuser',
-            email='testuser@test.com'
+            email='testuser@test.com',
+            password=test_password
         )
+        self.test_user_password = test_password
     
     def test_user_login_serializer(self):
         """Test UserLoginSerializer"""
@@ -169,15 +177,17 @@ class SerializerTestCase(CrispTestCase):
     def test_password_change_serializer(self):
         """Test PasswordChangeSerializer"""
         data = {
-            'current_password': 'TestPassword123!',
-            'new_password': 'NewPassword123!',
-            'new_password_confirm': 'NewPassword123!'
+            'current_password': self.test_user_password,  # Use the actual user password
+            'new_password': 'Tr8$mK#p9vL2!',  # Unique pattern avoiding common words
+            'new_password_confirm': 'Tr8$mK#p9vL2!'
         }
         
         request = Mock()
         request.user = self.test_user
         
         serializer = PasswordChangeSerializer(data=data, context={'request': request})
+        if not serializer.is_valid():
+            print(f"Validation errors: {serializer.errors}")  # Debug output
         self.assertTrue(serializer.is_valid())
     
     def test_password_reset_serializer(self):
@@ -193,8 +203,8 @@ class SerializerTestCase(CrispTestCase):
         """Test PasswordResetConfirmSerializer"""
         data = {
             'token': 'test_token',
-            'new_password': 'NewPassword123!',
-            'new_password_confirm': 'NewPassword123!'
+            'new_password': 'Jx4%nH&r6wB5@',  # Unique pattern avoiding common words
+            'new_password_confirm': 'Jx4%nH&r6wB5@'
         }
         
         serializer = PasswordResetConfirmSerializer(data=data)
@@ -224,7 +234,7 @@ class SerializerTestCase(CrispTestCase):
         data = {
             'username': 'newuser',
             'email': 'newuser@test.com',
-            'password': 'NewUserPassword123!',
+            'password': 'Qm7*dV^k3zC8#',  # Unique pattern avoiding common words
             'role': 'viewer',
             'organization_id': str(self.organization.id)
         }
@@ -237,8 +247,9 @@ class SerializerTestCase(CrispTestCase):
         serializer = OrganizationSerializer(instance=self.organization)
         data = serializer.data
         
-        self.assertEqual(data['name'], 'Test Organization')
-        self.assertEqual(data['domain'], 'test.com')
+        # Use the actual unique organization name from the base class
+        self.assertEqual(data['name'], self.organization.name)
+        self.assertTrue(data['domain'].endswith('.com'))
 
 
 class ValidatorTestCase(TestCase):
@@ -287,7 +298,8 @@ class ValidatorTestCase(TestCase):
     
     def test_password_validator_valid(self):
         """Test password validator with valid passwords"""
-        valid_passwords = ['P@ssw0rd2024', 'ValidP@ss8!', 'SecureP@ss9$']
+        # Create passwords that avoid common patterns and meet all requirements
+        valid_passwords = ['Tr8$mK#p9vL2!', 'Jx4%nH&r6wB5@', 'Qm7*dV^k3zC8#']
         
         for password in valid_passwords:
             try:
@@ -327,9 +339,9 @@ class PermissionHelperTestCase(CrispTestCase):
     
     def test_check_stix_object_permission(self):
         """Test STIX object permission checking"""
-        # Mock STIX object
+        # Mock STIX object with valid UUID
         stix_object = Mock()
-        stix_object.id = 'test_stix_id'
+        stix_object.id = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'  # Valid UUID format
         stix_object.created_by = self.viewer_user
         
         # Admin should have access

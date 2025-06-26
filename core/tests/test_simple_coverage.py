@@ -155,7 +155,7 @@ class SimpleModelTestCase(CrispTestCase):
     def test_model_string_methods(self):
         """Test model __str__ methods"""
         # Test Organization __str__
-        self.assertEqual(str(self.organization), 'Test Organization')
+        self.assertEqual(str(self.organization), self.organization.name)
         
         # Test CustomUser __str__
         user = CustomUser.objects.create_user(
@@ -166,7 +166,7 @@ class SimpleModelTestCase(CrispTestCase):
             role='viewer'
         )
         
-        expected_str = f"testuser (Test Organization)"
+        expected_str = f"testuser ({self.organization.name})"
         self.assertEqual(str(user), expected_str)
     
     def test_user_session_methods(self):

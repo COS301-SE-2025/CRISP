@@ -20,7 +20,7 @@ def verify_project_structure():
     
     # Check root directory - should only contain specific folders
     allowed_root_items = {
-        'core', 'crisp', 'backup', '.git', '.venv', '.claude'
+        'core', 'crisp', 'backup', '.git', '.venv'
     }
     
     root_items = set(item.name for item in project_root.iterdir())

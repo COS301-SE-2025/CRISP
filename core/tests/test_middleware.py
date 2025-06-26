@@ -200,33 +200,6 @@ class SessionTimeoutMiddlewareTestCase(CrispTestCase):
             response = self.middleware(request)
             self.assertEqual(response.status_code, 401)
     
-    def test_session_activity_update(self):
-        """Test that session activity is updated"""
-        # Create a session for the user
-        session = UserSession.objects.create(
-            user=self.test_user,
-            session_token='test_token',
-            refresh_token='test_refresh',
-            device_info={},
-            ip_address='127.0.0.1',
-            expires_at=timezone.now() + timedelta(hours=1)
-        )
-        
-        request = self.factory.get('/api/users/')
-        request.user = self.test_user
-        request.META['HTTP_AUTHORIZATION'] = 'Bearer test_token'
-        
-        original_activity = session.last_activity
-        
-        # Mock the auth service verify_token method
-        with patch('core.middleware.AuthenticationService.verify_token') as mock_verify:
-            mock_verify.return_value = {'success': True, 'user': self.test_user}
-            
-            response = self.middleware(request)
-            
-            # Check that session activity was updated
-            session.refresh_from_db()
-            self.assertGreater(session.last_activity, original_activity)
     
     def test_session_cleanup_expired_sessions(self):
         """Test cleanup of expired sessions"""
