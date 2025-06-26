@@ -14,6 +14,7 @@ if __name__ == '__main__':
     django.setup()
 
 from django.test import TestCase, RequestFactory, override_settings
+from .test_base import CrispTestCase
 from django.core.cache import cache
 from django.http import JsonResponse
 from unittest.mock import MagicMock, patch
@@ -164,13 +165,13 @@ class RateLimitMiddlewareTestCase(TestCase):
             self.assertIsNone(response)  # Should not be rate limited
 
 
-class SecurityAuditMiddlewareTestCase(TestCase):
+class SecurityAuditMiddlewareTestCase(CrispTestCase):
     """Test security audit middleware"""
     
     def setUp(self):
+        super().setUp()
         self.factory = RequestFactory()
         self.middleware = SecurityAuditMiddleware(lambda req: JsonResponse({'test': 'data'}))
-        self.organization = self.create_test_organization()
         self.user = CustomUser.objects.create_user(
             username='testuser',
             email='test@example.com',
@@ -178,17 +179,6 @@ class SecurityAuditMiddlewareTestCase(TestCase):
             organization=self.organization,
             is_verified=True
         )
-    
-    def create_test_organization(self):
-        """Create test organization"""
-        org, created = Organization.objects.get_or_create(
-            name='Test Organization',
-            defaults={
-                'description': 'Test organization for unit tests',
-                'domain': 'test.example.com'
-            }
-        )
-        return org
     
     @patch('core.middleware.logger')
     def test_suspicious_pattern_detection(self, mock_logger):
@@ -231,11 +221,11 @@ class SecurityAuditMiddlewareTestCase(TestCase):
             mock_logger.warning.assert_called()
 
 
-class PasswordValidatorTestCase(TestCase):
+class PasswordValidatorTestCase(CrispTestCase):
     """Test password validation"""
     
     def setUp(self):
-        self.organization = self.create_test_organization()
+        super().setUp()
         self.user = CustomUser.objects.create_user(
             username='testuser',
             email='test@example.com',
@@ -243,17 +233,6 @@ class PasswordValidatorTestCase(TestCase):
             organization=self.organization
         )
         self.validator = CustomPasswordValidator()
-    
-    def create_test_organization(self):
-        """Create test organization"""
-        org, created = Organization.objects.get_or_create(
-            name='Test Organization',
-            defaults={
-                'description': 'Test organization for unit tests',
-                'domain': 'test.example.com'
-            }
-        )
-        return org
     
     def test_valid_password(self):
         """Test valid password validation"""
@@ -395,12 +374,12 @@ class EmailValidatorTestCase(TestCase):
                 self.validator.validate(email)
 
 
-class PermissionTestCase(TestCase):
+class PermissionTestCase(CrispTestCase):
     """Test custom permissions"""
     
     def setUp(self):
+        super().setUp()
         self.factory = RequestFactory()
-        self.organization = self.create_test_organization()
         
         self.system_admin = CustomUser.objects.create_user(
             username='sysadmin',
@@ -438,17 +417,6 @@ class PermissionTestCase(TestCase):
             role='viewer',
             is_verified=True
         )
-    
-    def create_test_organization(self):
-        """Create test organization"""
-        org, created = Organization.objects.get_or_create(
-            name='Test Organization',
-            defaults={
-                'description': 'Test organization for unit tests',
-                'domain': 'test.example.com'
-            }
-        )
-        return org
     
     def test_is_system_admin_permission(self):
         """Test IsSystemAdmin permission"""
@@ -549,11 +517,11 @@ class PermissionTestCase(TestCase):
         self.assertTrue(permission.has_object_permission(request, None, self.viewer))
 
 
-class STIXObjectPermissionTestCase(TestCase):
+class STIXObjectPermissionTestCase(CrispTestCase):
     """Test STIX object permissions"""
     
     def setUp(self):
-        self.organization = self.create_test_organization()
+        super().setUp()
         self.user = CustomUser.objects.create_user(
             username='testuser',
             email='test@example.com',
@@ -572,17 +540,6 @@ class STIXObjectPermissionTestCase(TestCase):
             role='BlueVisionAdmin',
             is_verified=True
         )
-    
-    def create_test_organization(self):
-        """Create test organization"""
-        org, created = Organization.objects.get_or_create(
-            name='Test Organization',
-            defaults={
-                'description': 'Test organization for unit tests',
-                'domain': 'test.example.com'
-            }
-        )
-        return org
     
     def test_system_admin_stix_access(self):
         """Test system admin has access to all STIX objects"""
@@ -638,13 +595,13 @@ class STIXObjectPermissionTestCase(TestCase):
         self.assertFalse(check_stix_object_permission(self.user, stix_object, 'admin'))
 
 
-class SessionTimeoutTestCase(TestCase):
+class SessionTimeoutTestCase(CrispTestCase):
     """Test session timeout middleware"""
     
     def setUp(self):
+        super().setUp()
         self.factory = RequestFactory()
         self.middleware = SessionTimeoutMiddleware(lambda req: JsonResponse({'test': 'data'}))
-        self.organization = self.create_test_organization()
         self.user = CustomUser.objects.create_user(
             username='testuser',
             email='test@example.com',
@@ -652,17 +609,6 @@ class SessionTimeoutTestCase(TestCase):
             organization=self.organization,
             is_verified=True
         )
-    
-    def create_test_organization(self):
-        """Create test organization"""
-        org, created = Organization.objects.get_or_create(
-            name='Test Organization',
-            defaults={
-                'description': 'Test organization for unit tests',
-                'domain': 'test.example.com'
-            }
-        )
-        return org
     
     @patch('core.middleware.AuthenticationService')
     def test_valid_token_passes(self, mock_auth_service):

@@ -1644,7 +1644,7 @@ class Migration(migrations.Migration):
                 null=True,
                 on_delete=django.db.models.deletion.CASCADE,
                 related_name="owned_feeds",
-                to="core.institution",
+                to="core.organization",
             ),
         ),
         migrations.AddField(

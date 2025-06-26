@@ -16,6 +16,7 @@ if __name__ == '__main__':
     django.setup()
 
 from django.test import TestCase
+from .test_base import CrispTestCase
 from django.contrib.admin.sites import AdminSite
 from unittest.mock import Mock, patch
 
@@ -100,14 +101,11 @@ class SimpleValidatorTestCase(TestCase):
             pass  # Don't fail on validation errors, just test coverage
 
 
-class SimplePermissionTestCase(TestCase):
+class SimplePermissionTestCase(CrispTestCase):
     """Simple permission tests for coverage"""
     
     def setUp(self):
-        self.organization = Organization.objects.create(
-            name='Test Organization',
-            domain='test.com'
-        )
+        super().setUp()
         
         # Create user directly to avoid factory validation
         self.test_user = CustomUser.objects.create_user(
@@ -148,14 +146,11 @@ class SimplePermissionTestCase(TestCase):
         self.assertIsInstance(result, bool)
 
 
-class SimpleModelTestCase(TestCase):
+class SimpleModelTestCase(CrispTestCase):
     """Simple model tests for coverage"""
     
     def setUp(self):
-        self.organization = Organization.objects.create(
-            name='Test Organization',
-            domain='test.com'
-        )
+        super().setUp()
     
     def test_model_string_methods(self):
         """Test model __str__ methods"""
@@ -230,14 +225,11 @@ class SimpleModelTestCase(TestCase):
         self.assertIn('testuser', str(log))
 
 
-class SimpleFactoryTestCase(TestCase):
+class SimpleFactoryTestCase(CrispTestCase):
     """Simple factory tests for coverage"""
     
     def setUp(self):
-        self.organization = Organization.objects.create(
-            name='Test Organization',
-            domain='test.com'
-        )
+        super().setUp()
     
     def test_factory_exists(self):
         """Test that factory exists and can create users"""

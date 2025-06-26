@@ -2,6 +2,7 @@
 Tests for observer pattern implementation
 """
 from django.test import TestCase
+from .test_base import CrispTestCase
 from unittest.mock import Mock, patch
 import io
 import sys
@@ -31,21 +32,17 @@ class AuthEventObserverTestCase(TestCase):
             pass  # Some implementations may need valid data
 
 
-class ConsoleLoggingObserverTestCase(TestCase):
+class ConsoleLoggingObserverTestCase(CrispTestCase):
     """Test console logging observer"""
     
     def setUp(self):
-        self.organization = Organization.objects.create(
-            name='Test Organization',
-            domain='test.com'
-        )
+        super().setUp()
         
-        self.test_user = UserFactory.create_user('viewer', {
-            'username': 'testuser',
-            'email': 'testuser@test.com',
-            'password': 'TestPassword123!',
-            'organization': self.organization
-        })
+        self.test_user = self.create_test_user(
+            role='viewer',
+            username='testuser',
+            email='testuser@test.com'
+        )
         
         self.observer = ConsoleLoggingObserver()
     
@@ -118,21 +115,17 @@ class ConsoleLoggingObserverTestCase(TestCase):
             sys.stdout = sys.__stdout__
 
 
-class SecurityAlertObserverTestCase(TestCase):
+class SecurityAlertObserverTestCase(CrispTestCase):
     """Test security alert observer"""
     
     def setUp(self):
-        self.organization = Organization.objects.create(
-            name='Test Organization',
-            domain='test.com'
-        )
+        super().setUp()
         
-        self.test_user = UserFactory.create_user('viewer', {
-            'username': 'testuser',
-            'email': 'testuser@test.com',
-            'password': 'TestPassword123!',
-            'organization': self.organization
-        })
+        self.test_user = self.create_test_user(
+            role='viewer',
+            username='testuser',
+            email='testuser@test.com'
+        )
         
         self.observer = SecurityAlertObserver()
     
@@ -186,21 +179,17 @@ class SecurityAlertObserverTestCase(TestCase):
             sys.stdout = sys.__stdout__
 
 
-class NewLocationAlertObserverTestCase(TestCase):
+class NewLocationAlertObserverTestCase(CrispTestCase):
     """Test new location alert observer"""
     
     def setUp(self):
-        self.organization = Organization.objects.create(
-            name='Test Organization',
-            domain='test.com'
-        )
+        super().setUp()
         
-        self.test_user = UserFactory.create_user('viewer', {
-            'username': 'testuser',
-            'email': 'testuser@test.com',
-            'password': 'TestPassword123!',
-            'organization': self.organization
-        })
+        self.test_user = self.create_test_user(
+            role='viewer',
+            username='testuser',
+            email='testuser@test.com'
+        )
         
         self.observer = NewLocationAlertObserver()
     
@@ -268,21 +257,17 @@ class NewLocationAlertObserverTestCase(TestCase):
             sys.stdout = sys.__stdout__
 
 
-class AuthEventSubjectTestCase(TestCase):
+class AuthEventSubjectTestCase(CrispTestCase):
     """Test auth event subject (observable)"""
     
     def setUp(self):
-        self.organization = Organization.objects.create(
-            name='Test Organization',
-            domain='test.com'
-        )
+        super().setUp()
         
-        self.test_user = UserFactory.create_user('viewer', {
-            'username': 'testuser',
-            'email': 'testuser@test.com',
-            'password': 'TestPassword123!',
-            'organization': self.organization
-        })
+        self.test_user = self.create_test_user(
+            role='viewer',
+            username='testuser',
+            email='testuser@test.com'
+        )
     
     def test_observer_registration(self):
         """Test observer registration and deregistration"""
@@ -351,21 +336,17 @@ class AuthEventSubjectTestCase(TestCase):
             auth_event_subject.unregister_observer(mock_observer2)
 
 
-class ObserverIntegrationTestCase(TestCase):
+class ObserverIntegrationTestCase(CrispTestCase):
     """Test observer integration with the system"""
     
     def setUp(self):
-        self.organization = Organization.objects.create(
-            name='Test Organization',
-            domain='test.com'
-        )
+        super().setUp()
         
-        self.test_user = UserFactory.create_user('viewer', {
-            'username': 'testuser',
-            'email': 'testuser@test.com',
-            'password': 'TestPassword123!',
-            'organization': self.organization
-        })
+        self.test_user = self.create_test_user(
+            role='viewer',
+            username='testuser',
+            email='testuser@test.com'
+        )
     
     def test_observers_receive_auth_events(self):
         """Test that observers receive authentication events from the system"""

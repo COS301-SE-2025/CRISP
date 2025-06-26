@@ -12,6 +12,7 @@ from unittest.mock import Mock, patch
 from ..models import CustomUser, Organization, UserSession
 from ..middleware import SecurityHeadersMiddleware, RateLimitMiddleware, SecurityAuditMiddleware, SessionTimeoutMiddleware
 from ..factories.user_factory import UserFactory
+from .test_base import CrispTestCase
 
 User = get_user_model()
 
@@ -105,25 +106,20 @@ class RateLimitMiddlewareTestCase(TestCase):
             self.assertEqual(response.status_code, 200)
 
 
-class SecurityAuditMiddlewareTestCase(TestCase):
+class SecurityAuditMiddlewareTestCase(CrispTestCase):
     """Test security audit middleware"""
     
     def setUp(self):
+        super().setUp()
         self.factory = RequestFactory()
         self.middleware = SecurityAuditMiddleware(get_response=lambda r: HttpResponse())
         
-        # Create test organization and user
-        self.organization = Organization.objects.create(
-            name='Test Organization',
-            domain='test.com'
+        # Create test user using base method
+        self.test_user = self.create_test_user(
+            role='viewer',
+            username='testuser',
+            email='testuser@test.com'
         )
-        
-        self.test_user = UserFactory.create_user('viewer', {
-            'username': 'testuser',
-            'email': 'testuser@test.com',
-            'password': 'TestPassword123!',
-            'organization': self.organization
-        })
     
     def test_api_access_logging(self):
         """Test that API access is logged"""
@@ -163,25 +159,20 @@ class SecurityAuditMiddlewareTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
 
 
-class SessionTimeoutMiddlewareTestCase(TestCase):
+class SessionTimeoutMiddlewareTestCase(CrispTestCase):
     """Test session timeout middleware"""
     
     def setUp(self):
+        super().setUp()
         self.factory = RequestFactory()
         self.middleware = SessionTimeoutMiddleware(get_response=lambda r: HttpResponse())
         
-        # Create test organization and user
-        self.organization = Organization.objects.create(
-            name='Test Organization',
-            domain='test.com'
+        # Create test user using base method
+        self.test_user = self.create_test_user(
+            role='viewer',
+            username='testuser',
+            email='testuser@test.com'
         )
-        
-        self.test_user = UserFactory.create_user('viewer', {
-            'username': 'testuser',
-            'email': 'testuser@test.com',
-            'password': 'TestPassword123!',
-            'organization': self.organization
-        })
     
     def test_valid_token_passes(self):
         """Test that valid tokens pass through"""
@@ -260,24 +251,19 @@ class SessionTimeoutMiddlewareTestCase(TestCase):
         self.assertFalse(expired_session.is_active)
 
 
-class MiddlewareIntegrationTestCase(TestCase):
+class MiddlewareIntegrationTestCase(CrispTestCase):
     """Test middleware integration"""
     
     def setUp(self):
+        super().setUp()
         self.factory = RequestFactory()
         
-        # Create test organization and user
-        self.organization = Organization.objects.create(
-            name='Test Organization',
-            domain='test.com'
+        # Create test user using base method
+        self.test_user = self.create_test_user(
+            role='viewer',
+            username='testuser',
+            email='testuser@test.com'
         )
-        
-        self.test_user = UserFactory.create_user('viewer', {
-            'username': 'testuser',
-            'email': 'testuser@test.com',
-            'password': 'TestPassword123!',
-            'organization': self.organization
-        })
     
     def test_middleware_chain_execution(self):
         """Test that middleware chain executes properly"""

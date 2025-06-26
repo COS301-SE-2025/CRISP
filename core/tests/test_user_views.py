@@ -21,67 +21,51 @@ from rest_framework import status
 
 from ..models import CustomUser, Organization
 from ..factories.user_factory import UserFactory
+from .test_base import CrispAPITestCase
 
 
-class UserViewsTestCase(APITestCase):
+class UserViewsTestCase(CrispAPITestCase):
     """Test user views functionality"""
     
     def setUp(self):
-        self.client = APIClient()
+        super().setUp()
         
-        # Create test organization
-        self.organization = Organization.objects.create(
-            name='Test Organization',
-            domain='test.com',
-            description='Test organization for user views'
-        )
-        
-        # Create a BlueVisionAdmin user to act as creator
-        self.admin_creator = CustomUser.objects.create_user(
+        # Create a BlueVisionAdmin user to act as creator using base method
+        self.admin_creator = self.create_test_user(
+            role='BlueVisionAdmin',
             username='admin_creator',
             email='admin_creator@test.com',
-            password='AdminCreatorPassword123!',
             first_name='Admin',
             last_name='Creator',
-            organization=self.organization,
-            role='BlueVisionAdmin',
-            is_verified=True,
-            is_active=True,
             is_staff=True,
             is_superuser=True
         )
-        # Create test users
-        self.admin_user = UserFactory.create_user('BlueVisionAdmin', {
-            'username': 'admin',
-            'email': 'admin@test.com',
-            'password': 'AdminPassword123!',
-            'first_name': 'Admin',
-            'last_name': 'User',
-            'organization': self.organization,
-            'is_verified': True,
-            'created_by': self.admin_creator,
-            'role': 'BlueVisionAdmin'
-        })
         
-        self.publisher_user = UserFactory.create_user('publisher', {
-            'username': 'publisher',
-            'email': 'publisher@test.com',
-            'password': 'PublisherPassword123!',
-            'first_name': 'Publisher',
-            'last_name': 'User',
-            'organization': self.organization,
-            'is_verified': True
-        })
+        # Create test users using base methods
+        self.admin_user = self.create_test_user(
+            role='BlueVisionAdmin',
+            username='admin',
+            email='admin@test.com',
+            first_name='Admin',
+            last_name='User',
+            created_by=self.admin_creator
+        )
         
-        self.viewer_user = UserFactory.create_user('viewer', {
-            'username': 'viewer',
-            'email': 'viewer@test.com',
-            'password': 'ViewerPassword123!',
-            'first_name': 'Viewer',
-            'last_name': 'User',
-            'organization': self.organization,
-            'is_verified': True
-        })
+        self.publisher_user = self.create_test_user(
+            role='publisher',
+            username='publisher',
+            email='publisher@test.com',
+            first_name='Publisher',
+            last_name='User'
+        )
+        
+        self.viewer_user = self.create_test_user(
+            role='viewer',
+            username='viewer',
+            email='viewer@test.com',
+            first_name='Viewer',
+            last_name='User'
+        )
     
     def test_user_list_view_as_admin(self):
         """Test user list view as admin"""

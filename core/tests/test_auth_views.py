@@ -11,31 +11,23 @@ import json
 
 from ..models import CustomUser, Organization, UserSession, AuthenticationLog
 from ..factories.user_factory import UserFactory
+from .test_base import CrispAPITestCase
 
 
-class AuthViewsTestCase(APITestCase):
+class AuthViewsTestCase(CrispAPITestCase):
     """Test authentication views functionality"""
     
     def setUp(self):
-        self.client = APIClient()
+        super().setUp()
         
-        # Create test organization
-        self.organization = Organization.objects.create(
-            name='Test Organization',
-            domain='test.com',
-            description='Test organization for auth views'
+        # Create test user using the base class method
+        self.test_user = self.create_test_user(
+            role='viewer',
+            username='testuser',
+            email='testuser@test.com',
+            first_name='Test',
+            last_name='User'
         )
-        
-        # Create test user
-        self.test_user = UserFactory.create_user('viewer', {
-            'username': 'testuser',
-            'email': 'testuser@test.com',
-            'password': 'ComplexTestPass2024!@#$',
-            'first_name': 'Test',
-            'last_name': 'User',
-            'organization': self.organization,
-            'is_verified': True
-        })
     
     def test_custom_token_obtain_pair_view(self):
         """Test custom JWT token generation"""
@@ -55,7 +47,7 @@ class AuthViewsTestCase(APITestCase):
         
         # Check custom claims in token
         self.assertEqual(data['user']['role'], 'viewer')
-        self.assertEqual(data['user']['organization'], 'Test Organization')
+        self.assertEqual(data['user']['organization'], self.organization.name)
     
     def test_login_with_invalid_credentials(self):
         """Test login with invalid credentials"""

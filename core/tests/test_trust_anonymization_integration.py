@@ -60,13 +60,7 @@ class TrustAnonymizationIntegrationTestCase(TransactionTestCase):
             domain='hightrustuni.edu'
         )
         
-        # Create test institution for ThreatFeed owner
-        self.institution = Institution.objects.create(
-            name="Test Institution",
-            description="Test Institution for anonymization testing",
-            contact_email="test@institution.edu"
-        )
-        
+
         self.org_medium_trust = Organization.objects.create(
             name='Medium Trust Corp',
             description='Corporation with medium trust relationship', 
@@ -112,14 +106,16 @@ class TrustAnonymizationIntegrationTestCase(TransactionTestCase):
             default_access_level='read',
             description='Low trust with full anonymization'
         )
-        
-        # Create trust relationships
+          # Create trust relationships
         self.trust_rel_high = TrustRelationship.objects.create(
-            source_organization_id=str(self.org_high_trust.id),
-            target_organization_id=str(self.org_medium_trust.id),
+            source_organization=self.org_high_trust,
+            target_organization=self.org_medium_trust,
             trust_level=self.trust_level_high,
             relationship_type='bilateral',
             status='active',
+            is_active=True,
+            approved_by_source=True,
+            approved_by_target=True,
             anonymization_level='none',  # Override default
             created_by='system',
             valid_from=timezone.now(),
@@ -127,11 +123,14 @@ class TrustAnonymizationIntegrationTestCase(TransactionTestCase):
         )
         
         self.trust_rel_medium = TrustRelationship.objects.create(
-            source_organization_id=str(self.org_high_trust.id),
-            target_organization_id=str(self.org_low_trust.id),
+            source_organization=self.org_high_trust,
+            target_organization=self.org_low_trust,
             trust_level=self.trust_level_medium,
             relationship_type='bilateral',
             status='active',
+            is_active=True,
+            approved_by_source=True,
+            approved_by_target=True,
             anonymization_level='custom',  # Use trust level default
             created_by='system',
             valid_from=timezone.now(),
@@ -139,11 +138,14 @@ class TrustAnonymizationIntegrationTestCase(TransactionTestCase):
         )
         
         self.trust_rel_low = TrustRelationship.objects.create(
-            source_organization_id=str(self.org_medium_trust.id),
-            target_organization_id=str(self.org_low_trust.id),
+            source_organization=self.org_medium_trust,
+            target_organization=self.org_low_trust,
             trust_level=self.trust_level_low,
-            relationship_type='bilateral', 
+            relationship_type='bilateral',
             status='active',
+            is_active=True,
+            approved_by_source=True,
+            approved_by_target=True,
             anonymization_level='full',  # Explicit full anonymization
             created_by='system',
             valid_from=timezone.now(),
@@ -154,7 +156,7 @@ class TrustAnonymizationIntegrationTestCase(TransactionTestCase):
         self.threat_feed = ThreatFeed.objects.create(
             name='Test Threat Feed',
             description='Test feed for anonymization testing',
-            owner=self.institution,
+            owner=self.org_high_trust,  # Use the organization object directly
             is_public=False
         )
         
@@ -184,7 +186,6 @@ class TrustAnonymizationIntegrationTestCase(TransactionTestCase):
             threat_feed=self.threat_feed,
             mitre_technique_id='T1566.001',
             mitre_tactic='initial_access',
-            confidence=80,
             stix_id='attack-pattern--spearphish-test-001'
         )
         
@@ -344,16 +345,16 @@ class TrustAnonymizationIntegrationTestCase(TransactionTestCase):
         
         # Add organizations to the group
         TrustGroupMembership.objects.create(
-            group=trust_group,
-            organization_id=str(self.org_high_trust.id),
-            role='admin',
+            trust_group=trust_group,
+            organization=self.org_high_trust,
+            membership_type='administrator',
             is_active=True
         )
         
         TrustGroupMembership.objects.create(
-            group=trust_group,
-            organization_id=str(self.org_medium_trust.id),
-            role='member',
+            trust_group=trust_group,
+            organization=self.org_medium_trust,
+            membership_type='member',
             is_active=True
         )
         
@@ -367,13 +368,21 @@ class TrustAnonymizationIntegrationTestCase(TransactionTestCase):
         """Test that errors default to secure anonymization levels"""
         # Test with invalid organization (should default to full anonymization)
         try:
-            # Create an indicator with no threat feed (no source org)
+            # Create an indicator with a different threat feed (no clear source org relationship)
+            other_threat_feed = ThreatFeed.objects.create(
+                name='Other Threat Feed',
+                description='Different feed for error testing',
+                owner=self.org_no_trust,  # Use the organization object directly
+                is_public=False
+            )
+            
             orphaned_indicator = Indicator.objects.create(
                 type='ip',
                 value='10.0.0.1',
                 description='Orphaned indicator',
-                threat_feed=None,  # No threat feed = no source org
-                confidence=50
+                threat_feed=other_threat_feed,  # Different threat feed
+                confidence=50,
+                stix_id='indicator--orphaned-test-001'
             )
             
             anonymized = self.trust_anonymization_service.anonymize_indicator_for_organization(

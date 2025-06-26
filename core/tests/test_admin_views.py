@@ -10,53 +10,35 @@ import json
 
 from ..models import CustomUser, Organization, UserSession, AuthenticationLog
 from ..factories.user_factory import UserFactory
+from .test_base import CrispAPITestCase, CrispTestCase
 
 User = get_user_model()
 
 
-class AdminViewsTestCase(APITestCase):
+class AdminViewsTestCase(CrispAPITestCase):
     """Test admin views functionality"""
     
     def setUp(self):
-        self.client = APIClient()
+        super().setUp()
         
-        # Create test organization
-        self.organization = Organization.objects.create(
-            name='Test Organization',
-            domain='test.com',
-            description='Test organization for admin views'
+        # Create test users with different roles using the base class method
+        self.admin_user = self.create_test_user(
+            role='BlueVisionAdmin',
+            first_name='Admin',
+            last_name='User'
         )
         
-        # Create test users with different roles
-        self.admin_user = UserFactory.create_user('BlueVisionAdmin', {
-            'username': 'admin',
-            'email': 'admin@test.com',
-            'password': 'ComplexAdminPass2024!@#$',
-            'first_name': 'Admin',
-            'last_name': 'User',
-            'organization': self.organization,
-            'is_verified': True
-        })
+        self.publisher_user = self.create_test_user(
+            role='publisher',
+            first_name='Publisher',
+            last_name='User'
+        )
         
-        self.publisher_user = UserFactory.create_user('publisher', {
-            'username': 'publisher',
-            'email': 'publisher@test.com',
-            'password': 'PublisherComplexSecurePass2024!@#$',
-            'first_name': 'Publisher',
-            'last_name': 'User',
-            'organization': self.organization,
-            'is_verified': True
-        })
-        
-        self.viewer_user = UserFactory.create_user('viewer', {
-            'username': 'viewer',
-            'email': 'viewer@test.com',
-            'password': 'ViewerComplexSecurePass2024!@#$',
-            'first_name': 'Viewer',
-            'last_name': 'User',
-            'organization': self.organization,
-            'is_verified': True
-        })
+        self.viewer_user = self.create_test_user(
+            role='viewer',
+            first_name='Viewer',
+            last_name='User'
+        )
     
     def test_admin_user_list_as_admin(self):
         """Test admin user list view as BlueVisionAdmin"""
@@ -320,37 +302,21 @@ class AdminViewsTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
-class AdminViewPermissionsTestCase(TestCase):
+class AdminViewPermissionsTestCase(CrispTestCase):
     """Test admin view permission helpers"""
     
     def setUp(self):
-        self.organization = Organization.objects.create(
-            name='Test Org',
-            domain='test.com'
+        super().setUp()
+        
+        self.admin_user = self.create_test_user(role='BlueVisionAdmin')
+        
+        self.publisher_user = self.create_test_user(
+            role='publisher',
+            first_name='Publisher',
+            last_name='User'
         )
         
-        self.admin_user = UserFactory.create_user('BlueVisionAdmin', {
-            'username': 'admin',
-            'email': 'admin@test.com',
-            'password': 'AdminComplexSecurePass2024!@#$',
-            'organization': self.organization
-        })
-        
-        self.publisher_user = UserFactory.create_user('publisher', {
-            'username': 'publisher',
-            'email': 'publisher@test.com',
-            'password': 'PublisherComplexSecurePass2024!@#$',
-            'first_name': 'Publisher',
-            'last_name': 'User',
-            'organization': self.organization
-        })
-        
-        self.viewer_user = UserFactory.create_user('viewer', {
-            'username': 'viewer',
-            'email': 'viewer@test.com',
-            'password': 'ViewerComplexSecurePass2024!@#$',
-            'organization': self.organization
-        })
+        self.viewer_user = self.create_test_user(role='viewer')
     
     def test_can_assign_role_permissions(self):
         """Test _can_assign_role method"""

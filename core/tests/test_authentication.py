@@ -1,5 +1,6 @@
 import json
 from django.test import TestCase, override_settings
+from .test_base import CrispTestCase
 from django.urls import reverse
 from django.utils import timezone
 from django.contrib.auth import get_user_model
@@ -16,11 +17,11 @@ from ..strategies.authentication_strategies import (
 )
 
 
-class AuthenticationStrategyTestCase(TestCase):
+class AuthenticationStrategyTestCase(CrispTestCase):
     """Test authentication strategies"""
     
     def setUp(self):
-        self.organization = self.create_test_organization()
+        super().setUp()
         self.user = CustomUser.objects.create_user(
             username='testuser',
             email='test@example.com',
@@ -28,17 +29,6 @@ class AuthenticationStrategyTestCase(TestCase):
             organization=self.organization,
             is_verified=True
         )
-    
-    def create_test_organization(self):
-        """Create test organization"""
-        org, created = Organization.objects.get_or_create(
-            name='Test Organization',
-            defaults={
-                'description': 'Test organization for unit tests',
-                'domain': 'test.example.com'
-            }
-        )
-        return org
     
     def test_standard_authentication_success(self):
         """Test successful standard authentication"""
@@ -160,11 +150,11 @@ class AuthenticationStrategyTestCase(TestCase):
         self.assertTrue(len(self.user.trusted_devices) > 0)
 
 
-class AuthenticationServiceTestCase(TestCase):
+class AuthenticationServiceTestCase(CrispTestCase):
     """Test authentication service"""
     
     def setUp(self):
-        self.organization = self.create_test_organization()
+        super().setUp()
         self.user = CustomUser.objects.create_user(
             username='testuser',
             email='test@example.com',
@@ -173,17 +163,6 @@ class AuthenticationServiceTestCase(TestCase):
             is_verified=True
         )
         self.auth_service = AuthenticationService()
-    
-    def create_test_organization(self):
-        """Create test organization"""
-        org, created = Organization.objects.get_or_create(
-            name='Test Organization',
-            defaults={
-                'description': 'Test organization for unit tests',
-                'domain': 'test.example.com'
-            }
-        )
-        return org
     
     def test_authenticate_user_success(self):
         """Test successful user authentication"""
@@ -282,11 +261,11 @@ class AuthenticationServiceTestCase(TestCase):
         self.assertEqual(result['username'], self.user.username)
 
 
-class AccountLockoutTestCase(TestCase):
+class AccountLockoutTestCase(CrispTestCase):
     """Test account lockout functionality"""
     
     def setUp(self):
-        self.organization = self.create_test_organization()
+        super().setUp()
         self.user = CustomUser.objects.create_user(
             username='testuser',
             email='test@example.com',
@@ -294,17 +273,6 @@ class AccountLockoutTestCase(TestCase):
             organization=self.organization,
             is_verified=True
         )
-    
-    def create_test_organization(self):
-        """Create test organization"""
-        org, created = Organization.objects.get_or_create(
-            name='Test Organization',
-            defaults={
-                'description': 'Test organization for unit tests',
-                'domain': 'test.example.com'
-            }
-        )
-        return org
     
     def test_failed_login_increment(self):
         """Test that failed login attempts are incremented"""
@@ -351,11 +319,11 @@ class AccountLockoutTestCase(TestCase):
         self.assertIsNone(self.user.last_failed_login)
 
 
-class AuthenticationLogTestCase(TestCase):
+class AuthenticationLogTestCase(CrispTestCase):
     """Test authentication logging"""
     
     def setUp(self):
-        self.organization = self.create_test_organization()
+        super().setUp()
         self.user = CustomUser.objects.create_user(
             username='testuser',
             email='test@example.com',
@@ -363,17 +331,6 @@ class AuthenticationLogTestCase(TestCase):
             organization=self.organization,
             is_verified=True
         )
-    
-    def create_test_organization(self):
-        """Create test organization"""
-        org, created = Organization.objects.get_or_create(
-            name='Test Organization',
-            defaults={
-                'description': 'Test organization for unit tests',
-                'domain': 'test.example.com'
-            }
-        )
-        return org
     
     def test_log_authentication_event(self):
         """Test logging authentication events"""
@@ -420,11 +377,11 @@ class AuthenticationLogTestCase(TestCase):
         self.assertEqual(log_entry.username, 'unknown')
 
 
-class UserSessionTestCase(TestCase):
+class UserSessionTestCase(CrispTestCase):
     """Test user session management"""
     
     def setUp(self):
-        self.organization = self.create_test_organization()
+        super().setUp()
         self.user = CustomUser.objects.create_user(
             username='testuser',
             email='test@example.com',
@@ -432,17 +389,6 @@ class UserSessionTestCase(TestCase):
             organization=self.organization,
             is_verified=True
         )
-    
-    def create_test_organization(self):
-        """Create test organization"""
-        org, created = Organization.objects.get_or_create(
-            name='Test Organization',
-            defaults={
-                'description': 'Test organization for unit tests',
-                'domain': 'test.example.com'
-            }
-        )
-        return org
     
     def test_create_session(self):
         """Test creating user session"""
@@ -500,11 +446,11 @@ class UserSessionTestCase(TestCase):
         self.assertGreater(session.expires_at, original_expiry)
 
 
-class TrustedDeviceTestCase(TestCase):
+class TrustedDeviceTestCase(CrispTestCase):
     """Test trusted device functionality"""
     
     def setUp(self):
-        self.organization = self.create_test_organization()
+        super().setUp()
         self.user = CustomUser.objects.create_user(
             username='testuser',
             email='test@example.com',
@@ -512,17 +458,6 @@ class TrustedDeviceTestCase(TestCase):
             organization=self.organization,
             is_verified=True
         )
-    
-    def create_test_organization(self):
-        """Create test organization"""
-        org, created = Organization.objects.get_or_create(
-            name='Test Organization',
-            defaults={
-                'description': 'Test organization for unit tests',
-                'domain': 'test.example.com'
-            }
-        )
-        return org
     
     def test_add_trusted_device(self):
         """Test adding trusted device"""
@@ -545,11 +480,11 @@ class TrustedDeviceTestCase(TestCase):
         self.assertNotIn(device_fingerprint, self.user.trusted_devices)
 
 
-class PasswordSecurityTestCase(TestCase):
+class PasswordSecurityTestCase(CrispTestCase):
     """Test password security features"""
     
     def setUp(self):
-        self.organization = self.create_test_organization()
+        super().setUp()
         self.user = CustomUser.objects.create_user(
             username='testuser',
             email='test@example.com',
@@ -557,17 +492,6 @@ class PasswordSecurityTestCase(TestCase):
             organization=self.organization,
             is_verified=True
         )
-    
-    def create_test_organization(self):
-        """Create test organization"""
-        org, created = Organization.objects.get_or_create(
-            name='Test Organization',
-            defaults={
-                'description': 'Test organization for unit tests',
-                'domain': 'test.example.com'
-            }
-        )
-        return org
     
     def test_password_validation(self):
         """Test password validation"""

@@ -17,7 +17,7 @@ from core.services.otx_taxii_service import OTXTaxiiService
 from core.models.threat_feed import ThreatFeed
 from core.models.indicator import Indicator
 from core.models.ttp_data import TTPData
-from core.models.institution import Institution
+from core.models.auth import Organization, CustomUser
 from core.repositories.threat_feed_repository import ThreatFeedRepository
 from core.tests.test_stix_mock_data import TAXII1_CONTENT_BLOCK, STIX20_BUNDLE, STIX21_BUNDLE, TAXII2_COLLECTIONS
 
@@ -27,10 +27,11 @@ class EndToEndConsumptionTestCase(TransactionTestCase):
 
     def setUp(self):
         """Set up the test environment."""
-        # Create a test institution
-        self.institution = Institution.objects.create(
-            name="Test Institution",
-            description="Test Institution for E2E",
+        # Create a test organization
+        self.organization = Organization.objects.create(
+            name="Test Organization",
+            description="Test Organization for E2E",
+            domain="test.example.com",
             contact_email="test@example.com"
         )
         
@@ -38,7 +39,7 @@ class EndToEndConsumptionTestCase(TransactionTestCase):
         self.otx_feed = ThreatFeed.objects.create(
             name="OTX Feed",
             description="AlienVault OTX Feed",
-            owner=self.institution,
+            owner=self.organization,
             is_external=True,
             taxii_server_url="https://otx.alienvault.com/taxii",
             taxii_api_root="taxii",
@@ -50,7 +51,7 @@ class EndToEndConsumptionTestCase(TransactionTestCase):
         self.stix2_feed = ThreatFeed.objects.create(
             name="STIX 2.x Feed",
             description="STIX 2.x Test Feed",
-            owner=self.institution,
+            owner=self.organization,
             is_external=True,
             taxii_server_url="https://example.com/taxii2",
             taxii_api_root="api2",
@@ -250,18 +251,32 @@ class APIEndpointTestCase(APITestCase):
 
     def setUp(self):
         """Set up the test environment."""
-        # Create a test institution
-        self.institution = Institution.objects.create(
-            name="Test Institution",
-            description="Test Institution for API",
+        # Create a test organization
+        self.organization = Organization.objects.create(
+            name="Test Organization",
+            description="Test Organization for API",
+            domain="test.example.com",
             contact_email="test@example.com"
         )
+        
+        # Create a test user
+        self.user = CustomUser.objects.create_user(
+            username="testuser",
+            email="testuser@test.example.com",
+            password="testpass123",
+            organization=self.organization,
+            role="publisher",
+            is_verified=True
+        )
+        
+        # Authenticate the client
+        self.client.force_authenticate(user=self.user)
         
         # Create a test threat feed
         self.feed = ThreatFeed.objects.create(
             name="Test Feed",
             description="Test Feed for API",
-            owner=self.institution,
+            owner=self.organization,
             is_external=True,
             taxii_server_url="https://test.example.com/taxii",
             taxii_api_root="api1",

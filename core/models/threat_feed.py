@@ -1,11 +1,10 @@
 from django.db import models
 from django.utils import timezone
-from .institution import Institution
 
 class ThreatFeed(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
-    owner = models.ForeignKey(Institution, on_delete=models.CASCADE, related_name='owned_feeds', null=True)
+    owner = models.ForeignKey('Organization', on_delete=models.CASCADE, related_name='owned_feeds', null=True)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
     is_public = models.BooleanField(default=False)

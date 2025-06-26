@@ -150,7 +150,15 @@ class TrustAnonymizationService:
             # Get source organization from TTP's threat feed
             source_org = None
             if ttp.threat_feed and hasattr(ttp.threat_feed, 'owner'):
-                source_org = ttp.threat_feed.owner
+                owner = ttp.threat_feed.owner
+                # Check if owner is an Organization or Institution
+                if hasattr(owner, 'domain'):  # Organization has domain field
+                    source_org = owner
+                else:
+                    # Institution owner - we need to find corresponding Organization
+                    # For now, default to full anonymization for security
+                    logger.warning(f"Threat feed owner is Institution, not Organization. Defaulting to full anonymization.")
+                    source_org = None
             
             if not source_org:
                 logger.error(f"Cannot determine source organization for TTP {ttp.id}")
@@ -251,10 +259,10 @@ class TrustAnonymizationService:
             List[Tuple[Organization, str]]: List of (organization, anonymization_level) tuples
         """
         try:
-            sharing_orgs = self.trust_service.get_sharing_organizations(str(source_org.id))
+            sharing_data = self.trust_service.get_sharing_organizations(str(source_org.id))
             
             result = []
-            for org_id in sharing_orgs:
+            for org_id, trust_level, relationship in sharing_data:
                 try:
                     target_org = Organization.objects.get(id=org_id)
                     anonymization_level = self.get_trust_based_anonymization_level(source_org, target_org)
@@ -298,11 +306,21 @@ class TrustAnonymizationService:
                     # Determine data type for anonymization strategy
                     data_type = self._determine_data_type(field, anonymized_data[field])
                     
+                    # Convert string anonymization level to enum
+                    if anonymization_level == 'none':
+                        anon_level_enum = AnonymizationLevel.NONE
+                    elif anonymization_level == 'minimal' or anonymization_level == 'partial':
+                        anon_level_enum = AnonymizationLevel.MEDIUM
+                    elif anonymization_level == 'full':
+                        anon_level_enum = AnonymizationLevel.FULL
+                    else:
+                        anon_level_enum = AnonymizationLevel.MEDIUM  # Default
+                    
                     # Apply anonymization
-                    anonymized_value = self.anonymization_context.anonymize(
-                        anonymized_data[field], 
+                    anonymized_value = self.anonymization_context.execute_anonymization(
+                        str(anonymized_data[field]), 
                         data_type, 
-                        anonymization_level
+                        anon_level_enum
                     )
                     
                     anonymized_data[field] = anonymized_value

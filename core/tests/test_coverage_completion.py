@@ -23,48 +23,43 @@ from ..permissions import (
     check_stix_object_permission, check_feed_publish_permission,
     RateLimitPermission
 )
+from .test_base import CrispTestCase
 
 User = get_user_model()
 
 
-class AdminTestCase(TestCase):
+class AdminTestCase(CrispTestCase):
     """Test Django admin functionality"""
     
     def setUp(self):
+        super().setUp()
         self.site = AdminSite()
         self.factory = RequestFactory()
         
-        self.organization = Organization.objects.create(
-            name='Test Organization',
-            domain='test.com'
-        )
         # Create a root BlueVisionAdmin (self-created for test purposes)
-        self.root_admin = UserFactory.create_user('BlueVisionAdmin', {
-            'username': 'rootadmin',
-            'email': 'rootadmin@test.com',
-            'password': 'RootAdminPassword123!',
-            'organization': self.organization,
-            'is_staff': True,
-            'is_superuser': True,
-            'created_by': None  # Allow self-creation for the very first admin in tests
-        })
+        self.root_admin = self.create_test_user(
+            role='BlueVisionAdmin',
+            username='rootadmin',
+            email='rootadmin@test.com',
+            is_staff=True,
+            is_superuser=True,
+            created_by=None  # Allow self-creation for the very first admin in tests
+        )
         # Now create the actual admin user with root_admin as creator
-        self.admin_user = UserFactory.create_user('BlueVisionAdmin', {
-            'username': 'admin',
-            'email': 'admin@test.com',
-            'password': 'AdminPassword123!',
-            'organization': self.organization,
-            'is_staff': True,
-            'is_superuser': True,
-            'created_by': self.root_admin
-        })
+        self.admin_user = self.create_test_user(
+            role='BlueVisionAdmin',
+            username='admin',
+            email='admin@test.com',
+            is_staff=True,
+            is_superuser=True,
+            created_by=self.root_admin
+        )
         
-        self.test_user = UserFactory.create_user('viewer', {
-            'username': 'testuser',
-            'email': 'testuser@test.com',
-            'password': 'TestPassword123!',
-            'organization': self.organization
-        })
+        self.test_user = self.create_test_user(
+            role='viewer',
+            username='testuser',
+            email='testuser@test.com'
+        )
     
     def test_custom_user_admin(self):
         """Test CustomUserAdmin functionality"""
@@ -126,21 +121,17 @@ class AdminTestCase(TestCase):
         self.assertIn('success', admin.list_filter)
 
 
-class SerializerTestCase(TestCase):
+class SerializerTestCase(CrispTestCase):
     """Test serializer functionality"""
     
     def setUp(self):
-        self.organization = Organization.objects.create(
-            name='Test Organization',
-            domain='test.com'
-        )
+        super().setUp()
         
-        self.test_user = UserFactory.create_user('viewer', {
-            'username': 'testuser',
-            'email': 'testuser@test.com',
-            'password': 'TestPassword123!',
-            'organization': self.organization
-        })
+        self.test_user = self.create_test_user(
+            role='viewer',
+            username='testuser',
+            email='testuser@test.com'
+        )
     
     def test_user_login_serializer(self):
         """Test UserLoginSerializer"""
@@ -316,28 +307,23 @@ class ValidatorTestCase(TestCase):
 # Signals are tested implicitly through user operations
 
 
-class PermissionHelperTestCase(TestCase):
+class PermissionHelperTestCase(CrispTestCase):
     """Test permission helper functions"""
     
     def setUp(self):
-        self.organization = Organization.objects.create(
-            name='Test Organization',
-            domain='test.com'
+        super().setUp()
+        
+        self.admin_user = self.create_test_user(
+            role='BlueVisionAdmin',
+            username='admin',
+            email='admin@test.com'
         )
         
-        self.admin_user = UserFactory.create_user('BlueVisionAdmin', {
-            'username': 'admin',
-            'email': 'admin@test.com',
-            'password': 'AdminPassword123!',
-            'organization': self.organization
-        })
-        
-        self.viewer_user = UserFactory.create_user('viewer', {
-            'username': 'viewer',
-            'email': 'viewer@test.com',
-            'password': 'ViewerPassword123!',
-            'organization': self.organization
-        })
+        self.viewer_user = self.create_test_user(
+            role='viewer',
+            username='viewer',
+            email='viewer@test.com'
+        )
     
     def test_check_stix_object_permission(self):
         """Test STIX object permission checking"""
@@ -382,21 +368,17 @@ class PermissionHelperTestCase(TestCase):
         self.assertFalse(permission.has_permission(request, None))
 
 
-class FactoryTestCase(TestCase):
+class FactoryTestCase(CrispTestCase):
     """Test factory edge cases"""
     
     def setUp(self):
-        self.organization = Organization.objects.create(
-            name='Test Organization',
-            domain='test.com'
-        )
+        super().setUp()
         
-        self.admin_user = UserFactory.create_user('BlueVisionAdmin', {
-            'username': 'admin',
-            'email': 'admin@test.com',
-            'password': 'AdminPassword123!',
-            'organization': self.organization
-        })
+        self.admin_user = self.create_test_user(
+            role='BlueVisionAdmin',
+            username='admin',
+            email='admin@test.com'
+        )
     
     def test_create_user_with_auto_password(self):
         """Test creating user with auto-generated password"""
@@ -434,29 +416,27 @@ class FactoryTestCase(TestCase):
             }, self.admin_user)
 
 
-class ModelTestCase(TestCase):
+class ModelTestCase(CrispTestCase):
     """Test model edge cases and methods"""
     
     def setUp(self):
-        self.organization = Organization.objects.create(
-            name='Test Organization',
-            domain='test.com'
-        )
+        super().setUp()
         
-        self.test_user = UserFactory.create_user('viewer', {
-            'username': 'testuser',
-            'email': 'testuser@test.com',
-            'password': 'TestPassword123!',
-            'organization': self.organization
-        })
+        self.test_user = self.create_test_user(
+            role='viewer',
+            username='testuser',
+            email='testuser@test.com'
+        )
     
     def test_organization_str_method(self):
         """Test Organization __str__ method"""
-        self.assertEqual(str(self.organization), 'Test Organization')
+        # The organization name is unique, so we test the string representation
+        org_name = self.organization.name
+        self.assertEqual(str(self.organization), org_name)
     
     def test_custom_user_str_method(self):
         """Test CustomUser __str__ method"""
-        expected = f"testuser (Test Organization)"
+        expected = f"testuser ({self.organization.name})"
         self.assertEqual(str(self.test_user), expected)
     
     def test_user_session_properties(self):

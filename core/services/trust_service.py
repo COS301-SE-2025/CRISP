@@ -322,6 +322,7 @@ class TrustService:
             }
 
     @staticmethod
+    @staticmethod
     def check_trust_level(
         source_org: str,
         target_org: str
@@ -338,8 +339,8 @@ class TrustService:
         """
         # Direct bilateral relationship
         relationship = TrustRelationship.objects.filter(
-            source_organization=source_org,
-            target_organization=target_org,
+            source_organization_id=source_org,
+            target_organization_id=target_org,
             is_active=True
         ).select_related('trust_level').first()
         
@@ -356,8 +357,8 @@ class TrustService:
         
         # Check for bilateral reverse relationship
         reverse_relationship = TrustRelationship.objects.filter(
-            source_organization=target_org,
-            target_organization=source_org,
+            source_organization_id=target_org,
+            target_organization_id=source_org,
             is_active=True,
             is_bilateral=True
         ).select_related('trust_level').first()
@@ -375,13 +376,13 @@ class TrustService:
         
         # Check for community relationships (both orgs in same trust group)
         source_groups = TrustGroupMembership.objects.filter(
-            organization=source_org,
+            organization_id=source_org,
             is_active=True
         ).values_list('trust_group_id', flat=True)
         
         if source_groups:
             common_membership = TrustGroupMembership.objects.filter(
-                organization=target_org,
+                organization_id=target_org,
                 trust_group_id__in=source_groups,
                 is_active=True
             ).select_related('trust_group__default_trust_level').first()
@@ -506,7 +507,7 @@ class TrustService:
         
         # Get direct relationships
         relationships = TrustRelationship.objects.filter(
-            source_organization=source_org,
+            source_organization_id=source_org,
             is_active=True,
             trust_level__numerical_value__gte=min_trust_value
         ).select_related('trust_level')
@@ -526,11 +527,11 @@ class TrustService:
             logger.debug(f"Relationship {rel.id}: is_effective={is_effective}, status={rel.status}, approved_source={getattr(rel, 'approved_by_source', 'N/A')}, approved_target={getattr(rel, 'approved_by_target', 'N/A')}")
             
             if is_effective:
-                sharing_orgs.append((rel.target_organization, rel.trust_level, rel))
+                sharing_orgs.append((rel.target_organization_id, rel.trust_level, rel))
         
         # Get bilateral relationships (reverse direction)
         reverse_relationships = TrustRelationship.objects.filter(
-            target_organization=source_org,
+            target_organization_id=source_org,
             is_active=True,
             is_bilateral=True,
             trust_level__numerical_value__gte=min_trust_value
@@ -545,11 +546,11 @@ class TrustService:
                               rel.is_active)
             
             if is_effective:
-                sharing_orgs.append((rel.source_organization, rel.trust_level, rel))
+                sharing_orgs.append((rel.source_organization_id, rel.trust_level, rel))
         
         # Get community relationships
         group_memberships = TrustGroupMembership.objects.filter(
-            organization=source_org,
+            organization_id=source_org,
             is_active=True
         ).select_related('trust_group__default_trust_level')
         
@@ -561,13 +562,13 @@ class TrustService:
                 other_members = TrustGroupMembership.objects.filter(
                     trust_group=membership.trust_group,
                     is_active=True
-                ).exclude(organization=source_org)
+                ).exclude(organization_id=source_org)
                 
                 for other_member in other_members:
                     # Create implicit community relationship
                     community_rel = TrustRelationship(
-                        source_organization=source_org,
-                        target_organization=other_member.organization,
+                        source_organization_id=source_org,
+                        target_organization_id=other_member.organization_id,
                         relationship_type='community',
                         trust_level=membership.trust_group.default_trust_level,
                         trust_group=membership.trust_group,
@@ -576,7 +577,7 @@ class TrustService:
                     )
                     
                     sharing_orgs.append((
-                        other_member.organization,
+                        other_member.organization_id,
                         membership.trust_group.default_trust_level,
                         community_rel
                     ))

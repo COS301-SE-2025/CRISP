@@ -1,5 +1,6 @@
 import json
 from django.test import TestCase, TransactionTestCase
+from .test_base import CrispTestCase, CrispAPITestCase
 from django.urls import reverse
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
@@ -10,12 +11,11 @@ from ..services.auth_service import AuthenticationService
 from ..factories.user_factory import UserFactory
 
 
-class AuthenticationAPIIntegrationTestCase(APITestCase):
+class AuthenticationAPIIntegrationTestCase(CrispAPITestCase):
     """Integration tests for authentication API endpoints"""
     
     def setUp(self):
-        self.client = APIClient()
-        self.organization = self.create_test_organization()
+        super().setUp()
         
         # Create test users
         self.admin_user = CustomUser.objects.create_user(
@@ -35,17 +35,6 @@ class AuthenticationAPIIntegrationTestCase(APITestCase):
             role='viewer',
             is_verified=True
         )
-    
-    def create_test_organization(self):
-        """Create test organization"""
-        org, created = Organization.objects.get_or_create(
-            name='Test Organization',
-            defaults={
-                'description': 'Test organization for unit tests',
-                'domain': 'test.example.com'
-            }
-        )
-        return org
     
     def test_full_authentication_flow(self):
         """Test complete authentication flow"""
@@ -163,12 +152,11 @@ class AuthenticationAPIIntegrationTestCase(APITestCase):
             self.assertEqual(response.status_code, 200)
 
 
-class UserManagementAPIIntegrationTestCase(APITestCase):
+class UserManagementAPIIntegrationTestCase(CrispAPITestCase):
     """Integration tests for user management API endpoints"""
     
     def setUp(self):
-        self.client = APIClient()
-        self.organization = self.create_test_organization()
+        super().setUp()
         
         self.admin_user = CustomUser.objects.create_user(
             username='admin',
@@ -180,17 +168,6 @@ class UserManagementAPIIntegrationTestCase(APITestCase):
         )
         
         self.client.force_authenticate(user=self.admin_user)
-    
-    def create_test_organization(self):
-        """Create test organization"""
-        org, created = Organization.objects.get_or_create(
-            name='Test Organization',
-            defaults={
-                'description': 'Test organization for unit tests',
-                'domain': 'test.example.com'
-            }
-        )
-        return org
     
     def test_user_creation_via_api(self):
         """Test user creation through API"""
@@ -286,22 +263,11 @@ class UserManagementAPIIntegrationTestCase(APITestCase):
         self.assertFalse(test_user.is_active)
 
 
-class OrganizationIntegrationTestCase(TestCase):
+class OrganizationIntegrationTestCase(CrispTestCase):
     """Integration tests with organization model"""
     
     def setUp(self):
-        self.organization = self.create_test_organization()
-    
-    def create_test_organization(self):
-        """Create test organization"""
-        org, created = Organization.objects.get_or_create(
-            name='Test Organization',
-            defaults={
-                'description': 'Test organization for unit tests',
-                'domain': 'test.example.com'
-            }
-        )
-        return org
+        super().setUp()
     
     def test_user_organization_relationship(self):
         """Test user-organization relationship"""
@@ -346,11 +312,11 @@ class OrganizationIntegrationTestCase(TestCase):
         self.assertTrue(permission.has_object_permission(mock_request, None, regular_user))
 
 
-class STIXObjectIntegrationTestCase(TestCase):
+class STIXObjectIntegrationTestCase(CrispTestCase):
     """Integration tests with STIX objects"""
     
     def setUp(self):
-        self.organization = self.create_test_organization()
+        super().setUp()
         
         self.user = CustomUser.objects.create_user(
             username='stixuser',
@@ -370,17 +336,6 @@ class STIXObjectIntegrationTestCase(TestCase):
             role='BlueVisionAdmin',
             is_verified=True
         )
-    
-    def create_test_organization(self):
-        """Create test organization"""
-        org, created = Organization.objects.get_or_create(
-            name='Test Organization',
-            defaults={
-                'description': 'Test organization for unit tests',
-                'domain': 'test.example.com'
-            }
-        )
-        return org
     
     def test_stix_object_permission_creation(self):
         """Test creating STIX object permissions"""
@@ -440,11 +395,11 @@ class STIXObjectIntegrationTestCase(TestCase):
         self.assertTrue(check_stix_object_permission(self.user, stix_object, 'write'))
 
 
-class FeedPublishingIntegrationTestCase(TestCase):
+class FeedPublishingIntegrationTestCase(CrispTestCase):
     """Integration tests with feed publishing"""
     
     def setUp(self):
-        self.organization = self.create_test_organization()
+        super().setUp()
         
         self.publisher = CustomUser.objects.create_user(
             username='publisher',
@@ -464,17 +419,6 @@ class FeedPublishingIntegrationTestCase(TestCase):
             role='viewer',
             is_verified=True
         )
-    
-    def create_test_organization(self):
-        """Create test organization"""
-        org, created = Organization.objects.get_or_create(
-            name='Test Organization',
-            defaults={
-                'description': 'Test organization for unit tests',
-                'domain': 'test.example.com'
-            }
-        )
-        return org
     
     def test_feed_publishing_permissions(self):
         """Test feed publishing permissions"""
@@ -503,7 +447,8 @@ class AuthenticationEventIntegrationTestCase(TransactionTestCase):
     """Integration tests for authentication events and observers"""
     
     def setUp(self):
-        self.organization = self.create_test_organization()
+        from .test_base import CrispTestMixin
+        CrispTestMixin.setUp(self)
         self.user = CustomUser.objects.create_user(
             username='eventuser',
             email='eventuser@example.com',
@@ -511,17 +456,6 @@ class AuthenticationEventIntegrationTestCase(TransactionTestCase):
             organization=self.organization,
             is_verified=True
         )
-    
-    def create_test_organization(self):
-        """Create test organization"""
-        org, created = Organization.objects.get_or_create(
-            name='Test Organization',
-            defaults={
-                'description': 'Test organization for unit tests',
-                'domain': 'test.example.com'
-            }
-        )
-        return org
     
     def test_authentication_logging(self):
         """Test authentication event logging"""
@@ -580,11 +514,11 @@ class AuthenticationEventIntegrationTestCase(TransactionTestCase):
         auth_event_subject.detach(mock_observer)
 
 
-class MiddlewareIntegrationTestCase(TestCase):
+class MiddlewareIntegrationTestCase(CrispTestCase):
     """Integration tests for middleware stack"""
     
     def setUp(self):
-        self.organization = self.create_test_organization()
+        super().setUp()
         self.user = CustomUser.objects.create_user(
             username='middlewareuser',
             email='middlewareuser@example.com',
@@ -592,17 +526,6 @@ class MiddlewareIntegrationTestCase(TestCase):
             organization=self.organization,
             is_verified=True
         )
-    
-    def create_test_organization(self):
-        """Create test organization"""
-        org, created = Organization.objects.get_or_create(
-            name='Test Organization',
-            defaults={
-                'description': 'Test organization for unit tests',
-                'domain': 'test.example.com'
-            }
-        )
-        return org
     
     def test_middleware_stack_integration(self):
         """Test middleware stack working together"""
