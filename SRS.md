@@ -128,7 +128,7 @@ The platform will facilitate both consumption of external threat feeds and publi
 ## 3. Domain Model
 
 ### 3.1 UML Class Diagram
-![Domain Model](Domain%20Model%20Diagram/COS%20301%20CRISP%20Domain%20Model.png)
+![Domain Model](Domain%20Model%20Diagram/COS%20301%20CRISP%20Domain%20Model_2.png)
 
 ### 3.2 Core Domain Entities Description
 - **CustomUser**: Enhanced Django user model with organization association, security features, and multi-tenant capabilities
