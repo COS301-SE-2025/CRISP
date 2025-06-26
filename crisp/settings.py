@@ -5,6 +5,13 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+SMTP2GO_API_KEY = 'api-CE7DDEAC33DA4775B069E9C39789DED6'
+SMTP2GO_BASE_URL = 'https://api.smtp2go.com/v3/'
+
+
+CRISP_SENDER_NAME = 'CRISP Threat Intelligence Platform'
+CRISP_SENDER_EMAIL = 'datadefenders@chronocode.co.za'
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-default-key-for-dev')
