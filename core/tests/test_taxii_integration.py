@@ -1,6 +1,20 @@
 """
 Integration tests for TAXII feed consumption
 """
+import os
+import sys
+import django
+
+# Add the project root to Python path for standalone execution
+if __name__ == '__main__':
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(os.path.dirname(current_dir))
+    sys.path.insert(0, project_root)
+    
+    # Setup Django
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crisp.test_settings')
+    django.setup()
+
 import unittest
 from unittest.mock import patch, MagicMock
 import json
@@ -9,15 +23,51 @@ import pytz
 from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 
-from core.services.stix_taxii_service import StixTaxiiService
-from core.services.otx_taxii_service import OTXTaxiiService
-from core.models.threat_feed import ThreatFeed
-from core.models.indicator import Indicator
-from core.models.ttp_data import TTPData
-from core.repositories.threat_feed_repository import ThreatFeedRepository
-from core.repositories.indicator_repository import IndicatorRepository
-from core.repositories.ttp_repository import TTPRepository
-from core.tests.test_stix_mock_data import TAXII1_CONTENT_BLOCK, STIX20_BUNDLE, STIX21_BUNDLE, TAXII2_COLLECTIONS
+try:
+    from ..services.stix_taxii_service import StixTaxiiService
+except ImportError:
+    # Fallback for standalone execution
+    from core.services.stix_taxii_service import StixTaxiiService
+try:
+    from ..services.otx_taxii_service import OTXTaxiiService
+except ImportError:
+    # Fallback for standalone execution
+    from core.services.otx_taxii_service import OTXTaxiiService
+try:
+    from ..models.threat_feed import ThreatFeed
+except ImportError:
+    # Fallback for standalone execution
+    from core.models.threat_feed import ThreatFeed
+try:
+    from ..models.indicator import Indicator
+except ImportError:
+    # Fallback for standalone execution
+    from core.models.indicator import Indicator
+try:
+    from ..models.ttp_data import TTPData
+except ImportError:
+    # Fallback for standalone execution
+    from core.models.ttp_data import TTPData
+try:
+    from ..repositories.threat_feed_repository import ThreatFeedRepository
+except ImportError:
+    # Fallback for standalone execution
+    from core.repositories.threat_feed_repository import ThreatFeedRepository
+try:
+    from ..repositories.indicator_repository import IndicatorRepository
+except ImportError:
+    # Fallback for standalone execution
+    from core.repositories.indicator_repository import IndicatorRepository
+try:
+    from ..repositories.ttp_repository import TTPRepository
+except ImportError:
+    # Fallback for standalone execution
+    from core.repositories.ttp_repository import TTPRepository
+try:
+    from ..tests.test_stix_mock_data import TAXII1_CONTENT_BLOCK, STIX20_BUNDLE, STIX21_BUNDLE, TAXII2_COLLECTIONS
+except ImportError:
+    # Fallback for standalone execution
+    from core.tests.test_stix_mock_data import TAXII1_CONTENT_BLOCK, STIX20_BUNDLE, STIX21_BUNDLE, TAXII2_COLLECTIONS
 
 
 class TaxiiConsumptionIntegrationTestCase(TransactionTestCase):

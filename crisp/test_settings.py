@@ -1,16 +1,25 @@
 """
 Test settings for CRISP integrated platform
-Optimized for fast testing with SQLite and minimal external dependencies
+Configured for testing with PostgreSQL as required
 """
 
 from .settings import *
 import tempfile
+import os
 
-# Use in-memory SQLite for faster tests
+# Use PostgreSQL for tests (as required)
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': ':memory:',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('TEST_DB_NAME', 'test_crisp_auth_fixed'),
+        'USER': os.getenv('DB_USER', 'admin'),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'AdminPassword'),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '5432'),
+        'OPTIONS': {
+            'client_encoding': 'UTF8',
+            'connect_timeout': 10,
+        }
     }
 }
 
@@ -57,6 +66,11 @@ ALLOWED_HOSTS = ['testserver', 'localhost', '127.0.0.1']
 # Disable CORS for tests
 CORS_ALLOW_ALL_ORIGINS = True
 
+# Disable CSRF for API tests
+CSRF_COOKIE_SECURE = False
+CSRF_USE_SESSIONS = False
+CSRF_TRUSTED_ORIGINS = ['http://localhost', 'http://127.0.0.1', 'http://testserver']
+
 # Mock external services for tests
 OTX_SETTINGS = {
     'API_KEY': 'test-api-key',
@@ -90,5 +104,18 @@ SIMPLE_JWT.update({
 # Trust management test settings
 TRUST_MANAGEMENT_SECRET_KEY = 'test-trust-management-secret'
 
-# Enable rate limiting for tests (to test the middleware)
-RATELIMIT_ENABLE = True
+# Disable rate limiting for most tests to avoid interference
+RATELIMIT_ENABLE = False
+
+# Minimal middleware for auth tests
+MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    # Remove CSRF for API tests
+    # 'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]

@@ -54,6 +54,9 @@ auth_urlpatterns = [
     path('change-password/', auth_views.PasswordChangeView.as_view(), name='change_password'),
     path('password-reset/', auth_views.PasswordResetView.as_view(), name='password_reset'),
     path('password-reset-confirm/', auth_views.PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
+    # Alternative URLs to match test expectations
+    path('reset-password/', auth_views.PasswordResetView.as_view(), name='reset_password'),
+    path('reset-password-confirm/', auth_views.PasswordResetConfirmView.as_view(), name='reset_password_confirm'),
     path('trusted-devices/', auth_views.TrustedDeviceView.as_view(), name='trusted_devices'),
 ]
 

@@ -6,7 +6,7 @@ from datetime import timedelta
 import logging
 import django.db.models
 
-from ..models.models import (
+from ..models.trust_models.models import (
     TrustRelationship, TrustLevel, TrustGroup, TrustGroupMembership,
     TrustLog, SharingPolicy, TRUST_STATUS_CHOICES, RELATIONSHIP_TYPE_CHOICES
 )

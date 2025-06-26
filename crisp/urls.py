@@ -2,6 +2,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from core.views.home import home
+from core.views.auth_views import LoginPageView, ViewerDashboardView, DebugAuthView
 
 urlpatterns = [
     path('', home, name='home'),
@@ -16,12 +17,15 @@ urlpatterns = [
         path('threat-intel/', include('core.urls.threat_intel')),
     ])),
     
-    # Direct routing for some test paths
-    path('auth/', include('core.urls')),
+    # Direct routing for some test paths that expect template views
+    path('auth/', include([
+        path('login/', LoginPageView.as_view(), name='auth_login_page'),
+        path('', include('core.urls')),  # Include other auth URLs
+    ])),
     path('viewer/', include([
-        path('dashboard/', home, name='viewer_dashboard'),
+        path('dashboard/', ViewerDashboardView.as_view(), name='viewer_dashboard'),
     ])),
     path('debug/', include([
-        path('auth/', home, name='debug_auth'),
+        path('auth/', DebugAuthView.as_view(), name='debug_auth'),
     ])),
 ]

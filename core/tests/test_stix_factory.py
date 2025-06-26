@@ -1,7 +1,21 @@
 """
 Unit tests for STIX factory pattern implementations
 """
+import os
+import sys
+import django
 import unittest
+
+# Add the project root to Python path for standalone execution
+if __name__ == '__main__':
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(os.path.dirname(current_dir))
+    sys.path.insert(0, project_root)
+    
+    # Setup Django
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crisp.test_settings')
+    django.setup()
+
 from unittest.mock import patch, MagicMock
 import json
 from datetime import datetime
@@ -9,12 +23,21 @@ import pytz
 from django.test import TestCase
 from django.utils import timezone
 
-from core.patterns.factory.stix_indicator_creator import StixIndicatorCreator
-from core.patterns.factory.stix_ttp_creator import StixTTPCreator
-from core.models.indicator import Indicator
-from core.models.ttp_data import TTPData
-from core.models.threat_feed import ThreatFeed
-from core.tests.test_stix_mock_data import STIX20_BUNDLE, STIX21_BUNDLE
+try:
+    from ..patterns.factory.stix_indicator_creator import StixIndicatorCreator
+    from ..patterns.factory.stix_ttp_creator import StixTTPCreator
+    from ..models.indicator import Indicator
+    from ..models.ttp_data import TTPData
+    from ..models.threat_feed import ThreatFeed
+    from ..tests.test_stix_mock_data import STIX20_BUNDLE, STIX21_BUNDLE
+except ImportError:
+    # Fallback for standalone execution
+    from core.patterns.factory.stix_indicator_creator import StixIndicatorCreator
+    from core.patterns.factory.stix_ttp_creator import StixTTPCreator
+    from core.models.indicator import Indicator
+    from core.models.ttp_data import TTPData
+    from core.models.threat_feed import ThreatFeed
+    from core.tests.test_stix_mock_data import STIX20_BUNDLE, STIX21_BUNDLE
 
 
 class StixIndicatorCreatorTestCase(TestCase):

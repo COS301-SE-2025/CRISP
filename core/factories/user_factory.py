@@ -92,7 +92,7 @@ class StandardUserCreator(UserCreator):
                 organization=user_data['organization'],
                 role='viewer',
                 is_publisher=False,
-                is_verified=False,  # Requires admin verification
+                is_verified=user_data.get('is_verified', False),  # Allow override for tests
                 is_active=True
             )
             
@@ -130,7 +130,7 @@ class PublisherUserCreator(UserCreator):
                 organization=user_data['organization'],
                 role='publisher',
                 is_publisher=True,
-                is_verified=True,  # Publishers are verified by default
+                is_verified=user_data.get('is_verified', True),  # Publishers are verified by default
                 is_active=True
             )
             
@@ -179,7 +179,7 @@ class AdminUserCreator(UserCreator):
                 organization=user_data['organization'],
                 role=user_data.get('role', 'BlueVisionAdmin'),
                 is_publisher=True,
-                is_verified=True,
+                is_verified=user_data.get('is_verified', True),
                 is_active=True,
                 is_staff=True,  # Django admin access
                 is_superuser=user_data.get('role') == 'BlueVisionAdmin'

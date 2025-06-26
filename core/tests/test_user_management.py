@@ -1,14 +1,44 @@
+import os
+import sys
+import django
+
+# Add the project root to Python path for standalone execution
+if __name__ == '__main__':
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(os.path.dirname(current_dir))
+    sys.path.insert(0, project_root)
+    
+    # Setup Django
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crisp.test_settings')
+    django.setup()
+
 from django.test import TestCase
 from django.core.exceptions import ValidationError
 from unittest.mock import MagicMock, patch
 
-from core.models import CustomUser, Organization
-from core.factories.user_factory import (
-    UserFactory, StandardUserCreator, PublisherUserCreator, AdminUserCreator
-)
-from core.serializers import (
-    UserRegistrationSerializer, AdminUserCreateSerializer, AdminUserUpdateSerializer
-)
+try:
+    from ..models import CustomUser, Organization
+except ImportError:
+    # Fallback for standalone execution
+    from core.models import CustomUser, Organization
+try:
+    from ..factories.user_factory import (
+        UserFactory, StandardUserCreator, PublisherUserCreator, AdminUserCreator
+    )
+except ImportError:
+    # Fallback for standalone execution
+    from core.factories.user_factory import (
+        UserFactory, StandardUserCreator, PublisherUserCreator, AdminUserCreator
+    )
+try:
+    from ..serializers import (
+        UserRegistrationSerializer, AdminUserCreateSerializer, AdminUserUpdateSerializer
+    )
+except ImportError:
+    # Fallback for standalone execution
+    from core.serializers import (
+        UserRegistrationSerializer, AdminUserCreateSerializer, AdminUserUpdateSerializer
+    )
 
 
 class UserFactoryTestCase(TestCase):
@@ -584,3 +614,8 @@ class UserBulkOperationsTestCase(TestCase):
         for user in users:
             user.refresh_from_db()
             self.assertFalse(user.is_active)
+
+
+if __name__ == '__main__':
+    import unittest
+    unittest.main()

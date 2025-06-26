@@ -41,10 +41,35 @@ class Command(BaseCommand):
             default='all',
             help='Type of test to perform'
         )
+        parser.add_argument(
+            '--list-collections',
+            action='store_true',
+            help='List available collections'
+        )
+        parser.add_argument(
+            '--consume',
+            action='store_true',
+            help='Consume from a collection'
+        )
+        parser.add_argument(
+            '--collection',
+            type=str,
+            help='Collection name for consume operation'
+        )
 
     def handle(self, *args, **options):
         """Handle the command execution."""
         try:
+            # Handle new options first
+            if options.get('list_collections'):
+                self._handle_list_collections(options)
+                return
+            
+            if options.get('consume'):
+                self._handle_consume(options)
+                return
+            
+            # Legacy behavior
             self.stdout.write(
                 self.style.SUCCESS('Starting TAXII test operations...')
             )
@@ -62,7 +87,7 @@ class Command(BaseCommand):
 
         except Exception as e:
             logger.error(f"Error during TAXII test: {str(e)}")
-            raise CommandError(f"TAXII test failed: {str(e)}")
+            self.stderr.write(self.style.ERROR(f"Error during TAXII test: {str(e)}"))
 
     def _test_specific_feed(self, feed_id, options):
         """Test a specific threat feed."""
@@ -208,3 +233,53 @@ class Command(BaseCommand):
                 self.style.ERROR(f"    Content consumption failed: {str(e)}")
             )
             raise
+    
+    def _handle_list_collections(self, options):
+        """Handle the --list-collections option."""
+        self.stdout.write("Listing available collections...")
+        
+        try:
+            service = OTXTaxiiService()
+            collections = service.get_collections()
+            
+            self.stdout.write(f"Found {len(collections)} collections:")
+            for collection in collections:
+                self.stdout.write(f"  - ID: {collection.get('id', 'N/A')}")
+                self.stdout.write(f"    Title: {collection.get('title', 'N/A')}")
+                self.stdout.write(f"    Description: {collection.get('description', 'N/A')}")
+                self.stdout.write(f"    Available: {collection.get('available', False)}")
+                self.stdout.write("")
+                
+        except Exception as e:
+            error_msg = f"Error listing collections: {str(e)}"
+            logger.error(error_msg)
+            self.stderr.write(self.style.ERROR(error_msg))
+    
+    def _handle_consume(self, options):
+        """Handle the --consume option."""
+        collection_name = options.get('collection')
+        
+        if not collection_name:
+            error_msg = "Collection name is required for consuming"
+            logger.error(error_msg)
+            self.stderr.write(self.style.ERROR(error_msg))
+            return
+        
+        self.stdout.write(f"Consuming from collection: {collection_name}")
+        
+        try:
+            service = OTXTaxiiService()
+            result = service.consume_feed(collection_name=collection_name)
+            
+            self.stdout.write("Feed consumed:")
+            self.stdout.write(f"  Indicators created: {result.get('indicators_created', 0)}")
+            self.stdout.write(f"  Indicators updated: {result.get('indicators_updated', 0)}")
+            self.stdout.write(f"  TTPs created: {result.get('ttp_created', 0)}")
+            self.stdout.write(f"  TTPs updated: {result.get('ttp_updated', 0)}")
+            self.stdout.write(f"  Skipped: {result.get('skipped', 0)}")
+            self.stdout.write(f"  Errors: {result.get('errors', 0)}")
+            
+        except Exception as e:
+            error_msg = f"Error consuming feed: {str(e)}"
+            logger.error(error_msg)
+            self.stderr.write(self.style.ERROR(error_msg))

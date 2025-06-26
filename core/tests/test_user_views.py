@@ -1,6 +1,20 @@
 """
 Tests for user views functionality
 """
+import os
+import sys
+import django
+
+# Add the project root to Python path for standalone execution
+if __name__ == '__main__':
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(os.path.dirname(current_dir))
+    sys.path.insert(0, project_root)
+    
+    # Setup Django
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crisp.test_settings')
+    django.setup()
+
 from django.test import TestCase
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
@@ -327,3 +341,8 @@ class UserViewPermissionsTestCase(TestCase):
         request = factory.get(f'/api/users/{self.viewer_user.id}/')
         request.user = self.viewer_user
         view.request = request
+
+
+if __name__ == '__main__':
+    import unittest
+    unittest.main()

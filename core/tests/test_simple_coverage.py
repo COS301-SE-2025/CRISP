@@ -1,15 +1,37 @@
 """
 Simple tests to improve code coverage
 """
+import os
+import sys
+import django
+
+# Add the project root to Python path for standalone execution
+if __name__ == '__main__':
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(os.path.dirname(current_dir))
+    sys.path.insert(0, project_root)
+    
+    # Setup Django
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crisp.test_settings')
+    django.setup()
+
 from django.test import TestCase
 from django.contrib.admin.sites import AdminSite
 from unittest.mock import Mock, patch
 
-from ..models import CustomUser, Organization, UserSession, AuthenticationLog
-from ..admin import CustomUserAdmin, OrganizationAdmin, UserSessionAdmin, AuthenticationLogAdmin
-from ..validators import UsernameValidator, EmailValidator, CustomPasswordValidator
-from ..permissions import check_stix_object_permission, check_feed_publish_permission, RateLimitPermission
-from ..factories.user_factory import UserFactory
+try:
+    from ..models import CustomUser, Organization, UserSession, AuthenticationLog
+    from ..admin import CustomUserAdmin, OrganizationAdmin, UserSessionAdmin, AuthenticationLogAdmin
+    from ..validators import UsernameValidator, EmailValidator, CustomPasswordValidator
+    from ..permissions import check_stix_object_permission, check_feed_publish_permission, RateLimitPermission
+    from ..factories.user_factory import UserFactory
+except ImportError:
+    # Fallback for standalone execution
+    from core.models import CustomUser, Organization, UserSession, AuthenticationLog
+    from core.admin import CustomUserAdmin, OrganizationAdmin, UserSessionAdmin, AuthenticationLogAdmin
+    from core.validators import UsernameValidator, EmailValidator, CustomPasswordValidator
+    from core.permissions import check_stix_object_permission, check_feed_publish_permission, RateLimitPermission
+    from core.factories.user_factory import UserFactory
 
 
 class SimpleAdminTestCase(TestCase):
@@ -243,3 +265,8 @@ class SimpleFactoryTestCase(TestCase):
             self.assertIsNotNone(user)
         except Exception:
             pass  # Don't fail on validation, just test coverage
+
+
+if __name__ == '__main__':
+    import unittest
+    unittest.main()

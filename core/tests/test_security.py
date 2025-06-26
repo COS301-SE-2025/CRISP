@@ -1,19 +1,46 @@
+import os
+import sys
 import time
+import django
+
+# Add the project root to Python path for standalone execution
+if __name__ == '__main__':
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(os.path.dirname(current_dir))
+    sys.path.insert(0, project_root)
+    
+    # Setup Django
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crisp.test_settings')
+    django.setup()
+
 from django.test import TestCase, RequestFactory, override_settings
 from django.core.cache import cache
 from django.http import JsonResponse
 from unittest.mock import MagicMock, patch
 
-from ..models import CustomUser, AuthenticationLog, Organization
-from ..middleware import (
-    SecurityHeadersMiddleware, RateLimitMiddleware, AuthenticationMiddleware,
-    SecurityAuditMiddleware, SessionTimeoutMiddleware
-)
-from ..validators import CustomPasswordValidator, UsernameValidator, EmailValidator
-from ..permissions import (
-    IsSystemAdmin, IsOrganizationAdmin, IsPublisher, IsVerifiedUser,
-    IsSameUserOrAdmin, check_stix_object_permission
-)
+try:
+    from ..models import CustomUser, AuthenticationLog, Organization
+    from ..middleware import (
+        SecurityHeadersMiddleware, RateLimitMiddleware, AuthenticationMiddleware,
+        SecurityAuditMiddleware, SessionTimeoutMiddleware
+    )
+    from ..validators import CustomPasswordValidator, UsernameValidator, EmailValidator
+    from ..permissions import (
+        IsSystemAdmin, IsOrganizationAdmin, IsPublisher, IsVerifiedUser,
+        IsSameUserOrAdmin, check_stix_object_permission
+    )
+except ImportError:
+    # Fallback for standalone execution
+    from core.models import CustomUser, AuthenticationLog, Organization
+    from core.middleware import (
+        SecurityHeadersMiddleware, RateLimitMiddleware, AuthenticationMiddleware,
+        SecurityAuditMiddleware, SessionTimeoutMiddleware
+    )
+    from core.validators import CustomPasswordValidator, UsernameValidator, EmailValidator
+    from core.permissions import (
+        IsSystemAdmin, IsOrganizationAdmin, IsPublisher, IsVerifiedUser,
+        IsSameUserOrAdmin, check_stix_object_permission
+    )
 
 
 class SecurityHeadersMiddlewareTestCase(TestCase):
@@ -669,3 +696,8 @@ class SessionTimeoutTestCase(TestCase):
         response = self.middleware.process_request(request)
         self.assertIsInstance(response, JsonResponse)
         self.assertEqual(response.status_code, 401)
+
+
+if __name__ == '__main__':
+    import unittest
+    unittest.main()

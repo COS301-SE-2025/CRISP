@@ -78,6 +78,10 @@ class TTPRepository:
         """Get TTPs by threat feed ID"""
         return TTPData.objects.filter(threat_feed_id=feed_id)
     
+    def get_by_mitre_id(self, mitre_id):
+        """Get TTPs by MITRE technique ID"""
+        return TTPData.objects.filter(mitre_technique_id=mitre_id)
+    
     def update(self, ttp_id, update_data):
         """Update TTP by ID"""
         try:

@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 import logging
 
-from ..models.models import (
+from ..models.trust_models.models import (
     TrustGroup, TrustGroupMembership, TrustLevel, TrustLog
 )
 
