@@ -1,6 +1,5 @@
 # Python environments
 crisp_env/
-claude-env/
 venv/
 env/
 .env
