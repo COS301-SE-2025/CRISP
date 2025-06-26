@@ -1,8 +1,8 @@
 """
-Test Email Script for Data Defenders
-File: test_email_datadefenders.py
+Debug SMTP2Go Connection Test
+File: debug_smtp2go_test.py
 
-Simple test script to send an email to datadefenders.sa@gmail.com using SMTP2Go.
+Detailed debugging script to identify SMTP2Go connection issues.
 """
 
 import requests
@@ -10,10 +10,9 @@ import json
 from datetime import datetime
 
 
-def send_test_email():
-    """Send a test email to datadefenders.sa@gmail.com"""
+def test_smtp2go_endpoints():
+    """Test different SMTP2Go endpoints to identify the issue"""
     
-    # SMTP2Go configuration
     api_key = "api-CE7DDEAC33DA4775B069E9C39789DED6"
     base_url = "https://api.smtp2go.com/v3/"
     
@@ -22,336 +21,292 @@ def send_test_email():
         'X-Smtp2go-Api-Key': api_key
     }
     
-    # Email content
-    subject = "🛡️ CRISP Observer Pattern Test - Data Defenders"
+    print("SMTP2Go API Debugging")
+    print("=" * 50)
+    print(f"API Key: {api_key}")
+    print(f"Base URL: {base_url}")
+    print(f"Headers: {headers}")
+    print()
     
-    html_content = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>CRISP Test Email</title>
-        <style>
-            body {{ 
-                font-family: Arial, sans-serif; 
-                margin: 0; 
-                padding: 20px; 
-                background-color: #f8f9fa; 
-            }}
-            .container {{ 
-                max-width: 600px; 
-                margin: 0 auto; 
-                background-color: white; 
-                border-radius: 8px; 
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
-            }}
-            .header {{ 
-                background-color: #28a745; 
-                color: white; 
-                padding: 20px; 
-                border-radius: 8px 8px 0 0; 
-                text-align: center; 
-            }}
-            .content {{ 
-                padding: 20px; 
-            }}
-            .success-badge {{ 
-                display: inline-block; 
-                padding: 8px 16px; 
-                background-color: #28a745; 
-                color: white; 
-                border-radius: 20px; 
-                font-weight: bold; 
-                margin: 10px 0; 
-            }}
-            .info-box {{ 
-                background-color: #e3f2fd; 
-                padding: 15px; 
-                border-radius: 5px; 
-                margin: 15px 0; 
-                border-left: 4px solid #2196f3; 
-            }}
-            .feature-list {{ 
-                background-color: #f8f9fa; 
-                padding: 15px; 
-                border-radius: 5px; 
-                margin: 15px 0; 
-            }}
-            .footer {{ 
-                background-color: #e9ecef; 
-                padding: 15px; 
-                border-radius: 0 0 8px 8px; 
-                text-align: center; 
-                font-size: 12px; 
-                color: #6c757d; 
-            }}
-            ul {{ 
-                padding-left: 20px; 
-            }}
-            li {{ 
-                margin: 8px 0; 
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h1>🛡️ CRISP Observer Pattern</h1>
-                <p>Cyber Risk Information Sharing Platform</p>
-                <div class="success-badge">✅ Integration Successful!</div>
-            </div>
+    # Test different endpoints
+    endpoints = [
+        ("stats", "GET", "Account statistics"),
+        ("email/send", "POST", "Email sending endpoint"),
+        ("", "GET", "API root"),
+        ("account", "GET", "Account information"),
+        ("stats/overall", "GET", "Overall stats")
+    ]
+    
+    for endpoint, method, description in endpoints:
+        url = f"{base_url}{endpoint}"
+        print(f"Testing: {description}")
+        print(f"   URL: {url}")
+        print(f"   Method: {method}")
+        
+        try:
+            if method == "GET":
+                response = requests.get(url, headers=headers, timeout=10)
+            else:
+                # For POST, use minimal payload
+                test_payload = {
+                    "to": ["test@example.com"],
+                    "sender": "test@chronocode.co.za",
+                    "subject": "Test",
+                    "text_body": "Test"
+                }
+                response = requests.post(url, json=test_payload, headers=headers, timeout=10)
             
-            <div class="content">
-                <h2>Hello Data Defenders Team! 👋</h2>
-                
-                <p>Congratulations! Your CRISP Observer Pattern with SMTP2Go integration is working perfectly!</p>
-                
-                <div class="info-box">
-                    <h3>📧 Email Integration Details:</h3>
-                    <ul>
-                        <li><strong>API Key:</strong> api-CE7DDEAC33DA4775B069E9C39789DED6</li>
-                        <li><strong>Sender:</strong> datadefenders@chronocode.co.za</li>
-                        <li><strong>Recipient:</strong> datadefenders.sa@gmail.com</li>
-                        <li><strong>Test Time:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}</li>
-                        <li><strong>Status:</strong> ✅ Successfully Delivered</li>
-                    </ul>
-                </div>
-                
-                <div class="feature-list">
-                    <h3>🚀 Observer Pattern Features Implemented:</h3>
-                    <ul>
-                        <li>✅ <strong>ThreatFeedSubject</strong> - Manages threat feed notifications</li>
-                        <li>✅ <strong>InstitutionObserver</strong> - Notifies institutions of feed updates</li>
-                        <li>✅ <strong>AlertSystemObserver</strong> - Triggers security alerts</li>
-                        <li>✅ <strong>EmailNotificationObserver</strong> - Sends professional email notifications</li>
-                        <li>✅ <strong>SMTP2Go Integration</strong> - Reliable email delivery service</li>
-                        <li>✅ <strong>Batch Processing</strong> - Groups notifications to prevent spam</li>
-                        <li>✅ <strong>Priority-based Routing</strong> - Routes alerts based on severity</li>
-                        <li>✅ <strong>Professional Templates</strong> - Beautiful HTML email formatting</li>
-                        <li>✅ <strong>Async Processing</strong> - Non-blocking email delivery via Celery</li>
-                        <li>✅ <strong>Retry Mechanisms</strong> - Automatic retry on failures</li>
-                    </ul>
-                </div>
-                
-                <h3>🔔 Notification Types Available:</h3>
-                <ul>
-                    <li><strong>🚨 Critical Alerts</strong> - High-priority security threats</li>
-                    <li><strong>⚠️ Threat Indicators</strong> - New IoCs and malicious indicators</li>
-                    <li><strong>📊 TTP Updates</strong> - Tactics, Techniques, and Procedures</li>
-                    <li><strong>📈 Feed Publications</strong> - New threat intelligence feeds</li>
-                    <li><strong>📦 Batch Summaries</strong> - Multiple notifications in one email</li>
-                </ul>
-                
-                <div class="info-box">
-                    <h3>📋 Next Steps:</h3>
-                    <ol>
-                        <li>Integrate with your existing CRISP threat feeds</li>
-                        <li>Configure recipient groups for your team</li>
-                        <li>Set up priority-based alert routing</li>
-                        <li>Enable batch processing for optimal email delivery</li>
-                        <li>Monitor system health with built-in diagnostics</li>
-                    </ol>
-                </div>
-                
-                <p><strong>🎉 Your CRISP system is now ready for production use!</strong></p>
-                
-                <p>The Observer pattern implementation perfectly follows your UML diagram and integrates seamlessly with the existing CRISP architecture.</p>
-            </div>
+            print(f"   Status: {response.status_code}")
             
-            <div class="footer">
-                <p><strong>CRISP - Cyber Risk Information Sharing Platform</strong></p>
-                <p>Data Defenders Team | University of Pretoria COS 301</p>
-                <p>This email was sent via SMTP2Go API integration</p>
-                <p>Test completed at {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}</p>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
+            # Try to parse JSON response
+            try:
+                response_data = response.json()
+                print(f"   Response: {json.dumps(response_data, indent=2)[:200]}...")
+            except:
+                print(f"   Response (text): {response.text[:200]}...")
+            
+            if response.status_code == 200:
+                print("   SUCCESS")
+            elif response.status_code == 404:
+                print("   NOT FOUND (404)")
+            elif response.status_code == 401:
+                print("   UNAUTHORIZED (401) - Check API key")
+            elif response.status_code == 403:
+                print("   FORBIDDEN (403) - Permission denied")
+            else:
+                print(f"   OTHER ERROR ({response.status_code})")
+                
+        except requests.exceptions.Timeout:
+            print("   TIMEOUT")
+        except requests.exceptions.ConnectionError:
+            print("   CONNECTION ERROR")
+        except Exception as e:
+            print(f"   EXCEPTION: {str(e)}")
+        
+        print()
+
+
+def test_alternative_api_format():
+    """Test alternative API key format"""
     
-    text_content = f"""
-    CRISP Observer Pattern Test - Data Defenders
-    ==========================================
+    print("Testing Alternative API Key Formats")
+    print("=" * 50)
     
-    Hello Data Defenders Team!
+    # Sometimes SMTP2Go expects different header formats
+    api_key = "api-CE7DDEAC33DA4775B069E9C39789DED6"
+    base_url = "https://api.smtp2go.com/v3/"
     
-    Congratulations! Your CRISP Observer Pattern with SMTP2Go integration is working perfectly!
+    alternative_headers = [
+        {
+            'X-Smtp2go-Api-Key': api_key,
+            'Content-Type': 'application/json'
+        },
+        {
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json'
+        },
+        {
+            'X-API-Key': api_key,
+            'Content-Type': 'application/json'
+        },
+        {
+            'Api-Key': api_key,
+            'Content-Type': 'application/json'
+        }
+    ]
     
-    EMAIL INTEGRATION DETAILS:
-    - API Key: api-CE7DDEAC33DA4775B069E9C39789DED6
-    - Sender: datadefenders@chronocode.co.za
-    - Recipient: datadefenders.sa@gmail.com
-    - Test Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}
-    - Status: ✅ Successfully Delivered
+    for i, headers in enumerate(alternative_headers, 1):
+        print(f"🧪 Test {i}: {list(headers.keys())}")
+        
+        try:
+            response = requests.get(
+                f"{base_url}stats",
+                headers=headers,
+                timeout=10
+            )
+            
+            print(f"   Status: {response.status_code}")
+            
+            if response.status_code == 200:
+                print("    SUCCESS - This header format works!")
+                try:
+                    data = response.json()
+                    print(f"   Data: {json.dumps(data, indent=2)[:200]}...")
+                except:
+                    pass
+                return headers
+            else:
+                print(f"    Failed with {response.status_code}")
+                
+        except Exception as e:
+            print(f"    Exception: {str(e)}")
+        
+        print()
     
-    OBSERVER PATTERN FEATURES IMPLEMENTED:
-    ✅ ThreatFeedSubject - Manages threat feed notifications
-    ✅ InstitutionObserver - Notifies institutions of feed updates
-    ✅ AlertSystemObserver - Triggers security alerts
-    ✅ EmailNotificationObserver - Sends professional email notifications
-    ✅ SMTP2Go Integration - Reliable email delivery service
-    ✅ Batch Processing - Groups notifications to prevent spam
-    ✅ Priority-based Routing - Routes alerts based on severity
-    ✅ Professional Templates - Beautiful HTML email formatting
-    ✅ Async Processing - Non-blocking email delivery via Celery
-    ✅ Retry Mechanisms - Automatic retry on failures
+    return None
+
+
+def test_direct_email_send():
+    """Try sending email directly with proper format"""
     
-    NOTIFICATION TYPES AVAILABLE:
-    - 🚨 Critical Alerts - High-priority security threats
-    - ⚠️ Threat Indicators - New IoCs and malicious indicators
-    - 📊 TTP Updates - Tactics, Techniques, and Procedures
-    - 📈 Feed Publications - New threat intelligence feeds
-    - 📦 Batch Summaries - Multiple notifications in one email
+    print(" Testing Direct Email Send")
+    print("=" * 50)
     
-    NEXT STEPS:
-    1. Integrate with your existing CRISP threat feeds
-    2. Configure recipient groups for your team
-    3. Set up priority-based alert routing
-    4. Enable batch processing for optimal email delivery
-    5. Monitor system health with built-in diagnostics
+    api_key = "api-CE7DDEAC33DA4775B069E9C39789DED6"
     
-    🎉 Your CRISP system is now ready for production use!
+    # Use the most common header format for SMTP2Go
+    headers = {
+        'X-Smtp2go-Api-Key': api_key,
+        'Content-Type': 'application/json'
+    }
     
-    The Observer pattern implementation perfectly follows your UML diagram and integrates seamlessly with the existing CRISP architecture.
-    
-    ---
-    CRISP - Cyber Risk Information Sharing Platform
-    Data Defenders Team | University of Pretoria COS 301
-    This email was sent via SMTP2Go API integration
-    Test completed at {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}
-    """
-    
-    # Email payload
     payload = {
         "to": ["datadefenders.sa@gmail.com"],
-        "sender": "Data Defenders CRISP <datadefenders@chronocode.co.za>",
-        "subject": subject,
-        "html_body": html_content,
-        "text_body": text_content
+        "sender": "datadefenders@chronocode.co.za",
+        "subject": " CRISP Debug Test - Data Defenders",
+        "text_body": """
+Debug Test Email from CRISP
+
+This is a debug test to verify SMTP2Go integration.
+
+If you receive this email, the API is working correctly!
+
+API Key: api-CE7DDEAC33DA4775B069E9C39789DED6
+Sender: datadefenders@chronocode.co.za
+Timestamp: {}
+
+Data Defenders Team
+        """.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')),
+        "html_body": f"""
+        <html>
+        <body>
+            <h2>🧪 CRISP Debug Test</h2>
+            <p>This is a debug test to verify SMTP2Go integration.</p>
+            <p><strong>If you receive this email, the API is working correctly!</strong></p>
+            <ul>
+                <li>API Key: api-CE7DDEAC33DA4775B069E9C39789DED6</li>
+                <li>Sender: datadefenders@chronocode.co.za</li>
+                <li>Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}</li>
+            </ul>
+            <p>Data Defenders Team</p>
+        </body>
+        </html>
+        """
     }
     
     try:
-        print("🚀 Sending test email to datadefenders.sa@gmail.com...")
-        print(f"📧 Subject: {subject}")
-        print(f"🔑 API Key: {api_key}")
-        print(f"📤 Sender: datadefenders@chronocode.co.za")
+        print(" Sending debug email...")
+        print(f" To: datadefenders.sa@gmail.com")
+        print(f" From: datadefenders@chronocode.co.za")
         print()
         
         response = requests.post(
-            f"{base_url}email/send",
+            "https://api.smtp2go.com/v3/email/send",
             json=payload,
             headers=headers,
             timeout=30
         )
         
-        result = response.json()
+        print(f"📊 Response Status: {response.status_code}")
+        print("📋 Full Response:")
+        print("-" * 30)
         
-        print("📋 SMTP2Go Response:")
-        print("=" * 40)
-        print(json.dumps(result, indent=2))
-        print("=" * 40)
+        try:
+            response_data = response.json()
+            print(json.dumps(response_data, indent=2))
+        except:
+            print("Raw response:")
+            print(response.text)
         
-        if response.status_code == 200 and result.get('data', {}).get('succeeded', 0) > 0:
-            print("✅ SUCCESS! Email sent successfully!")
-            print("📧 Check the inbox at datadefenders.sa@gmail.com")
-            print("📱 Also check spam/junk folder if not in inbox")
-            print()
-            print("📊 Email Statistics:")
-            data = result.get('data', {})
-            print(f"   - Succeeded: {data.get('succeeded', 0)}")
-            print(f"   - Failed: {data.get('failed', 0)}")
-            if 'email_id' in data:
-                print(f"   - Email ID: {data['email_id']}")
-            
-            return True
-        else:
-            print("❌ FAILED! Email was not sent successfully")
-            print(f"HTTP Status: {response.status_code}")
-            error_msg = result.get('data', {}).get('error', 'Unknown error')
-            print(f"Error: {error_msg}")
-            
-            return False
-            
-    except requests.exceptions.RequestException as e:
-        print(f"❌ NETWORK ERROR: {str(e)}")
-        return False
-    except Exception as e:
-        print(f"❌ UNEXPECTED ERROR: {str(e)}")
-        return False
-
-
-def test_smtp2go_connection():
-    """Test SMTP2Go API connection"""
-    print("🔍 Testing SMTP2Go API connection...")
-    
-    api_key = "api-CE7DDEAC33DA4775B069E9C39789DED6"
-    base_url = "https://api.smtp2go.com/v3/"
-    
-    headers = {
-        'Content-Type': 'application/json',
-        'X-Smtp2go-Api-Key': api_key
-    }
-    
-    try:
-        response = requests.get(
-            f"{base_url}stats",
-            headers=headers,
-            timeout=10
-        )
+        print("-" * 30)
         
         if response.status_code == 200:
-            print("✅ SMTP2Go API connection successful!")
-            print("🌐 API Status: Online")
-            return True
+            result = response.json()
+            if result.get('data', {}).get('succeeded', 0) > 0:
+                print(" SUCCESS! Debug email sent!")
+                print(" Check datadefenders.sa@gmail.com")
+                return True
+            else:
+                print(" Email send failed in API response")
         else:
-            print(f"❌ SMTP2Go API connection failed: HTTP {response.status_code}")
-            return False
+            print(f" HTTP Error: {response.status_code}")
             
     except Exception as e:
-        print(f"❌ SMTP2Go API connection error: {str(e)}")
+        print(f"Exception occurred: {str(e)}")
+    
+    return False
+
+
+def check_api_key_validity():
+    """Check if the API key format is correct"""
+    
+    print("🔑 API Key Validation")
+    print("=" * 50)
+    
+    api_key = "api-CE7DDEAC33DA4775B069E9C39789DED6"
+    
+    print(f"API Key: {api_key}")
+    print(f"Length: {len(api_key)} characters")
+    print(f"Starts with 'api-': {api_key.startswith('api-')}")
+    print(f"Format: {'Correct' if api_key.startswith('api-') and len(api_key) > 10 else 'Suspicious'}")
+    print()
+    
+    # Check if it's a valid format
+    if not api_key.startswith('api-'):
+        print(" WARNING: API key should start with 'api-'")
         return False
+    
+    if len(api_key) < 20:
+        print(" WARNING: API key seems too short")
+        return False
+    
+    print(" API key format looks correct")
+    return True
 
 
 def main():
-    """Main function to run the email test"""
-    print("🛡️ CRISP Observer Pattern Email Test")
+    """Main debugging function"""
+    
+    print("🛡️ CRISP SMTP2Go Debug Tool")
+    print("=" * 60)
+    print("🎯 Diagnosing connection issues with SMTP2Go API")
+    print()
+    
+    # Step 1: Check API key format
+    check_api_key_validity()
+    print()
+    
+    # Step 2: Test different endpoints
+    test_smtp2go_endpoints()
+    print()
+    
+    # Step 3: Test alternative header formats
+    working_headers = test_alternative_api_format()
+    print()
+    
+    # Step 4: Try direct email send
+    email_success = test_direct_email_send()
+    print()
+    
+    # Summary
+    print("📋 DEBUGGING SUMMARY")
     print("=" * 50)
-    print("📧 Testing email delivery to: datadefenders.sa@gmail.com")
-    print("🔑 Using API Key: api-CE7DDEAC33DA4775B069E9C39789DED6")
-    print("📤 Sending from: datadefenders@chronocode.co.za")
-    print()
     
-    # Test API connection first
-    if not test_smtp2go_connection():
-        print("❌ Cannot proceed - API connection failed")
-        return
-    
-    print()
-    
-    # Send test email
-    success = send_test_email()
-    
-    print()
-    print("=" * 50)
-    if success:
-        print("🎉 TEST COMPLETED SUCCESSFULLY!")
-        print()
-        print("📧 IMPORTANT: Check your email!")
-        print("   → Inbox: datadefenders.sa@gmail.com")
-        print("   → Subject: 🛡️ CRISP Observer Pattern Test - Data Defenders")
-        print("   → Check spam folder if not in inbox")
-        print()
-        print("✅ Your CRISP Observer Pattern is ready!")
-        print("🚀 SMTP2Go integration is working perfectly!")
+    if email_success:
+        print(" SUCCESS: Email was sent successfully!")
+        print(" Your SMTP2Go integration is working!")
+        print(" Check datadefenders.sa@gmail.com for the debug email")
     else:
-        print("❌ TEST FAILED!")
-        print("🔧 Check the error messages above for troubleshooting")
+        print(" ISSUE: Email sending failed")
         print()
-        print("💡 Common issues:")
-        print("   - Check API key is correct")
-        print("   - Verify sender domain is authorized")
-        print("   - Ensure recipient email is valid")
+        print(" TROUBLESHOOTING STEPS:")
+        print("1. Verify your API key is active in SMTP2Go dashboard")
+        print("2. Check if your account has sending permissions")
+        print("3. Ensure 'datadefenders@chronocode.co.za' is verified")
+        print("4. Try logging into SMTP2Go web interface to confirm account status")
+        print("5. Contact SMTP2Go support if API key is correct but still fails")
+        print()
+        print(" SMTP2Go Dashboard: https://app.smtp2go.com/")
 
 
 if __name__ == "__main__":
