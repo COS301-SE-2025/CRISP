@@ -50,7 +50,12 @@
       "Bash(touch:*)",
       "Bash(tree:*)",
       "Bash(cp:*)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(DJANGO_SETTINGS_MODULE=crisp.test_settings python3 core/manage.py test --debug-mode --verbosity=2 core.tests.test_ultra_clean -k test_django_setup)",
+      "Bash(DJANGO_SETTINGS_MODULE=crisp.test_settings python3 core/manage.py showmigrations)",
+      "Bash(DJANGO_SETTINGS_MODULE=crisp.test_settings python3 core/manage.py migrate)",
+      "Bash(DJANGO_SETTINGS_MODULE=crisp.test_settings python3 core/manage.py createsuperuser --username admin --email admin@example.com)",
+      "Bash(env)"
     ],
     "deny": []
   }

@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from .models import CustomUser, AuthenticationLog, UserSession
+from .models.threat_feed import ThreatFeed
 from .validators import CustomPasswordValidator, UsernameValidator, EmailValidator
 
 
@@ -296,3 +297,11 @@ class OrganizationSerializer(serializers.Serializer):
     contact_email = serializers.EmailField(read_only=True)
     website = serializers.URLField(read_only=True)
     created_at = serializers.DateTimeField(read_only=True)
+
+
+class ThreatFeedSerializer(serializers.ModelSerializer):
+    """Serializer for ThreatFeed model"""
+    
+    class Meta:
+        model = ThreatFeed
+        fields = '__all__'

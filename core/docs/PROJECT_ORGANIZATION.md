@@ -12,28 +12,58 @@ CRISP/
 ├── .venv/             # Python virtual environment  
 ├── .claude/           # Claude AI workspace files
 ├── backup/            # Archived components
+├── README.md          # Main project documentation
 ├── core/              # 🎯 ALL APPLICATION CODE
+│   ├── manage.py      # Django management script
+│   ├── models.py      # Main models registration
+│   ├── admin.py       # Django admin configuration
+│   ├── serializers.py # API serializers
 │   ├── api/           # REST API endpoints
+│   │   ├── trust_api/ # Trust management API
+│   │   ├── serializers/ # API serializers
+│   │   └── views/     # API views
 │   ├── docs/          # Documentation files
 │   ├── factories/     # Test data factories
-│   ├── models/        # Django models
+│   ├── management/    # Django management commands
+│   ├── models/        # Organized Django models
+│   │   ├── auth.py    # Authentication models
+│   │   ├── stix_object.py # STIX models
+│   │   ├── trust_models/ # Trust management models
+│   │   ├── indicator.py # Indicator models
+│   │   ├── institution.py # Institution models
+│   │   ├── threat_feed.py # Threat feed models
+│   │   └── ttp_data.py # TTP data models
 │   ├── observers/     # Observer pattern implementations
 │   ├── parsers/       # Data parsers (STIX, etc.)
 │   ├── patterns/      # Design patterns
+│   │   ├── decorator/ # Decorator pattern (STIX decorators)
+│   │   ├── factory/   # Factory pattern (STIX creators)
+│   │   └── observer/  # Observer pattern (threat feed)
 │   ├── repositories/  # Data access layer
+│   ├── requirements/  # Python dependencies
 │   ├── scripts/       # Utility scripts
+│   ├── serializers/   # Additional serializers
 │   ├── services/      # Business logic services
 │   ├── strategies/    # Strategy pattern implementations
+│   │   ├── enums.py   # Strategy enums
+│   │   ├── anonymization.py # Anonymization strategies
+│   │   └── authentication_strategies.py # Auth strategies
 │   ├── taxii/         # TAXII protocol support
 │   ├── templates/     # Django templates
 │   ├── tests/         # All test files
-│   ├── views/         # Django views
-│   └── *.py          # Core Django modules
+│   ├── urls/          # URL configurations  
+│   ├── user_management/ # User management components
+│   └── views/         # Django views
+│       ├── auth_views.py # Authentication views
+│       ├── admin_views.py # Admin views
+│       └── api/       # API views
 └── crisp/             # 🎯 DJANGO PROJECT CONFIG ONLY
     ├── settings.py    # Django settings
+    ├── test_settings.py # Test environment settings
     ├── urls.py        # URL configuration
     ├── wsgi.py        # WSGI application
-    └── *.py          # Other Django project files
+    ├── asgi.py        # ASGI application
+    └── celery.py      # Celery configuration
 ```
 
 ## ✅ Organization Principles

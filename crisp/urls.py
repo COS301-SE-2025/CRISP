@@ -13,7 +13,7 @@ urlpatterns = [
     # Additional endpoints 
     path('api/v1/', include([
         path('trust/', include('core.api.trust_api.urls')),
-        path('threat-intel/', include('core.urls_threat_intel')),
+        path('threat-intel/', include('core.urls.threat_intel')),
     ])),
     
     # Direct routing for some test paths

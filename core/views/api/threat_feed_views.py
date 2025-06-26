@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from core.models.threat_feed import ThreatFeed
 from core.services.otx_taxii_service import OTXTaxiiService
-from core.threat_feed_serializer import ThreatFeedSerializer
+from core.serializers import ThreatFeedSerializer
 from core.models.indicator import Indicator  
 from core.models.ttp_data import TTPData     
 

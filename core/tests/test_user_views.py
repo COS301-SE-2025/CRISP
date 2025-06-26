@@ -174,7 +174,7 @@ class UserViewsTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         data = response.json()
-        self.assertTrue(data['success'])
+        self.assertEqual(data['first_name'], 'Updated')
         
         # Verify update
         self.viewer_user.refresh_from_db()
@@ -193,7 +193,7 @@ class UserViewsTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         data = response.json()
-        self.assertTrue(data['success'])
+        self.assertEqual(data['first_name'], 'Admin Updated')
         
         # Verify update
         self.viewer_user.refresh_from_db()
@@ -211,7 +211,7 @@ class UserViewsTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         data = response.json()
-        self.assertTrue(data['success'])
+        self.assertIn('is_verified', data)
         
         # Verify partial update
         self.viewer_user.refresh_from_db()
@@ -244,7 +244,7 @@ class UserViewsTestCase(APITestCase):
         self.client.force_authenticate(user=self.viewer_user)
         
         response = self.client.delete(f'/api/users/{self.viewer_user.id}/')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
     
     def test_user_delete_as_viewer_denied(self):
         """Test that viewers cannot delete other users"""

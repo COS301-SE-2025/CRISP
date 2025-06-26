@@ -18,7 +18,7 @@ cd "/mnt/c/Users/jadyn/Documents/University of Pretoria/2025/Capstone"
 
 ### 2. Run Setup Script
 ```bash
-python3 setup_and_test.py
+python3 core/scripts/setup_and_test.py
 ```
 
 ## 🧪 Individual Component Testing
@@ -26,12 +26,21 @@ python3 setup_and_test.py
 ### Test Core Models
 ```bash
 python3 -c "
+import os
 import sys
-sys.path.append('core')
-import models
-print('✅ Organization:', models.Organization.__name__)
-print('✅ CustomUser:', models.CustomUser.__name__)
-print('✅ UserSession:', models.UserSession.__name__)
+import django
+from django.conf import settings
+
+# Setup Django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crisp.test_settings')
+sys.path.append('.')
+django.setup()
+
+# Test models
+from core.models.auth import Organization, CustomUser, UserSession
+print('✅ Organization:', Organization.__name__)
+print('✅ CustomUser:', CustomUser.__name__)
+print('✅ UserSession:', UserSession.__name__)
 print('🎯 Core models working!')
 "
 ```
@@ -39,8 +48,17 @@ print('🎯 Core models working!')
 ### Test STIX Models
 ```bash
 python3 -c "
+import os
 import sys
+import django
+from django.conf import settings
+
+# Setup Django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crisp.test_settings')
 sys.path.append('.')
+django.setup()
+
+# Test models
 from core.models.stix_object import STIXObject, Collection, Feed
 print('✅ STIXObject:', STIXObject.__name__)
 print('✅ Collection:', Collection.__name__)
@@ -52,8 +70,17 @@ print('🎯 STIX models working!')
 ### Test Trust Models
 ```bash
 python3 -c "
+import os
 import sys
+import django
+from django.conf import settings
+
+# Setup Django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crisp.test_settings')
 sys.path.append('.')
+django.setup()
+
+# Test models
 from core.models.trust_models.models import TrustLevel, TrustRelationship
 print('✅ TrustLevel:', TrustLevel.__name__)
 print('✅ TrustRelationship:', TrustRelationship.__name__)
@@ -64,12 +91,21 @@ print('🎯 Trust models working!')
 ### Test Design Patterns
 ```bash
 python3 -c "
+import os
 import sys
+import django
+from django.conf import settings
+
+# Setup Django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crisp.test_settings')
 sys.path.append('.')
-from core.patterns.strategy.enums import AnonymizationLevel
-from core.patterns.observer.threat_feed import ThreatFeed
+django.setup()
+
+# Test patterns
+from core.strategies.enums import AnonymizationLevel
+from core.patterns.observer.threat_feed import ThreatFeedSubject
 print('✅ AnonymizationLevel:', AnonymizationLevel.__name__)
-print('✅ ThreatFeed:', ThreatFeed.__name__)
+print('✅ ThreatFeedSubject:', ThreatFeedSubject.__name__)
 print('🎯 Patterns working!')
 "
 ```
@@ -77,8 +113,17 @@ print('🎯 Patterns working!')
 ### Test Other Models
 ```bash
 python3 -c "
+import os
 import sys
+import django
+from django.conf import settings
+
+# Setup Django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crisp.test_settings')
 sys.path.append('.')
+django.setup()
+
+# Test other models
 from core.models.indicator import Indicator
 from core.models.institution import Institution
 from core.models.ttp_data import TTPData
@@ -94,25 +139,40 @@ print('🎯 Other models working!')
 ### Core Directory Structure
 ```
 core/
-├── models.py                    # Main models (Organization, CustomUser, etc.)
+├── models.py                    # Main Django models registration
 ├── admin.py                     # Django admin configuration
-├── views.py                     # Main views
 ├── serializers.py               # API serializers
 ├── models/                      # Model packages
 │   ├── __init__.py             # Clean exports (no circular imports)
+│   ├── auth.py                 # Authentication models (Organization, CustomUser, etc.)
 │   ├── stix_object.py          # STIX-related models
 │   ├── indicator.py            # Indicator models
 │   ├── institution.py          # Institution models
+│   ├── threat_feed.py          # Threat feed models
 │   ├── ttp_data.py            # TTP data models
 │   └── trust_models/
 │       └── models.py           # Trust management models
 ├── patterns/                    # Design patterns
-│   ├── strategy/
-│   ├── observer/
-│   ├── factory/
-│   └── decorator/
+│   ├── decorator/              # Decorator pattern (STIX decorators)
+│   ├── factory/                # Factory pattern (STIX creators)
+│   └── observer/               # Observer pattern (threat feed observers)
+├── strategies/                  # Strategy pattern implementations
+│   ├── enums.py                # Anonymization levels and other enums
+│   ├── anonymization.py        # Anonymization strategies
+│   ├── authentication_strategies.py # Auth strategies
+│   └── ...other strategies
 ├── api/                        # API endpoints
+│   ├── trust_api/              # Trust management API
+│   ├── serializers/            # API serializers
+│   └── views/                  # API views
+├── views/                      # Django views
+│   ├── auth_views.py           # Authentication views
+│   ├── admin_views.py          # Admin views
+│   └── api/                    # API views
+├── services/                   # Business logic services
+├── repositories/               # Data access layer
 ├── tests/                      # Test files
+├── scripts/                    # Utility scripts
 └── ...other core components
 ```
 
@@ -140,17 +200,19 @@ Run these commands to verify everything is working:
 ls -la
 
 # 2. Test all components
-python3 setup_and_test.py
+python3 core/scripts/setup_and_test.py
 
-# 3. Verify imports work
+# 3. Verify imports work (with Django setup)
 python3 -c "
+import os
 import sys
-sys.path.append('core')
-sys.path.append('.')
+import django
+from django.conf import settings
 
-# Test main models
-import models
-print('Main models:', [attr for attr in dir(models) if not attr.startswith('_')])
+# Setup Django properly
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crisp.test_settings')
+sys.path.append('.')
+django.setup()
 
 # Test STIX
 from core.models.stix_object import STIXObject
