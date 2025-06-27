@@ -27,7 +27,7 @@ from ..api.serializers.serializers import (
     CreateTrustRelationshipSerializer, ApproveTrustRelationshipSerializer,
     RevokeTrustRelationshipSerializer, CreateTrustGroupSerializer,
     JoinTrustGroupSerializer, LeaveTrustGroupSerializer, CheckTrustSerializer,
-    TestIntelligenceAccessSerializer, UpdateTrustLevelSerializer
+    IntelligenceAccessValidationSerializer, UpdateTrustLevelSerializer
 )
 from .test_base import CrispTestCase
 
@@ -770,14 +770,14 @@ class SerializerTestCase(CrispTestCase):
         self.assertTrue(serializer.is_valid())
     
     def test_test_intelligence_access_serializer(self):
-        """Test TestIntelligenceAccessSerializer"""
+        """Test IntelligenceAccessValidationSerializer"""
         data = {
             'intelligence_owner': str(self.org2.id),
             'required_access_level': 'read',
             'resource_type': 'indicator'
         }
         
-        serializer = TestIntelligenceAccessSerializer(data=data)
+        serializer = IntelligenceAccessValidationSerializer(data=data)
         self.assertTrue(serializer.is_valid())
     
     def test_update_trust_level_serializer(self):

@@ -17,7 +17,7 @@ from ...models import TrustRelationship, TrustLevel, TrustLog
 from ..serializers.serializers import (
     TrustRelationshipSerializer, CreateTrustRelationshipSerializer,
     ApproveTrustRelationshipSerializer, RevokeTrustRelationshipSerializer,
-    CheckTrustSerializer, TestIntelligenceAccessSerializer,
+    CheckTrustSerializer, IntelligenceAccessValidationSerializer,
     UpdateTrustLevelSerializer, TrustLogSerializer
 )
 from ...core.services.trust_service import TrustService
@@ -271,7 +271,7 @@ class TrustRelationshipViewSet(viewsets.ModelViewSet):
         """
         Test intelligence access based on trust relationships.
         """
-        serializer = TestIntelligenceAccessSerializer(data=request.data)
+        serializer = IntelligenceAccessValidationSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         

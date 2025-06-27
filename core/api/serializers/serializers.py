@@ -209,8 +209,8 @@ class CheckTrustSerializer(serializers.Serializer):
     target_organization = serializers.UUIDField()
 
 
-class TestIntelligenceAccessSerializer(serializers.Serializer):
-    """Serializer for testing intelligence access."""
+class IntelligenceAccessValidationSerializer(serializers.Serializer):
+    """Serializer for validating intelligence access."""
     
     intelligence_owner = serializers.UUIDField()
     required_access_level = serializers.ChoiceField(

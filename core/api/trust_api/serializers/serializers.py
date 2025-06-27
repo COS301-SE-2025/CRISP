@@ -6,7 +6,7 @@ Django REST Framework serializers for trust management models.
 
 from rest_framework import serializers
 from django.utils import timezone
-from ...models import (
+from core.models.trust_models.models import (
     TrustLevel, TrustGroup, TrustRelationship, TrustGroupMembership,
     TrustLog, SharingPolicy
 )
@@ -209,7 +209,7 @@ class CheckTrustSerializer(serializers.Serializer):
     target_organization = serializers.UUIDField()
 
 
-class TestIntelligenceAccessSerializer(serializers.Serializer):
+class IntelligenceAccessValidationSerializer(serializers.Serializer):
     """Serializer for testing intelligence access."""
     
     intelligence_owner = serializers.UUIDField()

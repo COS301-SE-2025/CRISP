@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # CRISP Coverage Analysis Script
-# Runs comprehensive test coverage for the CRISP platform
+# Runs comprehensive test coverage for the CRISP platform by explicitly targeting all test files.
 
-echo "🧪 CRISP Test Coverage Analysis"
-echo "================================"
+echo "🧪 CRISP Test Coverage Analysis - Running ALL tests"
+echo "==================================================="
 
 # Change to project root
 cd "/mnt/c/Users/jadyn/Documents/University of Pretoria/2025/Capstone"
@@ -12,28 +12,55 @@ cd "/mnt/c/Users/jadyn/Documents/University of Pretoria/2025/Capstone"
 # Set Python path
 export PYTHONPATH="/mnt/c/Users/jadyn/Documents/University of Pretoria/2025/Capstone"
 
-echo "📊 Running coverage analysis..."
+echo "📊 Running coverage analysis on all known test files..."
 
-# Check if PostgreSQL is available for full tests
-if pg_isready -h localhost -p 5432 >/dev/null 2>&1; then
-    echo "✅ PostgreSQL detected - running full test suite"
-    DJANGO_SETTINGS_MODULE=crisp.test_settings python3 -m pytest core/tests/ \
-        --cov=core \
-        --cov=crisp \
-        --cov-report=html:core/coverage/html \
-        --cov-report=term-missing \
-        --cov-report=json:core/coverage/coverage.json \
-        -v
-else
-    echo "⚠️  PostgreSQL not available - running functional tests only"
-    echo "   For full coverage, ensure PostgreSQL is running on localhost:5432"
-    python3 -m pytest core/tests/test_final_working.py core/tests/test_ultra_clean.py \
-        --cov=core \
-        --cov-report=html:core/coverage/html \
-        --cov-report=term-missing \
-        --cov-report=json:core/coverage/coverage.json \
-        -v
-fi
+# Run pytest on every single test file to ensure maximum coverage.
+# This command is intentionally explicit to avoid discovery issues.
+DJANGO_SETTINGS_MODULE=crisp.test_settings python3 -m pytest \
+    core/tests/test_admin_views.py \
+    core/tests/test_anonymization_service_integration.py \
+    core/tests/test_anonymization_strategies.py \
+    core/tests/test_api_comprehensive.py \
+    core/tests/test_api_permissions_serializers.py \
+    core/tests/test_api_repository_comprehensive.py \
+    core/tests/test_auth_debug.py \
+    core/tests/test_auth_views.py \
+    core/tests/test_authentication.py \
+    core/tests/test_comprehensive_coverage.py \
+    core/tests/test_coverage_completion.py \
+    core/tests/test_decorator.py \
+    core/tests/test_decorator_patterns_comprehensive.py \
+    core/tests/test_end_to_end.py \
+    core/tests/test_factory_patterns_comprehensive.py \
+    core/tests/test_final_working.py \
+    core/tests/test_integration.py \
+    core/tests/test_management_commands.py \
+    core/tests/test_middleware.py \
+    core/tests/test_models_comprehensive.py \
+    core/tests/test_observer.py \
+    core/tests/test_observers.py \
+    core/tests/test_observers_simple.py \
+    core/tests/test_repository.py \
+    core/tests/test_security.py \
+    core/tests/test_services_comprehensive.py \
+    core/tests/test_simple_coverage.py \
+    core/tests/test_stix1_parser.py \
+    core/tests/test_stix_factory.py \
+    core/tests/test_stix_mock_data.py \
+    core/tests/test_taxii_integration.py \
+    core/tests/test_taxii_parser_comprehensive.py \
+    core/tests/test_taxii_service.py \
+    core/tests/test_trust_anonymization_integration.py \
+    core/tests/test_ultra_clean.py \
+    core/tests/test_user_management.py \
+    core/tests/test_user_views.py \
+    core/tests/test_working.py \
+    --cov=core \
+    --cov=crisp \
+    --cov-report=html:core/coverage/html \
+    --cov-report=term-missing \
+    --cov-report=json:core/coverage/coverage.json \
+    -v
 
 echo ""
 echo "📋 Coverage Report Generated:"
@@ -61,4 +88,4 @@ echo ""
 echo "🚀 To view HTML report:"
 echo "   Open: core/coverage/html/index.html"
 echo ""
-echo "✅ Coverage analysis complete!"
+echo "✅

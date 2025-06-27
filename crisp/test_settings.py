@@ -7,19 +7,15 @@ from .settings import *
 import tempfile
 import os
 
-# Use PostgreSQL for tests (as required)
+# Use PostgreSQL for testing
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('TEST_DB_NAME', 'test_crisp_auth_fixed'),
-        'USER': os.getenv('DB_USER', 'admin'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'test_password_123'),  # Safe test password
-        'HOST': os.getenv('DB_HOST', 'localhost'),
-        'PORT': os.getenv('DB_PORT', '5432'),
-        'OPTIONS': {
-            'client_encoding': 'UTF8',
-            'connect_timeout': 10,
-        }
+        'NAME': 'test_crisp',
+        'USER': 'myuser',
+        'PASSWORD': 'password',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 

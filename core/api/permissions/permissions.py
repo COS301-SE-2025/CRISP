@@ -11,8 +11,10 @@ from rest_framework import permissions
 from rest_framework.request import Request
 from rest_framework.views import APIView
 
-from ...models import TrustRelationship, TrustGroup, TrustGroupMembership, TrustLevel
-from ...core.services.trust_service import TrustService
+from ...models.trust_models.models import TrustRelationship, TrustGroup, TrustGroupMembership
+from ...services.trust_service import TrustService
+from ...strategies.enums import TrustLevelEnum, SharingScopeEnum
+from ...utils.logging_utils import get_ip_address
 
 
 class BaseTrustPermission(permissions.BasePermission):

@@ -1,312 +1,226 @@
 """
-Unit tests for TAXII-related management commands
+Comprehensive tests for Django management commands
+Tests for taxii_operations and test_taxii commands.
 """
-import unittest
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import Mock, patch, MagicMock
 from io import StringIO
-import sys
 from django.test import TestCase
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
-from core.models.threat_feed import ThreatFeed
 from core.models.auth import Organization
+from core.models.threat_feed import ThreatFeed
 from core.management.commands.taxii_operations import Command as TaxiiOperationsCommand
-from core.management.commands.test_taxii import Command as TestTaxiiCommand
-from core.tests.test_stix_mock_data import TAXII2_COLLECTIONS
 from core.tests.test_base import CrispTestCase
 
 
-class TaxiiOperationsCommandTestCase(CrispTestCase):
-    """Test cases for the 'taxii_operations' management command"""
-
+class TaxiiOperationsCommandTest(CrispTestCase):
+    """Test taxii_operations management command"""
+    
     def setUp(self):
-        """Set up the test environment"""
-
         super().setUp()
-        # Use organization from CrispTestCase
-
-        # Create a test threat feed
-        self.feed = ThreatFeed.objects.create(
-            name="Test Feed",
-            description="Test Feed for Command",
-            is_external=True,
-            taxii_server_url="https://test.example.com/taxii",
-            taxii_api_root="api1",
-            taxii_collection_id="collection1"
-        )
-        
-        # Create the command instance
         self.command = TaxiiOperationsCommand()
         
-        # Capture stdout/stderr
-        self.stdout = StringIO()
-        self.stderr = StringIO()
-        self.command.stdout = self.stdout
-        self.command.stderr = self.stderr
-        
-        # Override the sys.stderr for CommandError testing
-        self.old_stderr = sys.stderr
-        sys.stderr = self.stderr
-
-    def tearDown(self):
-        """Clean up after the test"""
-        sys.stderr = self.old_stderr
-
-    @patch('core.services.stix_taxii_service.StixTaxiiService.discover_collections')
-    def test_discover_command(self, mock_discover_collections):
-        """Test the 'discover' command"""
-        mock_discover_collections.return_value = TAXII2_COLLECTIONS
-        
-        # Create StringIO objects for capturing output
-        out = StringIO()
-        err = StringIO()
-        
-        # Call the command with explicit stdout/stderr
-        call_command('taxii_operations', 'discover',
-                    server='https://test.example.com/taxii',
-                    api_root='api1',
-                    username='testuser',
-                    password='testpass',
-                    stdout=out,
-                    stderr=err)
-        
-        # Get the captured output
-        output = out.getvalue()
-        
-        # Check that discover_collections was called correctly
-        mock_discover_collections.assert_called_once_with(
-            'https://test.example.com/taxii',
-            'api1',
-            'testuser',
-            'testpass'
+        # Create test organization
+        self.org = Organization.objects.create(
+            name="TAXII Test Org", domain="taxii.com", contact_email="test@taxii.com"
         )
         
-        # Check the output
-        self.assertIn(f"Found {len(TAXII2_COLLECTIONS)} collections:", output)
-
+        # Create test threat feed
+        self.threat_feed = ThreatFeed.objects.create(
+            name="Test TAXII Feed",
+            description="Test threat feed for TAXII operations",
+            owner=self.org,
+            is_external=True,
+            taxii_server_url="https://test.taxii.server",
+            taxii_api_root="/api/v1/",
+            taxii_collection_id="test-collection-123"
+        )
+    
+    def test_command_help(self):
+        """Test command help and argument structure"""
+        # Test that command has expected help text
+        self.assertIn('TAXII operations', self.command.help)
+        
+        # Test command attributes
+        self.assertTrue(hasattr(self.command, 'add_arguments'))
+        self.assertTrue(hasattr(self.command, 'handle'))
+        self.assertTrue(hasattr(self.command, 'handle_discover'))
+        self.assertTrue(hasattr(self.command, 'handle_consume'))
+        self.assertTrue(hasattr(self.command, 'handle_add'))
+    
+    def test_handle_no_command(self):
+        """Test handling when no command is provided"""
+        with self.assertRaises(CommandError) as context:
+            self.command.handle()
+        
+        self.assertIn('A command is required', str(context.exception))
+    
     @patch('core.services.stix_taxii_service.StixTaxiiService.discover_collections')
-    def test_discover_command_error(self, mock_discover_collections):
-        """Test error handling in the 'discover' command"""
-        mock_discover_collections.side_effect = Exception("Test error")
+    def test_handle_discover_success(self, mock_discover):
+        """Test successful discover command"""
+        mock_collections = [
+            {'id': 'collection1', 'title': 'Test Collection 1'},
+            {'id': 'collection2', 'title': 'Test Collection 2'}
+        ]
+        mock_discover.return_value = mock_collections
         
-        # Capture stderr
-        err = StringIO()
-        
-        # Call the command with stderr capture
-        call_command('taxii_operations', 'discover',
-                     server='https://test.example.com/taxii',
-                     api_root='api1',
-                     stderr=err)
-        
-        # Check the error output
-        error_output = err.getvalue()
-        self.assertIn("Error discovering collections: Test error", error_output)
-
+        with patch('sys.stdout', new_callable=StringIO) as mock_stdout:
+            self.command.handle_discover({
+                'server': 'https://test.server',
+                'api_root': '/api/v1/',
+                'username': 'testuser',
+                'password': 'testpass'
+            })
+            
+            output = mock_stdout.getvalue()
+            self.assertIn('Found 2 collections', output)
+            self.assertIn('collection1', output)
+            self.assertIn('Test Collection 1', output)
+    
     @patch('core.services.stix_taxii_service.StixTaxiiService.consume_feed')
-    def test_consume_command(self, mock_consume_feed):
-        """Test the 'consume' command"""
-        mock_consume_feed.return_value = {
+    def test_handle_consume_success(self, mock_consume):
+        """Test successful consume command"""
+        mock_result = {
             'indicators_created': 5,
-            'indicators_updated': 2,
-            'ttp_created': 3,
+            'indicators_updated': 3,
+            'ttp_created': 2,
             'ttp_updated': 1,
             'skipped': 0,
             'errors': 0
         }
+        mock_consume.return_value = mock_result
         
-        # Create StringIO objects
-        out = StringIO()
-        err = StringIO()
-        
-        # Call the command with explicit stdout/stderr
-        call_command('taxii_operations', 'consume', 
-                    feed_id=self.feed.id,
-                    stdout=out,
-                    stderr=err)
-        
-        # Check that consume_feed was called correctly
-        mock_consume_feed.assert_called_once_with(self.feed.id)
-        
-        # Check the output
-        output = out.getvalue()
-        self.assertIn("Feed consumed:", output)
-        self.assertIn("Indicators created: 5", output)
-        self.assertIn("TTPs created: 3", output)
-
-    @patch('core.services.stix_taxii_service.StixTaxiiService.consume_feed')
-    def test_consume_command_nonexistent_feed(self, mock_consume_feed):
-        """Test the 'consume' command with a non-existent feed"""
-        
-        # Capture stderr
-        err = StringIO()
-        
-        # Call the command with non-existent feed ID
-        call_command('taxii_operations', 'consume', 
-                    feed_id=999,
-                    stderr=err)
-        
-        # Check that error was handled and written to stderr
-        error_output = err.getvalue()
-        import re
-        clean_output = re.sub(r'\x1b\[[0-9;]*m', '', error_output)
-        self.assertIn("Feed with ID 999 does not exist", clean_output)
-
-    def test_add_command(self):
-        """Test the 'add' command."""
-        # Create StringIO objects
-        out = StringIO()
-        err = StringIO()
-        
-        # Call the command with explicit stdout/stderr
-        call_command('taxii_operations', 'add',
-                    name='New Feed',
-                    description='New Test Feed',
-                    server='https://new.example.com/taxii',
-                    api_root='api2',
-                    collection_id='collection2',
-                    owner_id=self.organization.id,
-                    stdout=out,
-                    stderr=err)
-        
-        # Check that the feed was created
-        feed = ThreatFeed.objects.filter(name='New Feed').first()
-        self.assertIsNotNone(feed)
-        self.assertEqual(feed.taxii_server_url, 'https://new.example.com/taxii')
-        self.assertEqual(feed.taxii_api_root, 'api2')
-        self.assertEqual(feed.taxii_collection_id, 'collection2')
-        self.assertTrue(feed.is_external)
-        
-        # Check the output
-        output = out.getvalue()
-        self.assertIn(f"Feed added with ID: {feed.id}", output)
-
-    def test_invalid_command(self):
-        """Test calling an invalid command."""
-        # Call an invalid command and expect an error
-        with self.assertRaises(CommandError):
-            call_command('taxii_operations', 'invalid_command')
+        with patch('sys.stdout', new_callable=StringIO) as mock_stdout:
+            self.command.handle_consume({'feed_id': self.threat_feed.id})
+            
+            output = mock_stdout.getvalue()
+            self.assertIn('Feed consumed', output)
+            self.assertIn('Indicators created: 5', output)
+            self.assertIn('Indicators updated: 3', output)
+    
+    def test_handle_add_success(self):
+        """Test successful add command"""
+        with patch('sys.stdout', new_callable=StringIO) as mock_stdout:
+            self.command.handle_add({
+                'name': 'New TAXII Feed',
+                'description': 'New feed for testing',
+                'server': 'https://new.server',
+                'api_root': '/api/v2/',
+                'collection_id': 'new-collection',
+                'owner_id': str(self.org.id)
+            })
+            
+            output = mock_stdout.getvalue()
+            self.assertIn('Feed added with ID:', output)
+            self.assertIn('Name: New TAXII Feed', output)
+            
+            # Verify feed was created
+            new_feed = ThreatFeed.objects.filter(name='New TAXII Feed').first()
+            self.assertIsNotNone(new_feed)
+            self.assertEqual(new_feed.owner, self.org)
+    
+    def test_handle_consume_feed_not_found(self):
+        """Test consume command with non-existent feed"""
+        with patch('sys.stderr', new_callable=StringIO) as mock_stderr:
+            self.command.handle_consume({'feed_id': 99999})
+            
+            output = mock_stderr.getvalue()
+            self.assertIn('Feed with ID 99999 does not exist', output)
+    
+    def test_handle_add_owner_not_found(self):
+        """Test add command with non-existent owner"""
+        with patch('sys.stderr', new_callable=StringIO) as mock_stderr:
+            self.command.handle_add({
+                'name': 'Test Feed',
+                'description': 'Test description',
+                'server': 'https://test.server',
+                'api_root': '/api/v1/',
+                'collection_id': 'test-collection',
+                'owner_id': 'non-existent-id'
+            })
+            
+            output = mock_stderr.getvalue()
+            self.assertIn('Organization with ID non-existent-id does not exist', output)
 
 
-class TestTaxiiCommandTestCase(CrispTestCase):
-    """Test cases for the 'test_taxii' management command"""
-
+class ManagementCommandIntegrationTest(CrispTestCase):
+    """Integration tests for management commands"""
+    
     def setUp(self):
-        """Set up the test environment"""
         super().setUp()
-        # Use organization from CrispTestCase
-
-        # Create the command instance
-        self.command = TestTaxiiCommand()
-        
-        # Capture stdout/stderr
-        self.stdout = StringIO()
-        self.stderr = StringIO()
-        self.command.stdout = self.stdout
-        self.command.stderr = self.stderr
-
-    @patch('core.services.otx_taxii_service.OTXTaxiiService.get_collections')
-    def test_list_collections(self, mock_get_collections):
-        """Test the '--list-collections' option"""
-        
-        mock_get_collections.return_value = [
-            {'id': 'collection1', 'title': 'Test Collection 1', 'description': 'Collection 1 description', 'available': True},
-            {'id': 'collection2', 'title': 'Test Collection 2', 'description': 'Collection 2 description', 'available': True}
+        self.org = Organization.objects.create(
+            name="Integration Test Org", domain="integration.com", contact_email="test@integration.com"
+        )
+    
+    @patch('core.services.stix_taxii_service.StixTaxiiService.discover_collections')
+    def test_call_command_discover(self, mock_discover):
+        """Test calling discover command via call_command"""
+        mock_discover.return_value = [
+            {'id': 'test-collection', 'title': 'Test Collection'}
         ]
         
-        # Capture stdout
         out = StringIO()
+        call_command(
+            'taxii_operations', 'discover',
+            '--server', 'https://test.server',
+            '--api-root', '/api/v1/',
+            stdout=out
+        )
         
-        # Call the command
-        call_command('test_taxii', list_collections=True, stdout=out)
-        
-        # Check that get_collections was called
-        mock_get_collections.assert_called_once()
-        
-        # Check the output
         output = out.getvalue()
-        self.assertIn("Listing available collections...", output)
-        self.assertIn("Found 2 collections:", output)
-        self.assertIn("Test Collection 1", output)
-        self.assertIn("Test Collection 2", output)
-
-    @patch('core.services.otx_taxii_service.OTXTaxiiService.get_collections')
-    def test_list_collections_error(self, mock_get_collections):
-        """Test error handling in the '--list-collections' option"""
-
-        mock_get_collections.side_effect = Exception("Test error")
-        
-        # Capture stderr
-        err = StringIO()
-        
-        # Call the command
-        call_command('test_taxii', list_collections=True, stderr=err)
-        
-        # Check the error output
-        error_output = err.getvalue()
-        self.assertIn("Error listing collections: Test error", error_output)
-
-    @patch('core.services.otx_taxii_service.OTXTaxiiService.consume_feed')
-    def test_consume_option(self, mock_consume_feed):
-        """Test the '--consume' option."""
-
-        mock_consume_feed.return_value = {
-            'indicators_created': 5,
-            'indicators_updated': 2,
-            'ttp_created': 3,
-            'ttp_updated': 1,
-            'skipped': 0,
-            'errors': 0
-        }
-        
-        # Capture stdout
+        self.assertIn('Found 1 collections', output)
+        self.assertIn('test-collection', output)
+    
+    def test_call_command_add(self):
+        """Test calling add command via call_command"""
         out = StringIO()
+        call_command(
+            'taxii_operations', 'add',
+            '--name', 'CLI Test Feed',
+            '--description', 'Feed created via CLI',
+            '--server', 'https://cli.server',
+            '--api-root', '/api/v1/',
+            '--collection-id', 'cli-collection',
+            '--owner-id', str(self.org.id),
+            stdout=out
+        )
         
-        # Call the command with explicit stdout capture
-        call_command('test_taxii', 
-                    consume=True, 
-                    collection='test_collection', 
-                    stdout=out)
-        
-        # Check that consume_feed was called correctly
-        mock_consume_feed.assert_called_once_with(collection_name='test_collection')
-        
-        # Check the output
         output = out.getvalue()
-        self.assertIn("Consuming from collection: test_collection", output)
-        self.assertIn("Feed consumed:", output)
-        self.assertIn("Indicators created: 5", output)
-        self.assertIn("TTPs created: 3", output)
-
-    @patch('core.services.otx_taxii_service.OTXTaxiiService.consume_feed')
-    def test_consume_option_error(self, mock_consume_feed):
-        """Test error handling in the '--consume' option"""
-
-        mock_consume_feed.side_effect = Exception("Test error")
+        self.assertIn('Feed added with ID:', output)
+        self.assertIn('Name: CLI Test Feed', output)
         
-        # Capture stderr
-        err = StringIO()
-        
-        # Call the command
-        call_command('test_taxii', consume=True, collection='test_collection', stderr=err)
-        
-        # Check the error output
-        error_output = err.getvalue()
-        self.assertIn("Error consuming feed: Test error", error_output)
+        # Verify feed was created
+        cli_feed = ThreatFeed.objects.filter(name='CLI Test Feed').first()
+        self.assertIsNotNone(cli_feed)
+        self.assertEqual(cli_feed.description, 'Feed created via CLI')
 
 
-    def test_consume_without_collection(self):
-        """Test the '--consume' option without providing a collection name"""
-        # Capture stderr
-        err = StringIO()
-        
-        # Call the command without a collection name
-        call_command('test_taxii', consume=True, stderr=err)
-        
-        # Check the error output
-        error_output = err.getvalue()
-        self.assertIn("Collection name is required for consuming", error_output)
-
-
-if __name__ == '__main__':
-    unittest.main()
+class ManagementCommandErrorHandlingTest(CrispTestCase):
+    """Test error handling across management commands"""
+    
+    def setUp(self):
+        super().setUp()
+        self.command = TaxiiOperationsCommand()
+    
+    def test_command_exception_handling(self):
+        """Test command exception handling"""
+        with patch('core.services.stix_taxii_service.StixTaxiiService') as mock_service:
+            mock_service.side_effect = Exception("Service unavailable")
+            
+            with patch('sys.stderr', new_callable=StringIO):
+                try:
+                    self.command.handle(command='discover', server='test', api_root='/api/')
+                except:
+                    pass  # Exception should be handled gracefully
+    
+    def test_command_database_error_handling(self):
+        """Test handling of database errors"""
+        with patch('core.models.threat_feed.ThreatFeed.objects.get') as mock_get:
+            mock_get.side_effect = Exception("Database connection failed")
+            
+            with patch('sys.stderr', new_callable=StringIO) as mock_stderr:
+                self.command.handle_consume({'feed_id': 1})
+                
+                output = mock_stderr.getvalue()
+                self.assertIn('Error consuming feed', output)

@@ -11,8 +11,8 @@ from rest_framework import permissions
 from rest_framework.request import Request
 from rest_framework.views import APIView
 
-from ...models import TrustRelationship, TrustGroup, TrustGroupMembership, TrustLevel
-from ...core.services.trust_service import TrustService
+from core.models.trust_models.models import TrustRelationship, TrustGroup, TrustGroupMembership, TrustLevel
+from core.services.trust_service import TrustService
 
 
 class BaseTrustPermission(permissions.BasePermission):

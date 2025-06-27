@@ -13,15 +13,15 @@ from django.core.exceptions import ValidationError
 from typing import Dict, Any
 import django.db.models
 
-from ...models import TrustGroup, TrustGroupMembership, TrustLevel
+from core.models.trust_models.models import TrustGroup, TrustGroupMembership, TrustLevel
 from ..serializers.serializers import (
     TrustGroupSerializer, TrustGroupMembershipSerializer,
     CreateTrustGroupSerializer, JoinTrustGroupSerializer,
     LeaveTrustGroupSerializer
 )
-from ...core.services.trust_group_service import TrustGroupService
+from core.services.trust_group_service import TrustGroupService
 from ..permissions.permissions import TrustGroupPermission, TrustGroupMembershipPermission
-from ...core.validators.validators import validate_trust_operation
+from core.validators import validate_trust_operation
 
 
 class TrustGroupViewSet(viewsets.ModelViewSet):

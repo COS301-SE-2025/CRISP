@@ -221,3 +221,17 @@ class EmailValidator:
         
         if errors:
             raise ValidationError(errors)
+
+
+def validate_trust_operation(operation_type, source_org_id, target_org_id):
+    """Validate trust operations between organizations"""
+    if not operation_type or operation_type not in ['create', 'update', 'delete', 'revoke']:
+        raise ValidationError("Invalid trust operation type")
+    
+    if not source_org_id or not target_org_id:
+        raise ValidationError("Both source and target organization IDs are required")
+    
+    if source_org_id == target_org_id:
+        raise ValidationError("Cannot create trust relationship with the same organization")
+    
+    return True

@@ -8,11 +8,12 @@ from django.test import TestCase, TransactionTestCase
 from django.db import transaction
 from rest_framework.test import APITestCase, APIClient
 from django.contrib.auth import get_user_model
+import pytest
 
 from ..models import Organization, CustomUser
 from ..factories.user_factory import UserFactory
 
-
+@pytest.mark.django_db
 class CrispTestMixin:
     """
     Mixin providing common test utilities and database cleanup
@@ -120,6 +121,7 @@ class CrispTestCase(CrispTestMixin, TestCase):
     pass
 
 
+@pytest.mark.django_db
 class CrispAPITestCase(CrispTestMixin, APITestCase):
     """
     Base API test case for CRISP platform with robust database management
@@ -140,6 +142,7 @@ class CrispAPITestCase(CrispTestMixin, APITestCase):
         return user
 
 
+@pytest.mark.django_db
 class CrispTransactionTestCase(CrispTestMixin, TransactionTestCase):
     """
     Transaction test case for tests that need database transaction control

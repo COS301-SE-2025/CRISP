@@ -13,16 +13,16 @@ from django.core.exceptions import ValidationError
 from typing import Dict, Any
 import django.db.models
 
-from ...models import TrustRelationship, TrustLevel, TrustLog
+from core.models.trust_models.models import TrustRelationship, TrustLevel, TrustLog
 from ..serializers.serializers import (
     TrustRelationshipSerializer, CreateTrustRelationshipSerializer,
     ApproveTrustRelationshipSerializer, RevokeTrustRelationshipSerializer,
-    CheckTrustSerializer, TestIntelligenceAccessSerializer,
+    CheckTrustSerializer, IntelligenceAccessValidationSerializer,
     UpdateTrustLevelSerializer, TrustLogSerializer
 )
-from ...core.services.trust_service import TrustService
+from core.services.trust_service import TrustService
 from ..permissions.permissions import TrustRelationshipPermission
-from ...core.validators.validators import validate_trust_operation
+from core.validators import validate_trust_operation
 
 
 class TrustRelationshipViewSet(viewsets.ModelViewSet):
@@ -271,7 +271,7 @@ class TrustRelationshipViewSet(viewsets.ModelViewSet):
         """
         Test intelligence access based on trust relationships.
         """
-        serializer = TestIntelligenceAccessSerializer(data=request.data)
+        serializer = IntelligenceAccessValidationSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         

@@ -6,7 +6,9 @@ from enum import Enum
 
 
 class AnonymizationLevel(Enum):
-    """Defines the levels of anonymization to apply to data"""
+    """
+    Enum for defining anonymization levels.
+    """
     NONE = "none"      # No anonymization, original data preserved
     LOW = "low"        # Minimal anonymization, most information preserved
     MEDIUM = "medium"  # Moderate anonymization, partial information preserved
@@ -22,3 +24,24 @@ class DataType(Enum):
     URL = "url"                # URLs
     HASH = "hash"              # Cryptographic hashes
     FILENAME = "filename"      # File names
+
+
+class TrustLevelEnum(Enum):
+    """
+    Enum for defining trust levels in relationships.
+    """
+    UNKNOWN = 'unknown'
+    LOW = 'low'
+    MEDIUM = 'medium'
+    HIGH = 'high'
+    ABSOLUTE = 'absolute'
+
+
+class SharingScopeEnum(Enum):
+    """
+    Enum for defining sharing scopes for intelligence.
+    """
+    PRIVATE = 'private'
+    GROUP = 'group'
+    COMMUNITY = 'community'
+    PUBLIC = 'public'
