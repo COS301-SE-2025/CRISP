@@ -15,7 +15,7 @@ from dateutil.parser import isoparse
 
 from core.models.stix_object import STIXObject, Collection, CollectionObject
 from core.models import Organization
-from core.patterns.factory.stix_object_creator import STIXObjectCreator as STIXObjectFactory
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -300,8 +300,15 @@ class OTXProcessor:
                 }
             ]
             
-            # Create STIX indicator using factory
-            stix_indicator = STIXObjectFactory.create_object('indicator', indicator_data)
+            # Create STIX indicator object directly
+            stix_indicator = {
+                'id': f"indicator--{uuid.uuid4()}",
+                'type': 'indicator',
+                'spec_version': '2.1',
+                'created': indicator_data['valid_from'],
+                'modified': indicator_data['valid_from'],
+                **indicator_data
+            }
             return stix_indicator
             
         except Exception as e:

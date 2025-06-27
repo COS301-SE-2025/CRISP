@@ -3,12 +3,14 @@ from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from proper security config location
+load_dotenv(dotenv_path=Path(__file__).parent / 'config' / 'security' / '.env')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = os.getenv('SECRET_KEY', os.getenv('DJANGO_SECRET_KEY', 'crisp-development-secret-key'))
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    raise ValueError('DJANGO_SECRET_KEY environment variable is required')
 
 # Just a Note to remember: Don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
@@ -81,7 +83,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.getenv('DB_NAME', 'crisp'),
         'USER': os.getenv('DB_USER', 'admin'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'AdminPassword'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),  # No fallback - must be set in environment
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': os.getenv('DB_PORT', '5432'),
         'OPTIONS': {
@@ -218,7 +220,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 # OTX Configuration
 OTX_SETTINGS = {
-    'API_KEY': os.getenv('OTX_API_KEY', ''),
+    'API_KEY': os.getenv('OTX_API_KEY'),  # No fallback - must be set in environment if OTX is enabled
     'ENABLED': os.getenv('OTX_ENABLED', 'True').lower() == 'true',
     'FETCH_INTERVAL': int(os.getenv('OTX_FETCH_INTERVAL', '3600')),
     'BATCH_SIZE': int(os.getenv('OTX_BATCH_SIZE', '50')),
@@ -248,7 +250,9 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
 # Trust Management Configuration
-TRUST_MANAGEMENT_SECRET_KEY = os.getenv('TRUST_MANAGEMENT_SECRET_KEY', 'trust-management-hmac-secret-key-change-in-production')
+TRUST_MANAGEMENT_SECRET_KEY = os.getenv('TRUST_MANAGEMENT_SECRET_KEY')
+if not TRUST_MANAGEMENT_SECRET_KEY:
+    raise ValueError('TRUST_MANAGEMENT_SECRET_KEY environment variable is required')
 
 # Security settings
 SESSION_COOKIE_SECURE = not DEBUG

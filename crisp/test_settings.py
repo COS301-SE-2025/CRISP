@@ -13,7 +13,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.getenv('TEST_DB_NAME', 'test_crisp_auth_fixed'),
         'USER': os.getenv('DB_USER', 'admin'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'AdminPassword'),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'test_password_123'),  # Safe test password
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': os.getenv('DB_PORT', '5432'),
         'OPTIONS': {
@@ -59,7 +59,7 @@ CACHES = {
 }
 
 # Test-specific settings
-SECRET_KEY = 'test-secret-key-not-for-production'
+SECRET_KEY = os.getenv('TEST_SECRET_KEY', 'test-secret-key-not-for-production-' + str(hash('test')))
 DEBUG = True
 ALLOWED_HOSTS = ['testserver', 'localhost', '127.0.0.1']
 
@@ -102,7 +102,7 @@ SIMPLE_JWT.update({
 })
 
 # Trust management test settings
-TRUST_MANAGEMENT_SECRET_KEY = 'test-trust-management-secret'
+TRUST_MANAGEMENT_SECRET_KEY = os.getenv('TEST_TRUST_SECRET_KEY', 'test-trust-management-secret-' + str(hash('trust')))
 
 # Disable rate limiting for most tests to avoid interference
 RATELIMIT_ENABLE = False
