@@ -69,3 +69,5 @@ coverage.xml
 
 # Documentation
 docs/_build/
+Login.md
+UserManagementUserStory.md
