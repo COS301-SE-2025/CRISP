@@ -95,10 +95,3 @@ yarn-error.log*
 
 /backup
 /.venv
-/.claude
-.claude
-# Claude AI configuration files
-.claude/
-.claude.*
-*/.claude/
-*/.claude.*

@@ -21,6 +21,24 @@ Inspired by the Malware Information Sharing Platform (MISP) and the CIRCL inform
 - **Data Anonymization** - Configurable anonymization to protect sensitive information
 - **External Integration** - Compatible with MISP and other threat intelligence platforms
 
+## 🚀 Quick Start - Running the Demo UI
+
+### Terminal 1: Frontend
+```bash
+cd demo-ui
+npm run dev
+```
+
+### Terminal 2: Backend (Simple Demo Server)
+```bash
+python3 run_demo_server.py
+```
+
+Once both are running:
+- **Frontend:** http://localhost:5173 (or 3000)
+- **Backend:** http://localhost:8000
+- **Demo UI:** Navigate to demo UI and test real email alerts to datadefenders.sa@gmail.com
+
 ## 🏗️ Architecture & Design Patterns
 
 CRISP implements several design patterns for a flexible, maintainable, and extensible architecture:
