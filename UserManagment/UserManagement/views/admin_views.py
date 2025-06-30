@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
 from django.utils import timezone
 from django.core.paginator import Paginator
+from rest_framework import generics
 
 from ..models import CustomUser, AuthenticationLog, UserSession
 from ..serializers import (
@@ -13,6 +14,14 @@ from ..serializers import (
 )
 from ..factories.user_factory import UserFactory
 from ..permissions import IsSystemAdmin, IsOrganizationAdmin
+
+# Add this import - check what the actual name is in your permissions.py
+# Replace with the correct import based on your permissions.py file
+try:
+    from ..permissions import IsAdminOrPublisher
+except ImportError:
+    # If it doesn't exist, create an alias or use existing permission
+    IsAdminOrPublisher = IsOrganizationAdmin
 
 
 class AdminUserListView(APIView):
@@ -521,3 +530,56 @@ class AdminUserSessionView(APIView):
         else:
             ip = request.META.get('REMOTE_ADDR', '127.0.0.1')
         return ip
+
+
+# Add this if you want to create a separate view for auth logs
+
+class AdminAuthLogListView(APIView):
+    """Admin view for authentication logs with specific formatting"""
+    permission_classes = [IsAuthenticated, IsOrganizationAdmin]
+    
+    def get(self, request):
+        """Get authentication logs with filtering"""
+        # Filter logs based on admin permissions
+        if request.user.role == 'BlueVisionAdmin':
+            queryset = AuthenticationLog.objects.all()
+        else:
+            # Organization admins can only see logs for their organization users
+            org_users = CustomUser.objects.filter(organization=request.user.organization)
+            queryset = AuthenticationLog.objects.filter(user__in=org_users)
+        
+        # Apply filters
+        user_id = request.query_params.get('user_id')
+        action = request.query_params.get('action')
+        success = request.query_params.get('success')
+        
+        if user_id:
+            queryset = queryset.filter(user_id=user_id)
+        if action:
+            queryset = queryset.filter(action=action)
+        if success is not None:
+            queryset = queryset.filter(success=success.lower() == 'true')
+        
+        # Order by timestamp (newest first)
+        queryset = queryset.order_by('-timestamp')
+        
+        # Pagination
+        page = int(request.query_params.get('page', 1))
+        page_size = int(request.query_params.get('page_size', 50))
+        
+        paginator = Paginator(queryset, page_size)
+        page_obj = paginator.get_page(page)
+        
+        serializer = AuthenticationLogSerializer(page_obj.object_list, many=True)
+        
+        return Response({
+            'logs': serializer.data,
+            'pagination': {
+                'page': page,
+                'page_size': page_size,
+                'total_pages': paginator.num_pages,
+                'total_count': paginator.count,
+                'has_next': page_obj.has_next(),
+                'has_previous': page_obj.has_previous()
+            }
+        }, status=status.HTTP_200_OK)

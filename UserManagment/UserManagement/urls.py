@@ -26,7 +26,7 @@ def api_root(request):
             'admin': {
                 'users': '/api/admin/users/ (GET, POST)',
                 'user_detail': '/api/admin/users/{id}/ (GET, PUT, DELETE)',
-                'logs': '/api/admin/logs/ (GET)',
+                'auth_logs': '/api/admin/auth-logs/ (GET)',
                 'sessions': '/api/admin/sessions/ (GET)',
             },
             'user': {
@@ -60,14 +60,15 @@ auth_urlpatterns = [
 # Admin URLs
 admin_urlpatterns = [
     path('users/', admin_views.AdminUserListView.as_view(), name='admin_user_list'),
-    path('users/<uuid:user_id>/', admin_views.AdminUserDetailView.as_view(), name='admin_user_detail'),
+    path('users/<uuid:user_id>/', admin_views.AdminUserDetailView.as_view(), name='admin_user_detail'), 
     path('users/<uuid:user_id>/unlock/', admin_views.AdminUserUnlockView.as_view(), name='admin_user_unlock'),
-    path('logs/', admin_views.AdminAuthenticationLogView.as_view(), name='admin_auth_logs'),
+    # Fix: Change this to match the test expectation
+    path('auth-logs/', admin_views.AdminAuthenticationLogView.as_view(), name='admin_auth_logs'),
     path('sessions/', admin_views.AdminUserSessionView.as_view(), name='admin_user_sessions'),
     path('sessions/<uuid:session_id>/', admin_views.AdminUserSessionView.as_view(), name='admin_session_terminate'),
 ]
 
-# User URLs
+# User URLs  
 user_urlpatterns = [
     path('dashboard/', user_views.UserDashboardView.as_view(), name='user_dashboard'),
     path('sessions/', user_views.UserSessionListView.as_view(), name='user_sessions'),
@@ -75,7 +76,7 @@ user_urlpatterns = [
     path('search/', user_views.UserSearchView.as_view(), name='user_search'),
     path('activity/', user_views.UserActivityView.as_view(), name='user_activity'),
     path('stats/', user_views.UserStatsView.as_view(), name='user_stats'),
-    path('organization-users/', user_views.OrganizationUsersView.as_view(), name='organization_users'),
+    path('organization-users/', user_views.OrganizationUsersView.as_view(), name='organization_users'), 
 ]
 
 urlpatterns = [

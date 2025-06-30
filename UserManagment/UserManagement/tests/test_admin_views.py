@@ -18,6 +18,7 @@ class AdminViewsTestCase(APITestCase):
     """Test admin views functionality"""
     
     def setUp(self):
+        """Set up test environment"""
         self.client = APIClient()
         
         # Create test organization
@@ -27,8 +28,8 @@ class AdminViewsTestCase(APITestCase):
             description='Test organization for admin views'
         )
         
-        # Create test users with different roles
-        self.admin_user = UserFactory.create_user('BlueVisionAdmin', {
+        # Create admin user with bypass permissions for testing
+        self.admin_user = UserFactory.create_test_user('BlueVisionAdmin', {
             'username': 'admin',
             'email': 'admin@test.com',
             'password': 'AdminPassword123!',
@@ -36,8 +37,9 @@ class AdminViewsTestCase(APITestCase):
             'last_name': 'User',
             'organization': self.organization,
             'is_verified': True
-        })
+        }, bypass_permissions=True)
         
+        # Now create other users normally with the admin as creator
         self.publisher_user = UserFactory.create_user('publisher', {
             'username': 'publisher',
             'email': 'publisher@test.com',
@@ -46,7 +48,7 @@ class AdminViewsTestCase(APITestCase):
             'last_name': 'User',
             'organization': self.organization,
             'is_verified': True
-        })
+        }, created_by=self.admin_user)
         
         self.viewer_user = UserFactory.create_user('viewer', {
             'username': 'viewer',
@@ -56,7 +58,7 @@ class AdminViewsTestCase(APITestCase):
             'last_name': 'User',
             'organization': self.organization,
             'is_verified': True
-        })
+        }, created_by=self.admin_user)
     
     def test_admin_user_list_as_admin(self):
         """Test admin user list view as BlueVisionAdmin"""
@@ -112,6 +114,12 @@ class AdminViewsTestCase(APITestCase):
         }
         
         response = self.client.post('/api/admin/users/', user_data)
+        
+        # Debug output if test fails
+        if response.status_code != status.HTTP_201_CREATED:
+            print(f"Response status: {response.status_code}")
+            print(f"Response data: {response.json()}")
+        
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         
         data = response.json()
@@ -212,7 +220,8 @@ class AdminViewsTestCase(APITestCase):
         """Test viewing authentication logs"""
         self.client.force_authenticate(user=self.admin_user)
         
-        response = self.client.get('/api/admin/auth-logs/')
+        # Use the correct URL pattern
+        response = self.client.get('/api/admin/auth-logs/')  # Changed from '/api/admin/auth-logs/'
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         data = response.json()

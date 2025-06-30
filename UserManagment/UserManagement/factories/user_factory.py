@@ -5,7 +5,7 @@ from django.db import transaction
 from typing import Dict, Optional, Tuple
 import secrets
 import string
-from ..models import CustomUser, AuthenticationLog
+from ..models import CustomUser, AuthenticationLog, Organization
 
 
 class UserCreator(ABC):
@@ -296,3 +296,85 @@ class UserFactory:
         user = cls.create_user(role, user_data, created_by)
         
         return user, password
+    
+    @classmethod
+    def create_test_user(cls, role: str, user_data: Dict, bypass_permissions: bool = False) -> CustomUser:
+        """
+        Create user for testing purposes with optional permission bypass
+        
+        Args:
+            role: User role ('viewer', 'publisher', 'BlueVisionAdmin')
+            user_data: User data dictionary
+            bypass_permissions: Skip permission checks (for test setup)
+            
+        Returns:
+            CustomUser: Created user instance
+        """
+        if role not in cls._creators:
+            raise ValidationError(f"Invalid user role: {role}")
+        
+        # Skip authorization checks if bypass_permissions is True (for tests)
+        if not bypass_permissions:
+            created_by = user_data.get('created_by')
+            cls._check_creation_permissions(role, created_by)
+        
+        # Create user with appropriate creator
+        creator_class = cls._creators[role]
+        creator = creator_class()
+        
+        # For test users, we need to bypass admin validation
+        if bypass_permissions and role == 'BlueVisionAdmin':
+            # Create admin user directly without validation
+            return cls._create_test_admin(user_data)
+        
+        return creator.create_user(user_data)
+
+    @classmethod
+    def _create_test_admin(cls, user_data: Dict) -> CustomUser:
+        """Create admin user for testing without validation"""
+        from django.contrib.auth.password_validation import validate_password
+        
+        # Basic validation only
+        required_fields = ['username', 'email', 'password', 'organization']
+        for field in required_fields:
+            if field not in user_data or not user_data[field]:
+                raise ValidationError(f"'{field}' is required")
+        
+        # Validate password
+        try:
+            validate_password(user_data['password'])
+        except ValidationError as e:
+            raise ValidationError(f"Password validation failed: {'; '.join(e.messages)}")
+        
+        with transaction.atomic():
+            user = CustomUser.objects.create_user(
+                username=user_data['username'],
+                email=user_data['email'],
+                password=user_data['password'],
+                first_name=user_data.get('first_name', ''),
+                last_name=user_data.get('last_name', ''),
+                organization=user_data['organization'],
+                role='BlueVisionAdmin',
+                is_publisher=True,
+                is_verified=True,
+                is_active=True,
+                is_staff=True,
+                is_superuser=True
+            )
+            
+            # Log user creation
+            AuthenticationLog.log_authentication_event(
+                user=user,
+                action='user_created',
+                ip_address=user_data.get('created_from_ip', '127.0.0.1'),
+                user_agent=user_data.get('user_agent', 'Test'),
+                success=True,
+                additional_data={
+                    'created_by': 'Test Setup',
+                    'role': 'BlueVisionAdmin',
+                    'admin_privileges': True,
+                    'test_user': True
+                }
+            )
+            
+            return user
