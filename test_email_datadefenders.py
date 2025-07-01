@@ -1,15 +1,16 @@
 """
-Debug SMTP2Go Connection Test
-File: debug_smtp2go_test.py
+Gmail SMTP Connection Test
+File: test_email_datadefenders.py
 
-Detailed debugging script to identify SMTP2Go connection issues.
+Detailed debugging script to test Gmail SMTP connection.
 Updated to use environment variables for security.
-No external dependencies required - reads .env file manually.
+Uses Django's built-in email backend for Gmail SMTP.
 """
 
-import requests
-import json
+import smtplib
 import os
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 
 
@@ -46,14 +47,21 @@ def load_environment():
     if env_vars is None:
         return None
     
-    # Get required environment variables
-    api_key = os.getenv('SMTP2GO_API_KEY')
-    base_url = os.getenv('SMTP2GO_BASE_URL', 'https://api.smtp2go.com/v3/')
+    # Get required environment variables for Gmail
+    email_host = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+    email_port = int(os.getenv('EMAIL_PORT', '587'))
+    email_use_tls = os.getenv('EMAIL_USE_TLS', 'True').lower() == 'true'
+    email_host_user = os.getenv('EMAIL_HOST_USER')
+    email_host_password = os.getenv('EMAIL_HOST_PASSWORD')
     sender_email = os.getenv('CRISP_SENDER_EMAIL')
     sender_name = os.getenv('CRISP_SENDER_NAME', 'CRISP')
     
-    if not api_key:
-        print("❌ SMTP2GO_API_KEY not found in environment variables")
+    if not email_host_user:
+        print("❌ EMAIL_HOST_USER not found in environment variables")
+        return None
+    
+    if not email_host_password:
+        print("❌ EMAIL_HOST_PASSWORD not found in environment variables")
         return None
     
     if not sender_email:
@@ -61,267 +69,170 @@ def load_environment():
         return None
     
     return {
-        'api_key': api_key,
-        'base_url': base_url,
+        'email_host': email_host,
+        'email_port': email_port,
+        'email_use_tls': email_use_tls,
+        'email_host_user': email_host_user,
+        'email_host_password': email_host_password,
         'sender_email': sender_email,
         'sender_name': sender_name
     }
 
 
-def test_smtp2go_endpoints(config):
-    """Test different SMTP2Go endpoints to identify the issue"""
+def test_smtp_connection(config):
+    """Test Gmail SMTP connection"""
     
-    api_key = config['api_key']
-    base_url = config['base_url']
-    
-    headers = {
-        'Content-Type': 'application/json',
-        'X-Smtp2go-Api-Key': api_key
-    }
-    
-    print("SMTP2Go API Debugging")
+    print("Gmail SMTP Connection Test")
     print("=" * 50)
-    print(f"API Key: {api_key[:10]}...{api_key[-4:]} (masked)")
-    print(f"Base URL: {base_url}")
+    print(f"Host: {config['email_host']}")
+    print(f"Port: {config['email_port']}")
+    print(f"Use TLS: {config['email_use_tls']}")
+    print(f"Username: {config['email_host_user']}")
+    print(f"Password: {'*' * len(config['email_host_password'])}")
     print(f"Sender Email: {config['sender_email']}")
     print()
     
-    # Test different endpoints
-    endpoints = [
-        ("stats", "GET", "Account statistics"),
-        ("email/send", "POST", "Email sending endpoint"),
-        ("", "GET", "API root"),
-        ("account", "GET", "Account information"),
-        ("stats/overall", "GET", "Overall stats")
-    ]
-    
-    for endpoint, method, description in endpoints:
-        url = f"{base_url}{endpoint}"
-        print(f"Testing: {description}")
-        print(f"   URL: {url}")
-        print(f"   Method: {method}")
+    try:
+        print("🔌 Connecting to Gmail SMTP server...")
         
-        try:
-            if method == "GET":
-                response = requests.get(url, headers=headers, timeout=10)
-            else:
-                # For POST, use minimal payload
-                test_payload = {
-                    "to": ["test@example.com"],
-                    "sender": config['sender_email'],
-                    "subject": "Test",
-                    "text_body": "Test"
-                }
-                response = requests.post(url, json=test_payload, headers=headers, timeout=10)
-            
-            print(f"   Status: {response.status_code}")
-            
-            # Try to parse JSON response
-            try:
-                response_data = response.json()
-                print(f"   Response: {json.dumps(response_data, indent=2)[:200]}...")
-            except:
-                print(f"   Response (text): {response.text[:200]}...")
-            
-            if response.status_code == 200:
-                print("   SUCCESS")
-            elif response.status_code == 404:
-                print("   NOT FOUND (404)")
-            elif response.status_code == 401:
-                print("   UNAUTHORIZED (401) - Check API key")
-            elif response.status_code == 403:
-                print("   FORBIDDEN (403) - Permission denied")
-            else:
-                print(f"   OTHER ERROR ({response.status_code})")
-                
-        except requests.exceptions.Timeout:
-            print("   TIMEOUT")
-        except requests.exceptions.ConnectionError:
-            print("   CONNECTION ERROR")
-        except Exception as e:
-            print(f"   EXCEPTION: {str(e)}")
+        # Create SMTP connection
+        server = smtplib.SMTP(config['email_host'], config['email_port'])
         
-        print()
+        # Enable debug output
+        server.set_debuglevel(1)
+        
+        print("✅ Connected to SMTP server")
+        
+        if config['email_use_tls']:
+            print("🔐 Starting TLS...")
+            server.starttls()
+            print("✅ TLS started successfully")
+        
+        print("🔑 Authenticating...")
+        server.login(config['email_host_user'], config['email_host_password'])
+        print("✅ Authentication successful")
+        
+        server.quit()
+        print("✅ SMTP connection test passed!")
+        return True
+        
+    except smtplib.SMTPAuthenticationError as e:
+        print(f"❌ Authentication failed: {e}")
+        print("   Check your Gmail credentials and App Password")
+        return False
+    except smtplib.SMTPConnectError as e:
+        print(f"❌ Connection failed: {e}")
+        print("   Check your network connection and SMTP settings")
+        return False
+    except Exception as e:
+        print(f"❌ Unexpected error: {e}")
+        return False
 
 
-def test_alternative_api_format(config):
-    """Test alternative API key format"""
+def send_test_email(config):
+    """Send a test email using Gmail SMTP"""
     
-    print("Testing Alternative API Key Formats")
+    print("📧 Sending Test Email")
     print("=" * 50)
     
-    # Sometimes SMTP2Go expects different header formats
-    api_key = config['api_key']
-    base_url = config['base_url']
-    
-    alternative_headers = [
-        {
-            'X-Smtp2go-Api-Key': api_key,
-            'Content-Type': 'application/json'
-        },
-        {
-            'Authorization': f'Bearer {api_key}',
-            'Content-Type': 'application/json'
-        },
-        {
-            'X-API-Key': api_key,
-            'Content-Type': 'application/json'
-        },
-        {
-            'Api-Key': api_key,
-            'Content-Type': 'application/json'
-        }
-    ]
-    
-    for i, headers in enumerate(alternative_headers, 1):
-        print(f"🧪 Test {i}: {list(headers.keys())}")
-        
-        try:
-            response = requests.get(
-                f"{base_url}stats",
-                headers=headers,
-                timeout=10
-            )
-            
-            print(f"   Status: {response.status_code}")
-            
-            if response.status_code == 200:
-                print("    SUCCESS - This header format works!")
-                try:
-                    data = response.json()
-                    print(f"   Data: {json.dumps(data, indent=2)[:200]}...")
-                except:
-                    pass
-                return headers
-            else:
-                print(f"    Failed with {response.status_code}")
-                
-        except Exception as e:
-            print(f"    Exception: {str(e)}")
-        
-        print()
-    
-    return None
-
-
-def test_direct_email_send(config):
-    """Try sending email directly with proper format"""
-    
-    print("📧 Testing Direct Email Send")
-    print("=" * 50)
-    
-    api_key = config['api_key']
-    sender_email = config['sender_email']
-    sender_name = config['sender_name']
-    
-    # Use the most common header format for SMTP2Go
-    headers = {
-        'X-Smtp2go-Api-Key': api_key,
-        'Content-Type': 'application/json'
-    }
-    
-    # Target email for testing (you can change this)
+    # Target email for testing
     test_email = "datadefenders.sa@gmail.com"
     
-    payload = {
-        "to": [test_email],
-        "sender": sender_email,
-        "subject": "🧪 CRISP Debug Test - Data Defenders",
-        "text_body": f"""
+    try:
+        # Create message
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = "🧪 CRISP Gmail SMTP Test - Data Defenders"
+        msg['From'] = f"{config['sender_name']} <{config['sender_email']}>"
+        msg['To'] = test_email
+        
+        # Create text and HTML versions
+        text_body = f"""
 Debug Test Email from CRISP
 
-This is a debug test to verify SMTP2Go integration.
+This is a test to verify Gmail SMTP integration.
 
-If you receive this email, the API is working correctly!
+If you receive this email, Gmail SMTP is working correctly!
 
-Sender: {sender_name} <{sender_email}>
+Sender: {config['sender_name']} <{config['sender_email']}>
 Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}
 
 Data Defenders Team
-        """,
-        "html_body": f"""
+        """
+        
+        html_body = f"""
         <html>
         <body>
-            <h2>🧪 CRISP Debug Test</h2>
-            <p>This is a debug test to verify SMTP2Go integration.</p>
-            <p><strong>If you receive this email, the API is working correctly!</strong></p>
+            <h2>🧪 CRISP Gmail SMTP Test</h2>
+            <p>This is a test to verify Gmail SMTP integration.</p>
+            <p><strong>If you receive this email, Gmail SMTP is working correctly!</strong></p>
             <ul>
-                <li>Sender: {sender_name} &lt;{sender_email}&gt;</li>
+                <li>Sender: {config['sender_name']} &lt;{config['sender_email']}&gt;</li>
                 <li>Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}</li>
             </ul>
             <p>Data Defenders Team</p>
         </body>
         </html>
         """
-    }
-    
-    try:
-        print("📨 Sending debug email...")
+        
+        # Attach parts
+        part1 = MIMEText(text_body, 'plain')
+        part2 = MIMEText(html_body, 'html')
+        
+        msg.attach(part1)
+        msg.attach(part2)
+        
+        print("📨 Sending test email...")
         print(f"   To: {test_email}")
-        print(f"   From: {sender_name} <{sender_email}>")
+        print(f"   From: {config['sender_name']} <{config['sender_email']}>")
         print()
         
-        response = requests.post(
-            f"{config['base_url']}email/send",
-            json=payload,
-            headers=headers,
-            timeout=30
-        )
+        # Send email
+        server = smtplib.SMTP(config['email_host'], config['email_port'])
+        if config['email_use_tls']:
+            server.starttls()
         
-        print(f"📊 Response Status: {response.status_code}")
-        print("📋 Full Response:")
-        print("-" * 30)
+        server.login(config['email_host_user'], config['email_host_password'])
+        server.send_message(msg)
+        server.quit()
         
-        try:
-            response_data = response.json()
-            print(json.dumps(response_data, indent=2))
-        except:
-            print("Raw response:")
-            print(response.text)
+        print("✅ SUCCESS! Test email sent successfully!")
+        print(f"   Check {test_email} for the test email")
+        return True
         
-        print("-" * 30)
-        
-        if response.status_code == 200:
-            result = response.json()
-            if result.get('data', {}).get('succeeded', 0) > 0:
-                print("✅ SUCCESS! Debug email sent!")
-                print(f"   Check {test_email}")
-                return True
-            else:
-                print("❌ Email send failed in API response")
-        else:
-            print(f"❌ HTTP Error: {response.status_code}")
-            
     except Exception as e:
-        print(f"❌ Exception occurred: {str(e)}")
-    
-    return False
+        print(f"❌ Failed to send email: {e}")
+        return False
 
 
-def check_api_key_validity(config):
-    """Check if the API key format is correct"""
+def check_gmail_credentials(config):
+    """Validate Gmail credentials format"""
     
-    print("🔑 API Key Validation")
+    print("🔑 Gmail Credentials Validation")
     print("=" * 50)
     
-    api_key = config['api_key']
+    email_user = config['email_host_user']
+    email_password = config['email_host_password']
     
-    print(f"API Key: {api_key[:10]}...{api_key[-4:]} (masked)")
-    print(f"Length: {len(api_key)} characters")
-    print(f"Starts with 'api-': {api_key.startswith('api-')}")
-    print(f"Format: {'Correct' if api_key.startswith('api-') and len(api_key) > 10 else 'Suspicious'}")
+    print(f"Gmail Address: {email_user}")
+    print(f"App Password: {'*' * len(email_password)} ({len(email_password)} chars)")
     print()
     
-    # Check if it's a valid format
-    if not api_key.startswith('api-'):
-        print("⚠️  WARNING: API key should start with 'api-'")
+    # Basic validation
+    if not email_user.endswith('@gmail.com'):
+        print("⚠️  WARNING: Email should end with @gmail.com")
         return False
     
-    if len(api_key) < 20:
-        print("⚠️  WARNING: API key seems too short")
+    if len(email_password) < 10:
+        print("⚠️  WARNING: App password seems too short")
+        print("   App passwords are usually 16 characters")
         return False
     
-    print("✅ API key format looks correct")
+    if ' ' not in email_password:
+        print("⚠️  WARNING: App password should contain spaces")
+        print("   Format: 'xxxx xxxx xxxx xxxx'")
+        return False
+    
+    print("✅ Gmail credentials format looks correct")
     return True
 
 
@@ -332,9 +243,9 @@ def check_environment_setup():
     print("=" * 50)
     
     required_vars = [
-        'SMTP2GO_API_KEY',
+        'EMAIL_HOST_USER',
+        'EMAIL_HOST_PASSWORD',
         'CRISP_SENDER_EMAIL',
-        'SMTP2GO_BASE_URL',
         'CRISP_SENDER_NAME'
     ]
     
@@ -343,8 +254,8 @@ def check_environment_setup():
     for var in required_vars:
         value = os.getenv(var)
         if value:
-            if 'API_KEY' in var:
-                print(f"✅ {var}: {value[:10]}...{value[-4:]} (masked)")
+            if 'PASSWORD' in var:
+                print(f"✅ {var}: {'*' * len(value)} (masked)")
             else:
                 print(f"✅ {var}: {value}")
         else:
@@ -366,11 +277,11 @@ def check_environment_setup():
 
 
 def main():
-    """Main debugging function"""
+    """Main function to test Gmail SMTP"""
     
-    print("🛡️ CRISP SMTP2Go Debug Tool")
+    print("🛡️ CRISP Gmail SMTP Test Tool")
     print("=" * 60)
-    print("🎯 Diagnosing connection issues with SMTP2Go API")
+    print("📧 Testing Gmail SMTP connection and email sending")
     print("🔒 Using environment variables for security")
     print("📁 Reading .env file manually (no external dependencies)")
     print()
@@ -382,48 +293,48 @@ def main():
             print("❌ Failed to load configuration from .env file")
             return
         
-        # Step 0: Check environment setup
+        # Step 1: Check environment setup
         if not check_environment_setup():
             print("❌ Environment setup failed. Please check your .env file.")
             return
         
         print()
         
-        # Step 1: Check API key format
-        check_api_key_validity(config)
+        # Step 2: Check Gmail credentials format
+        check_gmail_credentials(config)
         print()
         
-        # Step 2: Test different endpoints
-        test_smtp2go_endpoints(config)
+        # Step 3: Test SMTP connection
+        connection_success = test_smtp_connection(config)
         print()
         
-        # Step 3: Test alternative header formats
-        working_headers = test_alternative_api_format(config)
-        print()
+        if not connection_success:
+            print("❌ SMTP connection failed. Fix connection issues before testing email send.")
+            return
         
-        # Step 4: Try direct email send
-        email_success = test_direct_email_send(config)
+        # Step 4: Send test email
+        email_success = send_test_email(config)
         print()
         
         # Summary
-        print("📋 DEBUGGING SUMMARY")
+        print("📋 TESTING SUMMARY")
         print("=" * 50)
         
         if email_success:
-            print("✅ SUCCESS: Email was sent successfully!")
-            print("   Your SMTP2Go integration is working!")
-            print("   Check datadefenders.sa@gmail.com for the debug email")
+            print("✅ SUCCESS: Test email sent successfully!")
+            print("   Your Gmail SMTP integration is working!")
+            print("   Check datadefenders.sa@gmail.com for the test email")
         else:
             print("❌ ISSUE: Email sending failed")
             print()
             print("🔧 TROUBLESHOOTING STEPS:")
-            print("1. Verify your API key is active in SMTP2Go dashboard")
-            print("2. Check if your account has sending permissions")
-            print(f"3. Ensure '{config['sender_email']}' is verified")
-            print("4. Try logging into SMTP2Go web interface to confirm account status")
-            print("5. Contact SMTP2Go support if API key is correct but still fails")
+            print("1. Verify your Gmail App Password is correct")
+            print("2. Check if 2-Factor Authentication is enabled on Gmail")
+            print("3. Ensure 'Less secure app access' is disabled (use App Passwords)")
+            print("4. Try generating a new App Password")
+            print("5. Check Gmail security settings")
             print()
-            print("🌐 SMTP2Go Dashboard: https://app.smtp2go.com/")
+            print("🌐 Gmail Security: https://security.google.com/")
             
     except Exception as e:
         print(f"❌ Unexpected error: {str(e)}")
@@ -431,3 +342,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
