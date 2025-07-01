@@ -85,5 +85,3 @@ logs/
 # Temporary files
 *.tmp
 *.temp
-test_email_datadefenders.py
-test_gmail_unit.py
