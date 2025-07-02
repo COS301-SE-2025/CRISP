@@ -1,6 +1,3 @@
-# CRISP - Cyber Risk Information Sharing Platform
-# Git ignore file
-
 # Python
 __pycache__/
 *.py[cod]
@@ -24,26 +21,21 @@ wheels/
 *.egg
 MANIFEST
 
-# Virtual Environment
-venv/
-env/
-ENV/
-.venv
-env.bak/
-venv.bak/
-
 # Django
 *.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
 media/
-staticfiles/
 
-# Environment variables
+# Environment
 .env
-.env.*
-!.env.example
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
 # IDE
 .vscode/
@@ -63,35 +55,40 @@ Thumbs.db
 
 # Testing
 .coverage
-htmlcov/
 .pytest_cache/
 .tox/
+htmlcov/
+.cache
 coverage.xml
 *.cover
 .hypothesis/
 
-# Documentation
-docs/_build/
+# Jupyter Notebook
+.ipynb_checkpoints
 
-# Logs and temporary files
-*.log
-*.tmp
-.cache/
-
-# Security
-*.key
-*.pem
-secrets/
+# pyenv
+.python-version
 
 # Celery
 celerybeat-schedule
 celerybeat.pid
 
-# Node.js (if frontend tools used)
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# SageMath parsed files
+*.sage.py
 
-/backup
-/.venv
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/

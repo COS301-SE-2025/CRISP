@@ -1,94 +1,98 @@
 """
-Test settings for CRISP integrated platform
-Optimized for fast testing with SQLite and minimal external dependencies
+Django settings for running tests for the trust_management app.
+This file is self-contained and does not depend on any external project.
 """
 
-from .settings import *
-import tempfile
+import os
 
-# Use in-memory SQLite for faster tests
+# Basic Django settings
+SECRET_KEY = os.getenv('TEST_SECRET_KEY', 'a-test-secret-key-for-trust-management')
+DEBUG = True
+ALLOWED_HOSTS = ['testserver', 'localhost', '127.0.0.1']
+
+# Application definition
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'rest_framework',
+    'core.trust',  # The app being tested
+    'core.tests',  # Test modules
+]
+
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+]
+
+ROOT_URLCONF = 'core.trust.urls'  # Point to the app's own urls if they exist for testing
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+
+# Use SQLite for tests with better concurrency handling
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': ':memory:',
+        'OPTIONS': {
+            'timeout': 30,
+            'check_same_thread': False,
+        },
+        'TEST': {
+            'NAME': ':memory:',
+        }
     }
 }
 
-# Fast password hashing for tests
-PASSWORD_HASHERS = [
-    'django.contrib.auth.hashers.MD5PasswordHasher',
-]
+# Disable database migrations for tests for speed
+class DisableMigrations:
+    def __contains__(self, item):
+        return True
+    def __getitem__(self, item):
+        return None
 
-# Disable password validation for tests
-AUTH_PASSWORD_VALIDATORS = []
+MIGRATION_MODULES = DisableMigrations()
 
-# Disable logging during tests to reduce noise
-LOGGING_CONFIG = None
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'null': {
-            'class': 'logging.NullHandler',
-        },
-    },
-    'root': {
-        'handlers': ['null'],
-    },
-}
-
-# Disable Celery for tests - run tasks synchronously
-CELERY_TASK_ALWAYS_EAGER = True
-CELERY_TASK_EAGER_PROPAGATES = True
-
-# Use locmem cache for tests (needed for rate limiting tests)
+# Cache configuration for tests
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'test-cache',
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
     }
 }
 
-# Test-specific settings
-SECRET_KEY = 'test-secret-key-not-for-production'
-DEBUG = True
-ALLOWED_HOSTS = ['testserver', 'localhost', '127.0.0.1']
+# Use a mock user model for tests since the main project's user model is not available
+AUTH_USER_MODEL = 'auth.User'
 
-# Disable CORS for tests
-CORS_ALLOW_ALL_ORIGINS = True
+# Internationalization
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = 'UTC'
+USE_I18N = True
+USE_TZ = True
 
-# Mock external services for tests
-OTX_SETTINGS = {
-    'API_KEY': 'test-api-key',
-    'ENABLED': False,  # Disable external API calls during tests
-    'FETCH_INTERVAL': 3600,
-    'BATCH_SIZE': 50,
-    'MAX_AGE_DAYS': 30,
+# Static files
+STATIC_URL = '/static/'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# REST Framework settings for tests
+REST_FRAMEWORK = {
+    'TEST_REQUEST_DEFAULT_FORMAT': 'json',
 }
-
-TAXII_SETTINGS = {
-    'DISCOVERY_TITLE': 'CRISP Test Server',
-    'DISCOVERY_DESCRIPTION': 'Test threat intelligence platform',
-    'DISCOVERY_CONTACT': 'test@crisp.test',
-    'MEDIA_TYPE_TAXII': 'application/taxii+json;version=2.1',
-    'MEDIA_TYPE_STIX': 'application/stix+json;version=2.1',
-    'MAX_CONTENT_LENGTH': 104857600,
-}
-
-# Test file storage
-MEDIA_ROOT = tempfile.mkdtemp()
-STATIC_ROOT = tempfile.mkdtemp()
-
-# JWT settings for tests
-SIMPLE_JWT.update({
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-    'ROTATE_REFRESH_TOKENS': False,
-    'BLACKLIST_AFTER_ROTATION': False,
-})
-
-# Trust management test settings
-TRUST_MANAGEMENT_SECRET_KEY = 'test-trust-management-secret'
-
-# Enable rate limiting for tests (to test the middleware)
-RATELIMIT_ENABLE = True
