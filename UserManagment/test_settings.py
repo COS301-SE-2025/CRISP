@@ -17,7 +17,7 @@ BASE_DIR = Path(__file__).resolve().parent
 # Security settings
 SECRET_KEY = os.getenv('SECRET_KEY', 'crisp-test-secret-key-for-development-only')
 DEBUG = True
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver']
 
 # Application definition
 INSTALLED_APPS = [
@@ -176,6 +176,21 @@ LOGGING = {
         },
     },
 }
+
+# Rate limiting configuration
+RATELIMIT_ENABLE = False  # Disable for testing
+RATELIMIT_ATTEMPTS = 5
+RATELIMIT_TIMEOUT = 300
+RATELIMIT_CACHE_PREFIX = 'rl:'
+
+# Security configuration
+SECURITY_LOCKOUT_ATTEMPTS = 5
+SECURITY_LOCKOUT_DURATION = 900  # 15 minutes
+
+# Additional security headers
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_BROWSER_XSS_FILTER = True
+X_FRAME_OPTIONS = 'DENY'
 
 # Test-specific settings
 if 'test' in sys.argv:

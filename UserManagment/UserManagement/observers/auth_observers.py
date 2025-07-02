@@ -240,6 +240,56 @@ class NotificationObserver(AuthenticationObserver):
         logger.info(f"Welcome with password sent to {user.username}")
 
 
+class SecurityAlertObserver(AuthenticationObserver):
+    """Observer that sends security alerts for suspicious activities"""
+    
+    def notify(self, event_type: str, user: CustomUser, event_data: Dict) -> None:
+        """Send security alerts for specific events"""
+        if event_type in ['account_locked', 'password_reset', 'multiple_failed_logins']:
+            timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+            username = user.username if user else event_data.get('username', 'Unknown')
+            
+            # In a real implementation, this would send actual alerts
+            print(f"[{timestamp}] 🚨 Security Alert: {event_type} for user: {username}")
+            logger.warning(f"Security alert: {event_type} for user {username}")
+
+
+class NewLocationAlertObserver(AuthenticationObserver):
+    """Observer that alerts users when they log in from a new location"""
+    
+    def notify(self, event_type: str, user: CustomUser, event_data: Dict) -> None:
+        """Send new location alerts"""
+        if event_type == 'login_success' and user:
+            ip_address = event_data.get('ip_address', 'unknown')
+            
+            # Simple check - in reality this would use IP geolocation
+            # For testing, we'll check if this is a different IP than the last login
+            if hasattr(user, '_last_login_ip') and user._last_login_ip != ip_address:
+                print(f"New location alert sent to {user.username} from {ip_address}")
+                logger.info(f"New location alert for {user.username} from {ip_address}")
+            
+            # Store the IP for next time (in memory for testing)
+            user._last_login_ip = ip_address
+
+
+class ConsoleLoggingObserver(AuthenticationObserver):
+    """Observer that logs authentication events to console"""
+    
+    def notify(self, event_type: str, user: CustomUser, event_data: Dict) -> None:
+        """Log authentication events to console"""
+        timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+        username = user.username if user else event_data.get('username', 'Unknown')
+        
+        if event_type == 'login_success':
+            print(f"[{timestamp}] ✅ Login successful for user: {username}")
+        elif event_type == 'login_failed':
+            print(f"[{timestamp}] ❌ Login failed for user: {username}")
+        elif event_type == 'password_changed':
+            print(f"[{timestamp}] 🔑 Password changed for user: {username}")
+        else:
+            print(f"[{timestamp}] 📝 Authentication event '{event_type}' for user: {username}")
+
+
 class AuthenticationEventSubject:
     """Subject for authentication events (Publisher in Observer pattern)"""
     
@@ -252,6 +302,7 @@ class AuthenticationEventSubject:
         self.attach(SecurityAuditObserver())
         self.attach(AccountLockoutObserver())
         self.attach(NotificationObserver())
+        self.attach(ConsoleLoggingObserver())
     
     def attach(self, observer: AuthenticationObserver) -> None:
         """Attach an observer"""
@@ -262,6 +313,18 @@ class AuthenticationEventSubject:
         """Detach an observer"""
         if observer in self._observers:
             self._observers.remove(observer)
+    
+    def register_observer(self, observer: AuthenticationObserver) -> None:
+        """Register an observer (alias for attach for test compatibility)"""
+        self.attach(observer)
+    
+    def deregister_observer(self, observer: AuthenticationObserver) -> None:
+        """Deregister an observer (alias for detach for test compatibility)"""
+        self.detach(observer)
+    
+    def unregister_observer(self, observer: AuthenticationObserver) -> None:
+        """Unregister an observer (alias for detach for test compatibility)"""
+        self.detach(observer)
     
     def notify_observers(self, event_type: str, user: CustomUser, event_data: Dict) -> None:
         """Notify all observers of an authentication event"""

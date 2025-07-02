@@ -79,9 +79,16 @@ user_urlpatterns = [
     path('organization-users/', user_views.OrganizationUsersView.as_view(), name='organization_users'), 
 ]
 
+# General user URLs (for tests compatibility)
+general_user_urlpatterns = [
+    path('', user_views.UserListView.as_view(), name='user_list'),
+    path('<uuid:user_id>/', user_views.UserDetailView.as_view(), name='user_detail'),
+]
+
 urlpatterns = [
     path('', api_root, name='api_root'),
     path('auth/', include(auth_urlpatterns)),
     path('admin/', include(admin_urlpatterns)),
     path('user/', include(user_urlpatterns)),
+    path('users/', include(general_user_urlpatterns)),
 ]

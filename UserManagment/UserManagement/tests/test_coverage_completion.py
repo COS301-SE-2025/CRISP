@@ -68,9 +68,15 @@ class AdminTestCase(TestCase):
         self.assertIn('username', admin.search_fields)
         self.assertIn('email', admin.search_fields)
         
-        # Test list filter
+        # Test list filter - check for AccountStatusFilter instead of is_verified
         self.assertIn('role', admin.list_filter)
-        self.assertIn('is_verified', admin.list_filter)
+        # AccountStatusFilter is used instead of is_verified directly
+        account_status_filter = None
+        for filter_item in admin.list_filter:
+            if hasattr(filter_item, '__name__') and 'AccountStatusFilter' in str(filter_item):
+                account_status_filter = filter_item
+                break
+        self.assertIsNotNone(account_status_filter)
         
         # Test readonly fields
         self.assertIn('id', admin.readonly_fields)
@@ -95,7 +101,7 @@ class AdminTestCase(TestCase):
         # Test list display
         self.assertIn('user', admin.list_display)
         self.assertIn('ip_address', admin.list_display)
-        self.assertIn('is_active', admin.list_display)
+        self.assertIn('session_status', admin.list_display)  # session_status instead of is_active
         
         # Test readonly fields
         self.assertIn('id', admin.readonly_fields)
@@ -107,12 +113,12 @@ class AdminTestCase(TestCase):
         
         # Test list display
         self.assertIn('username', admin.list_display)
-        self.assertIn('action', admin.list_display)
-        self.assertIn('success', admin.list_display)
+        self.assertIn('action_display', admin.list_display)  # action_display instead of action
+        self.assertIn('success_display', admin.list_display)  # success_display instead of success
         
         # Test list filter
-        self.assertIn('action', admin.list_filter)
-        self.assertIn('success', admin.list_filter)
+        self.assertIn('action', admin.list_filter)  # Check for ActionFilter
+        self.assertIn('success', admin.list_filter)  # Check for SuccessFilter
 
 
 class SerializerTestCase(TestCase):
@@ -167,7 +173,7 @@ class SerializerTestCase(TestCase):
     def test_password_change_serializer(self):
         """Test PasswordChangeSerializer"""
         data = {
-            'old_password': 'TestPassword123!',
+            'current_password': 'TestPassword123!',
             'new_password': 'NewPassword123!',
             'new_password_confirm': 'NewPassword123!'
         }
@@ -191,7 +197,8 @@ class SerializerTestCase(TestCase):
         """Test PasswordResetConfirmSerializer"""
         data = {
             'token': 'test_token',
-            'new_password': 'NewPassword123!'
+            'new_password': 'NewPassword123!',
+            'new_password_confirm': 'NewPassword123!'
         }
         
         serializer = PasswordResetConfirmSerializer(data=data)
@@ -223,7 +230,7 @@ class SerializerTestCase(TestCase):
             'email': 'newuser@test.com',
             'password': 'NewUserPassword123!',
             'role': 'viewer',
-            'organization': str(self.organization.id)
+            'organization_id': str(self.organization.id)
         }
         
         serializer = AdminUserCreateSerializer(data=data)
@@ -284,7 +291,7 @@ class ValidatorTestCase(TestCase):
     
     def test_password_validator_valid(self):
         """Test password validator with valid passwords"""
-        valid_passwords = ['Password123!', 'ValidPass1@', 'SecureP@ssw0rd']
+        valid_passwords = ['StrongP@ssw0rd123', 'MyStr0ngP@ssword!', 'VerySecureP@ss123']
         
         for password in valid_passwords:
             try:

@@ -3,13 +3,14 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
 
 from ..models import CustomUser, UserSession
 from ..serializers import (
     UserProfileSerializer, UserSessionSerializer, 
-    OrganizationSerializer
+    OrganizationSerializer, AdminUserUpdateSerializer
 )
-from ..permissions import IsVerifiedUser
+from ..permissions import IsVerifiedUser, IsOrganizationAdmin
 
 
 class UserSessionListView(APIView):
@@ -329,4 +330,228 @@ class OrganizationUsersView(APIView):
             },
             'stats': org_stats,
             'total_count': len(users_data)
+        }, status=status.HTTP_200_OK)
+
+
+class UserListView(APIView):
+    """General user list view - handles pagination, search, filtering"""
+    permission_classes = [IsAuthenticated, IsVerifiedUser]
+    
+    def get(self, request):
+        """Get list of users based on permissions"""
+        # Base queryset
+        if request.user.role in ['system_admin', 'admin']:
+            # Admins can see all users in their organization or all if system admin
+            if request.user.role == 'system_admin':
+                queryset = CustomUser.objects.filter(is_active=True)
+            else:
+                queryset = CustomUser.objects.filter(
+                    organization=request.user.organization,
+                    is_active=True
+                )
+        elif request.user.is_publisher:
+            # Publishers can see users in their organization
+            queryset = CustomUser.objects.filter(
+                organization=request.user.organization,
+                is_active=True
+            )
+        else:
+            # Viewers can only see limited user info or just themselves
+            queryset = CustomUser.objects.filter(
+                id=request.user.id,
+                is_active=True
+            )
+        
+        # Apply search filter
+        search = request.GET.get('search', '')
+        if search:
+            queryset = queryset.filter(
+                Q(username__icontains=search) |
+                Q(email__icontains=search) |
+                Q(first_name__icontains=search) |
+                Q(last_name__icontains=search)
+            )
+        
+        # Apply role filter
+        role = request.GET.get('role', '')
+        if role:
+            queryset = queryset.filter(role=role)
+        
+        # Apply pagination
+        page = request.GET.get('page', 1)
+        page_size = request.GET.get('page_size', 20)
+        
+        try:
+            page = int(page)
+            page_size = int(page_size)
+        except (ValueError, TypeError):
+            page = 1
+            page_size = 20
+        
+        # Calculate pagination
+        total_count = queryset.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        users = queryset[start:end]
+        
+        # Serialize users
+        serializer = UserProfileSerializer(users, many=True)
+        
+        return Response({
+            'users': serializer.data,
+            'pagination': {
+                'count': total_count,
+                'page': page,
+                'page_size': page_size,
+                'total_pages': (total_count + page_size - 1) // page_size
+            }
+        }, status=status.HTTP_200_OK)
+
+
+class UserDetailView(APIView):
+    """User detail view - get, update, delete specific user"""
+    permission_classes = [IsAuthenticated, IsVerifiedUser]
+    
+    def _can_access_user(self, request_user, target_user):
+        """Check if request user can access target user"""
+        # Users can always access their own profile
+        if request_user.id == target_user.id:
+            return True
+            
+        # System admins can access anyone
+        if request_user.role == 'system_admin':
+            return True
+            
+        # Admins can access users in their organization
+        if request_user.role == 'admin' and request_user.organization == target_user.organization:
+            return True
+            
+        # Publishers can view users in their organization
+        if request_user.is_publisher and request_user.organization == target_user.organization:
+            return True
+            
+        return False
+    
+    def _can_modify_user(self, request_user, target_user):
+        """Check if request user can modify target user"""
+        # Users can modify their own profile (limited)
+        if request_user.id == target_user.id:
+            return True
+            
+        # System admins can modify anyone
+        if request_user.role == 'system_admin':
+            return True
+            
+        # Admins can modify users in their organization (except other admins)
+        if (request_user.role == 'admin' and 
+            request_user.organization == target_user.organization and
+            target_user.role not in ['admin', 'system_admin']):
+            return True
+            
+        return False
+    
+    def get(self, request, user_id):
+        """Get user details"""
+        try:
+            user = CustomUser.objects.get(id=user_id, is_active=True)
+        except CustomUser.DoesNotExist:
+            return Response({
+                'error': 'User not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        if not self._can_access_user(request.user, user):
+            return Response({
+                'error': 'Permission denied'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        serializer = UserProfileSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    def put(self, request, user_id):
+        """Update user"""
+        try:
+            user = CustomUser.objects.get(id=user_id, is_active=True)
+        except CustomUser.DoesNotExist:
+            return Response({
+                'error': 'User not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        if not self._can_modify_user(request.user, user):
+            return Response({
+                'error': 'Permission denied'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Use appropriate serializer based on permissions
+        if request.user.role in ['system_admin', 'admin']:
+            serializer = AdminUserUpdateSerializer(user, data=request.data)
+        else:
+            serializer = UserProfileSerializer(user, data=request.data, partial=True)
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def patch(self, request, user_id):
+        """Partial update user"""
+        try:
+            user = CustomUser.objects.get(id=user_id, is_active=True)
+        except CustomUser.DoesNotExist:
+            return Response({
+                'error': 'User not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        if not self._can_modify_user(request.user, user):
+            return Response({
+                'error': 'Permission denied'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Use appropriate serializer based on permissions
+        if request.user.role in ['system_admin', 'admin']:
+            serializer = AdminUserUpdateSerializer(user, data=request.data, partial=True)
+        else:
+            serializer = UserProfileSerializer(user, data=request.data, partial=True)
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, user_id):
+        """Delete/deactivate user"""
+        try:
+            user = CustomUser.objects.get(id=user_id, is_active=True)
+        except CustomUser.DoesNotExist:
+            return Response({
+                'error': 'User not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Users cannot delete their own account
+        if request.user.id == user.id:
+            return Response({
+                'error': 'Cannot delete your own account'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Only admins can delete users
+        if not request.user.role in ['system_admin', 'admin']:
+            return Response({
+                'error': 'Permission denied'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # System admins can delete anyone, regular admins only in their org
+        if (request.user.role == 'admin' and 
+            request.user.organization != user.organization):
+            return Response({
+                'error': 'Permission denied'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Deactivate instead of delete
+        user.is_active = False
+        user.save()
+        
+        return Response({
+            'success': True,
+            'message': 'User deactivated successfully'
         }, status=status.HTTP_200_OK)

@@ -349,6 +349,8 @@ class AdminViewPermissionsTestCase(TestCase):
             'username': 'publisher',
             'email': 'publisher@test.com',
             'password': 'PublisherPassword123!',
+            'first_name': 'Publisher',
+            'last_name': 'User',
             'organization': self.organization
         })
         

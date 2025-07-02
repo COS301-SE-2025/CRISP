@@ -15,6 +15,10 @@ from ..strategies.authentication_strategies import (
     TrustedDeviceAuthenticationStrategy
 )
 from ..observers.auth_observers import auth_event_subject
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
+from rest_framework import status
 
 
 class AuthenticationService:
@@ -368,3 +372,6 @@ class AuthenticationService:
         expired_sessions.update(is_active=False)
         
         return count
+
+
+# End of auth_service.py

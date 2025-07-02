@@ -78,20 +78,29 @@ class UserLoginSerializer(serializers.Serializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    """Serializer for user profile"""
+    """Serializer for user profile data"""
     organization_name = serializers.CharField(source='organization.name', read_only=True)
+    organization = serializers.SerializerMethodField()  # Add this field
     
     class Meta:
         model = CustomUser
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name',
-            'organization_name', 'role', 'is_publisher', 'is_verified',
-            'two_factor_enabled', 'last_login', 'date_joined', 'created_at'
+            'organization', 'organization_name', 'role', 'is_publisher',
+            'is_verified', 'two_factor_enabled', 'last_login',
+            'date_joined', 'created_at'
         ]
-        read_only_fields = [
-            'id', 'username', 'role', 'is_publisher', 'is_verified',
-            'last_login', 'date_joined', 'created_at'
-        ]
+        read_only_fields = ['id', 'date_joined', 'created_at']
+    
+    def get_organization(self, obj):
+        """Get organization data"""
+        if obj.organization:
+            return {
+                'id': str(obj.organization.id),
+                'name': obj.organization.name,
+                'domain': obj.organization.domain
+            }
+        return None
 
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
@@ -174,18 +183,36 @@ class TokenRefreshSerializer(serializers.Serializer):
 
 
 class AdminUserListSerializer(serializers.ModelSerializer):
-    """Serializer for admin user list"""
+    """Serializer for admin user list view"""
     organization_name = serializers.CharField(source='organization.name', read_only=True)
-    last_login_display = serializers.DateTimeField(source='last_login', format='%Y-%m-%d %H:%M:%S', read_only=True)
+    organization = serializers.SerializerMethodField()  # Add this field
+    last_login_display = serializers.SerializerMethodField()
     
     class Meta:
         model = CustomUser
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name',
-            'organization_name', 'role', 'is_publisher', 'is_verified',
-            'is_active', 'failed_login_attempts', 'account_locked_until',
-            'last_login_display', 'date_joined', 'created_at'
+            'organization', 'organization_name', 'role', 'is_publisher',
+            'is_verified', 'is_active', 'failed_login_attempts',
+            'account_locked_until', 'last_login_display',
+            'date_joined', 'created_at'
         ]
+    
+    def get_organization(self, obj):
+        """Get organization data"""
+        if obj.organization:
+            return {
+                'id': str(obj.organization.id),
+                'name': obj.organization.name,
+                'domain': obj.organization.domain
+            }
+        return None
+    
+    def get_last_login_display(self, obj):
+        """Format last login for display"""
+        if obj.last_login:
+            return obj.last_login.strftime('%Y-%m-%d %H:%M:%S')
+        return None
 
 
 class AdminUserCreateSerializer(serializers.ModelSerializer):
@@ -292,6 +319,7 @@ class OrganizationSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     name = serializers.CharField(read_only=True)
     description = serializers.CharField(read_only=True)
+    domain = serializers.CharField(read_only=True)
     contact_email = serializers.EmailField(read_only=True)
     website = serializers.URLField(read_only=True)
     created_at = serializers.DateTimeField(read_only=True)

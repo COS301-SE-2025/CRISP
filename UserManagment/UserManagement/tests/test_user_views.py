@@ -156,7 +156,8 @@ class UserViewsTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         data = response.json()
-        self.assertTrue(data['success'])
+        # Check for user data in response instead of success field
+        self.assertEqual(data['first_name'], 'Updated')
         
         # Verify update
         self.viewer_user.refresh_from_db()
@@ -264,6 +265,8 @@ class UserViewPermissionsTestCase(TestCase):
             'username': 'publisher',
             'email': 'publisher@test.com',
             'password': 'PublisherPassword123!',
+            'first_name': 'Publisher',
+            'last_name': 'User',
             'organization': self.organization
         })
         

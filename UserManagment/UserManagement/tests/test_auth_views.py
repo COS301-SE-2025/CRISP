@@ -264,7 +264,7 @@ class AuthViewsTestCase(APITestCase):
         self.client.force_authenticate(user=self.test_user)
         
         password_data = {
-            'old_password': 'TestPassword123!',
+            'current_password': 'TestPassword123!',  # Use current_password instead of old_password
             'new_password': 'NewTestPassword123!',
             'new_password_confirm': 'NewTestPassword123!'
         }
@@ -284,7 +284,7 @@ class AuthViewsTestCase(APITestCase):
         self.client.force_authenticate(user=self.test_user)
         
         password_data = {
-            'old_password': 'WrongOldPassword',
+            'current_password': 'WrongOldPassword',  # Use current_password
             'new_password': 'NewTestPassword123!',
             'new_password_confirm': 'NewTestPassword123!'
         }
@@ -298,7 +298,7 @@ class AuthViewsTestCase(APITestCase):
             'email': 'testuser@test.com'
         }
         
-        response = self.client.post('/api/auth/reset-password/', reset_data)
+        response = self.client.post('/api/auth/password-reset/', reset_data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         data = response.json()
@@ -315,7 +315,7 @@ class AuthViewsTestCase(APITestCase):
             'email': 'nonexistent@test.com'
         }
         
-        response = self.client.post('/api/auth/reset-password/', reset_data)
+        response = self.client.post('/api/auth/password-reset/', reset_data)
         # Should still return success to prevent email enumeration
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
@@ -333,10 +333,11 @@ class AuthViewsTestCase(APITestCase):
         
         confirm_data = {
             'token': reset_token,
-            'new_password': 'ResetPassword123!'
+            'new_password': 'ResetPassword123!',
+            'new_password_confirm': 'ResetPassword123!'  # Add confirmation field
         }
         
-        response = self.client.post('/api/auth/reset-password-confirm/', confirm_data)
+        response = self.client.post('/api/auth/password-reset-confirm/', confirm_data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         data = response.json()
@@ -351,10 +352,11 @@ class AuthViewsTestCase(APITestCase):
         """Test password reset confirmation with invalid token"""
         confirm_data = {
             'token': 'invalid_token',
-            'new_password': 'ResetPassword123!'
+            'new_password': 'ResetPassword123!',
+            'new_password_confirm': 'ResetPassword123!'  # Add confirmation field
         }
         
-        response = self.client.post('/api/auth/reset-password-confirm/', confirm_data)
+        response = self.client.post('/api/auth/password-reset-confirm/', confirm_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         
         data = response.json()
@@ -418,18 +420,18 @@ class AuthViewTemplateTestCase(TestCase):
     
     def test_login_page_view(self):
         """Test login page template view"""
-        response = self.client.get('/auth/login/')
+        response = self.client.get('/api/auth/login-page/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertContains(response, 'CRISP User Management - Login')
     
     def test_viewer_dashboard_view(self):
         """Test viewer dashboard template view"""
-        response = self.client.get('/viewer/dashboard/')
+        response = self.client.get('/api/auth/dashboard/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertContains(response, 'CRISP Viewer Dashboard')
     
     def test_debug_auth_view(self):
         """Test debug auth template view"""
-        response = self.client.get('/debug/auth/')
+        response = self.client.get('/api/auth/debug/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertContains(response, 'Debug Authentication')
