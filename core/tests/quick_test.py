@@ -10,8 +10,8 @@ import json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Direct imports
-from crisp_anonymization.enums import AnonymizationLevel, DataType
-from crisp_anonymization.context import AnonymizationContext
+from core.patterns.strategy.enums import AnonymizationLevel, DataType
+from core.patterns.strategy.context import AnonymizationContext
 
 def test_basic_anonymization():
     """Test basic anonymization functionality"""

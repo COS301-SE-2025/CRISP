@@ -21,8 +21,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ValidationError
 
-from crisp_threat_intel.models import Collection, STIXObject, CollectionObject, Organization
-from crisp_threat_intel.strategies.anonymization import AnonymizationStrategyFactory
+from crisp_threat_intel.models import Collection, STIXObject, CollectionObject, Organization, TrustRelationship
+from crisp_threat_intel.strategies.integrated_anonymization import IntegratedAnonymizationContext
 
 
 class TAXIIBaseView(APIView):
@@ -71,29 +71,11 @@ class TAXIIBaseView(APIView):
         # Default to medium trust if no relationship exists
         return 0.5
     
-    def apply_anonymization(self, stix_object, requesting_org, source_org):
+    def get_trust_level_for_organizations(self, source_org, target_org):
         """
-        Apply appropriate anonymization based on trust level.
+        Get trust level between organizations using integrated system.
         """
-        if requesting_org == source_org:
-            return stix_object
-        
-        # Get trust level and determine anonymization strategy
-        trust_level = self.get_trust_level(source_org, requesting_org)
-        
-        # Determine anonymization strategy based on trust level
-        if trust_level >= 0.8:
-            strategy_name = 'none'
-        elif trust_level >= 0.4:
-            strategy_name = 'domain'  # Use composite strategy
-        else:
-            strategy_name = 'domain'  # Full anonymization
-        
-        # Get strategy and apply anonymization
-        strategy = AnonymizationStrategyFactory.get_strategy(strategy_name)
-        anonymized = strategy.anonymize(stix_object, trust_level)
-        
-        return anonymized
+        return TrustRelationship.get_trust_level(source_org, target_org)
 
 
 class DiscoveryView(TAXIIBaseView):
@@ -273,17 +255,20 @@ class CollectionObjectsView(TAXIIBaseView):
                 'objects': []
             }
             
+            # Use integrated anonymization context
+            context = IntegratedAnonymizationContext()
+            
             for obj in page_objects:
-                # Apply anonymization based on trust relationship
+                # Apply integrated anonymization based on trust relationship
                 stix_data = obj.to_stix()
                 
-                # Anonymize if needed
+                # Anonymize if needed based on trust relationship
                 if obj.source_organization != org:
-                    stix_data = self.apply_anonymization(
-                        stix_data, 
-                        org, 
-                        obj.source_organization
+                    trust_level = TrustRelationship.get_trust_level(
+                        obj.source_organization, 
+                        org
                     )
+                    stix_data = context.anonymize_stix_object(stix_data, trust_level)
                 
                 objects_data['objects'].append(stix_data)
             

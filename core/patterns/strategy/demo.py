@@ -11,8 +11,8 @@ try:
     from .enums import AnonymizationLevel, DataType
     from .context import AnonymizationContext
 except ImportError:
-    from crisp_anonymization.enums import AnonymizationLevel, DataType
-    from crisp_anonymization.context import AnonymizationContext
+    from enums import AnonymizationLevel, DataType
+    from context import AnonymizationContext
 
 
 def demonstrate_anonymization():

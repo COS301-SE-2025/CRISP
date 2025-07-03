@@ -10,7 +10,7 @@ import re
 # Add the current directory to Python path to import our package
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from crisp_anonymization import (
+from core.patterns.strategy import (
     AnonymizationContext, 
     AnonymizationLevel, 
     DataType,
@@ -19,7 +19,7 @@ from crisp_anonymization import (
     EmailAnonymizationStrategy,
     URLAnonymizationStrategy
 )
-from crisp_anonymization.utils import AnonymizationUtils
+from core.patterns.strategy.utils import AnonymizationUtils
 
 
 class TestEdgeCasesAndErrorHandling(unittest.TestCase):

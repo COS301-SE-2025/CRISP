@@ -9,11 +9,8 @@ import argparse
 from typing import List, Dict, Any
 from datetime import datetime
 
-from crisp_anonymization import (
-    AnonymizationContext, 
-    AnonymizationLevel, 
-    DataType
-)
+from core.patterns.strategy.context import AnonymizationContext
+from core.patterns.strategy.enums import AnonymizationLevel, DataType
 
 
 class ThreatIntelligenceProcessor:

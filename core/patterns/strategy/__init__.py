@@ -6,16 +6,16 @@ A flexible system for anonymizing cybersecurity threat intelligence data
 at different levels of sensitivity for secure information sharing.
 """
 
-from crisp_anonymization.enums import AnonymizationLevel, DataType
-from crisp_anonymization.strategies import (
+from .enums import AnonymizationLevel, DataType
+from .strategies import (
     AnonymizationStrategy,
     IPAddressAnonymizationStrategy,
     DomainAnonymizationStrategy,
     EmailAnonymizationStrategy,
     URLAnonymizationStrategy
 )
-from crisp_anonymization.context import AnonymizationContext
-from crisp_anonymization.exceptions import (
+from .context import AnonymizationContext
+from .exceptions import (
     AnonymizationError,
     InvalidDataTypeError, 
     StrategyNotFoundError,

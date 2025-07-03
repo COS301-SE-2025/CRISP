@@ -11,7 +11,7 @@ from typing import List, Tuple
 try:
     from .enums import AnonymizationLevel, DataType
 except ImportError:
-    from crisp_anonymization.enums import AnonymizationLevel, DataType
+    from enums import AnonymizationLevel, DataType
 
 
 class AnonymizationUtils:
