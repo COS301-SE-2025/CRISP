@@ -25,18 +25,18 @@ install-dev:
 
 # Testing targets
 test:
-	python3 test_anonymization.py
+	PYTHONPATH=/mnt/c/Users/Liamv/Documents/GitHub/CRISP:$$PYTHONPATH python3 core/tests/test_anonymization.py
 
 test-all:
-	python3 test_anonymization.py
-	python3 additional_tests.py
-	python3 test_strategies.py
+	PYTHONPATH=/mnt/c/Users/Liamv/Documents/GitHub/CRISP:$$PYTHONPATH python3 core/tests/test_anonymization.py
+	PYTHONPATH=/mnt/c/Users/Liamv/Documents/GitHub/CRISP:$$PYTHONPATH python3 core/tests/additional_tests.py
+	PYTHONPATH=/mnt/c/Users/Liamv/Documents/GitHub/CRISP:$$PYTHONPATH python3 core/tests/test_strategies.py
 
 test-runner:
-	python3 run_tests.py
+	PYTHONPATH=/mnt/c/Users/Liamv/Documents/GitHub/CRISP:$$PYTHONPATH python3 run_tests.py
 
 test-perf:
-	python3 run_tests.py --performance
+	PYTHONPATH=/mnt/c/Users/Liamv/Documents/GitHub/CRISP:$$PYTHONPATH python3 run_tests.py --performance
 
 # Development targets
 demo:
@@ -46,7 +46,7 @@ interactive:
 	python3 main.py interactive
 
 quick-test:
-	python3 quick_test.py
+	PYTHONPATH=/mnt/c/Users/Liamv/Documents/GitHub/CRISP:$$PYTHONPATH python3 core/tests/quick_test.py
 
 # Clean up
 clean:
