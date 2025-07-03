@@ -1,0 +1,14 @@
+{
+ "type": "threat-actor",
+    "spec_version": "2.1",
+    "id": "threat-actor--5be9c383-0227-48ae-8d34-53a12c7b8c1c",
+    "created": "2023-01-01T00:00:00.000Z",
+    "modified": "2023-01-01T00:00:00.000Z",
+    "name": "Test Threat Actor",
+    "description": "This group uses infrastructure at 203.0.113.5 and 198.51.100.10, with domains including actor-domain.example.com and second-domain.example.org. They send phishing emails from addresses like attack@actor-domain.example.com.",
+    "threat_actor_types": ["crime-syndicate"],
+    "aliases": ["TestGroup", "Evil Actors"],
+    "roles": ["director"],
+    "resource_level": "organization",
+    "primary_motivation": "financial-gain"
+}
