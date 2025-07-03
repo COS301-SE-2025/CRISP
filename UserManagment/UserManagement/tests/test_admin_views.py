@@ -110,7 +110,7 @@ class AdminViewsTestCase(APITestCase):
             'first_name': 'New',
             'last_name': 'User',
             'role': 'viewer',
-            'organization': str(self.organization.id)
+            'organization_id': str(self.organization.id)
         }
         
         response = self.client.post('/api/admin/users/', user_data)
@@ -136,7 +136,7 @@ class AdminViewsTestCase(APITestCase):
             'first_name': 'Auto',
             'last_name': 'User',
             'role': 'viewer',
-            'organization': str(self.organization.id),
+            'organization_id': str(self.organization.id),
             'auto_generate_password': True
         }
         
@@ -302,7 +302,7 @@ class AdminViewsTestCase(APITestCase):
             'first_name': 'Pub',
             'last_name': 'Created',
             'role': 'viewer',
-            'organization': str(self.organization.id)
+            'organization_id': str(self.organization.id)
         }
         
         response = self.client.post('/api/admin/users/', user_data)
@@ -322,7 +322,7 @@ class AdminViewsTestCase(APITestCase):
             'first_name': 'Bad',
             'last_name': 'Admin',
             'role': 'BlueVisionAdmin',
-            'organization': str(self.organization.id)
+            'organization_id': str(self.organization.id)
         }
         
         response = self.client.post('/api/admin/users/', user_data)

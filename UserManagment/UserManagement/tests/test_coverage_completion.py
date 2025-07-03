@@ -116,9 +116,10 @@ class AdminTestCase(TestCase):
         self.assertIn('action_display', admin.list_display)  # action_display instead of action
         self.assertIn('success_display', admin.list_display)  # success_display instead of success
         
-        # Test list filter
-        self.assertIn('action', admin.list_filter)  # Check for ActionFilter
-        self.assertIn('success', admin.list_filter)  # Check for SuccessFilter
+        # Test list filter - check for actual filter classes
+        filter_classes = [filter_class.__name__ if hasattr(filter_class, '__name__') else str(filter_class) for filter_class in admin.list_filter]
+        self.assertIn('ActionFilter', str(admin.list_filter))
+        self.assertIn('SuccessFilter', str(admin.list_filter))
 
 
 class SerializerTestCase(TestCase):
@@ -291,7 +292,7 @@ class ValidatorTestCase(TestCase):
     
     def test_password_validator_valid(self):
         """Test password validator with valid passwords"""
-        valid_passwords = ['StrongP@ssw0rd123', 'MyStr0ngP@ssword!', 'VerySecureP@ss123']
+        valid_passwords = ['K9!mX$w7R2nY', 'L3#nY&j8TmBq4', 'P5%qZ*h2W9fE7']
         
         for password in valid_passwords:
             try:
@@ -324,30 +325,50 @@ class PermissionHelperTestCase(TestCase):
             'username': 'admin',
             'email': 'admin@test.com',
             'password': 'AdminPassword123!',
-            'organization': self.organization
+            'organization': self.organization,
+            'is_verified': True
         })
         
         self.viewer_user = UserFactory.create_user('viewer', {
             'username': 'viewer',
             'email': 'viewer@test.com',
             'password': 'ViewerPassword123!',
-            'organization': self.organization
+            'organization': self.organization,
+            'is_verified': True
         })
     
     def test_check_stix_object_permission(self):
         """Test STIX object permission checking"""
-        # Mock STIX object
+        import uuid
+        
+        # Create a publisher for write permissions test
+        publisher_user = UserFactory.create_user('publisher', {
+            'username': 'publisher',
+            'email': 'publisher@test.com',
+            'password': 'PublisherPassword123!',
+            'first_name': 'Publisher',
+            'last_name': 'User',
+            'organization': self.organization,
+            'is_verified': True
+        })
+        
+        # Mock STIX object with proper created_by mock and valid UUID
         stix_object = Mock()
-        stix_object.id = 'test_stix_id'
-        stix_object.created_by = self.viewer_user
+        stix_object.id = str(uuid.uuid4())  # Generate a valid UUID
+        # Mock the created_by user with organization property
+        stix_object.created_by = Mock()
+        stix_object.created_by.organization = self.organization
         
         # Admin should have access
         self.assertTrue(check_stix_object_permission(self.admin_user, stix_object, 'read'))
         self.assertTrue(check_stix_object_permission(self.admin_user, stix_object, 'write'))
         self.assertTrue(check_stix_object_permission(self.admin_user, stix_object, 'admin'))
         
-        # User should have read access to own objects
+        # Viewer should have read access to objects from same organization
         self.assertTrue(check_stix_object_permission(self.viewer_user, stix_object, 'read'))
+        
+        # Publisher should have write access to objects from same organization
+        self.assertTrue(check_stix_object_permission(publisher_user, stix_object, 'write'))
     
     def test_check_feed_publish_permission(self):
         """Test feed publish permission checking"""

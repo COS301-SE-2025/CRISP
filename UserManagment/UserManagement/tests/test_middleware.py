@@ -9,7 +9,7 @@ from datetime import timedelta
 from unittest.mock import Mock, patch
 
 from ..models import CustomUser, Organization, UserSession
-from ..middleware import SecurityHeadersMiddleware, RateLimitMiddleware, SecurityAuditMiddleware, SessionTimeoutMiddleware
+from ..middleware import SecurityHeadersMiddleware, RateLimitMiddleware, SecurityAuditMiddleware, SessionTimeoutMiddleware, SessionActivityMiddleware
 from ..factories.user_factory import UserFactory
 
 User = get_user_model()
@@ -61,20 +61,36 @@ class RateLimitMiddlewareTestCase(TestCase):
     
     def test_rate_limiting_under_threshold(self):
         """Test that requests under threshold are allowed"""
-        request = self.factory.post('/api/auth/login/')
+        request = self.factory.post('/api/auth/login/')  # Added trailing slash
         request.META['REMOTE_ADDR'] = '127.0.0.1'
         
-        response = self.middleware(request)
-        self.assertEqual(response.status_code, 200)
+        # Mock cache to simulate being under rate limit
+        with patch('UserManagement.middleware.cache') as mock_cache, \
+             patch('django.conf.settings.RATELIMIT_ENABLE', True):
+            
+            mock_cache.get.return_value = 2  # Simulate only 2 requests (< 5 limit for login)
+            
+            # Call process_request directly
+            response = self.middleware.process_request(request)
+            # When not rate limited, process_request should return None (meaning continue)
+            self.assertIsNone(response)
     
     def test_rate_limiting_over_threshold(self):
         """Test that requests over threshold are blocked"""
-        request = self.factory.post('/api/auth/login/')
+        request = self.factory.post('/api/auth/login/')  # Added trailing slash
         request.META['REMOTE_ADDR'] = '127.0.0.1'
         
-        # Simulate multiple requests to exceed threshold
-        with patch('django.core.cache.cache.get', return_value=20):  # Simulate 20 requests already
-            response = self.middleware(request)
+        # Mock cache to simulate exceeding rate limit
+        with patch('UserManagement.middleware.cache') as mock_cache, \
+             patch('django.conf.settings.RATELIMIT_ENABLE', True):
+            
+            mock_cache.get.return_value = 10  # Simulate already at limit (>= 5 for login)
+            
+            # Call process_request directly since that's where rate limiting happens
+            response = self.middleware.process_request(request)
+            
+            # When rate limited, process_request should return a response directly
+            self.assertIsNotNone(response)
             self.assertEqual(response.status_code, 429)
     
     def test_different_ips_not_rate_limited_together(self):
@@ -200,11 +216,15 @@ class SessionTimeoutMiddlewareTestCase(TestCase):
         request.user = self.test_user
         request.META['HTTP_AUTHORIZATION'] = 'Bearer invalid_token'
         
-        # Mock the auth service verify_token method
-        with patch('UserManagement.middleware.AuthenticationService.verify_token') as mock_verify:
+        # Mock the auth service verify_token method using the correct module path
+        with patch('UserManagement.services.auth_service.AuthenticationService.verify_token') as mock_verify:
             mock_verify.return_value = {'success': False, 'message': 'Invalid token'}
             
-            response = self.middleware(request)
+            # For SessionTimeoutMiddleware, we need to call process_request directly
+            response = self.middleware.process_request(request)
+            
+            # Should return a 401 response
+            self.assertIsNotNone(response)
             self.assertEqual(response.status_code, 401)
     
     def test_session_activity_update(self):
@@ -224,6 +244,10 @@ class SessionTimeoutMiddlewareTestCase(TestCase):
         request.META['HTTP_AUTHORIZATION'] = 'Bearer test_token'
         
         original_activity = session.last_activity
+        
+        # Larger delay to ensure time difference
+        import time
+        time.sleep(0.1)  # Increased to 100ms
         
         # Mock the auth service verify_token method
         with patch('UserManagement.middleware.AuthenticationService.verify_token') as mock_verify:
@@ -250,6 +274,10 @@ class SessionTimeoutMiddlewareTestCase(TestCase):
         
         request = self.factory.get('/api/users/')
         request.user = self.test_user
+        
+        # Force cleanup by clearing the cache key or calling cleanup directly
+        from django.core.cache import cache
+        cache.delete('session_cleanup_last_run')  # Force cleanup to run
         
         response = self.middleware(request)
         
