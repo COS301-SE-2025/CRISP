@@ -106,6 +106,9 @@ DATABASES = {
         'PASSWORD': os.environ.get('DB_PASSWORD', 'AdminPassword'),
         'HOST': os.environ.get('DB_HOST', 'localhost'),
         'PORT': os.environ.get('DB_PORT', '5432'),
+        'TEST': {
+            'NAME': 'test_crisp_temp',
+        }
     }
 }
 

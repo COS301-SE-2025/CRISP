@@ -2512,3 +2512,413 @@ INFO 2025-06-23 08:58:23,956 feed_observers 3378 134899691270144 Connected feed 
 INFO 2025-06-23 09:56:16,446 feed_observers 3426 131583002058752 Connected feed observer signals
 INFO 2025-06-23 09:56:32,524 feed_observers 3451 138416393846784 Connected feed observer signals
 INFO 2025-06-23 09:57:04,235 feed_observers 3476 126289377599488 Connected feed observer signals
+INFO 2025-07-03 06:53:49,640 feed_observers 5778 124244468830208 Connected feed observer signals
+INFO 2025-07-03 06:53:50,590 feed_observers 5779 124131440013312 Connected feed observer signals
+INFO 2025-07-03 06:53:55,467 feed_observers 5780 131364626366464 Connected feed observer signals
+INFO 2025-07-03 06:54:46,542 feed_observers 5783 134342023413760 Connected feed observer signals
+INFO 2025-07-03 06:56:41,125 feed_observers 5792 124936940224512 Connected feed observer signals
+INFO 2025-07-03 06:56:43,237 feed_observers 5793 138846522744832 Connected feed observer signals
+INFO 2025-07-03 06:56:45,468 feed_observers 5794 140463723216896 Connected feed observer signals
+INFO 2025-07-03 07:04:59,149 feed_observers 5901 135744388640768 Connected feed observer signals
+INFO 2025-07-03 07:07:19,141 feed_observers 5913 140279087149056 Connected feed observer signals
+INFO 2025-07-03 07:08:09,289 feed_observers 5918 133628617773056 Connected feed observer signals
+INFO 2025-07-03 07:08:28,400 feed_observers 5920 136911042539520 Connected feed observer signals
+INFO 2025-07-03 07:08:41,266 feed_observers 5923 139092578390016 Connected feed observer signals
+INFO 2025-07-03 07:08:51,189 feed_observers 5925 138452456292352 Connected feed observer signals
+INFO 2025-07-03 07:09:21,454 feed_observers 5928 133371089018880 Connected feed observer signals
+INFO 2025-07-03 07:11:06,319 feed_observers 5935 134033068482560 Connected feed observer signals
+INFO 2025-07-03 07:11:07,669 utils 5935 134033068482560 Attempting to publish feed 'Phishing Campaigns Feed' (ID: 75f2794c-f262-4a4c-b216-0d85973e6930). Collection: 'Phishing Campaigns'
+INFO 2025-07-03 07:11:07,672 utils 5935 134033068482560 Generating bundle for collection 'Phishing Campaigns' (Owner: CRISP Threat Intel Consortium). Requesting org: None (Internal View)
+INFO 2025-07-03 07:11:07,844 utils 5935 134033068482560 Generated bundle bundle--4b96236b-e4f4-4e73-9472-18de1da5d326 with 1 objects (incl. owner identity).
+INFO 2025-07-03 07:11:08,002 utils 5935 134033068482560 Feed 'Phishing Campaigns Feed' published successfully. Bundle ID: bundle--4b96236b-e4f4-4e73-9472-18de1da5d326, 1 objects.
+INFO 2025-07-03 07:11:08,005 utils 5935 134033068482560 Attempting to publish feed 'Ransomware Indicators Feed' (ID: 0953b8f6-f340-4074-9ab0-581135084f2b). Collection: 'Ransomware Indicators'
+INFO 2025-07-03 07:11:08,007 utils 5935 134033068482560 Generating bundle for collection 'Ransomware Indicators' (Owner: CRISP Threat Intel Consortium). Requesting org: None (Internal View)
+INFO 2025-07-03 07:11:08,137 utils 5935 134033068482560 Generated bundle bundle--cff3a1ad-4aca-4366-b580-cf8d37fdcac8 with 1 objects (incl. owner identity).
+INFO 2025-07-03 07:11:08,308 utils 5935 134033068482560 Feed 'Ransomware Indicators Feed' published successfully. Bundle ID: bundle--cff3a1ad-4aca-4366-b580-cf8d37fdcac8, 1 objects.
+INFO 2025-07-03 07:11:08,311 utils 5935 134033068482560 Attempting to publish feed 'Educational Sector Threats Feed' (ID: 193bf392-d1f1-4049-b475-b4400a384065). Collection: 'Educational Sector Threats'
+INFO 2025-07-03 07:11:08,313 utils 5935 134033068482560 Generating bundle for collection 'Educational Sector Threats' (Owner: CRISP Threat Intel Consortium). Requesting org: None (Internal View)
+INFO 2025-07-03 07:11:08,457 utils 5935 134033068482560 Generated bundle bundle--f211f445-f460-4fad-8a57-065d94ea8f27 with 5 objects (incl. owner identity).
+INFO 2025-07-03 07:11:08,602 utils 5935 134033068482560 Feed 'Educational Sector Threats Feed' published successfully. Bundle ID: bundle--f211f445-f460-4fad-8a57-065d94ea8f27, 5 objects.
+INFO 2025-07-03 07:11:09,679 feed_observers 5937 133705024139264 Connected feed observer signals
+INFO 2025-07-03 07:11:34,485 feed_observers 5940 124529596952576 Connected feed observer signals
+INFO 2025-07-03 07:11:34,870 utils 5940 124529596952576 Attempting to publish feed 'Educational Sector Threats Feed' (ID: 193bf392-d1f1-4049-b475-b4400a384065). Collection: 'Educational Sector Threats'
+INFO 2025-07-03 07:11:34,873 utils 5940 124529596952576 Generating bundle for collection 'Educational Sector Threats' (Owner: CRISP Threat Intel Consortium). Requesting org: None (Internal View)
+INFO 2025-07-03 07:11:35,419 utils 5940 124529596952576 Generated bundle bundle--fb391e40-452c-42b0-b117-41acde56273d with 5 objects (incl. owner identity).
+INFO 2025-07-03 07:11:36,121 utils 5940 124529596952576 Feed 'Educational Sector Threats Feed' published successfully. Bundle ID: bundle--fb391e40-452c-42b0-b117-41acde56273d, 5 objects.
+INFO 2025-07-03 07:11:55,471 feed_observers 5942 131460306460672 Connected feed observer signals
+INFO 2025-07-03 07:11:56,985 feed_observers 5943 126643168243712 Connected feed observer signals
+INFO 2025-07-03 07:11:59,132 feed_observers 5945 128625301127168 Connected feed observer signals
+INFO 2025-07-03 07:12:00,025 utils 5945 128625301127168 Attempting to publish feed 'Phishing Campaigns Feed' (ID: 75f2794c-f262-4a4c-b216-0d85973e6930). Collection: 'Phishing Campaigns'
+INFO 2025-07-03 07:12:00,029 utils 5945 128625301127168 Generating bundle for collection 'Phishing Campaigns' (Owner: CRISP Threat Intel Consortium). Requesting org: None (Internal View)
+INFO 2025-07-03 07:12:00,226 utils 5945 128625301127168 Generated bundle bundle--f773759b-c7e3-4baf-9df0-c983f1d9bad1 with 1 objects (incl. owner identity).
+INFO 2025-07-03 07:12:00,536 utils 5945 128625301127168 Feed 'Phishing Campaigns Feed' published successfully. Bundle ID: bundle--f773759b-c7e3-4baf-9df0-c983f1d9bad1, 1 objects.
+INFO 2025-07-03 07:12:00,539 utils 5945 128625301127168 Attempting to publish feed 'Ransomware Indicators Feed' (ID: 0953b8f6-f340-4074-9ab0-581135084f2b). Collection: 'Ransomware Indicators'
+INFO 2025-07-03 07:12:00,541 utils 5945 128625301127168 Generating bundle for collection 'Ransomware Indicators' (Owner: CRISP Threat Intel Consortium). Requesting org: None (Internal View)
+INFO 2025-07-03 07:12:00,869 utils 5945 128625301127168 Generated bundle bundle--1422602f-bce9-4e59-a07d-18f1fb29174b with 1 objects (incl. owner identity).
+INFO 2025-07-03 07:12:01,237 utils 5945 128625301127168 Feed 'Ransomware Indicators Feed' published successfully. Bundle ID: bundle--1422602f-bce9-4e59-a07d-18f1fb29174b, 1 objects.
+INFO 2025-07-03 07:12:01,240 utils 5945 128625301127168 Attempting to publish feed 'Educational Sector Threats Feed' (ID: 193bf392-d1f1-4049-b475-b4400a384065). Collection: 'Educational Sector Threats'
+INFO 2025-07-03 07:12:01,242 utils 5945 128625301127168 Generating bundle for collection 'Educational Sector Threats' (Owner: CRISP Threat Intel Consortium). Requesting org: None (Internal View)
+INFO 2025-07-03 07:12:01,532 utils 5945 128625301127168 Generated bundle bundle--ef845200-2b36-4eae-b716-90c854f5afd8 with 5 objects (incl. owner identity).
+INFO 2025-07-03 07:12:01,911 utils 5945 128625301127168 Feed 'Educational Sector Threats Feed' published successfully. Bundle ID: bundle--ef845200-2b36-4eae-b716-90c854f5afd8, 5 objects.
+INFO 2025-07-03 07:12:03,067 feed_observers 5948 125868605284352 Connected feed observer signals
+INFO 2025-07-03 07:31:45,707 feed_observers 6015 132857846910976 Connected feed observer signals
+INFO 2025-07-03 07:32:04,530 feed_observers 6018 137654054109184 Connected feed observer signals
+INFO 2025-07-03 07:32:05,443 feed_observers 6019 139611631038464 Connected feed observer signals
+INFO 2025-07-03 07:32:11,304 feed_observers 6021 134320598138880 Connected feed observer signals
+INFO 2025-07-03 07:32:12,066 utils 6021 134320598138880 Generating bundle for collection 'Test Verification Collection' (Owner: Test Verification Org). Requesting org: None (Internal View)
+INFO 2025-07-03 07:32:12,623 utils 6021 134320598138880 Generated bundle bundle--a005da6c-ed48-4874-8c5f-faac7a457dea with 2 objects (incl. owner identity).
+INFO 2025-07-03 07:32:14,054 feed_observers 6023 124073286373376 Connected feed observer signals
+INFO 2025-07-03 07:32:14,473 utils 6023 124073286373376 Generating bundle for collection 'Test Verification Collection' (Owner: Test Verification Org). Requesting org: None (Internal View)
+INFO 2025-07-03 07:32:14,968 utils 6023 124073286373376 Generated bundle bundle--98e400ce-5562-4180-8997-326602bc2901 with 2 objects (incl. owner identity).
+INFO 2025-07-03 07:32:14,976 utils 6023 124073286373376 Attempting to publish feed 'Test Verification Feed' (ID: 36bc0e49-3467-4dbe-9535-891b34a57e55). Collection: 'Test Verification Collection'
+INFO 2025-07-03 07:32:14,977 utils 6023 124073286373376 Generating bundle for collection 'Test Verification Collection' (Owner: Test Verification Org). Requesting org: None (Internal View)
+INFO 2025-07-03 07:32:15,557 utils 6023 124073286373376 Generated bundle bundle--86005ed9-84ea-4a4b-a3db-2b3f07ee0452 with 2 objects (incl. owner identity).
+INFO 2025-07-03 07:32:16,568 utils 6023 124073286373376 Feed 'Test Verification Feed' published successfully. Bundle ID: bundle--86005ed9-84ea-4a4b-a3db-2b3f07ee0452, 2 objects.
+INFO 2025-07-03 07:32:17,495 feed_observers 6025 124505671196672 Connected feed observer signals
+INFO 2025-07-03 07:32:21,594 basehttp 6025 124505590593088 "GET / HTTP/1.1" 301 0
+INFO 2025-07-03 07:32:21,664 basehttp 6025 124505590593088 code 400, message Bad request version ("¤\x9eîÉ\x96Nd\x96hÛW=×`ÐD\x14\x81\x84û®\x88øªô«cy`/\x91ô\x00V\x13\x02\x13\x03\x13\x01À,À0À+À/Ì©Ì¨\x00\x9f\x00\x9eÌªÀ¯À\xadÀ®À¬À$À(À#À'À")
+ERROR 2025-07-03 07:32:21,664 basehttp 6025 124505590593088 You're accessing the development server over HTTPS, but it only supports HTTP.
+INFO 2025-07-03 07:32:23,673 feed_observers 6030 136054682849280 Connected feed observer signals
+INFO 2025-07-03 07:32:24,704 feed_observers 6032 136231969931264 Connected feed observer signals
+INFO 2025-07-03 07:32:25,166 stix_factory 6032 136231969931264 Registered STIX creator for type: test-type
+INFO 2025-07-03 07:32:25,167 stix_factory 6032 136231969931264 Unregistered STIX creator for type: test-type
+INFO 2025-07-03 07:32:26,356 utils 6032 136231969931264 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 07:32:26,669 utils 6032 136231969931264 Generated bundle bundle--232ab3d8-e456-4a4d-83a8-1399ded092be with 4 objects (incl. owner identity).
+INFO 2025-07-03 07:32:30,218 utils 6032 136231969931264 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 07:32:30,662 utils 6032 136231969931264 Generated bundle bundle--12c45124-9d0b-41ca-8b36-501e16d9515a with 4 objects (incl. owner identity).
+INFO 2025-07-03 07:32:30,663 utils 6032 136231969931264 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 07:32:30,888 utils 6032 136231969931264 Generated bundle bundle--b6586df6-aed5-4657-9eb0-7d618d246fde with 4 objects (incl. owner identity).
+INFO 2025-07-03 07:32:30,889 utils 6032 136231969931264 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 07:32:31,103 utils 6032 136231969931264 Generated bundle bundle--059b7434-f7a7-465a-9458-5133f2205a6a with 4 objects (incl. owner identity).
+INFO 2025-07-03 07:32:31,104 utils 6032 136231969931264 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 07:32:31,268 utils 6032 136231969931264 Generated bundle bundle--d39b26d8-df78-4831-941c-50481d86a310 with 4 objects (incl. owner identity).
+INFO 2025-07-03 07:32:31,269 utils 6032 136231969931264 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 07:32:31,415 utils 6032 136231969931264 Generated bundle bundle--75720d62-c731-4b74-ab1c-45b2fa757801 with 4 objects (incl. owner identity).
+INFO 2025-07-03 07:32:31,416 utils 6032 136231969931264 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 07:32:31,589 utils 6032 136231969931264 Generated bundle bundle--a0951d14-c295-49dd-a1c5-4ef91c5e45cd with 4 objects (incl. owner identity).
+INFO 2025-07-03 07:32:31,591 utils 6032 136231969931264 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 07:32:31,691 utils 6032 136231969931264 Generated bundle bundle--96668286-49e2-45cb-ad0c-fb32bc01d55b with 4 objects (incl. owner identity).
+INFO 2025-07-03 07:32:31,692 utils 6032 136231969931264 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 07:32:31,986 utils 6032 136231969931264 Generated bundle bundle--9704d0b0-fc37-4eb7-9173-5f32caab9571 with 4 objects (incl. owner identity).
+INFO 2025-07-03 07:32:31,987 utils 6032 136231969931264 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 07:32:32,289 utils 6032 136231969931264 Generated bundle bundle--2581b4f6-4920-46b1-b124-c48f77ed3a0d with 4 objects (incl. owner identity).
+INFO 2025-07-03 07:32:32,290 utils 6032 136231969931264 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 07:32:32,420 utils 6032 136231969931264 Generated bundle bundle--093922b8-477d-4cb9-a18a-a7226e10bc08 with 4 objects (incl. owner identity).
+INFO 2025-07-03 07:32:33,780 utils 6032 136231969931264 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 07:32:34,079 utils 6032 136231969931264 Generated bundle bundle--e0bca816-147e-493a-9f3a-f15ab9524ece with 4 objects (incl. owner identity).
+INFO 2025-07-03 07:32:36,276 utils 6032 136231969931264 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 07:32:36,529 utils 6032 136231969931264 Generated bundle bundle--d8706fa5-e92f-4101-9bc6-06e4d108e26f with 1 objects (incl. owner identity).
+INFO 2025-07-03 07:32:37,941 utils 6032 136231969931264 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 07:32:38,275 utils 6032 136231969931264 Generated bundle bundle--2bb33121-a7e6-4d0a-be74-88acfb734ec0 with 2 objects (incl. owner identity).
+INFO 2025-07-03 07:32:39,829 utils 6032 136231969931264 Generating bundle for collection 'Empty Test Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 07:32:40,438 utils 6032 136231969931264 Generated bundle bundle--c969b2c5-0f2d-4657-812c-c9fed1017c65 with 1 objects (incl. owner identity).
+INFO 2025-07-03 07:32:44,766 utils 6032 136231969931264 Attempting to publish feed 'Test STIX Feed' (ID: 0a3e403e-fdeb-4a60-a230-61e6faf56c18). Collection: 'Test Feed Collection'
+INFO 2025-07-03 07:32:44,766 utils 6032 136231969931264 Generating bundle for collection 'Test Feed Collection' (Owner: Test Feed Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 07:32:44,783 utils 6032 136231969931264 Generated bundle bundle--40b0ef12-c075-43f8-a6aa-b827b47760c1 with 2 objects (incl. owner identity).
+INFO 2025-07-03 07:32:44,787 utils 6032 136231969931264 Feed 'Test STIX Feed' published successfully. Bundle ID: bundle--40b0ef12-c075-43f8-a6aa-b827b47760c1, 2 objects.
+INFO 2025-07-03 07:32:45,114 utils 6032 136231969931264 Attempting to publish feed 'Test Status Feed' (ID: 1af6004a-10f1-4048-8a62-afbafbb952fe). Collection: 'Test Feed Collection'
+INFO 2025-07-03 07:32:45,115 utils 6032 136231969931264 Generating bundle for collection 'Test Feed Collection' (Owner: Test Feed Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 07:32:45,129 utils 6032 136231969931264 Generated bundle bundle--a8208319-800b-4518-8e3c-45a282ffe31a with 2 objects (incl. owner identity).
+INFO 2025-07-03 07:32:45,133 utils 6032 136231969931264 Feed 'Test Status Feed' published successfully. Bundle ID: bundle--a8208319-800b-4518-8e3c-45a282ffe31a, 2 objects.
+INFO 2025-07-03 07:32:45,472 utils 6032 136231969931264 Generating bundle for collection 'Bundle Test Collection' (Owner: Bundle Test Org). Requesting org: None (Internal View)
+INFO 2025-07-03 07:32:45,490 utils 6032 136231969931264 Generated bundle bundle--aa92094f-e65d-4ef4-8dbb-7ffcfa0cb2c9 with 4 objects (incl. owner identity).
+INFO 2025-07-03 07:32:46,508 feed_observers 6038 140470841815040 Connected feed observer signals
+INFO 2025-07-03 07:32:48,389 feed_observers 6039 129013411028992 Connected feed observer signals
+INFO 2025-07-03 09:54:03,153 feed_observers 6565 138708172324864 Connected feed observer signals
+INFO 2025-07-03 09:54:11,861 feed_observers 6604 132199732793344 Connected feed observer signals
+INFO 2025-07-03 09:55:29,507 feed_observers 6642 132065426784256 Connected feed observer signals
+INFO 2025-07-03 09:55:30,554 feed_observers 6659 127554815840256 Connected feed observer signals
+INFO 2025-07-03 09:55:34,217 feed_observers 6661 126443023376384 Connected feed observer signals
+INFO 2025-07-03 09:55:34,622 utils 6661 126443023376384 Generating bundle for collection 'Test Verification Collection' (Owner: Test Verification Org). Requesting org: None (Internal View)
+INFO 2025-07-03 09:55:34,687 utils 6661 126443023376384 Generated bundle bundle--38e0771b-7492-4d3a-8393-1c490854db41 with 3 objects (incl. owner identity).
+INFO 2025-07-03 10:05:48,473 feed_observers 7003 126105668149248 Connected feed observer signals
+INFO 2025-07-03 10:06:37,571 feed_observers 7033 140214301028352 Connected feed observer signals
+INFO 2025-07-03 10:07:13,610 utils 7033 140214301028352 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: Test University
+INFO 2025-07-03 10:07:13,633 utils 7033 140214301028352 Generated bundle bundle--4bb9f5d6-0a85-4e51-93a9-380d38e6058e with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:07:14,040 utils 7033 140214301028352 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-07-03 10:07:14,065 utils 7033 140214301028352 Generated bundle bundle--855d4d0a-d6e5-4601-abf7-a78e41046e8e with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:07:14,066 utils 7033 140214301028352 Attempting to publish feed 'Test Feed' (ID: f0309610-6813-48a4-9d8d-24ba21b40eb9). Collection: 'Test Threat Collection'
+INFO 2025-07-03 10:07:14,066 utils 7033 140214301028352 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-07-03 10:07:14,076 utils 7033 140214301028352 Generated bundle bundle--f2bd0d32-158f-4af3-af5e-8d109094e9a1 with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:07:14,080 utils 7033 140214301028352 Feed 'Test Feed' published successfully. Bundle ID: bundle--f2bd0d32-158f-4af3-af5e-8d109094e9a1, 2 objects.
+INFO 2025-07-03 10:07:14,434 utils 7033 140214301028352 Processed 2 CSV rows, generated 2 STIX SDO dictionaries.
+INFO 2025-07-03 10:07:18,755 utils 7033 140214301028352 Attempting to publish feed 'Test STIX Feed' (ID: d602c4c4-6b32-4478-835b-f601b9c456fa). Collection: 'Test Feed Collection'
+INFO 2025-07-03 10:07:18,756 utils 7033 140214301028352 Generating bundle for collection 'Test Feed Collection' (Owner: Test Feed Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:07:18,774 utils 7033 140214301028352 Generated bundle bundle--c41d6cfe-5e66-41a7-bb07-8ccca22164d2 with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:07:18,777 utils 7033 140214301028352 Feed 'Test STIX Feed' published successfully. Bundle ID: bundle--c41d6cfe-5e66-41a7-bb07-8ccca22164d2, 2 objects.
+INFO 2025-07-03 10:07:19,123 utils 7033 140214301028352 Attempting to publish feed 'Test Status Feed' (ID: 2c877f9c-5615-40f0-9704-67257475d603). Collection: 'Test Feed Collection'
+INFO 2025-07-03 10:07:19,124 utils 7033 140214301028352 Generating bundle for collection 'Test Feed Collection' (Owner: Test Feed Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:07:19,147 utils 7033 140214301028352 Generated bundle bundle--a6ce56cc-fa09-48d3-97e6-dd47bc609a6e with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:07:19,152 utils 7033 140214301028352 Feed 'Test Status Feed' published successfully. Bundle ID: bundle--a6ce56cc-fa09-48d3-97e6-dd47bc609a6e, 2 objects.
+INFO 2025-07-03 10:07:19,574 utils 7033 140214301028352 Generating bundle for collection 'Bundle Test Collection' (Owner: Bundle Test Org). Requesting org: None (Internal View)
+INFO 2025-07-03 10:07:19,591 utils 7033 140214301028352 Generated bundle bundle--d7cb8174-7aee-48a0-8f93-a1c6023d4e19 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:07:20,464 utils 7033 140214301028352 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:07:20,651 utils 7033 140214301028352 Generated bundle bundle--fdfb398b-2d85-41d1-8c5c-93a5a0ff9ea8 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:07:21,718 utils 7033 140214301028352 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:07:21,907 utils 7033 140214301028352 Generated bundle bundle--03835c46-5a03-49c8-a181-e3900dc0dda4 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:07:21,908 utils 7033 140214301028352 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:07:22,232 utils 7033 140214301028352 Generated bundle bundle--cac7c317-bddb-40aa-ad54-7c0bac60bbf1 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:07:22,234 utils 7033 140214301028352 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:07:22,367 utils 7033 140214301028352 Generated bundle bundle--9b59ef42-d1f0-4ed0-8c65-985bd8f90395 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:07:22,368 utils 7033 140214301028352 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:07:22,446 utils 7033 140214301028352 Generated bundle bundle--272e7424-46b2-4893-8f33-f62c3e26b1fd with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:07:22,447 utils 7033 140214301028352 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:07:22,536 utils 7033 140214301028352 Generated bundle bundle--3636421d-8de1-452a-94dc-5cb015572172 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:07:22,538 utils 7033 140214301028352 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:07:22,673 utils 7033 140214301028352 Generated bundle bundle--3c06e23e-882a-4f78-a4a1-086b8ffadc64 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:07:22,674 utils 7033 140214301028352 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:07:22,797 utils 7033 140214301028352 Generated bundle bundle--293115cb-285a-4bbe-8216-8b0d708025cb with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:07:22,798 utils 7033 140214301028352 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:07:22,922 utils 7033 140214301028352 Generated bundle bundle--263b97dd-1b64-4a40-bdf8-70308e35a02b with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:07:22,923 utils 7033 140214301028352 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:07:23,059 utils 7033 140214301028352 Generated bundle bundle--4af445ee-9f8b-47c0-a82b-feeb8165f1dc with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:07:23,060 utils 7033 140214301028352 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:07:23,148 utils 7033 140214301028352 Generated bundle bundle--7493b3d7-fdc5-4774-afb4-bbed196eeb73 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:07:24,550 utils 7033 140214301028352 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:07:24,893 utils 7033 140214301028352 Generated bundle bundle--629f36d4-6a87-4230-a9ad-cda02d0f4f44 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:07:29,126 utils 7033 140214301028352 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:07:29,416 utils 7033 140214301028352 Generated bundle bundle--c9ff7482-8076-458a-8f61-543c174d9dc5 with 1 objects (incl. owner identity).
+INFO 2025-07-03 10:07:30,834 utils 7033 140214301028352 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:07:31,096 utils 7033 140214301028352 Generated bundle bundle--ea9087e2-e655-4764-bb84-dac55552ac86 with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:07:32,591 utils 7033 140214301028352 Generating bundle for collection 'Empty Test Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:07:33,006 utils 7033 140214301028352 Generated bundle bundle--2d0fc6b3-d108-458f-ba01-5d97214e97ac with 1 objects (incl. owner identity).
+INFO 2025-07-03 10:07:33,384 stix_factory 7033 140214301028352 Registered STIX creator for type: test-type
+INFO 2025-07-03 10:07:33,385 stix_factory 7033 140214301028352 Unregistered STIX creator for type: test-type
+INFO 2025-07-03 10:08:05,768 feed_observers 7072 129423324135424 Connected feed observer signals
+INFO 2025-07-03 10:08:49,749 utils 7072 129423324135424 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: Test University
+INFO 2025-07-03 10:08:49,772 utils 7072 129423324135424 Generated bundle bundle--4f7ffab4-e0bb-40af-82d3-bb0a1de2b19c with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:08:50,121 utils 7072 129423324135424 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-07-03 10:08:50,134 utils 7072 129423324135424 Generated bundle bundle--b7091972-c32a-49c1-b6e0-5d405732b84b with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:08:50,135 utils 7072 129423324135424 Attempting to publish feed 'Test Feed' (ID: 694d540a-fe49-4503-8b70-bad76bb74a8c). Collection: 'Test Threat Collection'
+INFO 2025-07-03 10:08:50,136 utils 7072 129423324135424 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-07-03 10:08:50,150 utils 7072 129423324135424 Generated bundle bundle--6853cd3b-57a7-4f71-b148-2ff5a66459c3 with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:08:50,157 utils 7072 129423324135424 Feed 'Test Feed' published successfully. Bundle ID: bundle--6853cd3b-57a7-4f71-b148-2ff5a66459c3, 2 objects.
+INFO 2025-07-03 10:08:50,535 utils 7072 129423324135424 Processed 2 CSV rows, generated 2 STIX SDO dictionaries.
+INFO 2025-07-03 10:08:54,433 utils 7072 129423324135424 Attempting to publish feed 'Test STIX Feed' (ID: d141ce43-4e2c-49b9-a00c-92b2b7ab9609). Collection: 'Test Feed Collection'
+INFO 2025-07-03 10:08:54,434 utils 7072 129423324135424 Generating bundle for collection 'Test Feed Collection' (Owner: Test Feed Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:08:54,454 utils 7072 129423324135424 Generated bundle bundle--d6b089c9-0d01-4d89-a93c-bfc1f15cd9f9 with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:08:54,458 utils 7072 129423324135424 Feed 'Test STIX Feed' published successfully. Bundle ID: bundle--d6b089c9-0d01-4d89-a93c-bfc1f15cd9f9, 2 objects.
+INFO 2025-07-03 10:08:54,785 utils 7072 129423324135424 Attempting to publish feed 'Test Status Feed' (ID: 4a3803eb-1152-4a85-b79a-b735e682053e). Collection: 'Test Feed Collection'
+INFO 2025-07-03 10:08:54,786 utils 7072 129423324135424 Generating bundle for collection 'Test Feed Collection' (Owner: Test Feed Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:08:54,803 utils 7072 129423324135424 Generated bundle bundle--1c80d51f-bcda-4df6-b865-1b5aaffb1fcb with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:08:54,807 utils 7072 129423324135424 Feed 'Test Status Feed' published successfully. Bundle ID: bundle--1c80d51f-bcda-4df6-b865-1b5aaffb1fcb, 2 objects.
+INFO 2025-07-03 10:08:55,163 utils 7072 129423324135424 Generating bundle for collection 'Bundle Test Collection' (Owner: Bundle Test Org). Requesting org: None (Internal View)
+INFO 2025-07-03 10:08:55,189 utils 7072 129423324135424 Generated bundle bundle--5c5c64c5-6320-4a50-8a76-c865ce4eefcb with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:08:56,318 utils 7072 129423324135424 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:08:56,638 utils 7072 129423324135424 Generated bundle bundle--f203774b-23d9-4ff1-9920-dfc7370a44a8 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:08:58,358 utils 7072 129423324135424 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:08:58,763 utils 7072 129423324135424 Generated bundle bundle--7fa7d1b9-d94d-4f0f-aa4b-91f23bc1017b with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:08:58,765 utils 7072 129423324135424 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:08:58,938 utils 7072 129423324135424 Generated bundle bundle--032cb541-8150-488b-bf10-152c89a1ace8 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:08:58,941 utils 7072 129423324135424 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:08:59,100 utils 7072 129423324135424 Generated bundle bundle--d6e8ced1-8419-4e1f-98fd-92533ec57a5d with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:08:59,113 utils 7072 129423324135424 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:08:59,267 utils 7072 129423324135424 Generated bundle bundle--acf35503-6b7a-4a56-882f-256beb58946f with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:08:59,268 utils 7072 129423324135424 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:08:59,393 utils 7072 129423324135424 Generated bundle bundle--f6974d2d-8fa7-4384-b7f4-017ac2c13414 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:08:59,403 utils 7072 129423324135424 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:08:59,603 utils 7072 129423324135424 Generated bundle bundle--c5cbde45-351d-4080-b4d1-0fda09439a8d with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:08:59,610 utils 7072 129423324135424 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:08:59,831 utils 7072 129423324135424 Generated bundle bundle--7ab603da-8b99-4ef6-86f6-f22fda0ddd91 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:08:59,836 utils 7072 129423324135424 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:09:00,057 utils 7072 129423324135424 Generated bundle bundle--791c6511-e366-41dd-be7b-347dbc80fe47 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:09:00,062 utils 7072 129423324135424 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:09:00,340 utils 7072 129423324135424 Generated bundle bundle--f512e4c0-3257-43b3-b95e-e0bf5365419c with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:09:00,354 utils 7072 129423324135424 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:09:00,563 utils 7072 129423324135424 Generated bundle bundle--4bb0624f-47ed-4490-a352-3f7b2eda7a7e with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:09:05,577 utils 7072 129423324135424 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:09:05,850 utils 7072 129423324135424 Generated bundle bundle--62fd228f-af4e-4331-ab5d-06ad1d285d48 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:09:09,543 utils 7072 129423324135424 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:09:10,664 utils 7072 129423324135424 Generated bundle bundle--e12b5f94-a507-48af-bfc9-2a47b68b6e1a with 1 objects (incl. owner identity).
+INFO 2025-07-03 10:09:12,124 utils 7072 129423324135424 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:09:12,442 utils 7072 129423324135424 Generated bundle bundle--19c605e3-fb3a-4337-9c52-02bb57091412 with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:09:15,903 utils 7072 129423324135424 Generating bundle for collection 'Empty Test Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:09:16,158 utils 7072 129423324135424 Generated bundle bundle--080c2c98-e090-4798-a2f2-a1b591be5c51 with 1 objects (incl. owner identity).
+INFO 2025-07-03 10:09:16,634 stix_factory 7072 129423324135424 Registered STIX creator for type: test-type
+INFO 2025-07-03 10:09:16,635 stix_factory 7072 129423324135424 Unregistered STIX creator for type: test-type
+INFO 2025-07-03 10:13:00,814 feed_observers 7158 140296177418240 Connected feed observer signals
+INFO 2025-07-03 10:13:27,312 utils 7158 140296177418240 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: Test University
+INFO 2025-07-03 10:13:27,336 utils 7158 140296177418240 Generated bundle bundle--61c27bc4-3850-4700-8b10-6fa853854dbb with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:13:27,781 utils 7158 140296177418240 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-07-03 10:13:27,795 utils 7158 140296177418240 Generated bundle bundle--63838ac0-79fb-4d94-b8d6-ed9994ae7bfc with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:13:27,796 utils 7158 140296177418240 Attempting to publish feed 'Test Feed' (ID: 7b537a88-f1c2-46fc-8ac3-49157b107346). Collection: 'Test Threat Collection'
+INFO 2025-07-03 10:13:27,796 utils 7158 140296177418240 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-07-03 10:13:27,810 utils 7158 140296177418240 Generated bundle bundle--422c0960-2e5a-4a48-96d9-7541e131683b with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:13:27,814 utils 7158 140296177418240 Feed 'Test Feed' published successfully. Bundle ID: bundle--422c0960-2e5a-4a48-96d9-7541e131683b, 2 objects.
+INFO 2025-07-03 10:13:28,339 utils 7158 140296177418240 Processed 2 CSV rows, generated 2 STIX SDO dictionaries.
+INFO 2025-07-03 10:13:29,268 utils 7158 140296177418240 Attempting to publish feed 'Test Publication Feed' (ID: a614a2ed-2430-48c6-aea7-c06f9068240d). Collection: 'Test Feed Collection'
+INFO 2025-07-03 10:13:29,269 utils 7158 140296177418240 Generating bundle for collection 'Test Feed Collection' (Owner: Feed Publisher Org). Requesting org: None (Internal View)
+INFO 2025-07-03 10:13:29,286 utils 7158 140296177418240 Generated bundle bundle--74e397e8-da8d-455a-b9d2-a6a438767927 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:13:29,291 utils 7158 140296177418240 Feed 'Test Publication Feed' published successfully. Bundle ID: bundle--74e397e8-da8d-455a-b9d2-a6a438767927, 4 objects.
+INFO 2025-07-03 10:13:31,013 utils 7158 140296177418240 Attempting to publish feed 'Test Publication Feed' (ID: cb7eb5be-bd48-4bfc-8ff8-8900a2a1d29b). Collection: 'Test Feed Collection'
+INFO 2025-07-03 10:13:31,016 utils 7158 140296177418240 Generating bundle for collection 'Test Feed Collection' (Owner: Feed Publisher Org). Requesting org: None (Internal View)
+INFO 2025-07-03 10:13:31,029 utils 7158 140296177418240 Generated bundle bundle--e10451ed-188e-492c-ac7e-a73c79713db3 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:13:31,034 utils 7158 140296177418240 Feed 'Test Publication Feed' published successfully. Bundle ID: bundle--e10451ed-188e-492c-ac7e-a73c79713db3, 4 objects.
+INFO 2025-07-03 10:13:42,308 utils 7158 140296177418240 Attempting to publish feed 'Test STIX Feed' (ID: ac94663b-740c-4fd1-917d-78b76045d27a). Collection: 'Test Feed Collection'
+INFO 2025-07-03 10:13:42,313 utils 7158 140296177418240 Generating bundle for collection 'Test Feed Collection' (Owner: Test Feed Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:13:42,353 utils 7158 140296177418240 Generated bundle bundle--7d03c4b8-ce90-4875-841c-1d4c7e1cabcf with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:13:42,366 utils 7158 140296177418240 Feed 'Test STIX Feed' published successfully. Bundle ID: bundle--7d03c4b8-ce90-4875-841c-1d4c7e1cabcf, 2 objects.
+INFO 2025-07-03 10:13:43,202 utils 7158 140296177418240 Attempting to publish feed 'Test Status Feed' (ID: 20a6603d-1ce9-491c-ae3e-52cf81334b05). Collection: 'Test Feed Collection'
+INFO 2025-07-03 10:13:43,208 utils 7158 140296177418240 Generating bundle for collection 'Test Feed Collection' (Owner: Test Feed Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:13:43,241 utils 7158 140296177418240 Generated bundle bundle--63de9846-36d7-4e06-9bd5-64fcaaad2577 with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:13:43,255 utils 7158 140296177418240 Feed 'Test Status Feed' published successfully. Bundle ID: bundle--63de9846-36d7-4e06-9bd5-64fcaaad2577, 2 objects.
+INFO 2025-07-03 10:13:44,299 utils 7158 140296177418240 Generating bundle for collection 'Bundle Test Collection' (Owner: Bundle Test Org). Requesting org: None (Internal View)
+INFO 2025-07-03 10:13:44,347 utils 7158 140296177418240 Generated bundle bundle--36b8c1fc-17fb-4311-9f50-b08d7fddf8c8 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:13:48,457 utils 7158 140296177418240 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:13:49,060 utils 7158 140296177418240 Generated bundle bundle--ae7d9c9b-8cd8-4b58-9981-cf26753e9c4d with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:13:50,556 utils 7158 140296177418240 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:13:50,816 utils 7158 140296177418240 Generated bundle bundle--1b6da65e-21ed-4561-a67c-959093aac42c with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:13:50,817 utils 7158 140296177418240 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:13:50,945 utils 7158 140296177418240 Generated bundle bundle--c505729e-b4c8-413c-8a93-ca576be29b46 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:13:50,946 utils 7158 140296177418240 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:13:51,116 utils 7158 140296177418240 Generated bundle bundle--f1cf529a-73c1-411d-b332-16893d46e928 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:13:51,117 utils 7158 140296177418240 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:13:51,263 utils 7158 140296177418240 Generated bundle bundle--23e99d2f-2159-4e31-8a86-bd9fc88de04b with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:13:51,264 utils 7158 140296177418240 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:13:51,431 utils 7158 140296177418240 Generated bundle bundle--cf4c2d73-ebf2-4fd4-93e3-3c3e0327e16c with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:13:51,433 utils 7158 140296177418240 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:13:51,599 utils 7158 140296177418240 Generated bundle bundle--6637674e-f6af-41c3-a2cc-106577bda75f with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:13:51,600 utils 7158 140296177418240 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:13:51,775 utils 7158 140296177418240 Generated bundle bundle--1332e685-4267-4af3-b036-bbd50164dcd7 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:13:51,776 utils 7158 140296177418240 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:13:51,922 utils 7158 140296177418240 Generated bundle bundle--d17176da-2521-4050-81e2-bf16d01dae50 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:13:51,923 utils 7158 140296177418240 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:13:52,070 utils 7158 140296177418240 Generated bundle bundle--27c8f739-4cd7-4399-a169-94f827f1935c with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:13:52,071 utils 7158 140296177418240 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:13:52,157 utils 7158 140296177418240 Generated bundle bundle--6dada544-5cf4-49dc-9cee-a1e55449a4e2 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:13:54,414 utils 7158 140296177418240 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:13:54,793 utils 7158 140296177418240 Generated bundle bundle--ea03696d-5b0b-4a2f-8c9d-a7f6e292da90 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:13:56,259 utils 7158 140296177418240 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:13:56,500 utils 7158 140296177418240 Generated bundle bundle--144844f1-3891-451d-8834-8538ec60b56c with 1 objects (incl. owner identity).
+INFO 2025-07-03 10:13:57,893 utils 7158 140296177418240 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:13:58,002 utils 7158 140296177418240 Generated bundle bundle--5561a81f-1b73-45d3-ba79-250183dd8409 with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:13:59,866 utils 7158 140296177418240 Generating bundle for collection 'Empty Test Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:14:00,301 utils 7158 140296177418240 Generated bundle bundle--03d3a50f-fcf1-47f5-a7a5-8116cfbfa5fd with 1 objects (incl. owner identity).
+INFO 2025-07-03 10:14:01,024 stix_factory 7158 140296177418240 Registered STIX creator for type: test-type
+INFO 2025-07-03 10:14:01,025 stix_factory 7158 140296177418240 Unregistered STIX creator for type: test-type
+INFO 2025-07-03 10:16:24,112 feed_observers 7208 127020461740032 Connected feed observer signals
+INFO 2025-07-03 10:17:07,096 utils 7208 127020461740032 Attempting to publish feed 'Test Publication Feed' (ID: 4fa56e4e-7ede-4515-8609-809b2895b1ca). Collection: 'Test Feed Collection'
+INFO 2025-07-03 10:17:07,097 utils 7208 127020461740032 Generating bundle for collection 'Test Feed Collection' (Owner: Feed Publisher Org). Requesting org: None (Internal View)
+INFO 2025-07-03 10:17:07,115 utils 7208 127020461740032 Generated bundle bundle--085cb373-0199-4e5c-9814-bb9de57f5ec5 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:17:07,119 utils 7208 127020461740032 Feed 'Test Publication Feed' published successfully. Bundle ID: bundle--085cb373-0199-4e5c-9814-bb9de57f5ec5, 4 objects.
+INFO 2025-07-03 10:17:08,642 utils 7208 127020461740032 Attempting to publish feed 'Test Publication Feed' (ID: 6d9e6645-b2dd-4425-9698-0f43f4e941a6). Collection: 'Test Feed Collection'
+INFO 2025-07-03 10:17:08,645 utils 7208 127020461740032 Generating bundle for collection 'Test Feed Collection' (Owner: Feed Publisher Org). Requesting org: None (Internal View)
+INFO 2025-07-03 10:17:08,656 utils 7208 127020461740032 Generated bundle bundle--b5c2796a-e9ed-4fbd-910a-b31fa55c9032 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:17:08,659 utils 7208 127020461740032 Feed 'Test Publication Feed' published successfully. Bundle ID: bundle--b5c2796a-e9ed-4fbd-910a-b31fa55c9032, 4 objects.
+WARNING 2025-07-03 10:17:10,121 log 7208 127020461740032 Not Found: /taxii2/collections/f0238afe-3264-4648-87d5-175c695d6891/
+WARNING 2025-07-03 10:17:10,488 log 7208 127020461740032 Not Found: /taxii2/collections/c9a159c2-27ad-4484-af38-afaa595df0b3/objects/indicator--3c7cbd05-1871-4192-9ca2-157152e32074/
+WARNING 2025-07-03 10:17:12,269 log 7208 127020461740032 Forbidden: /taxii2/collections/
+INFO 2025-07-03 10:19:55,259 feed_observers 7251 133758650626048 Connected feed observer signals
+INFO 2025-07-03 10:20:25,323 utils 7251 133758650626048 Attempting to publish feed 'Test Publication Feed' (ID: 1f2258d5-b2a4-4e89-af3d-f53ff3ee4176). Collection: 'Test Feed Collection'
+INFO 2025-07-03 10:20:25,324 utils 7251 133758650626048 Generating bundle for collection 'Test Feed Collection' (Owner: Feed Publisher Org). Requesting org: None (Internal View)
+INFO 2025-07-03 10:20:25,349 utils 7251 133758650626048 Generated bundle bundle--5721ae95-6238-4f6f-af4f-70c19c8a9707 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:20:25,355 utils 7251 133758650626048 Feed 'Test Publication Feed' published successfully. Bundle ID: bundle--5721ae95-6238-4f6f-af4f-70c19c8a9707, 4 objects.
+INFO 2025-07-03 10:20:26,284 utils 7251 133758650626048 Attempting to publish feed 'Test Publication Feed' (ID: 5f95abbd-e4f7-4ba3-90c1-39a4ada9f547). Collection: 'Test Feed Collection'
+INFO 2025-07-03 10:20:26,286 utils 7251 133758650626048 Generating bundle for collection 'Test Feed Collection' (Owner: Feed Publisher Org). Requesting org: None (Internal View)
+INFO 2025-07-03 10:20:26,302 utils 7251 133758650626048 Generated bundle bundle--5782d4ef-feb0-4e57-84e0-5ccbb6614146 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:20:26,307 utils 7251 133758650626048 Feed 'Test Publication Feed' published successfully. Bundle ID: bundle--5782d4ef-feb0-4e57-84e0-5ccbb6614146, 4 objects.
+INFO 2025-07-03 10:20:27,199 utils 7251 133758650626048 Attempting to publish feed 'Test Publication Feed' (ID: 06b373e8-1d67-4c17-b7fc-69448e134242). Collection: 'Test Feed Collection'
+INFO 2025-07-03 10:20:27,203 utils 7251 133758650626048 Generating bundle for collection 'Test Feed Collection' (Owner: Feed Publisher Org). Requesting org: None (Internal View)
+INFO 2025-07-03 10:20:27,217 utils 7251 133758650626048 Generated bundle bundle--145ca949-da7c-48e9-bd91-af955c69683a with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:20:27,221 utils 7251 133758650626048 Feed 'Test Publication Feed' published successfully. Bundle ID: bundle--145ca949-da7c-48e9-bd91-af955c69683a, 4 objects.
+WARNING 2025-07-03 10:20:29,268 log 7251 133758650626048 Not Found: /taxii2/collections/0fb9f894-b0f8-4711-b8b5-0052b31dc656/
+WARNING 2025-07-03 10:20:29,652 log 7251 133758650626048 Not Found: /taxii2/collections/19919602-d12d-4f20-897a-eeb693dc967a/objects/indicator--042f7db5-fd6b-48d2-997b-ea88f5cbc926/
+INFO 2025-07-03 10:20:30,140 utils 7251 133758650626048 Attempting to publish feed 'Workflow Test Feed' (ID: f6f2169f-c158-47f9-925a-8971737af5f2). Collection: 'Workflow Test Collection'
+INFO 2025-07-03 10:20:30,141 utils 7251 133758650626048 Generating bundle for collection 'Workflow Test Collection' (Owner: Workflow Test Org). Requesting org: None (Internal View)
+INFO 2025-07-03 10:20:30,157 utils 7251 133758650626048 Generated bundle bundle--1c6eb778-4406-4584-bec7-38969f458cba with 1 objects (incl. owner identity).
+INFO 2025-07-03 10:20:30,161 utils 7251 133758650626048 Feed 'Workflow Test Feed' published successfully. Bundle ID: bundle--1c6eb778-4406-4584-bec7-38969f458cba, 1 objects.
+WARNING 2025-07-03 10:20:31,537 log 7251 133758650626048 Not Found: /taxii2/collections/9002fc17-d1c4-4240-9f3a-be763f4022e5/
+WARNING 2025-07-03 10:20:32,244 log 7251 133758650626048 Forbidden: /taxii2/collections/
+INFO 2025-07-03 10:20:58,359 feed_observers 7288 139813036601344 Connected feed observer signals
+INFO 2025-07-03 10:21:34,057 utils 7288 139813036601344 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: Test University
+INFO 2025-07-03 10:21:34,078 utils 7288 139813036601344 Generated bundle bundle--12be1328-e307-4bef-82cd-4499ed139cf2 with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:21:34,436 utils 7288 139813036601344 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-07-03 10:21:34,448 utils 7288 139813036601344 Generated bundle bundle--0f442c78-d6f6-4a28-90e3-e9387417ca80 with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:21:34,450 utils 7288 139813036601344 Attempting to publish feed 'Test Feed' (ID: f799a016-adbf-4392-b130-b6d737b7d55f). Collection: 'Test Threat Collection'
+INFO 2025-07-03 10:21:34,451 utils 7288 139813036601344 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-07-03 10:21:34,469 utils 7288 139813036601344 Generated bundle bundle--2a83306c-17b3-46b6-aa95-ad88b73ae8fd with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:21:34,476 utils 7288 139813036601344 Feed 'Test Feed' published successfully. Bundle ID: bundle--2a83306c-17b3-46b6-aa95-ad88b73ae8fd, 2 objects.
+INFO 2025-07-03 10:21:34,838 utils 7288 139813036601344 Processed 2 CSV rows, generated 2 STIX SDO dictionaries.
+INFO 2025-07-03 10:21:35,650 utils 7288 139813036601344 Attempting to publish feed 'Test Publication Feed' (ID: a61f2da2-dc38-47ee-87d8-d4cfd53e1d6f). Collection: 'Test Feed Collection'
+INFO 2025-07-03 10:21:35,651 utils 7288 139813036601344 Generating bundle for collection 'Test Feed Collection' (Owner: Feed Publisher Org). Requesting org: None (Internal View)
+INFO 2025-07-03 10:21:35,677 utils 7288 139813036601344 Generated bundle bundle--3afa69bb-701f-4b26-953a-cc56b3e582dd with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:21:35,684 utils 7288 139813036601344 Feed 'Test Publication Feed' published successfully. Bundle ID: bundle--3afa69bb-701f-4b26-953a-cc56b3e582dd, 4 objects.
+INFO 2025-07-03 10:21:36,402 utils 7288 139813036601344 Attempting to publish feed 'Test Publication Feed' (ID: 8ce7999a-66b9-43e2-aff2-e8dca945b6af). Collection: 'Test Feed Collection'
+INFO 2025-07-03 10:21:36,405 utils 7288 139813036601344 Generating bundle for collection 'Test Feed Collection' (Owner: Feed Publisher Org). Requesting org: None (Internal View)
+INFO 2025-07-03 10:21:36,419 utils 7288 139813036601344 Generated bundle bundle--8c69c4cd-6c3e-4ae2-b98b-00a45870c2df with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:21:36,424 utils 7288 139813036601344 Feed 'Test Publication Feed' published successfully. Bundle ID: bundle--8c69c4cd-6c3e-4ae2-b98b-00a45870c2df, 4 objects.
+INFO 2025-07-03 10:21:37,158 utils 7288 139813036601344 Attempting to publish feed 'Test Publication Feed' (ID: f4a60744-06bf-4042-aa63-02d8115ac2e3). Collection: 'Test Feed Collection'
+INFO 2025-07-03 10:21:37,163 utils 7288 139813036601344 Generating bundle for collection 'Test Feed Collection' (Owner: Feed Publisher Org). Requesting org: None (Internal View)
+INFO 2025-07-03 10:21:37,203 utils 7288 139813036601344 Generated bundle bundle--b8c3c014-910c-4205-870c-c9b4ba5a3952 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:21:37,225 utils 7288 139813036601344 Feed 'Test Publication Feed' published successfully. Bundle ID: bundle--b8c3c014-910c-4205-870c-c9b4ba5a3952, 4 objects.
+WARNING 2025-07-03 10:21:38,696 log 7288 139813036601344 Not Found: /taxii2/collections/4b731276-d22d-4f2e-99fa-bb9fcf9641c3/
+WARNING 2025-07-03 10:21:39,077 log 7288 139813036601344 Not Found: /taxii2/collections/5eecac9a-f6ef-43be-8c3d-5ba6428733ae/objects/indicator--f97b5b02-7fc7-4e43-82e1-b3e88c9e499f/
+INFO 2025-07-03 10:21:40,108 utils 7288 139813036601344 Attempting to publish feed 'Workflow Test Feed' (ID: 114c8704-b4c8-4cd7-9aac-c873c656312c). Collection: 'Workflow Test Collection'
+INFO 2025-07-03 10:21:40,117 utils 7288 139813036601344 Generating bundle for collection 'Workflow Test Collection' (Owner: Workflow Test Org). Requesting org: None (Internal View)
+INFO 2025-07-03 10:21:40,158 utils 7288 139813036601344 Generated bundle bundle--df97471d-c3c5-47e7-9192-24d3ab056d58 with 1 objects (incl. owner identity).
+INFO 2025-07-03 10:21:40,171 utils 7288 139813036601344 Feed 'Workflow Test Feed' published successfully. Bundle ID: bundle--df97471d-c3c5-47e7-9192-24d3ab056d58, 1 objects.
+WARNING 2025-07-03 10:21:43,329 log 7288 139813036601344 Not Found: /taxii2/collections/2e86c121-a0db-442a-b19f-3a685aa6e0f4/
+WARNING 2025-07-03 10:21:44,257 log 7288 139813036601344 Forbidden: /taxii2/collections/
+INFO 2025-07-03 10:21:51,454 utils 7288 139813036601344 Attempting to publish feed 'Test STIX Feed' (ID: ccf9e760-2239-43b7-81a8-d4077c1e6a41). Collection: 'Test Feed Collection'
+INFO 2025-07-03 10:21:51,455 utils 7288 139813036601344 Generating bundle for collection 'Test Feed Collection' (Owner: Test Feed Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:21:51,476 utils 7288 139813036601344 Generated bundle bundle--909c8f3b-32c7-4e59-83e3-a22614074d40 with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:21:51,480 utils 7288 139813036601344 Feed 'Test STIX Feed' published successfully. Bundle ID: bundle--909c8f3b-32c7-4e59-83e3-a22614074d40, 2 objects.
+INFO 2025-07-03 10:21:51,840 utils 7288 139813036601344 Attempting to publish feed 'Test Status Feed' (ID: adc679e6-2af8-45a7-a909-4e2eb9927ec3). Collection: 'Test Feed Collection'
+INFO 2025-07-03 10:21:51,840 utils 7288 139813036601344 Generating bundle for collection 'Test Feed Collection' (Owner: Test Feed Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:21:51,858 utils 7288 139813036601344 Generated bundle bundle--35c25135-d69f-4c00-b044-f0740a1d6812 with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:21:51,862 utils 7288 139813036601344 Feed 'Test Status Feed' published successfully. Bundle ID: bundle--35c25135-d69f-4c00-b044-f0740a1d6812, 2 objects.
+INFO 2025-07-03 10:21:52,256 utils 7288 139813036601344 Generating bundle for collection 'Bundle Test Collection' (Owner: Bundle Test Org). Requesting org: None (Internal View)
+INFO 2025-07-03 10:21:52,276 utils 7288 139813036601344 Generated bundle bundle--f5d55ec9-ee9e-4475-b95a-98b0da7bba14 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:21:53,373 utils 7288 139813036601344 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:21:53,906 utils 7288 139813036601344 Generated bundle bundle--dbd9e743-bca2-46b1-80f8-afa0e45461ee with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:21:55,742 utils 7288 139813036601344 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:21:56,056 utils 7288 139813036601344 Generated bundle bundle--5b95f819-3980-4ec4-b4a5-9c95ef59d64a with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:21:56,057 utils 7288 139813036601344 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:21:56,254 utils 7288 139813036601344 Generated bundle bundle--7faff5bf-cbd4-4ac2-9af8-1948ff70674b with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:21:56,255 utils 7288 139813036601344 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:21:56,423 utils 7288 139813036601344 Generated bundle bundle--16dc3aa0-36be-41a2-ad59-9f8de2c15501 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:21:56,423 utils 7288 139813036601344 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:21:56,559 utils 7288 139813036601344 Generated bundle bundle--fd7edafb-a4de-4e34-aaa3-b45fcb26c31f with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:21:56,559 utils 7288 139813036601344 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:21:56,702 utils 7288 139813036601344 Generated bundle bundle--1b8f79d1-9462-4389-8ebc-dd3fcab2083c with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:21:56,703 utils 7288 139813036601344 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:21:56,859 utils 7288 139813036601344 Generated bundle bundle--2391f99c-a233-4620-9c9e-3f2fcd3874d7 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:21:56,859 utils 7288 139813036601344 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:21:57,025 utils 7288 139813036601344 Generated bundle bundle--55755829-cbbd-4ea2-b2cc-fbb4e87a933a with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:21:57,026 utils 7288 139813036601344 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:21:57,308 utils 7288 139813036601344 Generated bundle bundle--bd1d42f3-7262-4a36-88d1-f83669c9d2dd with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:21:57,309 utils 7288 139813036601344 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:21:57,520 utils 7288 139813036601344 Generated bundle bundle--b060488a-31d6-4add-a007-e1bc0e0374c4 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:21:57,521 utils 7288 139813036601344 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:21:57,688 utils 7288 139813036601344 Generated bundle bundle--3a4f7f45-ee54-441a-a021-1a4637c897b0 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:22:01,542 utils 7288 139813036601344 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:22:01,807 utils 7288 139813036601344 Generated bundle bundle--9b9d0013-c1bf-4bb5-a592-1bf1c9d5d732 with 4 objects (incl. owner identity).
+INFO 2025-07-03 10:22:05,238 utils 7288 139813036601344 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:22:07,656 utils 7288 139813036601344 Generated bundle bundle--4e691d87-c263-44b0-baf1-dbdcca88d752 with 1 objects (incl. owner identity).
+INFO 2025-07-03 10:22:11,382 utils 7288 139813036601344 Generating bundle for collection 'Test Bundle Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:22:11,906 utils 7288 139813036601344 Generated bundle bundle--069219bd-72db-4efb-9948-0dfd4bf924e5 with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:22:13,766 utils 7288 139813036601344 Generating bundle for collection 'Empty Test Collection' (Owner: Test Bundle Organization). Requesting org: None (Internal View)
+INFO 2025-07-03 10:22:14,026 utils 7288 139813036601344 Generated bundle bundle--de7d5b1d-0388-4728-a971-1b0222755d20 with 1 objects (incl. owner identity).
+INFO 2025-07-03 10:22:14,495 stix_factory 7288 139813036601344 Registered STIX creator for type: test-type
+INFO 2025-07-03 10:22:14,496 stix_factory 7288 139813036601344 Unregistered STIX creator for type: test-type
+INFO 2025-07-03 10:23:17,540 feed_observers 7360 131597946220544 Connected feed observer signals
+INFO 2025-07-03 10:23:23,766 feed_observers 7363 129164870897664 Connected feed observer signals
+INFO 2025-07-03 10:23:43,121 utils 7360 131597946220544 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: Test University
+INFO 2025-07-03 10:23:43,155 utils 7360 131597946220544 Generated bundle bundle--2ccb2e5d-5c07-4791-b232-ecf71a5a43d0 with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:23:44,176 utils 7360 131597946220544 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-07-03 10:23:44,214 utils 7360 131597946220544 Generated bundle bundle--c53861a4-46f1-4bfa-a766-385c8d60f520 with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:23:44,231 utils 7360 131597946220544 Attempting to publish feed 'Test Feed' (ID: 956f34ee-d11c-45e2-9236-9b599e057f4e). Collection: 'Test Threat Collection'
+INFO 2025-07-03 10:23:44,263 utils 7360 131597946220544 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-07-03 10:23:44,348 utils 7360 131597946220544 Generated bundle bundle--89bf0a7c-38a0-433f-a4b4-c60bef15ae6c with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:23:44,385 utils 7360 131597946220544 Feed 'Test Feed' published successfully. Bundle ID: bundle--89bf0a7c-38a0-433f-a4b4-c60bef15ae6c, 2 objects.
+INFO 2025-07-03 10:23:45,009 utils 7360 131597946220544 Processed 2 CSV rows, generated 2 STIX SDO dictionaries.
+INFO 2025-07-03 10:23:54,583 feed_observers 7371 137402153324544 Connected feed observer signals
+INFO 2025-07-03 10:24:37,086 utils 7371 137402153324544 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: Test University
+INFO 2025-07-03 10:24:37,108 utils 7371 137402153324544 Generated bundle bundle--f3b37ba8-c03e-4029-9714-4e12e41e52a5 with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:24:37,488 utils 7371 137402153324544 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-07-03 10:24:37,497 utils 7371 137402153324544 Generated bundle bundle--d680d41b-18e9-4e93-8d71-97f60782a0e7 with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:24:37,498 utils 7371 137402153324544 Attempting to publish feed 'Test Feed' (ID: 6817e3f5-567f-4124-ab5d-af1698e55594). Collection: 'Test Threat Collection'
+INFO 2025-07-03 10:24:37,499 utils 7371 137402153324544 Generating bundle for collection 'Test Threat Collection' (Owner: Test University). Requesting org: None (Internal View)
+INFO 2025-07-03 10:24:37,511 utils 7371 137402153324544 Generated bundle bundle--b0eb85a2-28ae-454a-8fa0-967fb357e03c with 2 objects (incl. owner identity).
+INFO 2025-07-03 10:24:37,516 utils 7371 137402153324544 Feed 'Test Feed' published successfully. Bundle ID: bundle--b0eb85a2-28ae-454a-8fa0-967fb357e03c, 2 objects.
+INFO 2025-07-03 10:24:37,858 utils 7371 137402153324544 Processed 2 CSV rows, generated 2 STIX SDO dictionaries.
