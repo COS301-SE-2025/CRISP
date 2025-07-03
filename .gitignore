@@ -1,0 +1,130 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+*/venv/
+venv/
+ENV/
+env/
+.venv/
+.ENV/
+.env/
+
+# Environment Files (SECURITY CRITICAL)
+.env
+*.env
+.env.*
+.env.example
+*/.env.example
+.env
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+media/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Security & API Keys (SECURITY CRITICAL)
+**/secrets.py
+**/secret_*.py
+**/*_secrets.py
+**/api_keys.py
+**/credentials.py
+**/config/production.py
+**/settings/production.py
+**/local.py
+**/*_local.py
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Database dumps and backups
+*.sql
+*.dump
+*.backup
+backup/
+dumps/
+
+# Logs
+*.log
+logs/
+log/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+.pytest_cache/
+
+# Claude AI
+/.claude
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Redis
+dump.rdb
+
+# Local development overrides
+local/
+*.local
+
+# Sensitive documentation
+NOTES.txt
+TODO.txt
+**/sensitive/
