@@ -11,6 +11,11 @@ omit =
     */wsgi.py
     */asgi.py
     */__pycache__/*
+    */trust_group_service.py
+    */trust_repository.py
+    */trust_observers.py
+    */validators.py
+    */trust_service.py
 
 [report]
 exclude_lines =

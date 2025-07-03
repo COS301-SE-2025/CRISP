@@ -12,9 +12,11 @@ from django.core.exceptions import ValidationError
 from core.trust.models import TrustLevel, TrustRelationship, TrustGroup, TrustLog
 from core.trust.services.trust_service import TrustService
 from core.trust.validators import TrustRelationshipValidator, SecurityValidator
-from core.trust.patterns.decorator.stix_trust_decorators import (
-    StixTrustValidationDecorator, StixTrustEnrichmentDecorator
+from core.trust.patterns.decorator.trust_decorators import (
+    SecurityEnhancementDecorator, ComplianceDecorator
 )
+from core.trust.patterns.repository import TrustRelationshipRepository, TrustLevelRepository, TrustLogRepository
+from core.trust.patterns.strategy import TrustLevelAccessStrategy
 
 
 class FinalCoveragePushTest(TestCase):
@@ -106,33 +108,39 @@ class FinalCoveragePushTest(TestCase):
                 approved_by_user=self.user
             )
     
-    def test_stix_decorators_basic_functionality(self):
-        """Test STIX decorators for coverage"""
-        mock_stix_object = Mock()
-        mock_stix_object.metadata = {}
-        mock_stix_object.pattern = "test-pattern"
-        mock_stix_object.labels = ["test-label"]
-        # Mock the to_dict method to return a proper dict
-        mock_stix_object.to_dict.return_value = {
-            'type': 'test-object',
-            'id': 'test--12345',
-            'created': '2023-01-01T00:00:00Z',
-            'modified': '2023-01-01T00:00:00Z'
-        }
+    def test_trust_decorators_basic_functionality(self):
+        """Test trust decorators for coverage"""
+        # Create a trust relationship for testing
+        relationship = TrustRelationship.objects.create(
+            source_organization=self.org1,
+            target_organization=self.org2,
+            trust_level=self.trust_level,
+            created_by=self.user,
+            last_modified_by=self.user,
+            status='active',
+            approved_by_source=True,
+            approved_by_target=True
+        )
         
-        # Test validation decorator
-        validator = StixTrustValidationDecorator(mock_stix_object)
-        validated = validator.validate({'test': 'data'})
+        # Test security enhancement decorator
+        from core.trust.patterns.decorator.trust_decorators import BasicTrustEvaluation
+        from django.utils import timezone
+        basic_eval = BasicTrustEvaluation(relationship)
+        security_decorator = SecurityEnhancementDecorator(basic_eval)
+        context = {'user': self.user, 'request_time': timezone.now()}
+        enhanced = security_decorator.evaluate(context)
         
-        # Should return the decorated object
-        self.assertIsNotNone(validated)
+        # Should return the enhanced object
+        self.assertIsNotNone(enhanced)
+        self.assertIn('security_enhanced', enhanced)
         
-        # Test trust enrichment decorator with proper mock
-        enricher = StixTrustEnrichmentDecorator(mock_stix_object)
-        enriched = enricher.to_dict()
+        # Test compliance decorator
+        compliance_decorator = ComplianceDecorator(basic_eval)
+        compliant = compliance_decorator.evaluate(context)
         
-        # Should return enriched object
-        self.assertIsNotNone(enriched)
+        # Should return compliance validated object
+        self.assertIsNotNone(compliant)
+        self.assertIn('compliance_validated', compliant)
     
     def test_trust_models_properties_and_methods(self):
         """Test model properties and methods for coverage"""
@@ -299,3 +307,72 @@ class FinalCoveragePushTest(TestCase):
             
             # Observer should be available (whether called or not)
             self.assertTrue(hasattr(mock_manager, 'notify') or mock_manager.called)
+    
+    
+    def test_repository_patterns_extended(self):
+        """Test repository patterns for extended coverage"""
+        # TrustRelationshipRepository advanced methods
+        rel_repo = TrustRelationshipRepository()
+        
+        # Test get_by_organizations
+        relationship = TrustRelationship.objects.create(
+            source_organization=self.org1,
+            target_organization=self.org2,
+            trust_level=self.trust_level,
+            created_by=self.user,
+            last_modified_by=self.user
+        )
+        
+        found = rel_repo.get_by_organizations(self.org1, self.org2)
+        self.assertEqual(found, relationship)
+        
+        # Test get_pending_approvals
+        pending = rel_repo.get_pending_approvals(self.org1)
+        self.assertIn(relationship, pending)
+        
+        # Test get_expiring_soon
+        expiring = rel_repo.get_expiring_soon(30)
+        self.assertGreaterEqual(len(expiring), 0)
+        
+        # TrustLevelRepository advanced methods
+        level_repo = TrustLevelRepository()
+        
+        # Test get_by_score_range
+        score_range = level_repo.get_by_score_range(80, 100)
+        self.assertIn(self.trust_level, score_range)
+        
+        # Test get_default
+        default = level_repo.get_default()
+        # May be None if no default is set
+        
+        # TrustLogRepository methods
+        log_repo = TrustLogRepository()
+        
+        test_log = TrustLog.objects.create(
+            action='test_extended',
+            source_organization=self.org1,
+            user=self.user,
+            success=True
+        )
+        
+        # Test get_by_action
+        action_logs = log_repo.get_by_action('test_extended')
+        self.assertIn(test_log, action_logs)
+        
+        # Test immutability (should raise NotImplementedError)
+        with self.assertRaises(NotImplementedError):
+            log_repo.update(str(test_log.id), action='modified')
+        
+        with self.assertRaises(NotImplementedError):
+            log_repo.delete(str(test_log.id))
+    
+    def test_access_control_strategies(self):
+        """Test basic access control strategies for coverage"""
+        # Test basic strategy creation
+        strategy = TrustLevelAccessStrategy()
+        self.assertIsInstance(strategy, TrustLevelAccessStrategy)
+        
+        # Test that it inherits from base strategy
+        from core.trust.patterns.strategy import AccessControlStrategy
+        self.assertIsInstance(strategy, AccessControlStrategy)
+    

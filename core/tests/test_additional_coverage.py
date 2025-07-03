@@ -17,7 +17,7 @@ class AdditionalCoverageTests(TestCase):
         
         self.trust_level = TrustLevel.objects.create(
             name='Test Level',
-            level='medium',
+            level='trusted',
             description='Test level',
             numerical_value=50,
             created_by='test_user'

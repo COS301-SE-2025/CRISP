@@ -12,8 +12,7 @@ from ..models import (
 )
 from ..patterns.repository import trust_repository_manager
 from ..patterns.observer import trust_event_manager, notify_trust_relationship_event
-from ..patterns.factory import stix_trust_factory
-from ..integrations import stix_taxii_trust_integration
+from ..patterns.factory import trust_factory
 
 logger = logging.getLogger(__name__)
 
@@ -93,13 +92,18 @@ class TrustService:
                     relationship_type=relationship_type
                 )
                 
-                # Export to STIX if requested
-                if export_to_stix:
-                    try:
-                        stix_object = stix_trust_factory.create_stix_object(relationship)
-                        logger.info(f"Trust relationship exported to STIX: {relationship.id}")
-                    except Exception as e:
-                        logger.warning(f"Failed to export trust relationship to STIX: {str(e)}")
+                # Log relationship creation 
+                trust_factory.create_log(
+                    action='relationship_created',
+                    source_organization=source_org,
+                    user=created_by or 'system',
+                    target_organization=target_org,
+                    trust_relationship=relationship,
+                    details={
+                        'trust_level': trust_level_name,
+                        'relationship_type': relationship_type
+                    }
+                )
                 
                 logger.info(f"Trust relationship created: {source_org} -> {target_org} ({trust_level_name})")
                 return relationship
@@ -597,3 +601,13 @@ class TrustService:
         except Exception as e:
             logger.error(f"Failed to update trust level: {str(e)}")
             raise
+
+    @staticmethod
+    def get_available_trust_levels() -> List[TrustLevel]:
+        """
+        Get all available active trust levels.
+        
+        Returns:
+            List[TrustLevel]: List of active trust levels ordered by numerical value
+        """
+        return TrustLevel.objects.filter(is_active=True).order_by('numerical_value')

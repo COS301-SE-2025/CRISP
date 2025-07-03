@@ -6,11 +6,9 @@ from datetime import timedelta
 
 
 TRUST_LEVEL_CHOICES = [
-    ('none', 'No Trust'),
-    ('low', 'Low Trust'),
-    ('medium', 'Medium Trust'),
-    ('high', 'High Trust'),
-    ('complete', 'Complete Trust'),
+    ('public', 'Public Trust'),
+    ('trusted', 'Trusted Trust'),
+    ('restricted', 'Restricted Trust'),
 ]
 
 TRUST_STATUS_CHOICES = [
@@ -114,11 +112,26 @@ class TrustLevel(models.Model):
     def clean(self):
         if self.numerical_value < 0 or self.numerical_value > 100:
             raise ValidationError("Numerical value must be between 0 and 100")
+        
+        # Validate level choice
+        valid_levels = [choice[0] for choice in TRUST_LEVEL_CHOICES]
+        if self.level not in valid_levels:
+            raise ValidationError(f"Level must be one of: {', '.join(valid_levels)}")
+    
+    @property
+    def is_default(self):
+        """Property to check if this is the default trust level"""
+        return self.is_system_default
 
     @classmethod
     def get_default_trust_level(cls):
         """Get the default trust level for new relationships"""
         return cls.objects.filter(is_system_default=True, is_active=True).first()
+    
+    @classmethod
+    def get_default(cls):
+        """Get the default trust level - alias for get_default_trust_level"""
+        return cls.get_default_trust_level()
 
 
 class TrustGroup(models.Model):
@@ -616,6 +629,10 @@ class TrustLog(models.Model):
         default=dict,
         help_text="Additional details about the action"
     )
+    metadata = models.JSONField(
+        default=dict,
+        help_text="Additional metadata about the log entry"
+    )
     timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -633,6 +650,14 @@ class TrustLog(models.Model):
     def __str__(self):
         status = "SUCCESS" if self.success else "FAILURE"
         return f"{self.action} - {self.source_organization} - {status} - {self.timestamp}"
+
+    def get_detail(self, key: str, default=None):
+        """Get a specific detail from the details JSON field."""
+        return self.details.get(key, default)
+    
+    def get_metadata(self, key: str, default=None):
+        """Get a specific metadata value from the metadata JSON field."""
+        return self.metadata.get(key, default)
 
     @classmethod
     def log_trust_event(cls, action, source_organization, user, 

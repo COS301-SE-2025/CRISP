@@ -618,6 +618,13 @@ class TrustLevelRepository(BaseRepository):
             numerical_value__lte=max_score,
             is_active=True
         ).order_by('numerical_value')
+    
+    def get_by_minimum_value(self, min_value: int) -> models.QuerySet:
+        """Get trust levels with numerical value >= min_value."""
+        return self.model_class.objects.filter(
+            numerical_value__gte=min_value,
+            is_active=True
+        ).order_by('numerical_value')
 
 
 class TrustLogRepository(BaseRepository):
@@ -682,6 +689,12 @@ class TrustLogRepository(BaseRepository):
             queryset = queryset.filter(timestamp__lte=end_date)
         
         return queryset
+    
+    def get_by_organization(self, organization: str, 
+                           start_date: datetime = None,
+                           end_date: datetime = None) -> models.QuerySet:
+        """Alias for get_for_organization."""
+        return self.get_for_organization(organization, start_date, end_date)
     
     def get_by_action(self, action: str, 
                      start_date: datetime = None,

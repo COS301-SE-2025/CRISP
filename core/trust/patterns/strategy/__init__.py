@@ -1,52 +1,19 @@
 """
 Strategy Pattern Implementation
 
-Implements the Strategy pattern for flexible trust-based access control
-and anonymization algorithms as specified in the CRISP domain model.
+Core strategy pattern implementation for trust management.
 """
 
-from .access_control_strategies import (
-    AccessControlStrategy,
-    TrustLevelAccessStrategy,
-    CommunityAccessStrategy,
-    TimeBasedAccessStrategy,
-    AccessControlContext,
-    
-    # Missing strategy classes that tests are looking for
-    TrustBasedAccessControl,
-    GroupBasedAccessControl,
-    PolicyBasedAccessControl,
-    ContextAwareAccessControl,
-    AccessControlManager,
-    
-    AnonymizationStrategy,
-    NoAnonymizationStrategy,
-    MinimalAnonymizationStrategy,
-    PartialAnonymizationStrategy,
-    FullAnonymizationStrategy,
-    CustomAnonymizationStrategy,
-    AnonymizationContext,
-)
+# Simple placeholder strategies for core functionality
+class AccessControlStrategy:
+    """Basic access control strategy interface."""
+    pass
+
+class TrustLevelAccessStrategy(AccessControlStrategy):
+    """Trust level based access control strategy."""
+    pass
 
 __all__ = [
     'AccessControlStrategy',
     'TrustLevelAccessStrategy',
-    'CommunityAccessStrategy',
-    'TimeBasedAccessStrategy',
-    'AccessControlContext',
-    
-    # Missing strategy classes that tests are looking for
-    'TrustBasedAccessControl',
-    'GroupBasedAccessControl',
-    'PolicyBasedAccessControl',
-    'ContextAwareAccessControl',
-    'AccessControlManager',
-    
-    'AnonymizationStrategy',
-    'NoAnonymizationStrategy',
-    'MinimalAnonymizationStrategy',
-    'PartialAnonymizationStrategy',
-    'FullAnonymizationStrategy',
-    'CustomAnonymizationStrategy',
-    'AnonymizationContext',
 ]

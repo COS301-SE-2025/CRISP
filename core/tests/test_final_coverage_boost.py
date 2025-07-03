@@ -8,17 +8,18 @@ import uuid
 from unittest.mock import patch, Mock
 from django.test import TestCase
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 from core.trust.models import TrustLevel, TrustRelationship, TrustGroup, TrustLog
 from core.trust.services.trust_service import TrustService
 from core.trust.validators import TrustRelationshipValidator, SecurityValidator
-from core.trust.patterns.decorator.stix_trust_decorators import (
-    StixTrustValidationDecorator, StixTrustEnrichmentDecorator, StixTrustDecoratorChain
+from core.trust.patterns.decorator.trust_decorators import (
+    SecurityEnhancementDecorator, ComplianceDecorator, TrustDecoratorChain
 )
 from core.trust.patterns.repository.trust_repository import (
     TrustRelationshipRepository, TrustGroupRepository, TrustLevelRepository
 )
-from core.trust.patterns.factory.stix_trust_factory import StixTrustFactory
+from core.trust.patterns.factory.trust_factory import TrustFactory
 
 
 class FinalCoverageBoostTest(TestCase):
@@ -31,7 +32,7 @@ class FinalCoverageBoostTest(TestCase):
         
         self.trust_level = TrustLevel.objects.create(
             name='Final Test Level',
-            level='high',
+            level='trusted',
             description='High trust level for testing',
             numerical_value=85,
             default_anonymization_level='none',
@@ -39,38 +40,43 @@ class FinalCoverageBoostTest(TestCase):
             created_by=self.user
         )
 
-    def test_stix_decorators_basic_functionality(self):
-        """Test STIX decorators for coverage"""
-        mock_stix_object = Mock()
-        mock_stix_object.metadata = {}
-        mock_stix_object.pattern = "test-pattern"
-        mock_stix_object.labels = ["test-label"]
-        # Mock the to_dict method to return a proper dict
-        mock_stix_object.to_dict.return_value = {
-            'type': 'test-object',
-            'id': 'test--12345',
-            'created': '2023-01-01T00:00:00Z',
-            'modified': '2023-01-01T00:00:00Z'
-        }
+    def test_trust_decorators_basic_functionality(self):
+        """Test trust decorators for coverage"""
+        # Create a trust relationship for testing
+        relationship = TrustRelationship.objects.create(
+            source_organization=self.org1,
+            target_organization=self.org2,
+            trust_level=self.trust_level,
+            created_by=self.user,
+            last_modified_by=self.user,
+            status='active',
+            approved_by_source=True,
+            approved_by_target=True
+        )
         
-        # Test validation decorator
-        validator = StixTrustValidationDecorator(mock_stix_object)
-        validated = validator.validate({'test': 'data'})
+        # Test security enhancement decorator
+        from core.trust.patterns.decorator.trust_decorators import BasicTrustEvaluation
+        basic_eval = BasicTrustEvaluation(relationship)
+        security_decorator = SecurityEnhancementDecorator(basic_eval)
+        context = {'user': self.user, 'request_time': timezone.now()}
+        enhanced = security_decorator.evaluate(context)
         
-        # Should return the decorated object
-        self.assertIsNotNone(validated)
+        # Should return the enhanced object
+        self.assertIsNotNone(enhanced)
+        self.assertIn('security_enhanced', enhanced)
 
-        # Test trust enrichment decorator with proper mock
-        enricher = StixTrustEnrichmentDecorator(mock_stix_object)
-        enriched = enricher.to_dict()
+        # Test compliance decorator
+        compliance_decorator = ComplianceDecorator(basic_eval)
+        compliant = compliance_decorator.evaluate(context)
 
-        # Should return enriched object
-        self.assertIsNotNone(enriched)
+        # Should return compliance validated object
+        self.assertIsNotNone(compliant)
+        self.assertIn('compliance_validated', compliant)
     
     def test_trust_models_properties_and_methods(self):
         """Test model properties and methods for coverage"""
         # Test trust level properties
-        self.assertEqual(self.trust_level.level, 'high')
+        self.assertEqual(self.trust_level.level, 'trusted')
         self.assertEqual(self.trust_level.numerical_value, 85)
         self.assertTrue(self.trust_level.is_active)
         
@@ -80,7 +86,7 @@ class FinalCoverageBoostTest(TestCase):
         # Test invalid numerical value
         invalid_level = TrustLevel(
             name='Invalid Level',
-            level='high',
+            level='trusted',
             description='Test',
             numerical_value=150,  # Invalid - over 100
             created_by=self.user
@@ -150,9 +156,39 @@ class FinalCoverageBoostTest(TestCase):
         })
         self.assertIsInstance(security_result, dict)
     
-    def test_stix_factory_operations(self):
-        """Test STIX factory for coverage"""
-        # Test creating STIX trust relationship
+    def test_trust_factory_operations(self):
+        """Test trust factory for coverage"""
+        # Test creating trust relationship through factory
+        relationship_data = {
+            'source_organization': self.org1,
+            'target_organization': self.org2,
+            'trust_level': self.trust_level,
+            'created_by': self.user,
+            'last_modified_by': self.user
+        }
+        
+        # Test trust factory
+        factory = TrustFactory()
+        trust_obj = factory.create_relationship(
+            source_org=self.org1,
+            target_org=self.org2,
+            trust_level=self.trust_level,
+            created_by=self.user
+        )
+        self.assertIsNotNone(trust_obj)
+        
+        # Test trust group creation
+        trust_group = factory.create_group(
+            name='Factory Test Group',
+            description='Created by factory',
+            created_by=self.user,
+            group_type='sector'
+        )
+        self.assertIsNotNone(trust_group)
+    
+    def test_decorator_chain_builder(self):
+        """Test trust decorator chain builder"""
+        # Create a trust relationship for testing
         relationship = TrustRelationship.objects.create(
             source_organization=self.org1,
             target_organization=self.org2,
@@ -160,32 +196,22 @@ class FinalCoverageBoostTest(TestCase):
             created_by=self.user,
             last_modified_by=self.user
         )
-        
-        # Test STIX factory
-        stix_obj = StixTrustFactory.create_trust_relationship_stix(relationship)
-        self.assertIsNotNone(stix_obj)
-        
-        # Test STIX trust level
-        stix_level = StixTrustFactory.create_trust_level_stix(self.trust_level)
-        self.assertIsNotNone(stix_level)
-    
-    def test_decorator_chain_builder(self):
-        """Test STIX decorator chain builder"""
-        mock_stix_object = Mock()
-        mock_stix_object.to_dict.return_value = {
-            'type': 'test-object',
-            'id': 'test--12345',
-            'created': '2023-01-01T00:00:00Z',
-            'modified': '2023-01-01T00:00:00Z'
-        }
-        
+
         # Test decorator chain
-        chain = StixTrustDecoratorChain(mock_stix_object)
-        decorated = chain.validate().enrich().build()
-        
+        chain = TrustDecoratorChain(relationship)
+        decorated = chain.add_security_enhancement().add_compliance_validation().build()
+
         self.assertIsNotNone(decorated)
-        result = decorated.to_dict()
+        
+        # Test evaluation
+        context = {
+            'user': self.user,
+            'resource_type': 'indicator',
+            'request_time': timezone.now()
+        }
+        result = decorated.evaluate(context)
         self.assertIsNotNone(result)
+        self.assertIn('allowed', result)
     
     def test_trust_group_operations(self):
         """Test TrustGroup operations for coverage"""

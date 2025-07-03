@@ -1,28 +1,24 @@
 """
 Factory Pattern Implementation
 
-Implements the Factory Method pattern for creating STIX objects from
-trust management entities as specified in the CRISP domain model.
+Implements the Factory Method pattern for creating trust management objects
+as specified in the CRISP domain model.
 """
 
-from .stix_trust_factory import (
-    StixTrustFactory,
-    StixTrustObject,
-    StixTrustObjectCreator,
-    StixTrustRelationshipCreator,
-    StixTrustGroupCreator,
-    StixTrustLevelCreator,
-    StixTrustBundleCreator,
-    stix_trust_factory,
+from .trust_factory import (
+    TrustObjectCreator,
+    TrustRelationshipCreator,
+    TrustGroupCreator,
+    TrustLogCreator,
+    TrustFactory,
+    trust_factory,
 )
 
 __all__ = [
-    'StixTrustFactory',
-    'StixTrustObject',
-    'StixTrustObjectCreator',
-    'StixTrustRelationshipCreator',
-    'StixTrustGroupCreator', 
-    'StixTrustLevelCreator',
-    'StixTrustBundleCreator',
-    'stix_trust_factory',
+    'TrustObjectCreator',
+    'TrustRelationshipCreator',
+    'TrustGroupCreator', 
+    'TrustLogCreator',
+    'TrustFactory',
+    'trust_factory',
 ]

@@ -429,6 +429,49 @@ class SecurityValidator:
         }
     
     @staticmethod
+    def validate_api_request(request_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validate API request data for security compliance.
+        
+        Args:
+            request_data: Dictionary containing request data to validate
+            
+        Returns:
+            Dictionary with validation results
+        """
+        errors = []
+        warnings = []
+        
+        # Input sanitization
+        sanitization_result = SecurityValidator.validate_input_sanitization(request_data)
+        if not sanitization_result['valid']:
+            errors.extend(sanitization_result['errors'])
+        
+        # Check for suspicious patterns in the request
+        user_context = {
+            'user_id': request_data.get('user_id', 'unknown'),
+            'timestamp': timezone.now().isoformat()
+        }
+        
+        pattern_result = SecurityValidator.validate_suspicious_patterns(request_data, user_context)
+        if not pattern_result['valid']:
+            errors.extend(pattern_result['errors'])
+        warnings.extend(pattern_result.get('warnings', []))
+        
+        # Temporal security validation
+        temporal_result = SecurityValidator.validate_temporal_security(request_data)
+        if not temporal_result['valid']:
+            errors.extend(temporal_result['errors'])
+        warnings.extend(temporal_result.get('warnings', []))
+        
+        return {
+            'valid': len(errors) == 0,
+            'errors': errors,
+            'warnings': warnings,
+            'sanitized_data': sanitization_result.get('sanitized_data', request_data)
+        }
+
+    @staticmethod
     def record_security_event(event_type: str, user_id: str, organization_id: str,
                             details: Dict[str, Any]) -> None:
         """Record security events for monitoring."""

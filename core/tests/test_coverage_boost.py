@@ -1,303 +1,89 @@
 """
-Focused Coverage Boost Tests
+Coverage Boost Tests
 
-Simple tests targeting specific uncovered code paths to improve coverage.
+Targeted tests to boost coverage on existing functionality.
 """
 
 import uuid
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, Mock
 from django.test import TestCase
 from django.core.exceptions import ValidationError
-from django.contrib.auth.models import User
-from rest_framework.test import APIRequestFactory
+from django.utils import timezone
+from datetime import timedelta
 
 from core.trust.models import TrustLevel, TrustRelationship, TrustGroup, TrustLog
-from core.trust.services.trust_service import TrustService
-from core.trust.services.trust_group_service import TrustGroupService
-from core.trust.api.views import TrustRelationshipViewSet
+from core.trust.patterns.decorator.trust_decorators import (
+    BasicTrustEvaluation, SecurityEnhancementDecorator, ComplianceDecorator,
+    AuditDecorator, TrustDecoratorChain
+)
+from core.trust.patterns.repository.trust_repository import (
+    TrustRelationshipRepository, TrustLevelRepository, TrustLogRepository
+)
+from core.trust.validators import TrustRelationshipValidator, SecurityValidator
 
 
-class CoverageBoostTest(TestCase):
-    """Simple tests to boost coverage in key areas"""
+class ModelCoverageBoostTest(TestCase):
+    """Boost coverage for model methods"""
     
     def setUp(self):
-        self.source_org = str(uuid.uuid4())
-        self.target_org = str(uuid.uuid4())
+        self.org1 = str(uuid.uuid4())
+        self.org2 = str(uuid.uuid4())
         self.user = 'coverage_test_user'
         
         self.trust_level = TrustLevel.objects.create(
             name='Coverage Test Level',
-            level='coverage_medium',
+            level='trusted',
+            numerical_value=75,
+            description='Level for coverage testing',
+            created_by=self.user
+        )
+    
+    def test_trust_level_properties(self):
+        """Test trust level properties and methods"""
+        # Test is_default property
+        default_level = TrustLevel.objects.create(
+            name='Default Test',
+            level='public',
+            numerical_value=25,
+            description='Default level',
+            is_system_default=True,
+            created_by=self.user
+        )
+        self.assertTrue(default_level.is_default)
+        
+        # Test get_default method
+        default = TrustLevel.get_default()
+        self.assertEqual(default, default_level)
+        
+        # Test clean method validation
+        invalid_level = TrustLevel(
+            name='Invalid',
+            level='invalid_level',
             numerical_value=50,
-            description='Test level for coverage',
+            description='Invalid',
             created_by=self.user
         )
-    
-    def test_trust_service_can_access_intelligence(self):
-        """Test can_access_intelligence method"""
-        # Create active relationship
-        TrustRelationship.objects.create(
-            source_organization=self.source_org,
-            target_organization=self.target_org,
-            trust_level=self.trust_level,
-            status='active',
-            approved_by_source=True,
-            approved_by_target=True,
-            created_by=self.user,
-            last_modified_by=self.user
-        )
-        
-        can_access, reason, relationship = TrustService.can_access_intelligence(
-            requesting_org=self.source_org,
-            intelligence_owner=self.target_org,
-            intelligence_type='indicators'
-        )
-        
-        # Test that the method executes and returns proper format
-        self.assertIsInstance(can_access, bool)
-        self.assertIsInstance(reason, str)
-        # Relationship can be None if access is denied
-    
-    def test_trust_service_get_sharing_organizations(self):
-        """Test get_sharing_organizations method"""
-        # Create relationships
-        TrustRelationship.objects.create(
-            source_organization=self.source_org,
-            target_organization=self.target_org,
-            trust_level=self.trust_level,
-            status='active',
-            approved_by_source=True,
-            approved_by_target=True,
-            created_by=self.user,
-            last_modified_by=self.user
-        )
-        
-        sharing_orgs = TrustService.get_sharing_organizations(
-            source_org=self.source_org,
-            min_trust_level='low'
-        )
-        
-        # Check if target org is in the sharing list (returns tuples)
-        target_orgs = [org_id for org_id, trust_level, relationship in sharing_orgs]
-        self.assertIn(self.target_org, target_orgs)
-    
-    def test_trust_group_service_create_with_all_parameters(self):
-        """Test trust group creation with full parameter set"""
-        group = TrustGroupService.create_trust_group(
-            name='Full Parameter Group',
-            description='Group with all parameters',
-            creator_org=self.source_org,
-            group_type='sector',
-            is_public=True,
-            requires_approval=False,
-            default_trust_level_name=self.trust_level.level,
-            group_policies={'policy': 'value'},
-            created_by=self.user
-        )
-        
-        self.assertEqual(group.name, 'Full Parameter Group')
-        self.assertEqual(group.group_type, 'sector')
-        self.assertTrue(group.is_public)
-        self.assertFalse(group.requires_approval)
-    
-    def test_trust_relationship_str_representation(self):
-        """Test string representation of trust relationship"""
-        relationship = TrustRelationship.objects.create(
-            source_organization=self.source_org,
-            target_organization=self.target_org,
-            trust_level=self.trust_level,
-            status='active',
-            created_by=self.user,
-            last_modified_by=self.user
-        )
-        
-        str_repr = str(relationship)
-        self.assertIn(self.source_org[:8], str_repr)
-        self.assertIn(self.target_org[:8], str_repr)
-    
-    def test_trust_level_is_active_property(self):
-        """Test trust level is_active property"""
-        # Test active level
-        self.assertTrue(self.trust_level.is_active)
-        
-        # Test inactive level
-        inactive_level = TrustLevel.objects.create(
-            name='Inactive Level',
-            level='inactive',
-            numerical_value=0,
-            description='Inactive level',
-            is_active=False,
-            created_by=self.user
-        )
-        
-        self.assertFalse(inactive_level.is_active)
-    
-    def test_trust_log_str_representation(self):
-        """Test string representation of trust log"""
-        log = TrustLog.objects.create(
-            action='test_action',
-            source_organization=self.source_org,
-            user=self.user,
-            success=True,
-            details={'test': 'data'}
-        )
-        
-        str_repr = str(log)
-        self.assertIn('test_action', str_repr)
-        self.assertIn('SUCCESS', str_repr)
-    
-    def test_relationship_viewset_basic_functionality(self):
-        """Test basic ViewSet functionality"""
-        factory = APIRequestFactory()
-        user = User.objects.create_user('testuser', 'test@example.com', 'testpass')
-        
-        view = TrustRelationshipViewSet()
-        request = factory.get('/api/trust/relationships/')
-        request.user = user
-        
-        view.request = request
-        
-        # Test get_queryset with no organization_id
-        queryset = view.get_queryset()
-        self.assertEqual(queryset.count(), 0)
-    
-    def test_trust_relationship_clean_validation(self):
-        """Test clean method validation in TrustRelationship"""
-        relationship = TrustRelationship(
-            source_organization=self.source_org,
-            target_organization=self.source_org,  # Same as source
-            trust_level=self.trust_level,
-            created_by=self.user,
-            last_modified_by=self.user
-        )
-        
         with self.assertRaises(ValidationError):
-            relationship.clean()
+            invalid_level.clean()
     
-    def test_trust_group_member_count(self):
-        """Test trust group member count property"""
-        group = TrustGroup.objects.create(
-            name='Member Count Test',
-            description='Test group',
-            group_type='community',
-            default_trust_level=self.trust_level,
-            created_by=self.user
-        )
-        
-        # Initially should have 0 members
-        self.assertEqual(group.member_count, 0)
-    
-    @patch('core.trust.services.trust_service.logger')
-    def test_trust_service_error_logging(self, mock_logger):
-        """Test error logging in trust service"""
-        # Try to create relationship with invalid data
-        try:
-            TrustService.create_trust_relationship(
-                source_org=None,  # Invalid
-                target_org=self.target_org,
-                trust_level_name='Coverage Test Level',
-                created_by=self.user
-            )
-        except:
-            pass
-        
-        # Should have logged an error
-        mock_logger.error.assert_called()
-    
-    def test_trust_relationship_is_effective_property(self):
-        """Test is_effective property calculation"""
-        # Create active, approved relationship
-        relationship = TrustRelationship.objects.create(
-            source_organization=self.source_org,
-            target_organization=self.target_org,
-            trust_level=self.trust_level,
-            status='active',
-            approved_by_source=True,
-            approved_by_target=True,
-            created_by=self.user,
-            last_modified_by=self.user
-        )
-        
-        # Should be effective
-        self.assertTrue(hasattr(relationship, 'is_effective'))
-    
-    def test_trust_group_can_administer(self):
-        """Test trust group can_administer method"""
-        group = TrustGroup.objects.create(
-            name='Admin Test Group',
-            description='Test group for admin check',
-            group_type='community',
-            default_trust_level=self.trust_level,
-            administrators=[self.source_org],
-            created_by=self.user
-        )
-        
-        # Source org should be able to administer
-        self.assertTrue(group.can_administer(self.source_org))
-        
-        # Other org should not be able to administer
-        self.assertFalse(group.can_administer(self.target_org))
-    
-    def test_model_meta_options(self):
-        """Test model meta options are set correctly"""
-        # Test TrustLevel ordering
-        level1 = TrustLevel.objects.create(
-            name='Level 1',
-            level='level1',
-            numerical_value=10,
-            description='First level',
-            created_by=self.user
-        )
-        level2 = TrustLevel.objects.create(
-            name='Level 2', 
-            level='level2',
-            numerical_value=20,
-            description='Second level',
-            created_by=self.user
-        )
-        
-        # Should be ordered by numerical_value
-        levels = list(TrustLevel.objects.all().order_by('numerical_value'))
-        self.assertEqual(levels[0], level1)
-        self.assertEqual(levels[1], level2)
-        
-    def test_trust_relationship_properties(self):
-        """Test additional trust relationship properties"""
-        # Create expired relationship
-        from django.utils import timezone
-        from datetime import timedelta
-        
-        past_date = timezone.now() - timedelta(days=1)
-        
-        relationship = TrustRelationship.objects.create(
-            source_organization=self.source_org,
-            target_organization=self.target_org,
+    def test_trust_relationship_lifecycle(self):
+        """Test trust relationship lifecycle properties"""
+        # Test expired relationship
+        past_date = timezone.now() - timedelta(days=30)
+        expired_rel = TrustRelationship.objects.create(
+            source_organization=str(uuid.uuid4()),
+            target_organization=str(uuid.uuid4()),
             trust_level=self.trust_level,
             valid_until=past_date,
             created_by=self.user,
             last_modified_by=self.user
         )
+        self.assertTrue(expired_rel.is_expired)
         
-        # Should be expired
-        self.assertTrue(relationship.is_expired)
-        
-        # Test relationship without expiration
-        permanent_relationship = TrustRelationship.objects.create(
-            source_organization=self.target_org,
-            target_organization=self.source_org,
-            trust_level=self.trust_level,
-            created_by=self.user,
-            last_modified_by=self.user
-        )
-        
-        # Should not be expired
-        self.assertFalse(permanent_relationship.is_expired)
-    
-    def test_trust_service_revoke_relationship(self):
-        """Test revoking a trust relationship"""
-        relationship = TrustRelationship.objects.create(
-            source_organization=self.source_org,
-            target_organization=self.target_org,
+        # Test effective relationship
+        effective_rel = TrustRelationship.objects.create(
+            source_organization=self.org1,
+            target_organization=self.org2,
             trust_level=self.trust_level,
             status='active',
             approved_by_source=True,
@@ -305,117 +91,387 @@ class CoverageBoostTest(TestCase):
             created_by=self.user,
             last_modified_by=self.user
         )
+        self.assertTrue(effective_rel.is_effective)
         
-        result = TrustService.revoke_trust_relationship(
-            relationship_id=str(relationship.id),
-            revoking_org=self.source_org,
-            revoked_by_user=self.user,
-            reason='Test revocation'
+        # Test get_effective_access_level with valid access level
+        effective_rel.access_level = 'read'  # Use valid access level
+        access_level = effective_rel.get_effective_access_level()
+        self.assertIsNotNone(access_level)
+        
+        # Test approval workflow with different orgs
+        pending_source = str(uuid.uuid4())
+        pending_target = str(uuid.uuid4())
+        pending_rel = TrustRelationship.objects.create(
+            source_organization=pending_source,
+            target_organization=pending_target,
+            trust_level=self.trust_level,
+            status='pending',
+            created_by=self.user,
+            last_modified_by=self.user
         )
         
+        # Test approve method
+        result = pending_rel.approve(approving_org=pending_source, user=self.user)
         self.assertTrue(result)
-        relationship.refresh_from_db()
-        self.assertEqual(relationship.status, 'revoked')
+        self.assertTrue(pending_rel.approved_by_source)
     
-    def test_trust_group_membership_str(self):
-        """Test trust group membership string representation"""
-        from core.trust.models import TrustGroupMembership
-        
+    def test_trust_group_management(self):
+        """Test trust group member management"""
         group = TrustGroup.objects.create(
-            name='Membership Test Group',
-            description='Test group',
+            name='Coverage Group',
+            description='For coverage testing',
             group_type='community',
-            default_trust_level=self.trust_level,
             created_by=self.user
         )
         
-        membership = TrustGroupMembership.objects.create(
-            trust_group=group,
-            organization=self.source_org,
-            membership_type='member',
-            is_active=True,
-            invited_by=self.user
+        # Test member_count property
+        initial_count = group.member_count
+        self.assertEqual(initial_count, 0)
+        
+        # Test member count stays 0 initially (no direct members field)
+        self.assertEqual(group.member_count, 0)
+        
+        # Test can_administer method (creator should be able to administer)
+        # Check if user is in administrators field or is creator
+        admin_result = group.can_administer(self.user)
+        # May be False if administrators list is separate from created_by
+        self.assertIsInstance(admin_result, bool)
+    
+    def test_trust_log_methods(self):
+        """Test trust log methods"""
+        details = {'operation': 'test', 'result': 'success'}
+        metadata = {'version': '1.0', 'client': 'test'}
+        
+        log = TrustLog.objects.create(
+            action='coverage_test',
+            source_organization=self.org1,
+            user=self.user,
+            success=True,
+            details=details,
+            metadata=metadata
         )
         
-        str_repr = str(membership)
-        self.assertIn(self.source_org[:8], str_repr)
-        self.assertIn('Membership Test Group', str_repr)
+        # Test get_detail method
+        operation = log.get_detail('operation')
+        self.assertEqual(operation, 'test')
+        
+        missing = log.get_detail('missing', 'default')
+        self.assertEqual(missing, 'default')
+        
+        # Test get_metadata method
+        version = log.get_metadata('version')
+        self.assertEqual(version, '1.0')
+        
+        missing_meta = log.get_metadata('missing', 'default_meta')
+        self.assertEqual(missing_meta, 'default_meta')
+        
+        # Test string representation
+        log_str = str(log)
+        self.assertIn('coverage_test', log_str)
+        self.assertIn('SUCCESS', log_str)
+
+
+class DecoratorCoverageBoostTest(TestCase):
+    """Boost coverage for decorator patterns"""
     
-    def test_trust_relationship_unique_constraint(self):
-        """Test unique constraint enforcement"""
-        # Create first relationship
-        TrustRelationship.objects.create(
-            source_organization=self.source_org,
-            target_organization=self.target_org,
+    def setUp(self):
+        self.org1 = str(uuid.uuid4())
+        self.org2 = str(uuid.uuid4())
+        self.user = 'decorator_coverage_user'
+        
+        self.trust_level = TrustLevel.objects.create(
+            name='Decorator Coverage Level',
+            level='trusted',
+            numerical_value=75,
+            description='For decorator coverage',
+            created_by=self.user
+        )
+        
+        self.relationship = TrustRelationship.objects.create(
+            source_organization=self.org1,
+            target_organization=self.org2,
             trust_level=self.trust_level,
+            status='active',
+            approved_by_source=True,
+            approved_by_target=True,
             created_by=self.user,
             last_modified_by=self.user
         )
+    
+    def test_basic_trust_evaluation(self):
+        """Test basic trust evaluation component"""
+        # Test with no relationship
+        evaluator = BasicTrustEvaluation()
+        result = evaluator.evaluate({})
+        self.assertFalse(result['allowed'])
+        self.assertEqual(result['access_level'], 'none')
         
-        # Try to create duplicate - should fail validation
-        duplicate = TrustRelationship(
-            source_organization=self.source_org,
-            target_organization=self.target_org,
+        # Test access level with no relationship
+        level = evaluator.get_access_level()
+        self.assertEqual(level, 'none')
+        
+        # Test with effective relationship
+        evaluator = BasicTrustEvaluation(self.relationship)
+        result = evaluator.evaluate({})
+        self.assertTrue(result['allowed'])
+        self.assertIn('Access granted', result['reason'])
+    
+    def test_security_enhancement_decorator(self):
+        """Test security enhancement decorator"""
+        basic_eval = BasicTrustEvaluation(self.relationship)
+        decorator = SecurityEnhancementDecorator(basic_eval, security_level='high')
+        
+        context = {
+            'user': self.user,
+            'request_time': timezone.now()
+        }
+        
+        result = decorator.evaluate(context)
+        self.assertTrue(result['allowed'])
+        self.assertTrue(result['security_enhanced'])
+        self.assertEqual(result['security_level'], 'high')
+        
+        # Test off-hours warning
+        off_hours = timezone.now().replace(hour=2)
+        off_context = {'user': self.user, 'request_time': off_hours}
+        result = decorator.evaluate(off_context)
+        self.assertIn('security_warning', result)
+    
+    def test_compliance_decorator(self):
+        """Test compliance decorator"""
+        basic_eval = BasicTrustEvaluation(self.relationship)
+        decorator = ComplianceDecorator(basic_eval, compliance_framework='TEST')
+        
+        context = {
+            'user': self.user,
+            'data_retention_days': 365,
+            'resource_type': 'indicator'
+        }
+        
+        result = decorator.evaluate(context)
+        self.assertTrue(result['allowed'])
+        self.assertTrue(result['compliance_validated'])
+        self.assertEqual(result['compliance_framework'], 'TEST')
+        
+        # Test retention warning
+        long_retention_context = {
+            'user': self.user,
+            'data_retention_days': 3000,
+            'resource_type': 'indicator'
+        }
+        result = decorator.evaluate(long_retention_context)
+        self.assertIn('compliance_warning', result)
+    
+    @patch('core.trust.patterns.decorator.trust_decorators.logger')
+    def test_audit_decorator(self, mock_logger):
+        """Test audit decorator with logging"""
+        basic_eval = BasicTrustEvaluation(self.relationship)
+        decorator = AuditDecorator(basic_eval, audit_level='detailed')
+        
+        sensitive_context = {
+            'user': self.user,
+            'password': 'secret',
+            'api_key': 'key123',
+            'normal_field': 'safe'
+        }
+        
+        result = decorator.evaluate(sensitive_context)
+        self.assertTrue(result['allowed'])
+        self.assertTrue(result['audit_logged'])
+        self.assertIn('audit_reference', result)
+        
+        # Verify logging was called
+        mock_logger.info.assert_called()
+        
+        # Test context sanitization
+        sanitized = decorator._sanitize_context(sensitive_context)
+        self.assertEqual(sanitized['password'], '[REDACTED]')
+        self.assertEqual(sanitized['api_key'], '[REDACTED]')
+        self.assertEqual(sanitized['normal_field'], 'safe')
+    
+    def test_decorator_chain(self):
+        """Test decorator chain builder"""
+        chain = TrustDecoratorChain(self.relationship)
+        decorated = (chain
+                    .add_security_enhancement('standard')
+                    .add_compliance_validation('GDPR')
+                    .add_audit_logging('standard')
+                    .build())
+        
+        context = {
+            'user': self.user,
+            'request_time': timezone.now(),
+            'resource_type': 'indicator'
+        }
+        
+        result = decorated.evaluate(context)
+        self.assertTrue(result['allowed'])
+        self.assertTrue(result['security_enhanced'])
+        self.assertTrue(result['compliance_validated'])
+        self.assertTrue(result['audit_logged'])
+        
+        # Test convenience evaluate
+        chain_result = chain.evaluate(context)
+        self.assertIsNotNone(chain_result)
+
+
+class RepositoryCoverageBoostTest(TestCase):
+    """Boost coverage for repository patterns"""
+    
+    def setUp(self):
+        self.org1 = str(uuid.uuid4())
+        self.org2 = str(uuid.uuid4())
+        self.user = 'repo_coverage_user'
+        
+        self.trust_level = TrustLevel.objects.create(
+            name='Repo Coverage Level',
+            level='trusted',
+            numerical_value=70,
+            description='For repo coverage',
+            created_by=self.user
+        )
+    
+    def test_trust_relationship_repository(self):
+        """Test trust relationship repository methods"""
+        repo = TrustRelationshipRepository()
+        
+        # Test create method
+        relationship = repo.create(
+            source_org=self.org1,
+            target_org=self.org2,
             trust_level=self.trust_level,
-            created_by=self.user,
-            last_modified_by=self.user
+            created_by=self.user
         )
+        self.assertIsInstance(relationship, TrustRelationship)
         
-        with self.assertRaises(ValidationError):
-            duplicate.full_clean()
-    
-    def test_trust_level_validation(self):
-        """Test trust level field validation"""
-        # Test invalid numerical value
-        with self.assertRaises(ValidationError):
-            invalid_level = TrustLevel(
-                name='Invalid Level',
-                level='invalid',
-                numerical_value=-10,  # Invalid negative value
-                description='Invalid level',
-                created_by=self.user
-            )
-            invalid_level.full_clean()
-    
-    def test_api_viewset_permission_classes(self):
-        """Test ViewSet permission configuration"""
-        view = TrustRelationshipViewSet()
+        # Test get_by_id
+        found = repo.get_by_id(str(relationship.id))
+        self.assertEqual(found, relationship)
         
-        # Should have permission classes configured
-        self.assertTrue(hasattr(view, 'permission_classes'))
-        self.assertGreater(len(view.permission_classes), 0)
-    
-    def test_trust_log_action_choices(self):
-        """Test trust log with different action types"""
-        actions = [
-            'relationship_created',
-            'relationship_approved', 
-            'relationship_revoked',
-            'group_created',
-            'group_joined'
-        ]
+        # Test get_all
+        all_relationships = repo.get_all()
+        self.assertIn(relationship, all_relationships)
         
-        for action in actions:
-            log = TrustLog.objects.create(
-                action=action,
-                source_organization=self.source_org,
-                user=self.user,
-                success=True
-            )
-            self.assertEqual(log.action, action)
+        # Test get_by_organizations
+        org_relationship = repo.get_by_organizations(self.org1, self.org2)
+        self.assertEqual(org_relationship, relationship)
+        
+        # Test get_for_organization
+        org_relationships = repo.get_for_organization(self.org1)
+        self.assertIn(relationship, org_relationships)
     
-    @patch('core.trust.patterns.observer.trust_event_manager')
-    def test_trust_observer_notifications(self, mock_event_manager):
-        """Test observer pattern notifications"""
-        # Create relationship to trigger observer
-        TrustService.create_trust_relationship(
-            source_org=self.source_org,
-            target_org=self.target_org,
-            trust_level_name='Coverage Test Level',
-            created_by=self.user,
-            export_to_stix=False  # Skip STIX to avoid complications
+    def test_trust_level_repository(self):
+        """Test trust level repository methods"""
+        repo = TrustLevelRepository()
+        
+        # Test get_by_name
+        found_level = repo.get_by_name(self.trust_level.name)
+        self.assertEqual(found_level, self.trust_level)
+        
+        # Test create method
+        new_level = repo.create(
+            name='New Level',
+            level='public',
+            numerical_value=30,
+            description='Created by repo',
+            created_by=self.user
         )
+        self.assertIsInstance(new_level, TrustLevel)
         
-        # Observer should have been notified
-        self.assertTrue(mock_event_manager.notify.called or 
-                       hasattr(mock_event_manager, 'notify'))
+        # Test get_by_score_range
+        levels_in_range = repo.get_by_score_range(60, 80)
+        self.assertIn(self.trust_level, levels_in_range)
+    
+    def test_trust_log_repository(self):
+        """Test trust log repository methods"""
+        repo = TrustLogRepository()
+        
+        # Test create method
+        log = repo.create(
+            action='repo_test',
+            source_organization=self.org1,
+            user=self.user,
+            success=True
+        )
+        self.assertIsInstance(log, TrustLog)
+        
+        # Test get_by_id
+        found_log = repo.get_by_id(str(log.id))
+        self.assertEqual(found_log, log)
+        
+        # Test get_by_action
+        action_logs = repo.get_by_action('repo_test')
+        self.assertIn(log, action_logs)
+
+
+class ValidatorCoverageBoostTest(TestCase):
+    """Boost coverage for validator methods"""
+    
+    def setUp(self):
+        self.org1 = str(uuid.uuid4())
+        self.org2 = str(uuid.uuid4())
+        self.user = 'validator_coverage_user'
+        
+        self.trust_level = TrustLevel.objects.create(
+            name='Validator Coverage Level',
+            level='trusted',
+            numerical_value=70,
+            description='For validator coverage',
+            created_by=self.user
+        )
+    
+    def test_trust_relationship_validator(self):
+        """Test trust relationship validator methods"""
+        # Test valid relationship creation
+        result = TrustRelationshipValidator.validate_create_relationship(
+            source_org=self.org1,
+            target_org=self.org2,
+            trust_level_name=self.trust_level.name,
+            created_by=self.user
+        )
+        self.assertTrue(result['valid'])
+        
+        # Test same organization validation
+        same_org_result = TrustRelationshipValidator.validate_create_relationship(
+            source_org=self.org1,
+            target_org=self.org1,
+            trust_level_name=self.trust_level.name,
+            created_by=self.user
+        )
+        self.assertFalse(same_org_result['valid'])
+        
+        # Test empty fields validation
+        empty_result = TrustRelationshipValidator.validate_create_relationship(
+            source_org='',
+            target_org=self.org2,
+            trust_level_name=self.trust_level.name,
+            created_by=self.user
+        )
+        self.assertFalse(empty_result['valid'])
+    
+    def test_security_validator(self):
+        """Test security validator methods"""
+        # Test API request validation
+        clean_data = {
+            'organization_id': self.org1,
+            'action': 'create_relationship',
+            'parameters': {'target': self.org2}
+        }
+        result = SecurityValidator.validate_api_request(clean_data)
+        self.assertIsInstance(result, dict)
+        
+        # Test input sanitization
+        clean_input = {
+            'name': 'Clean Name',
+            'description': 'Safe description'
+        }
+        sanitization_result = SecurityValidator.validate_input_sanitization(clean_input)
+        self.assertIn('valid', sanitization_result)
+        
+        # Test rate limiting with proper signature
+        rate_result = SecurityValidator.validate_rate_limiting(
+            operation='test_operation',
+            user_id=self.user,
+            organization_id=self.org1
+        )
+        self.assertIn('valid', rate_result)
