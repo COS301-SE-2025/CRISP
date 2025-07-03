@@ -31,27 +31,26 @@ class TestIPAddressStrategy(unittest.TestCase):
         """Test all anonymization levels for IPv4 addresses"""
         ipv4 = "192.168.1.100"
         
-        self.assertEqual(
-            self.strategy.anonymize(ipv4, AnonymizationLevel.NONE), 
-            ipv4
-        )
+        print(f"\n=== Testing IPv4 anonymization for: {ipv4} ===")
         
-        self.assertEqual(
-            self.strategy.anonymize(ipv4, AnonymizationLevel.LOW), 
-            "192.168.1.x"
-        )
+        none_result = self.strategy.anonymize(ipv4, AnonymizationLevel.NONE)
+        print(f"NONE level:   {ipv4} → {none_result}")
+        self.assertEqual(none_result, ipv4)
         
-        self.assertEqual(
-            self.strategy.anonymize(ipv4, AnonymizationLevel.MEDIUM), 
-            "192.168.x.x"
-        )
+        low_result = self.strategy.anonymize(ipv4, AnonymizationLevel.LOW)
+        print(f"LOW level:    {ipv4} → {low_result}")
+        self.assertEqual(low_result, "192.168.1.x")
         
-        self.assertEqual(
-            self.strategy.anonymize(ipv4, AnonymizationLevel.HIGH), 
-            "192.x.x.x"
-        )
+        medium_result = self.strategy.anonymize(ipv4, AnonymizationLevel.MEDIUM)
+        print(f"MEDIUM level: {ipv4} → {medium_result}")
+        self.assertEqual(medium_result, "192.168.x.x")
+        
+        high_result = self.strategy.anonymize(ipv4, AnonymizationLevel.HIGH)
+        print(f"HIGH level:   {ipv4} → {high_result}")
+        self.assertEqual(high_result, "192.x.x.x")
         
         full_anon = self.strategy.anonymize(ipv4, AnonymizationLevel.FULL)
+        print(f"FULL level:   {ipv4} → {full_anon}")
         self.assertTrue(full_anon.startswith("anon-ipv4-"))
         self.assertTrue(re.match(r"anon-ipv4-[a-f0-9]{8}", full_anon))
 
@@ -59,45 +58,54 @@ class TestIPAddressStrategy(unittest.TestCase):
         """Test all anonymization levels for IPv6 addresses"""
         ipv6 = "2001:db8::1"
         
-        self.assertEqual(
-            self.strategy.anonymize(ipv6, AnonymizationLevel.NONE), 
-            ipv6
-        )
+        print(f"\n=== Testing IPv6 anonymization for: {ipv6} ===")
+        
+        none_result = self.strategy.anonymize(ipv6, AnonymizationLevel.NONE)
+        print(f"NONE level:   {ipv6} → {none_result}")
+        self.assertEqual(none_result, ipv6)
         
         # LOW: Last 16 bits anonymized
         low_anon = self.strategy.anonymize(ipv6, AnonymizationLevel.LOW)
+        print(f"LOW level:    {ipv6} → {low_anon}")
         self.assertTrue("xxxx" in low_anon)
         
         # MEDIUM: Last 32 bits anonymized
         medium_anon = self.strategy.anonymize(ipv6, AnonymizationLevel.MEDIUM)
+        print(f"MEDIUM level: {ipv6} → {medium_anon}")
         self.assertTrue("xxxx" in medium_anon)
         
         # HIGH: Only first 64 bits preserved
         high_anon = self.strategy.anonymize(ipv6, AnonymizationLevel.HIGH)
+        print(f"HIGH level:   {ipv6} → {high_anon}")
         self.assertTrue("xxxx" in high_anon)
         
         # FULL: Complete anonymization
         full_anon = self.strategy.anonymize(ipv6, AnonymizationLevel.FULL)
+        print(f"FULL level:   {ipv6} → {full_anon}")
         self.assertTrue(full_anon.startswith("anon-ipv6-"))
 
     def test_special_ip_addresses(self):
         """Test anonymization of special IP addresses"""
         special_ips = [
-            "127.0.0.1",         # Loopback
-            "0.0.0.0",           # Unspecified
-            "255.255.255.255",   # Broadcast
-            "224.0.0.1",         # Multicast
-            "169.254.1.1",       # Link-local
-            "::1",               # IPv6 loopback
-            "fe80::1",           # IPv6 link-local
-            "ff02::1"            # IPv6 multicast
+            ("127.0.0.1", "Loopback"),
+            ("0.0.0.0", "Unspecified"),
+            ("255.255.255.255", "Broadcast"),
+            ("224.0.0.1", "Multicast"),
+            ("169.254.1.1", "Link-local"),
+            ("::1", "IPv6 loopback"),
+            ("fe80::1", "IPv6 link-local"),
+            ("ff02::1", "IPv6 multicast")
         ]
         
-        for ip in special_ips:
+        print(f"\n=== Testing special IP addresses ===")
+        
+        for ip, description in special_ips:
+            print(f"\nTesting {description}: {ip}")
             # All special IPs should be anonymizable without errors
             for level in [AnonymizationLevel.LOW, AnonymizationLevel.MEDIUM, 
                          AnonymizationLevel.HIGH, AnonymizationLevel.FULL]:
                 result = self.strategy.anonymize(ip, level)
+                print(f"  {level.name:6}: {ip} → {result}")
                 self.assertTrue(isinstance(result, str))
                 self.assertTrue(len(result) > 0)
     
@@ -132,31 +140,30 @@ class TestDomainStrategy(unittest.TestCase):
         """Test all anonymization levels for domain names"""
         domain = "subdomain.example.com"
         
-        self.assertEqual(
-            self.strategy.anonymize(domain, AnonymizationLevel.NONE), 
-            domain
-        )
+        print(f"\n=== Testing domain anonymization for: {domain} ===")
+        
+        none_result = self.strategy.anonymize(domain, AnonymizationLevel.NONE)
+        print(f"NONE level:   {domain} → {none_result}")
+        self.assertEqual(none_result, domain)
         
         # LOW: Keep TLD and one level up
-        self.assertEqual(
-            self.strategy.anonymize(domain, AnonymizationLevel.LOW), 
-            "*.example.com"
-        )
+        low_result = self.strategy.anonymize(domain, AnonymizationLevel.LOW)
+        print(f"LOW level:    {domain} → {low_result}")
+        self.assertEqual(low_result, "*.example.com")
         
         # MEDIUM: Keep only TLD
-        self.assertEqual(
-            self.strategy.anonymize(domain, AnonymizationLevel.MEDIUM), 
-            "*.com"
-        )
+        medium_result = self.strategy.anonymize(domain, AnonymizationLevel.MEDIUM)
+        print(f"MEDIUM level: {domain} → {medium_result}")
+        self.assertEqual(medium_result, "*.com")
         
         # HIGH: Keep only category
-        self.assertEqual(
-            self.strategy.anonymize(domain, AnonymizationLevel.HIGH), 
-            "*.commercial"
-        )
+        high_result = self.strategy.anonymize(domain, AnonymizationLevel.HIGH)
+        print(f"HIGH level:   {domain} → {high_result}")
+        self.assertEqual(high_result, "*.commercial")
         
         # FULL: Complete anonymization
         full_anon = self.strategy.anonymize(domain, AnonymizationLevel.FULL)
+        print(f"FULL level:   {domain} → {full_anon}")
         self.assertTrue(full_anon.startswith("anon-domain-"))
         self.assertTrue(full_anon.endswith(".example"))
 
@@ -176,8 +183,11 @@ class TestDomainStrategy(unittest.TestCase):
             ("example.xyz", "*.other")
         ]
         
+        print(f"\n=== Testing domain categorization (HIGH level) ===")
+        
         for domain, expected in tld_categories:
             result = self.strategy.anonymize(domain, AnonymizationLevel.HIGH)
+            print(f"{domain:20} → {result:15} (expected: {expected})")
             self.assertEqual(result, expected)
 
     def test_unusual_domains(self):
@@ -211,27 +221,32 @@ class TestEmailStrategy(unittest.TestCase):
         """Test all anonymization levels for email addresses"""
         email = "user@example.com"
         
-        self.assertEqual(
-            self.strategy.anonymize(email, AnonymizationLevel.NONE), 
-            email
-        )
+        print(f"\n=== Testing email anonymization for: {email} ===")
+        
+        none_result = self.strategy.anonymize(email, AnonymizationLevel.NONE)
+        print(f"NONE level:   {email} → {none_result}")
+        self.assertEqual(none_result, email)
         
         # LOW: Anonymize local part but keep domain
         low_anon = self.strategy.anonymize(email, AnonymizationLevel.LOW)
+        print(f"LOW level:    {email} → {low_anon}")
         self.assertTrue(low_anon.startswith("user-"))
         self.assertTrue(low_anon.endswith("@example.com"))
         
         # MEDIUM: Anonymize local part and partially anonymize domain
         medium_anon = self.strategy.anonymize(email, AnonymizationLevel.MEDIUM)
+        print(f"MEDIUM level: {email} → {medium_anon}")
         self.assertTrue(medium_anon.startswith("user-"))
         self.assertTrue("@*.example.com" in medium_anon)
         
         # HIGH: Keep only domain category
         high_anon = self.strategy.anonymize(email, AnonymizationLevel.HIGH)
+        print(f"HIGH level:   {email} → {high_anon}")
         self.assertEqual(high_anon, "user@*.commercial")
         
         # FULL: Complete anonymization
         full_anon = self.strategy.anonymize(email, AnonymizationLevel.FULL)
+        print(f"FULL level:   {email} → {full_anon}")
         self.assertTrue(full_anon.startswith("anon-user-"))
         self.assertTrue(full_anon.endswith("@example.com"))
 
@@ -289,27 +304,32 @@ class TestURLStrategy(unittest.TestCase):
         """Test all anonymization levels for URLs"""
         url = "https://example.com/path/to/resource?query=value"
         
-        self.assertEqual(
-            self.strategy.anonymize(url, AnonymizationLevel.NONE), 
-            url
-        )
+        print(f"\n=== Testing URL anonymization for: {url} ===")
+        
+        none_result = self.strategy.anonymize(url, AnonymizationLevel.NONE)
+        print(f"NONE level:   {url} → {none_result}")
+        self.assertEqual(none_result, url)
         
         # LOW: Keep protocol and domain, remove path
         low_anon = self.strategy.anonymize(url, AnonymizationLevel.LOW)
+        print(f"LOW level:    {url} → {low_anon}")
         self.assertTrue(low_anon.startswith("https://"))
         self.assertTrue("*.example.com" in low_anon)
         self.assertTrue("[path-removed]" in low_anon)
         
         # MEDIUM: Keep protocol and TLD
         medium_anon = self.strategy.anonymize(url, AnonymizationLevel.MEDIUM)
+        print(f"MEDIUM level: {url} → {medium_anon}")
         self.assertEqual(medium_anon, "https://*.com")
         
         # HIGH: Keep protocol and category
         high_anon = self.strategy.anonymize(url, AnonymizationLevel.HIGH)
+        print(f"HIGH level:   {url} → {high_anon}")
         self.assertEqual(high_anon, "https://*.commercial")
         
         # FULL: Complete anonymization
         full_anon = self.strategy.anonymize(url, AnonymizationLevel.FULL)
+        print(f"FULL level:   {url} → {full_anon}")
         self.assertTrue(full_anon.startswith("https://anon-url-"))
         self.assertTrue(full_anon.endswith(".example"))
 
