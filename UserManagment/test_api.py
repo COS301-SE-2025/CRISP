@@ -20,13 +20,13 @@ class APITester:
         self.session = requests.Session()
         
     def print_success(self, message):
-        print(f"✅ {message}")
+        print(f"\033[92m✅ {message}\033[0m")  # Green text
         
     def print_error(self, message):
-        print(f"❌ {message}")
+        print(f"\033[91m❌ {message}\033[0m")  # Red text
         
     def print_info(self, message):
-        print(f"ℹ️  {message}")
+        print(f"\033[94mℹ️  {message}\033[0m")  # Blue text
         
     def test_login(self, username="admin", password="AdminPassword123!"):
         """Test user login"""
@@ -204,8 +204,6 @@ class APITester:
                         self.print_error(f"Rate limiting not working: got {response.status_code} instead of 429")
                         return False
             
-            # Restore headers
-            self.session.headers.update(temp_headers)
             return False
             
         except Exception as e:
@@ -236,7 +234,7 @@ class APITester:
             return False
 
 def main():
-    print("🧪 CRISP User Management API Test Suite")
+    print("\n\033[1mCRISP User Management API Test Suite\033[0m")
     print("=" * 50)
     
     tester = APITester()
@@ -264,13 +262,13 @@ def main():
         except Exception as e:
             tester.print_error(f"Test {test_name} crashed: {e}")
     
-    print(f"\n📊 Test Results: {passed}/{total} tests passed")
+    print(f"\n\033[1mTest Results: {passed}/{total} tests passed\033[0m")
     
     if passed == total:
-        print("🎉 All tests passed! The API is working correctly.")
+        print("\033[92m🎉 All tests passed! The API is working correctly.\033[0m")
         return 0
     else:
-        print("⚠️  Some tests failed. Check the Django server logs for more details.")
+        print("\033[91m⚠️  Some tests failed. Check the Django server logs for more details.\033[0m")
         return 1
 
 if __name__ == "__main__":

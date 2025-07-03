@@ -2,7 +2,7 @@
 
 # CRISP User Management Quick Start Script
 
-echo "🚀 CRISP User Management Quick Start"
+echo "CRISP User Management Quick Start"
 echo "====================================="
 
 # Colors for output
@@ -13,7 +13,7 @@ NC='\033[0m' # No Color
 
 # Function to print colored output
 print_status() {
-    echo -e "${GREEN}✅ $1${NC}"
+    echo -e "${GREEN}$1${NC}"
 }
 
 print_warning() {
@@ -21,7 +21,7 @@ print_warning() {
 }
 
 print_error() {
-    echo -e "${RED}❌ $1${NC}"
+    echo -e "${RED}$1${NC}"
 }
 
 # Check if Python is installed
@@ -168,4 +168,4 @@ echo ""
 echo "5. Audit users:"
 echo "   python manage.py audit_users --security-focus"
 echo ""
-print_status "Ready to go! 🚀"
+print_status "Ready to go!"

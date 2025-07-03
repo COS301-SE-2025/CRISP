@@ -37,7 +37,7 @@ class AdminFunctionalityTester:
         
     def setup_test_environment(self):
         """Setup test environment with system admin"""
-        print("🔧 Setting up test environment...")
+        print("Setting up test environment...")
         
         # Create test organization
         self.test_organization, created = Organization.objects.get_or_create(
@@ -50,7 +50,7 @@ class AdminFunctionalityTester:
         )
         if created:
             self.created_orgs.append(self.test_organization)
-            print(f"   ✅ Created test organization: {self.test_organization.name}")
+            print(f"   Created test organization: {self.test_organization.name}")
         else:
             print(f"   ℹ️  Using existing organization: {self.test_organization.name}")
         
@@ -71,9 +71,9 @@ class AdminFunctionalityTester:
                 is_superuser=True
             )
             self.created_users.append(self.system_admin)
-            print(f"   ✅ Created system admin: {self.system_admin.username}")
+            print(f"   Created system admin: {self.system_admin.username}")
         
-        print("   ✅ Test environment setup completed\n")
+        print("   Test environment setup completed\n")
     
     def test_admin_login(self):
         """Test admin login functionality"""
@@ -86,18 +86,18 @@ class AdminFunctionalityTester:
         )
         
         if login_successful:
-            print("   ✅ Admin login successful")
+            print("   Admin login successful")
             
             # Test admin interface access
             response = self.client.get('/admin/')
             if response.status_code == 200:
-                print("   ✅ Admin interface accessible")
+                print("   Admin interface accessible")
                 return True
             else:
-                print(f"   ❌ Admin interface not accessible (status: {response.status_code})")
+                print(f"   Admin interface not accessible (status: {response.status_code})")
                 return False
         else:
-            print("   ❌ Admin login failed")
+            print("   Admin login failed")
             return False
     
     def test_organization_admin_interface(self):
@@ -107,17 +107,17 @@ class AdminFunctionalityTester:
         # Test organization list view
         response = self.client.get('/admin/UserManagement/organization/')
         if response.status_code == 200:
-            print("   ✅ Organization list view accessible")
+            print("   Organization list view accessible")
         else:
-            print(f"   ❌ Organization list view failed (status: {response.status_code})")
+            print(f"   Organization list view failed (status: {response.status_code})")
             return False
         
         # Test organization creation form
         response = self.client.get('/admin/UserManagement/organization/add/')
         if response.status_code == 200:
-            print("   ✅ Organization creation form accessible")
+            print("   Organization creation form accessible")
         else:
-            print(f"   ❌ Organization creation form failed (status: {response.status_code})")
+            print(f"   Organization creation form failed (status: {response.status_code})")
             return False
         
         # Test creating organization through admin
@@ -130,24 +130,24 @@ class AdminFunctionalityTester:
         
         response = self.client.post('/admin/UserManagement/organization/add/', org_data)
         if response.status_code == 302:  # Redirect after successful creation
-            print("   ✅ Organization creation through admin successful")
+            print("   Organization creation through admin successful")
             
             # Verify organization was created
             created_org = Organization.objects.filter(name='Admin Created Organization').first()
             if created_org:
                 self.created_orgs.append(created_org)
-                print(f"   ✅ Verified organization created: {created_org.name}")
+                print(f"   Verified organization created: {created_org.name}")
                 return True
             else:
-                print("   ❌ Organization creation verification failed")
+                print("   Organization creation verification failed")
                 return False
         else:
-            print(f"   ❌ Organization creation failed (status: {response.status_code})")
+            print(f"   Organization creation failed (status: {response.status_code})")
             return False
     
     def test_user_creation_all_roles(self):
         """Test creating users with all role types through admin"""
-        print("👥 Testing user creation for all role types...")
+        print("Testing user creation for all role types...")
         
         # Define all user roles to test
         user_roles = [
@@ -195,24 +195,24 @@ class AdminFunctionalityTester:
                 created_user = CustomUser.objects.filter(username=f'test_{role}_user').first()
                 if created_user and created_user.role == role:
                     self.created_users.append(created_user)
-                    print(f"   ✅ {role} user created successfully: {created_user.username}")
+                    print(f"   {role} user created successfully: {created_user.username}")
                     success_count += 1
                 else:
-                    print(f"   ❌ {role} user creation verification failed")
+                    print(f"   {role} user creation verification failed")
             else:
-                print(f"   ❌ {role} user creation failed (status: {response.status_code})")
+                print(f"   {role} user creation failed (status: {response.status_code})")
                 # Print form errors for debugging
                 if hasattr(response, 'context') and response.context and 'form' in response.context:
                     form = response.context['form']
                     if hasattr(form, 'errors') and form.errors:
                         print(f"      Form errors: {form.errors}")
         
-        print(f"   📊 User creation summary: {success_count}/{len(user_roles)} successful")
+        print(f"   User creation summary: {success_count}/{len(user_roles)} successful")
         return success_count == len(user_roles)
     
     def test_admin_model_registration(self):
         """Test that all models are properly registered in admin"""
-        print("📋 Testing admin model registration...")
+        print("Testing admin model registration...")
         
         # Test that all expected models are accessible
         models_to_test = [
@@ -228,12 +228,12 @@ class AdminFunctionalityTester:
         for model_url, model_name in models_to_test:
             response = self.client.get(f'/admin/UserManagement/{model_url}/')
             if response.status_code == 200:
-                print(f"   ✅ {model_name} admin interface accessible")
+                print(f"   {model_name} admin interface accessible")
                 success_count += 1
             else:
-                print(f"   ❌ {model_name} admin interface failed (status: {response.status_code})")
+                print(f"   {model_name} admin interface failed (status: {response.status_code})")
         
-        print(f"   📊 Model registration summary: {success_count}/{len(models_to_test)} accessible")
+        print(f"   Model registration summary: {success_count}/{len(models_to_test)} accessible")
         return success_count == len(models_to_test)
     
     def test_user_management_features(self):
@@ -241,16 +241,16 @@ class AdminFunctionalityTester:
         print("⚙️ Testing user management features...")
         
         if not self.created_users:
-            print("   ⚠️  No test users available for management testing")
+            print("    No test users available for management testing")
             return False
         
         # Test user editing
         test_user = self.created_users[0]
         response = self.client.get(f'/admin/UserManagement/customuser/{test_user.id}/change/')
         if response.status_code == 200:
-            print("   ✅ User edit form accessible")
+            print("   User edit form accessible")
         else:
-            print(f"   ❌ User edit form failed (status: {response.status_code})")
+            print(f"   User edit form failed (status: {response.status_code})")
             return False
         
         # Test user deactivation
@@ -269,19 +269,19 @@ class AdminFunctionalityTester:
         if response.status_code == 302:
             test_user.refresh_from_db()
             if not test_user.is_active:
-                print("   ✅ User deactivation successful")
+                print("   User deactivation successful")
             else:
-                print("   ❌ User deactivation verification failed")
+                print("   User deactivation verification failed")
                 return False
         else:
-            print(f"   ❌ User deactivation failed (status: {response.status_code})")
+            print(f"   User deactivation failed (status: {response.status_code})")
             return False
         
         return True
     
     def test_authentication_log_viewing(self):
         """Test authentication log viewing"""
-        print("📊 Testing authentication log viewing...")
+        print("Testing authentication log viewing...")
         
         # Create test authentication log
         log_entry = AuthenticationLog.log_authentication_event(
@@ -296,18 +296,18 @@ class AdminFunctionalityTester:
         # Test log list view
         response = self.client.get('/admin/UserManagement/authenticationlog/')
         if response.status_code == 200:
-            print("   ✅ Authentication log list accessible")
+            print("   Authentication log list accessible")
         else:
-            print(f"   ❌ Authentication log list failed (status: {response.status_code})")
+            print(f"   Authentication log list failed (status: {response.status_code})")
             return False
         
         # Test log detail view
         response = self.client.get(f'/admin/UserManagement/authenticationlog/{log_entry.id}/change/')
         if response.status_code == 200:
-            print("   ✅ Authentication log detail accessible")
+            print("   Authentication log detail accessible")
             return True
         else:
-            print(f"   ❌ Authentication log detail failed (status: {response.status_code})")
+            print(f"   Authentication log detail failed (status: {response.status_code})")
             return False
     
     def cleanup_test_data(self):
@@ -318,19 +318,19 @@ class AdminFunctionalityTester:
         for user in self.created_users:
             if user.username != 'admin_test_user':  # Keep the admin for future tests
                 user.delete()
-                print(f"   ✅ Deleted user: {user.username}")
+                print(f"   Deleted user: {user.username}")
         
         # Delete created organizations (except the main test org)
         for org in self.created_orgs:
             if org.name != 'Admin Test Organization':
                 org.delete()
-                print(f"   ✅ Deleted organization: {org.name}")
+                print(f"   Deleted organization: {org.name}")
         
-        print("   ✅ Cleanup completed\n")
+        print("   Cleanup completed\n")
     
     def run_comprehensive_test(self):
         """Run comprehensive admin functionality test"""
-        print("🚀 CRISP User Management - Django Admin Functionality Test")
+        print("CRISP User Management - Django Admin Functionality Test")
         print("=" * 60)
         
         test_results = []
@@ -348,7 +348,7 @@ class AdminFunctionalityTester:
             test_results.append(("Authentication Log Viewing", self.test_authentication_log_viewing()))
             
         except Exception as e:
-            print(f"❌ Test execution failed with error: {str(e)}")
+            print(f"Test execution failed with error: {str(e)}")
             test_results.append(("Test Execution", False))
         
         finally:
@@ -356,17 +356,17 @@ class AdminFunctionalityTester:
             try:
                 self.cleanup_test_data()
             except Exception as e:
-                print(f"⚠️  Cleanup warning: {str(e)}")
+                print(f" Cleanup warning: {str(e)}")
         
         # Report results
-        print("📊 TEST RESULTS SUMMARY")
+        print("TEST RESULTS SUMMARY")
         print("=" * 60)
         
         passed = 0
         total = len(test_results)
         
         for test_name, result in test_results:
-            status = "✅ PASSED" if result else "❌ FAILED"
+            status = "PASSED" if result else "FAILED"
             print(f"{test_name:.<40} {status}")
             if result:
                 passed += 1
@@ -376,13 +376,13 @@ class AdminFunctionalityTester:
         print(f"Overall Success Rate: {passed}/{total} ({success_rate:.1f}%)")
         
         if passed == total:
-            print("\n🎉 ALL TESTS PASSED! Django admin interface is fully functional.")
-            print("✅ Organizations can be created by system admins")
-            print("✅ All user role types can be created and managed")
-            print("✅ Admin interface is properly configured")
+            print("\nALL TESTS PASSED! Django admin interface is fully functional.")
+            print("Organizations can be created by system admins")
+            print("All user role types can be created and managed")
+            print("Admin interface is properly configured")
             return True
         else:
-            print(f"\n⚠️  {total - passed} test(s) failed. Please review the output above.")
+            print(f"\n {total - passed} test(s) failed. Please review the output above.")
             return False
 
 

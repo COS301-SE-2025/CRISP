@@ -25,22 +25,22 @@ def test_url_configuration():
         
         # Check that main URLs exist
         if urlpatterns:
-            print("✅ Main URL patterns configured")
+            print("Main URL patterns configured")
         else:
-            print("❌ No main URL patterns found")
+            print("No main URL patterns found")
             return False
             
         # Check that UserManagement URLs exist
         if user_urlpatterns:
-            print("✅ UserManagement URL patterns configured")
+            print("UserManagement URL patterns configured")
         else:
-            print("❌ No UserManagement URL patterns found")
+            print("No UserManagement URL patterns found")
             return False
             
         return True
         
     except Exception as e:
-        print(f"❌ URL configuration error: {e}")
+        print(f"URL configuration error: {e}")
         return False
 
 def test_authentication_setup():
@@ -53,23 +53,23 @@ def test_authentication_setup():
         
         # Check that CustomUser model is properly configured
         if CustomUser._meta.get_field('username'):
-            print("✅ CustomUser model configured")
+            print("CustomUser model configured")
         else:
-            print("❌ CustomUser model missing username field")
+            print("CustomUser model missing username field")
             return False
             
         # Check authentication backends (Django default is fine)
         auth_backends = getattr(settings, 'AUTHENTICATION_BACKENDS', ['django.contrib.auth.backends.ModelBackend'])
         if auth_backends:
-            print("✅ Authentication backends configured")
+            print("Authentication backends configured")
         else:
-            print("❌ No authentication backends configured")
+            print("No authentication backends configured")
             return False
             
         return True
         
     except Exception as e:
-        print(f"❌ Authentication setup error: {e}")
+        print(f"Authentication setup error: {e}")
         return False
 
 def test_admin_configuration():
@@ -82,21 +82,21 @@ def test_admin_configuration():
         
         # Check that admin classes are registered
         if CustomUserAdmin:
-            print("✅ CustomUserAdmin configured")
+            print("CustomUserAdmin configured")
         else:
-            print("❌ CustomUserAdmin not found")
+            print("CustomUserAdmin not found")
             return False
             
         if OrganizationAdmin:
-            print("✅ OrganizationAdmin configured")
+            print("OrganizationAdmin configured")
         else:
-            print("❌ OrganizationAdmin not found")
+            print("OrganizationAdmin not found")
             return False
             
         return True
         
     except Exception as e:
-        print(f"❌ Admin configuration error: {e}")
+        print(f"Admin configuration error: {e}")
         return False
 
 def test_security_settings():
@@ -115,15 +115,15 @@ def test_security_settings():
         passed = 0
         for setting_name, is_configured in security_checks:
             if is_configured:
-                print(f"✅ {setting_name} configured")
+                print(f"{setting_name} configured")
                 passed += 1
             else:
-                print(f"⚠️  {setting_name} not configured")
+                print(f" {setting_name} not configured")
         
         return passed >= 2  # At least 2 security settings should be configured
         
     except Exception as e:
-        print(f"❌ Security settings error: {e}")
+        print(f"Security settings error: {e}")
         return False
 
 def main():
@@ -144,13 +144,13 @@ def main():
         if test():
             passed += 1
     
-    print(f"\n📊 Test Results: {passed}/{total} passed")
+    print(f"\nTest Results: {passed}/{total} passed")
     
     if passed == total:
-        print("🎉 All offline tests passed!")
+        print("All offline tests passed!")
         return 0
     else:
-        print("⚠️  Some offline tests failed")
+        print(" Some offline tests failed")
         return 1
 
 if __name__ == "__main__":

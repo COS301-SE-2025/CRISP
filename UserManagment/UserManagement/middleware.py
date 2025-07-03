@@ -95,10 +95,10 @@ class RateLimitMiddleware(MiddlewareMixin):
     def _is_rate_limited(self, key, limit, window):
         """Check if rate limit is exceeded"""
         current_time = int(time.time())
-        window_start = current_time - window
+        time_window = current_time // window
         
         # Get current count
-        cache_key = f'ratelimit:{key}:{window_start // window}'
+        cache_key = f'ratelimit:{key}:{time_window}'
         current_count = cache.get(cache_key, 0)
         
         if current_count >= limit:

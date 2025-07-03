@@ -18,7 +18,7 @@ from django.test import RequestFactory
 def test_role_updates():
     """Test that all role updates are working correctly"""
     
-    print("🔍 Testing Role Structure Updates")
+    print("Testing Role Structure Updates")
     print("=" * 50)
     
     # Test 1: Check USER_ROLE_CHOICES
@@ -30,9 +30,9 @@ def test_role_updates():
     print(f"   Actual roles: {actual_roles}")
     
     if set(actual_roles) == set(expected_roles):
-        print("   ✅ USER_ROLE_CHOICES correctly updated")
+        print("   USER_ROLE_CHOICES correctly updated")
     else:
-        print("   ❌ USER_ROLE_CHOICES not updated correctly")
+        print("   USER_ROLE_CHOICES not updated correctly")
         return False
     
     # Test 2: Create test organization
@@ -44,7 +44,7 @@ def test_role_updates():
             'domain': 'roletest.com'
         }
     )
-    print("   ✅ Test organization created")
+    print("   Test organization created")
     
     # Test 3: Create users with new roles
     print("\n3. Testing user creation with new roles...")
@@ -65,7 +65,7 @@ def test_role_updates():
             is_verified=True
         )
         test_users['BlueVisionAdmin'] = blue_admin
-        print("   ✅ BlueVisionAdmin user created")
+        print("   BlueVisionAdmin user created")
         
         # Create viewer
         viewer = UserFactory.create_user('viewer', {
@@ -75,7 +75,7 @@ def test_role_updates():
             'organization': org
         }, blue_admin)
         test_users['viewer'] = viewer
-        print("   ✅ Viewer user created")
+        print("   Viewer user created")
         
         # Create publisher
         publisher = UserFactory.create_user('publisher', {
@@ -87,10 +87,10 @@ def test_role_updates():
             'organization': org
         }, blue_admin)
         test_users['publisher'] = publisher
-        print("   ✅ Publisher user created")
+        print("   Publisher user created")
         
     except Exception as e:
-        print(f"   ❌ Error creating users: {e}")
+        print(f"   Error creating users: {e}")
         return False
     
     # Test 4: Test permissions
@@ -104,16 +104,16 @@ def test_role_updates():
     
     request.user = test_users['BlueVisionAdmin']
     if is_system_admin.has_permission(request, None):
-        print("   ✅ BlueVisionAdmin passes IsSystemAdmin check")
+        print("   BlueVisionAdmin passes IsSystemAdmin check")
     else:
-        print("   ❌ BlueVisionAdmin fails IsSystemAdmin check")
+        print("   BlueVisionAdmin fails IsSystemAdmin check")
         return False
     
     request.user = test_users['publisher']
     if not is_system_admin.has_permission(request, None):
-        print("   ✅ Publisher correctly fails IsSystemAdmin check")
+        print("   Publisher correctly fails IsSystemAdmin check")
     else:
-        print("   ❌ Publisher incorrectly passes IsSystemAdmin check")
+        print("   Publisher incorrectly passes IsSystemAdmin check")
         return False
     
     # Test IsOrganizationAdmin
@@ -121,9 +121,9 @@ def test_role_updates():
     
     request.user = test_users['BlueVisionAdmin']
     if is_org_admin.has_permission(request, None):
-        print("   ✅ BlueVisionAdmin passes IsOrganizationAdmin check")
+        print("   BlueVisionAdmin passes IsOrganizationAdmin check")
     else:
-        print("   ❌ BlueVisionAdmin fails IsOrganizationAdmin check")
+        print("   BlueVisionAdmin fails IsOrganizationAdmin check")
         return False
     
     # Test IsPublisher
@@ -135,16 +135,16 @@ def test_role_updates():
     
     request.user = test_users['publisher']
     if is_publisher.has_permission(request, None):
-        print("   ✅ Publisher passes IsPublisher check")
+        print("   Publisher passes IsPublisher check")
     else:
-        print("   ❌ Publisher fails IsPublisher check")
+        print("   Publisher fails IsPublisher check")
         return False
     
     request.user = test_users['viewer']
     if not is_publisher.has_permission(request, None):
-        print("   ✅ Viewer correctly fails IsPublisher check")
+        print("   Viewer correctly fails IsPublisher check")
     else:
-        print("   ❌ Viewer incorrectly passes IsPublisher check")
+        print("   Viewer incorrectly passes IsPublisher check")
         return False
     
     # Test 5: Test model methods
@@ -155,34 +155,34 @@ def test_role_updates():
     test_users['BlueVisionAdmin'].save()
     
     if test_users['BlueVisionAdmin'].can_publish_feeds():
-        print("   ✅ BlueVisionAdmin can publish feeds")
+        print("   BlueVisionAdmin can publish feeds")
     else:
-        print("   ❌ BlueVisionAdmin cannot publish feeds")
+        print("   BlueVisionAdmin cannot publish feeds")
         return False
     
     if test_users['publisher'].can_publish_feeds():
-        print("   ✅ Publisher can publish feeds")
+        print("   Publisher can publish feeds")
     else:
-        print("   ❌ Publisher cannot publish feeds")
+        print("   Publisher cannot publish feeds")
         return False
     
     if not test_users['viewer'].can_publish_feeds():
-        print("   ✅ Viewer correctly cannot publish feeds")
+        print("   Viewer correctly cannot publish feeds")
     else:
-        print("   ❌ Viewer incorrectly can publish feeds")
+        print("   Viewer incorrectly can publish feeds")
         return False
     
     # Test is_organization_admin
     if test_users['BlueVisionAdmin'].is_organization_admin():
-        print("   ✅ BlueVisionAdmin is organization admin")
+        print("   BlueVisionAdmin is organization admin")
     else:
-        print("   ❌ BlueVisionAdmin is not organization admin")
+        print("   BlueVisionAdmin is not organization admin")
         return False
     
     if not test_users['publisher'].is_organization_admin():
-        print("   ✅ Publisher correctly is not organization admin")
+        print("   Publisher correctly is not organization admin")
     else:
-        print("   ❌ Publisher incorrectly is organization admin")
+        print("   Publisher incorrectly is organization admin")
         return False
     
     # Test 6: Clean up
@@ -190,11 +190,11 @@ def test_role_updates():
     for user in test_users.values():
         user.delete()
     org.delete()
-    print("   ✅ Test data cleaned up")
+    print("   Test data cleaned up")
     
     print("\n" + "=" * 50)
-    print("🎉 All role update tests passed!")
-    print("\n📋 Summary of changes verified:")
+    print("All role update tests passed!")
+    print("\nSummary of changes verified:")
     print("- USER_ROLE_CHOICES updated to 3 roles")
     print("- UserFactory supports new role structure")
     print("- Permission classes work with BlueVisionAdmin")

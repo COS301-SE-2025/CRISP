@@ -7,9 +7,9 @@ echo "======================================"
 # Test 1: Check if server is running
 echo "1. Checking if server is running..."
 if curl -s http://127.0.0.1:8000/admin/ > /dev/null 2>&1; then
-    echo "   ✅ Server is running"
+    echo "   Server is running"
 else
-    echo "   ❌ Server is not running"
+    echo "   Server is not running"
     echo "   💡 Start server with: python3 manage.py runserver"
     exit 1
 fi
@@ -19,9 +19,9 @@ echo ""
 echo "2. Testing API endpoint..."
 RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/api/auth/login/)
 if [ "$RESPONSE" = "405" ]; then
-    echo "   ✅ API endpoint is accessible (Method Not Allowed for GET as expected)"
+    echo "   API endpoint is accessible (Method Not Allowed for GET as expected)"
 else
-    echo "   ❌ Unexpected response: $RESPONSE"
+    echo "   Unexpected response: $RESPONSE"
 fi
 
 # Test 3: Test login page
@@ -29,9 +29,9 @@ echo ""
 echo "3. Testing login page..."
 RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/api/auth/login-page/)
 if [ "$RESPONSE" = "200" ]; then
-    echo "   ✅ Login page is accessible"
+    echo "   Login page is accessible"
 else
-    echo "   ❌ Login page not accessible: $RESPONSE"
+    echo "   Login page not accessible: $RESPONSE"
 fi
 
 # Test 4: Attempt login with test credentials
@@ -49,7 +49,7 @@ LOGIN_RESPONSE=$(curl -s -X POST http://127.0.0.1:8000/api/auth/login/ \
 echo "   Response: $LOGIN_RESPONSE"
 
 if echo "$LOGIN_RESPONSE" | grep -q "access"; then
-    echo "   ✅ Login successful with test credentials!"
+    echo "   Login successful with test credentials!"
     
     # Extract access token for further testing
     ACCESS_TOKEN=$(echo "$LOGIN_RESPONSE" | grep -o '"access":"[^"]*"' | cut -d'"' -f4)
@@ -63,16 +63,16 @@ if echo "$LOGIN_RESPONSE" | grep -q "access"; then
         echo "   Profile Response: $PROFILE_RESPONSE"
         
         if echo "$PROFILE_RESPONSE" | grep -q "username"; then
-            echo "   ✅ Profile access successful!"
+            echo "   Profile access successful!"
         else
-            echo "   ❌ Profile access failed"
+            echo "   Profile access failed"
         fi
     fi
     
 elif echo "$LOGIN_RESPONSE" | grep -q "authentication_failed\|invalid_credentials"; then
     echo "   ℹ️  Expected failure - test user doesn't exist or wrong password"
 else
-    echo "   ❌ Unexpected login response"
+    echo "   Unexpected login response"
 fi
 
 echo ""

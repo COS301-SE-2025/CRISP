@@ -23,23 +23,23 @@ def test_login():
         
         if response.status_code == 200:
             data = response.json()
-            print("✅ Login successful!")
+            print("Login successful!")
             access_token = data.get('tokens', {}).get('access', 'Not found')
             print(f"Access token: {access_token[:50]}...")
             return access_token
         else:
-            print(f"❌ Login failed: {response.status_code}")
+            print(f"Login failed: {response.status_code}")
             print(f"Response: {response.text}")
             return None
             
     except requests.exceptions.ConnectionError:
-        print("⚠️  Server not running - skipping API tests")
+        print(" Server not running - skipping API tests")
         return "skip"
     except requests.exceptions.Timeout:
-        print("⚠️  Server timeout - skipping API tests")
+        print(" Server timeout - skipping API tests")
         return "skip"
     except Exception as e:
-        print(f"❌ Error during login: {e}")
+        print(f"Error during login: {e}")
         return None
 
 def test_profile(token):
@@ -53,15 +53,15 @@ def test_profile(token):
         
         if response.status_code == 200:
             data = response.json()
-            print("✅ Profile fetch successful!")
+            print("Profile fetch successful!")
             print(f"User: {data.get('username')} ({data.get('role')})")
             print(f"Organization: {data.get('organization', {}).get('name')}")
         else:
-            print(f"❌ Profile fetch failed: {response.status_code}")
+            print(f"Profile fetch failed: {response.status_code}")
             print(f"Response: {response.text}")
             
     except Exception as e:
-        print(f"❌ Error fetching profile: {e}")
+        print(f"Error fetching profile: {e}")
 
 def test_admin_users(token):
     """Test admin users endpoint"""
@@ -74,14 +74,14 @@ def test_admin_users(token):
         
         if response.status_code == 200:
             data = response.json()
-            print("✅ Admin users endpoint successful!")
+            print("Admin users endpoint successful!")
             print(f"Total users: {data.get('count', 0)}")
         else:
-            print(f"❌ Admin users endpoint failed: {response.status_code}")
+            print(f"Admin users endpoint failed: {response.status_code}")
             print(f"Response: {response.text}")
             
     except Exception as e:
-        print(f"❌ Error accessing admin users: {e}")
+        print(f"Error accessing admin users: {e}")
 
 def main():
     print("🛡️  CRISP User Management System Test")
@@ -91,7 +91,7 @@ def main():
     token = test_login()
     
     if token == "skip":
-        print("\n⚠️  Server not running - API tests skipped")
+        print("\n Server not running - API tests skipped")
         print("\nTo run full API tests:")
         print("1. Start the Django server: python3 manage.py runserver")
         print("2. Run this test again")
@@ -103,10 +103,10 @@ def main():
         # Test admin endpoints
         test_admin_users(token)
         
-        print("\n🎉 System test completed!")
+        print("\nSystem test completed!")
         
     else:
-        print("\n❌ System test failed - could not authenticate")
+        print("\nSystem test failed - could not authenticate")
         sys.exit(1)
 
 if __name__ == "__main__":

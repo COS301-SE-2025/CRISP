@@ -273,21 +273,37 @@ class NewLocationAlertObserver(AuthenticationObserver):
 
 
 class ConsoleLoggingObserver(AuthenticationObserver):
-    """Observer that logs authentication events to console"""
+    """Observer that logs authentication events to console with colored output"""
+    
+    # ANSI color codes
+    GREEN = '\033[92m'  # Green
+    RED = '\033[91m'    # Red
+    YELLOW = '\033[93m' # Yellow
+    RESET = '\033[0m'   # Reset to default
     
     def notify(self, event_type: str, user: CustomUser, event_data: Dict) -> None:
-        """Log authentication events to console"""
+        """Log authentication events to console with color coding"""
         timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
         username = user.username if user else event_data.get('username', 'Unknown')
         
-        if event_type == 'login_success':
-            print(f"[{timestamp}] ✅ Login successful for user: {username}")
+        # Check if this is a test result
+        if event_data.get('is_test_result'):
+            test_name = event_data.get('test_name', 'Unknown Test')
+            if event_data.get('success', False):
+                print(f"{self.GREEN}[{timestamp}] ✓ TEST PASSED: {test_name}{self.RESET}")
+            else:
+                error_msg = event_data.get('error_message', 'Test failed')
+                print(f"{self.RED}[{timestamp}] ✗ TEST FAILED: {test_name} - {error_msg}{self.RESET}")
+        elif event_type == 'login_success':
+            print(f"{self.GREEN}[{timestamp}] ✓ Login successful for user: {username}{self.RESET}")
         elif event_type == 'login_failed':
-            print(f"[{timestamp}] ❌ Login failed for user: {username}")
+            print(f"{self.RED}[{timestamp}] ✗ Login failed for user: {username}{self.RESET}")
         elif event_type == 'password_changed':
-            print(f"[{timestamp}] 🔑 Password changed for user: {username}")
+            print(f"{self.GREEN}[{timestamp}] ✓ Password changed for user: {username}{self.RESET}")
+        elif event_type in ['account_locked', 'suspicious_activity']:
+            print(f"{self.RED}[{timestamp}] ⚠ {event_type.replace('_', ' ').title()} for user: {username}{self.RESET}")
         else:
-            print(f"[{timestamp}] 📝 Authentication event '{event_type}' for user: {username}")
+            print(f"{self.YELLOW}[{timestamp}] ℹ Authentication event '{event_type}' for user: {username}{self.RESET}")
 
 
 class AuthenticationEventSubject:

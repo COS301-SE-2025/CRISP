@@ -57,7 +57,7 @@ class ConsoleLoggingObserverTestCase(TestCase):
             })
             
             output = captured_output.getvalue()
-            self.assertIn('✅ Login successful', output)
+            self.assertIn('Login successful', output)
             self.assertIn('testuser', output)
         finally:
             # Restore stdout
@@ -75,7 +75,7 @@ class ConsoleLoggingObserverTestCase(TestCase):
             })
             
             output = captured_output.getvalue()
-            self.assertIn('❌ Login failed', output)
+            self.assertIn('Login failed', output)
             self.assertIn('testuser', output)
         finally:
             sys.stdout = sys.__stdout__
@@ -91,7 +91,7 @@ class ConsoleLoggingObserverTestCase(TestCase):
             })
             
             output = captured_output.getvalue()
-            self.assertIn('🔑 Password changed', output)
+            self.assertIn('Password changed', output)
             self.assertIn('testuser', output)
         finally:
             sys.stdout = sys.__stdout__
@@ -105,7 +105,7 @@ class ConsoleLoggingObserverTestCase(TestCase):
             self.observer.notify('unknown_event', self.test_user, {})
             
             output = captured_output.getvalue()
-            self.assertIn('📝 Authentication event', output)
+            self.assertIn('Authentication event', output)
             self.assertIn('unknown_event', output)
         finally:
             sys.stdout = sys.__stdout__

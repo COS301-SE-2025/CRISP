@@ -24,7 +24,7 @@ def test_viewer_login_api():
     viewers = CustomUser.objects.filter(role='viewer', is_active=True, is_verified=True)
     
     if not viewers.exists():
-        print("   ⚠️  No active viewer users found. Creating test viewer...")
+        print("    No active viewer users found. Creating test viewer...")
         
         # Create test organization if needed
         org, created = Organization.objects.get_or_create(
@@ -45,7 +45,7 @@ def test_viewer_login_api():
             is_verified=True,
             is_active=True
         )
-        print(f"   ✅ Created test viewer: {viewer.username}")
+        print(f"   Created test viewer: {viewer.username}")
     else:
         viewer = viewers.first()
         print(f"   ℹ️  Using existing viewer: {viewer.username}")
@@ -72,8 +72,8 @@ def test_viewer_login_api():
         
         if response.status_code == 200:
             data = response.json()
-            print("   ✅ Login successful!")
-            print(f"   🎫 Access token received: {data.get('access', 'N/A')[:50]}...")
+            print("   Login successful!")
+            print(f"   Access token received: {data.get('access', 'N/A')[:50]}...")
             print(f"   🔄 Refresh token received: {data.get('refresh', 'N/A')[:50]}...")
             
             # Test accessing protected endpoint
@@ -89,33 +89,33 @@ def test_viewer_login_api():
                 
                 if profile_response.status_code == 200:
                     profile_data = profile_response.json()
-                    print("   ✅ Profile access successful!")
+                    print("   Profile access successful!")
                     print(f"   👤 User: {profile_data.get('username')}")
                     print(f"   🏢 Organization: {profile_data.get('organization', {}).get('name')}")
-                    print(f"   🎭 Role: {profile_data.get('role')}")
+                    print(f"   Role: {profile_data.get('role')}")
                 else:
-                    print(f"   ❌ Profile access failed: {profile_response.status_code}")
-                    print(f"   📄 Response: {profile_response.text}")
+                    print(f"   Profile access failed: {profile_response.status_code}")
+                    print(f"   Response: {profile_response.text}")
             
             return True
             
         else:
-            print(f"   ❌ Login failed: {response.status_code}")
-            print(f"   📄 Response: {response.text}")
+            print(f"   Login failed: {response.status_code}")
+            print(f"   Response: {response.text}")
             return False
             
     except requests.exceptions.ConnectionError:
-        print("   ❌ Connection failed - is the Django server running?")
-        print("   💡 Start server with: python3 manage.py runserver")
+        print("   Connection failed - is the Django server running?")
+        print("   Start server with: python3 manage.py runserver")
         return False
     except Exception as e:
-        print(f"   ❌ Error during login test: {str(e)}")
+        print(f"   Error during login test: {str(e)}")
         return False
 
 
 def create_simple_login_form():
     """Create a simple HTML login form for testing"""
-    print("📄 Creating simple login form...")
+    print("Creating simple login form...")
     
     login_html = """
 <!DOCTYPE html>
@@ -231,7 +231,7 @@ def create_simple_login_form():
                     resultDiv.className = 'result success';
                     resultDiv.style.display = 'block';
                     resultDiv.innerHTML = `
-                        <strong>✅ Login Successful!</strong><br>
+                        <strong>Login Successful!</strong><br>
                         Welcome ${data.user?.username || username}!<br>
                         Role: ${data.user?.role || 'N/A'}<br>
                         Organization: ${data.user?.organization || 'N/A'}<br>
@@ -248,7 +248,7 @@ def create_simple_login_form():
                     resultDiv.className = 'result error';
                     resultDiv.style.display = 'block';
                     resultDiv.innerHTML = `
-                        <strong>❌ Login Failed</strong><br>
+                        <strong>Login Failed</strong><br>
                         ${data.detail || data.non_field_errors || 'Invalid credentials'}
                     `;
                 }
@@ -256,7 +256,7 @@ def create_simple_login_form():
                 resultDiv.className = 'result error';
                 resultDiv.style.display = 'block';
                 resultDiv.innerHTML = `
-                    <strong>❌ Error</strong><br>
+                    <strong>Error</strong><br>
                     ${error.message}
                 `;
             }
@@ -277,7 +277,7 @@ def create_simple_login_form():
     with open(login_file, 'w') as f:
         f.write(login_html)
     
-    print(f"   ✅ Created login form: {login_file}")
+    print(f"   Created login form: {login_file}")
     print(f"   🌐 Access at: http://127.0.0.1:8000/auth/login/")
     
     return login_file
@@ -319,7 +319,7 @@ curl -X GET http://127.0.0.1:8000/api/auth/profile/ \\
 
 def main():
     """Main function"""
-    print("🚀 CRISP User Management - Viewer Login Test")
+    print("CRISP User Management - Viewer Login Test")
     print("=" * 50)
     
     # Test API login
@@ -336,16 +336,16 @@ def main():
     show_curl_examples()
     
     print("\n" + "=" * 50)
-    print("📋 SUMMARY:")
+    print("SUMMARY:")
     if login_success:
-        print("✅ Viewer login via API works correctly")
+        print("Viewer login via API works correctly")
     else:
-        print("❌ Viewer login via API failed")
+        print("Viewer login via API failed")
     
-    print("✅ Simple login form created")
-    print("✅ API examples provided")
+    print("Simple login form created")
+    print("API examples provided")
     
-    print("\n🎯 NEXT STEPS:")
+    print("\nNEXT STEPS:")
     print("1. Ensure Django server is running: python3 manage.py runserver")
     print("2. Test login via curl command above")
     print("3. Or access login form at: http://127.0.0.1:8000/auth/login/")

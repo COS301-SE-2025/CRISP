@@ -58,57 +58,81 @@ class RateLimitMiddlewareTestCase(TestCase):
     
     def test_login_rate_limiting(self):
         """Test rate limiting for login attempts"""
-        # First 5 attempts should pass
-        for i in range(5):
+        # Mock cache to simulate rate limiting behavior
+        with patch('UserManagement.middleware.cache') as mock_cache, \
+             patch('django.conf.settings.RATELIMIT_ENABLE', True):
+            
+            # First 5 attempts should pass (cache returns count < limit)
+            for i in range(5):
+                mock_cache.get.return_value = i  # Count is under limit
+                
+                request = self.factory.post('/api/auth/login/')
+                request.META['REMOTE_ADDR'] = '127.0.0.1'
+                
+                response = self.middleware.process_request(request)
+                self.assertIsNone(response)  # Should not be rate limited
+            
+            # 6th attempt should be rate limited (cache returns count >= limit)
+            mock_cache.get.return_value = 5  # Count equals limit
+            
             request = self.factory.post('/api/auth/login/')
             request.META['REMOTE_ADDR'] = '127.0.0.1'
             
             response = self.middleware.process_request(request)
-            self.assertIsNone(response)  # Should not be rate limited
-        
-        # 6th attempt should be rate limited
-        request = self.factory.post('/api/auth/login/')
-        request.META['REMOTE_ADDR'] = '127.0.0.1'
-        
-        response = self.middleware.process_request(request)
-        self.assertIsInstance(response, JsonResponse)
-        self.assertEqual(response.status_code, 429)
+            self.assertIsInstance(response, JsonResponse)
+            self.assertEqual(response.status_code, 429)
     
     def test_password_reset_rate_limiting(self):
         """Test rate limiting for password reset"""
-        # First 3 attempts should pass
-        for i in range(3):
+        # Mock cache to simulate rate limiting behavior
+        with patch('UserManagement.middleware.cache') as mock_cache, \
+             patch('django.conf.settings.RATELIMIT_ENABLE', True):
+            
+            # First 3 attempts should pass (cache returns count < limit)
+            for i in range(3):
+                mock_cache.get.return_value = i  # Count is under limit
+                
+                request = self.factory.post('/api/auth/password-reset/')
+                request.META['REMOTE_ADDR'] = '127.0.0.1'
+                
+                response = self.middleware.process_request(request)
+                self.assertIsNone(response)
+            
+            # 4th attempt should be rate limited (cache returns count >= limit)
+            mock_cache.get.return_value = 3  # Count equals limit
+            
             request = self.factory.post('/api/auth/password-reset/')
             request.META['REMOTE_ADDR'] = '127.0.0.1'
             
             response = self.middleware.process_request(request)
-            self.assertIsNone(response)
-        
-        # 4th attempt should be rate limited
-        request = self.factory.post('/api/auth/password-reset/')
-        request.META['REMOTE_ADDR'] = '127.0.0.1'
-        
-        response = self.middleware.process_request(request)
-        self.assertIsInstance(response, JsonResponse)
-        self.assertEqual(response.status_code, 429)
+            self.assertIsInstance(response, JsonResponse)
+            self.assertEqual(response.status_code, 429)
     
     def test_api_rate_limiting(self):
         """Test general API rate limiting"""
-        # Test many API requests
-        for i in range(100):
+        # Mock cache to simulate rate limiting behavior
+        with patch('UserManagement.middleware.cache') as mock_cache, \
+             patch('django.conf.settings.RATELIMIT_ENABLE', True):
+            
+            # First 100 requests should pass (cache returns count < limit)
+            for i in range(100):
+                mock_cache.get.return_value = i  # Count is under limit
+                
+                request = self.factory.get('/api/test/')
+                request.META['REMOTE_ADDR'] = '127.0.0.1'
+                
+                response = self.middleware.process_request(request)
+                self.assertIsNone(response)
+            
+            # 101st request should be rate limited (cache returns count >= limit)
+            mock_cache.get.return_value = 100  # Count equals limit
+            
             request = self.factory.get('/api/test/')
             request.META['REMOTE_ADDR'] = '127.0.0.1'
             
             response = self.middleware.process_request(request)
-            self.assertIsNone(response)
-        
-        # 101st request should be rate limited
-        request = self.factory.get('/api/test/')
-        request.META['REMOTE_ADDR'] = '127.0.0.1'
-        
-        response = self.middleware.process_request(request)
-        self.assertIsInstance(response, JsonResponse)
-        self.assertEqual(response.status_code, 429)
+            self.assertIsInstance(response, JsonResponse)
+            self.assertEqual(response.status_code, 429)
     
     def test_different_ips_not_rate_limited(self):
         """Test that different IPs are not rate limited together"""

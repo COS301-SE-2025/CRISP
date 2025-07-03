@@ -12,10 +12,10 @@ def check_file_exists(file_path, description=""):
     """Check if file exists and return status"""
     if os.path.exists(file_path):
         size = os.path.getsize(file_path)
-        print(f"✅ {file_path} ({size} bytes) {description}")
+        print(f"{file_path} ({size} bytes) {description}")
         return True
     else:
-        print(f"❌ {file_path} - MISSING {description}")
+        print(f"{file_path} - MISSING {description}")
         return False
 
 def validate_python_syntax(file_path):
@@ -25,7 +25,7 @@ def validate_python_syntax(file_path):
             compile(f.read(), file_path, 'exec')
         return True
     except SyntaxError as e:
-        print(f"  ⚠️  Syntax Error in {file_path}: {e}")
+        print(f"   Syntax Error in {file_path}: {e}")
         return False
     except Exception:
         return True  # File might not be Python
@@ -47,7 +47,7 @@ def main():
         (".env", "Environment variables (optional)"),
     ]
     
-    print("\n📁 Core Django Files:")
+    print("\nCore Django Files:")
     for file_path, desc in core_files:
         files_checked += 1
         if not check_file_exists(file_path, desc):
@@ -86,7 +86,7 @@ def main():
         ("UserManagement/services/auth_service.py", "Authentication service"),
     ]
     
-    print("\n🔧 Service Files:")
+    print("\nService Files:")
     for file_path, desc in service_files:
         files_checked += 1
         if not check_file_exists(file_path, desc):
@@ -114,7 +114,7 @@ def main():
         ("UserManagement/strategies/authentication_strategies.py", "Auth strategies"),
     ]
     
-    print("\n🎯 Strategy Files:")
+    print("\nStrategy Files:")
     for file_path, desc in strategy_files:
         files_checked += 1
         if not check_file_exists(file_path, desc):
@@ -161,7 +161,7 @@ def main():
         ("UserManagement/tests/test_integration.py", "Integration tests"),
     ]
     
-    print("\n🧪 Test Files:")
+    print("\nTest Files:")
     for file_path, desc in test_files:
         files_checked += 1
         if not check_file_exists(file_path, desc):
@@ -189,11 +189,11 @@ def main():
     print(f"\n🗃️ Migration Files:")
     if os.path.exists(migration_dir):
         migration_files = [f for f in os.listdir(migration_dir) if f.endswith('.py')]
-        print(f"✅ {migration_dir}/ ({len(migration_files)} migration files)")
+        print(f"{migration_dir}/ ({len(migration_files)} migration files)")
         for migration in sorted(migration_files):
-            print(f"  📄 {migration}")
+            print(f"  {migration}")
     else:
-        print(f"❌ {migration_dir}/ - MISSING")
+        print(f"{migration_dir}/ - MISSING")
         files_missing += 1
     
     # Documentation and Test Files
@@ -226,19 +226,19 @@ def main():
     
     # Summary
     print("\n" + "=" * 60)
-    print("📊 File Validation Summary:")
-    print(f"✅ Files Checked: {files_checked}")
-    print(f"❌ Files Missing: {files_missing}")
-    print(f"⚠️  Syntax Errors: {syntax_errors}")
+    print("File Validation Summary:")
+    print(f"Files Checked: {files_checked}")
+    print(f"Files Missing: {files_missing}")
+    print(f" Syntax Errors: {syntax_errors}")
     
     success_rate = ((files_checked - files_missing - syntax_errors) / files_checked) * 100
-    print(f"📈 Success Rate: {success_rate:.1f}%")
+    print(f"Success Rate: {success_rate:.1f}%")
     
     if files_missing == 0 and syntax_errors == 0:
-        print("\n🎉 All files present and valid!")
+        print("\nAll files present and valid!")
         return 0
     else:
-        print(f"\n⚠️  Issues found: {files_missing} missing files, {syntax_errors} syntax errors")
+        print(f"\n Issues found: {files_missing} missing files, {syntax_errors} syntax errors")
         return 1
 
 if __name__ == "__main__":

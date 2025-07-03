@@ -15,7 +15,7 @@ django.setup()
 
 def test_session_monitoring():
     """Test session monitoring commands"""
-    print("🔍 Testing Session Management Commands")
+    print("Testing Session Management Commands")
     print("=" * 50)
     
     print("\n1. Testing session monitoring command...")
@@ -27,11 +27,11 @@ def test_session_monitoring():
             timeout=10
         )
         if result.returncode == 0:
-            print("   ✅ monitor_sessions command available")
+            print("   monitor_sessions command available")
         else:
-            print(f"   ❌ monitor_sessions command failed: {result.stderr}")
+            print(f"   monitor_sessions command failed: {result.stderr}")
     except Exception as e:
-        print(f"   ❌ Error testing monitor_sessions: {e}")
+        print(f"   Error testing monitor_sessions: {e}")
 
     print("\n2. Testing session cleanup command...")
     try:
@@ -42,11 +42,11 @@ def test_session_monitoring():
             timeout=10
         )
         if result.returncode == 0:
-            print("   ✅ cleanup_sessions command available")
+            print("   cleanup_sessions command available")
         else:
-            print(f"   ❌ cleanup_sessions command failed: {result.stderr}")
+            print(f"   cleanup_sessions command failed: {result.stderr}")
     except Exception as e:
-        print(f"   ❌ Error testing cleanup_sessions: {e}")
+        print(f"   Error testing cleanup_sessions: {e}")
 
     print("\n3. Running session statistics...")
     try:
@@ -57,15 +57,15 @@ def test_session_monitoring():
             timeout=15
         )
         if result.returncode == 0:
-            print("   ✅ Session monitoring successful")
-            print("   📊 Output:")
+            print("   Session monitoring successful")
+            print("   Output:")
             for line in result.stdout.split('\n')[:10]:  # Show first 10 lines
                 if line.strip():
                     print(f"      {line}")
         else:
-            print(f"   ❌ Session monitoring failed: {result.stderr}")
+            print(f"   Session monitoring failed: {result.stderr}")
     except Exception as e:
-        print(f"   ❌ Error running session monitoring: {e}")
+        print(f"   Error running session monitoring: {e}")
 
 def test_session_cleanup_dry_run():
     """Test session cleanup in dry-run mode"""
@@ -78,15 +78,15 @@ def test_session_cleanup_dry_run():
             timeout=15
         )
         if result.returncode == 0:
-            print("   ✅ Session cleanup dry-run successful")
+            print("   Session cleanup dry-run successful")
             print("   🧹 Output:")
             for line in result.stdout.split('\n')[:15]:  # Show first 15 lines
                 if line.strip():
                     print(f"      {line}")
         else:
-            print(f"   ❌ Session cleanup failed: {result.stderr}")
+            print(f"   Session cleanup failed: {result.stderr}")
     except Exception as e:
-        print(f"   ❌ Error running session cleanup: {e}")
+        print(f"   Error running session cleanup: {e}")
 
 def show_session_management_usage():
     """Show usage instructions"""
@@ -94,7 +94,7 @@ def show_session_management_usage():
     print("📚 SESSION MANAGEMENT USAGE GUIDE")
     print("=" * 50)
     
-    print("\n🔍 MONITORING SESSIONS:")
+    print("\nMONITORING SESSIONS:")
     print("  # View all active sessions")
     print("  python3 manage.py monitor_sessions")
     print()
@@ -132,14 +132,14 @@ def show_session_management_usage():
     print("  • Expired sessions are cleaned up every 5 minutes")
     print("  • All session activity is logged in AuthenticationLog")
     
-    print("\n📊 WHAT TRIGGERS SESSION DEACTIVATION:")
+    print("\nWHAT TRIGGERS SESSION DEACTIVATION:")
     print("  1. ⏰ Session expires (JWT token expiration)")
     print("  2. 😴 No activity for 24+ hours (configurable)")
-    print("  3. 🔒 Manual logout via API")
-    print("  4. 🛠️ Manual cleanup via management commands")
+    print("  3. Manual logout via API")
+    print("  4. Manual cleanup via management commands")
     print("  5. 🔄 Token refresh failure")
     
-    print("\n🎯 VIEWING SESSION DATA:")
+    print("\nVIEWING SESSION DATA:")
     print("  • Django Admin: /admin/UserManagement/usersession/")
     print("  • API Endpoint: /api/user/sessions/ (for own sessions)")
     print("  • Admin API: /api/admin/sessions/ (for all sessions)")
@@ -156,24 +156,24 @@ def main():
         show_session_management_usage()
         
         print("\n" + "=" * 50)
-        print("✅ SESSION MANAGEMENT SYSTEM READY!")
+        print("SESSION MANAGEMENT SYSTEM READY!")
         print("=" * 50)
-        print("🎯 Key Features Implemented:")
-        print("  ✅ Automatic session activity tracking")
-        print("  ✅ Periodic cleanup of expired sessions")
-        print("  ✅ Inactivity-based session deactivation")
-        print("  ✅ Comprehensive session monitoring")
-        print("  ✅ Management commands for cleanup")
-        print("  ✅ Detailed audit logging")
+        print("Key Features Implemented:")
+        print("  Automatic session activity tracking")
+        print("  Periodic cleanup of expired sessions")
+        print("  Inactivity-based session deactivation")
+        print("  Comprehensive session monitoring")
+        print("  Management commands for cleanup")
+        print("  Detailed audit logging")
         
-        print("\n💡 Next Steps:")
+        print("\nNext Steps:")
         print("  1. Login as a user and monitor session activity")
         print("  2. Run: python3 manage.py monitor_sessions --watch")
         print("  3. Test inactivity timeout (wait 24+ hours or change config)")
         print("  4. Set up cron job for regular cleanup")
         
     except Exception as e:
-        print(f"\n❌ Test failed: {str(e)}")
+        print(f"\nTest failed: {str(e)}")
         return False
     
     return True

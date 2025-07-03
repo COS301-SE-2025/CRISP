@@ -43,8 +43,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'UserManagement.middleware.SecurityHeadersMiddleware',
+    'UserManagement.middleware.RateLimitMiddleware',
     # Temporarily disabled problematic middleware
-    # 'UserManagement.middleware.RateLimitMiddleware',
     # 'UserManagement.middleware.SecurityAuditMiddleware',
 ]
 
@@ -178,7 +178,7 @@ LOGGING = {
 }
 
 # Rate limiting configuration
-RATELIMIT_ENABLE = False  # Disable for testing
+RATELIMIT_ENABLE = True  # Enable for testing
 RATELIMIT_ATTEMPTS = 5
 RATELIMIT_TIMEOUT = 300
 RATELIMIT_CACHE_PREFIX = 'rl:'

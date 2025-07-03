@@ -15,10 +15,10 @@ def test_django_setup():
     try:
         import django
         django.setup()
-        print("✅ Django setup successful")
+        print("Django setup successful")
         return True
     except Exception as e:
-        print(f"❌ Django setup failed: {e}")
+        print(f"Django setup failed: {e}")
         return False
 
 def test_models():
@@ -32,10 +32,10 @@ def test_models():
         session_count = UserSession.objects.count()
         log_count = AuthenticationLog.objects.count()
         
-        print(f"✅ Models functional - Users: {user_count}, Orgs: {org_count}, Sessions: {session_count}, Logs: {log_count}")
+        print(f"Models functional - Users: {user_count}, Orgs: {org_count}, Sessions: {session_count}, Logs: {log_count}")
         return True
     except Exception as e:
-        print(f"❌ Model test failed: {e}")
+        print(f"Model test failed: {e}")
         return False
 
 def test_authentication_service():
@@ -57,13 +57,13 @@ def test_authentication_service():
         )
         
         if result['success']:
-            print("✅ Authentication service working")
+            print("Authentication service working")
             return True
         else:
-            print(f"❌ Authentication failed: {result.get('message')}")
+            print(f"Authentication failed: {result.get('message')}")
             return False
     except Exception as e:
-        print(f"❌ Authentication service test failed: {e}")
+        print(f"Authentication service test failed: {e}")
         return False
 
 def test_api_login():
@@ -77,16 +77,16 @@ def test_api_login():
         if response.status_code == 200:
             result = response.json()
             if 'tokens' in result and 'access' in result['tokens']:
-                print("✅ API login successful")
+                print("API login successful")
                 return True, result['tokens']['access']
             else:
-                print("❌ API login response missing tokens")
+                print("API login response missing tokens")
                 return False, None
         else:
-            print(f"❌ API login failed: {response.status_code}")
+            print(f"API login failed: {response.status_code}")
             return False, None
     except Exception as e:
-        print(f"❌ API login test failed: {e}")
+        print(f"API login test failed: {e}")
         return False, None
 
 def test_api_profile(token):
@@ -99,13 +99,13 @@ def test_api_profile(token):
         
         if response.status_code == 200:
             result = response.json()
-            print(f"✅ API profile working - User: {result.get('username')}")
+            print(f"API profile working - User: {result.get('username')}")
             return True
         else:
-            print(f"❌ API profile failed: {response.status_code}")
+            print(f"API profile failed: {response.status_code}")
             return False
     except Exception as e:
-        print(f"❌ API profile test failed: {e}")
+        print(f"API profile test failed: {e}")
         return False
 
 def test_admin_interface():
@@ -114,13 +114,13 @@ def test_admin_interface():
         response = requests.get("http://127.0.0.1:8000/admin/", timeout=5)
         
         if response.status_code in [200, 302]:  # 302 = redirect to login
-            print("✅ Admin interface accessible")
+            print("Admin interface accessible")
             return True
         else:
-            print(f"❌ Admin interface failed: {response.status_code}")
+            print(f"Admin interface failed: {response.status_code}")
             return False
     except Exception as e:
-        print(f"❌ Admin interface test failed: {e}")
+        print(f"Admin interface test failed: {e}")
         return False
 
 def test_security_headers():
@@ -140,13 +140,13 @@ def test_security_headers():
                 found_headers += 1
         
         if found_headers >= 3:
-            print("✅ Security headers present")
+            print("Security headers present")
             return True
         else:
-            print(f"❌ Security headers missing ({found_headers}/3)")
+            print(f"Security headers missing ({found_headers}/3)")
             return False
     except Exception as e:
-        print(f"❌ Security headers test failed: {e}")
+        print(f"Security headers test failed: {e}")
         return False
 
 def main():
@@ -195,15 +195,15 @@ def main():
     
     # Summary
     print("\n" + "=" * 50)
-    print(f"📊 Test Results: {tests_passed}/{tests_total} passed")
+    print(f"Test Results: {tests_passed}/{tests_total} passed")
     success_rate = (tests_passed / tests_total) * 100
-    print(f"📈 Success Rate: {success_rate:.1f}%")
+    print(f"Success Rate: {success_rate:.1f}%")
     
     if tests_passed == tests_total:
-        print("\n🎉 All basic tests passed! System is operational.")
+        print("\nAll basic tests passed! System is operational.")
         return 0
     else:
-        print(f"\n⚠️ {tests_total - tests_passed} tests failed. Check server is running.")
+        print(f"\n{tests_total - tests_passed} tests failed. Check server is running.")
         return 1
 
 if __name__ == "__main__":

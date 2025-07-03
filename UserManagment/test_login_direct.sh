@@ -63,16 +63,16 @@ if [ "$ACCESS_TOKEN" != "NO_TOKEN" ] && [ "$ACCESS_TOKEN" != "PARSE_ERROR" ] && 
         BODY=$(echo "$RESPONSE" | sed 's/HTTP_STATUS:[0-9]*$//')
         
         if [ "$HTTP_STATUS" = "200" ]; then
-            echo "  ✅ $endpoint: Success ($HTTP_STATUS)"
+            echo "  $endpoint: Success ($HTTP_STATUS)"
         else
-            echo "  ❌ $endpoint: Failed ($HTTP_STATUS)"
+            echo "  $endpoint: Failed ($HTTP_STATUS)"
         fi
         echo "  Response: $BODY"
         echo
     done
     
 else
-    echo "❌ Failed to extract access token from login response"
+    echo "Failed to extract access token from login response"
     echo "Debug info:"
     echo "ACCESS_TOKEN value: '$ACCESS_TOKEN'"
 fi

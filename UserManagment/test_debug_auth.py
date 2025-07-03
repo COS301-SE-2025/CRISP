@@ -17,7 +17,7 @@ django.setup()
 def test_debug_auth_page():
     """Test that the debug auth page loads and functions correctly"""
     
-    print("🔍 Testing debug_auth.html functionality")
+    print("Testing debug_auth.html functionality")
     print("=" * 50)
     
     # Start Django server
@@ -38,7 +38,7 @@ def test_debug_auth_page():
         response = requests.get(f"{base_url}/api/auth/debug/")
         
         if response.status_code == 200:
-            print("   ✅ Debug auth page loads successfully (200 OK)")
+            print("   Debug auth page loads successfully (200 OK)")
             
             # Check if it contains expected content
             html_content = response.text
@@ -59,12 +59,12 @@ def test_debug_auth_page():
                     missing_elements.append(element)
             
             if not missing_elements:
-                print("   ✅ All expected HTML elements found")
+                print("   All expected HTML elements found")
             else:
-                print(f"   ❌ Missing elements: {missing_elements}")
+                print(f"   Missing elements: {missing_elements}")
                 
         else:
-            print(f"   ❌ Debug auth page failed to load (Status: {response.status_code})")
+            print(f"   Debug auth page failed to load (Status: {response.status_code})")
             return False
         
         # Test 2: Check API endpoints that the debug page uses
@@ -73,17 +73,17 @@ def test_debug_auth_page():
         # Test API root
         response = requests.get(f"{base_url}/api/")
         if response.status_code == 200:
-            print("   ✅ API root endpoint accessible")
+            print("   API root endpoint accessible")
         else:
-            print(f"   ❌ API root endpoint failed (Status: {response.status_code})")
+            print(f"   API root endpoint failed (Status: {response.status_code})")
         
         # Test login endpoint (should fail without credentials but return proper error)
         response = requests.post(f"{base_url}/api/auth/login/", 
                                json={"username": "", "password": ""})
         if response.status_code == 400:  # Bad request for empty credentials
-            print("   ✅ Login endpoint responding correctly")
+            print("   Login endpoint responding correctly")
         else:
-            print(f"   ❌ Login endpoint unexpected response (Status: {response.status_code})")
+            print(f"   Login endpoint unexpected response (Status: {response.status_code})")
         
         # Test 3: Check if authentication works with debug page
         print("4. Testing authentication flow...")
@@ -93,31 +93,31 @@ def test_debug_auth_page():
                                      json={"username": "admin", "password": "admin123"})
         
         if login_response.status_code == 200:
-            print("   ✅ Login successful with test credentials")
+            print("   Login successful with test credentials")
             
             login_data = login_response.json()
             if 'tokens' in login_data and 'access' in login_data['tokens']:
                 token = login_data['tokens']['access']
-                print("   ✅ JWT token received")
+                print("   JWT token received")
                 
                 # Test profile endpoint with token
                 profile_response = requests.get(f"{base_url}/api/auth/profile/",
                                               headers={"Authorization": f"Bearer {token}"})
                 
                 if profile_response.status_code == 200:
-                    print("   ✅ Profile endpoint accessible with token")
+                    print("   Profile endpoint accessible with token")
                     profile_data = profile_response.json()
                     print(f"   👤 User: {profile_data.get('username', 'Unknown')}")
                 else:
-                    print(f"   ❌ Profile endpoint failed (Status: {profile_response.status_code})")
+                    print(f"   Profile endpoint failed (Status: {profile_response.status_code})")
             else:
-                print("   ❌ No access token in login response")
+                print("   No access token in login response")
         else:
-            print(f"   ⚠️  Login failed (Status: {login_response.status_code}) - may need to create test user")
+            print(f"    Login failed (Status: {login_response.status_code}) - may need to create test user")
         
         print("\n" + "=" * 50)
-        print("🎉 Debug auth page test completed!")
-        print("\n📋 Summary:")
+        print("Debug auth page test completed!")
+        print("\nSummary:")
         print("- Debug auth page is accessible at: /api/auth/debug/")
         print("- Contains all expected JavaScript functions")
         print("- API endpoints are responding correctly")
@@ -128,7 +128,7 @@ def test_debug_auth_page():
         return True
         
     except Exception as e:
-        print(f"❌ Error during testing: {e}")
+        print(f"Error during testing: {e}")
         return False
     
     finally:
@@ -140,7 +140,7 @@ def test_debug_auth_page():
                 server_process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 server_process.kill()
-            print("   ✅ Server stopped")
+            print("   Server stopped")
 
 if __name__ == "__main__":
     # Change to the correct directory

@@ -78,14 +78,14 @@ parse_test_output() {
     
     # Determine if suite passed
     if [ $failures -eq 0 ] && [ $errors -eq 0 ] && [ $tests_run -gt 0 ]; then
-        echo -e "   Status: ${GREEN}✅ PASSED${NC}"
+        echo -e "   Status: ${GREEN}PASSED${NC}"
         ((SUITES_PASSED++))
         return 0
     elif [ $tests_run -eq 0 ]; then
         echo -e "   Status: ${YELLOW}⚠️  NO TESTS FOUND${NC}"
         return 2
     else
-        echo -e "   Status: ${RED}❌ FAILED${NC}"
+        echo -e "   Status: ${RED}FAILED${NC}"
         ((SUITES_FAILED++))
         return 1
     fi
@@ -134,9 +134,9 @@ run_system_validation() {
     
     echo -e "${YELLOW}Checking Django configuration...${NC}"
     if python3 manage.py check --verbosity=1; then
-        echo -e "${GREEN}✅ Django configuration valid${NC}"
+        echo -e "${GREEN}Django configuration valid${NC}"
     else
-        echo -e "${RED}❌ Django configuration issues found${NC}"
+        echo -e "${RED}Django configuration issues found${NC}"
         return 1
     fi
     
@@ -146,15 +146,15 @@ run_system_validation() {
     echo -e "\n${YELLOW}Validating models...${NC}"
     if python3 manage.py shell -c "
 from UserManagement.models import CustomUser, Organization, UserSession, AuthenticationLog
-print('✅ All models imported successfully')
+print('All models imported successfully')
 print('CustomUser model:', CustomUser._meta.verbose_name)
 print('Organization model:', Organization._meta.verbose_name)
 print('UserSession model:', UserSession._meta.verbose_name)
 print('AuthenticationLog model:', AuthenticationLog._meta.verbose_name)
 "; then
-        echo -e "${GREEN}✅ Models validation passed${NC}"
+        echo -e "${GREEN}Models validation passed${NC}"
     else
-        echo -e "${RED}❌ Models validation failed${NC}"
+        echo -e "${RED}Models validation failed${NC}"
         return 1
     fi
 }
@@ -174,7 +174,7 @@ run_coverage_analysis() {
     
     echo -e "\n${YELLOW}Generating HTML coverage report...${NC}"
     coverage html
-    echo -e "${GREEN}✅ HTML coverage report generated in htmlcov/ directory${NC}"
+    echo -e "${GREEN}HTML coverage report generated in htmlcov/ directory${NC}"
     
     # Get overall coverage percentage
     local coverage_percent=$(coverage report | tail -1 | grep -oE '[0-9]+%' | tail -1)
@@ -182,11 +182,11 @@ run_coverage_analysis() {
 }
 
 # Main execution starts here
-print_section "🚀 STARTING ENHANCED TEST SUITE"
+print_section "STARTING ENHANCED TEST SUITE"
 
 # System validation first
 if ! run_system_validation; then
-    echo -e "${RED}❌ System validation failed. Aborting test suite.${NC}"
+    echo -e "${RED}System validation failed. Aborting test suite.${NC}"
     exit 1
 fi
 
@@ -213,7 +213,7 @@ done
 run_coverage_analysis
 
 # Additional system tests if they exist
-print_section "🔍 ADDITIONAL SYSTEM TESTS"
+print_section "ADDITIONAL SYSTEM TESTS"
 
 if [ -f "test_api.py" ]; then
     echo -e "${YELLOW}Running API tests...${NC}"
@@ -260,11 +260,11 @@ fi
 echo -e "\n${BOLD}============================================================${NC}"
 if [ $SUITES_FAILED -eq 0 ] && [ $TOTAL_TESTS_FAILED -eq 0 ] && [ $TOTAL_TESTS_ERRORS -eq 0 ]; then
     echo -e "${GREEN}🎉 ALL TESTS PASSED! System is fully operational.${NC}"
-    echo -e "${GREEN}✅ Ready for production deployment.${NC}"
+    echo -e "${GREEN}Ready for production deployment.${NC}"
     exit 0
 else
     echo -e "${RED}⚠️  Some tests failed or had errors.${NC}"
     echo -e "${YELLOW}📋 Review the detailed output above for specific issues.${NC}"
-    echo -e "${YELLOW}🔍 Check the HTML coverage report in htmlcov/ for coverage details.${NC}"
+    echo -e "${YELLOW}Check the HTML coverage report in htmlcov/ for coverage details.${NC}"
     exit 1
 fi

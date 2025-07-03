@@ -37,7 +37,7 @@ def test_login_and_token():
         
         if response.status_code == 200:
             data = response.json()
-            print("   ✅ Login successful!")
+            print("   Login successful!")
             print(f"   Response keys: {list(data.keys())}")
             
             # Check token structure
@@ -61,12 +61,12 @@ def test_login_and_token():
                 
                 if profile_response.status_code == 200:
                     profile_data = profile_response.json()
-                    print("   ✅ Profile access successful!")
+                    print("   Profile access successful!")
                     print(f"   User: {profile_data.get('username')}")
                     print(f"   Role: {profile_data.get('role')}")
                     print(f"   Organization: {profile_data.get('organization', {}).get('name', 'N/A')}")
                 else:
-                    print("   ❌ Profile access failed")
+                    print("   Profile access failed")
                     print(f"   Response: {profile_response.text}")
                 
                 # Test other endpoints
@@ -80,26 +80,26 @@ def test_login_and_token():
                 for endpoint in endpoints:
                     try:
                         resp = requests.get(f'http://127.0.0.1:8000{endpoint}', headers=headers, timeout=10)
-                        status = "✅" if resp.status_code == 200 else "❌"
+                        status = "" if resp.status_code == 200 else ""
                         print(f"   {status} {endpoint}: {resp.status_code}")
                         if resp.status_code != 200:
                             error_data = resp.json() if resp.headers.get('content-type', '').startswith('application/json') else resp.text
                             print(f"      Error: {error_data}")
                     except Exception as e:
-                        print(f"   ❌ {endpoint}: Error - {e}")
+                        print(f"   {endpoint}: Error - {e}")
                 
             else:
-                print("   ❌ No 'tokens' key in response")
+                print("   No 'tokens' key in response")
                 print(f"   Full response: {data}")
         else:
-            print(f"   ❌ Login failed")
+            print(f"   Login failed")
             print(f"   Response: {response.text}")
             
     except requests.exceptions.ConnectionError:
-        print("   ❌ Connection failed - is the Django server running?")
+        print("   Connection failed - is the Django server running?")
         return False
     except Exception as e:
-        print(f"   ❌ Error: {e}")
+        print(f"   Error: {e}")
         return False
 
 if __name__ == '__main__':
