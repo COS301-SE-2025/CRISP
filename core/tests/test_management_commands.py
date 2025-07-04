@@ -2,10 +2,11 @@
 Unit tests for TAXII-related management commands
 """
 import unittest
+import uuid
 from unittest.mock import patch, MagicMock, call
 from io import StringIO
 import sys
-from django.test import TestCase
+from django.test import TestCase, TransactionTestCase
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
@@ -16,23 +17,27 @@ from core.management.commands.test_taxii import Command as TestTaxiiCommand
 from core.tests.test_stix_mock_data import TAXII2_COLLECTIONS
 
 
-class TaxiiOperationsCommandTestCase(TestCase):
-    """Test cases for the 'taxii_operations' management command"""
+class TaxiiOperationsCommandTestCase(TransactionTestCase):
+    """Test cases for the 'taxii_operations' management command - Using TransactionTestCase for better isolation"""
 
     def setUp(self):
         """Set up the test environment"""
+        # Clear any existing data
+        ThreatFeed.objects.all().delete()
+        Institution.objects.all().delete()
 
         super().setUp()
         # Create an Institution to use as the owner for ThreatFeeds
         self.institution = Institution.objects.create(
-            name="Test Institution",
+            name=f"Test Institution - {uuid.uuid4().hex[:8]}",
             description="Test description"
         )
 
         # Create a test threat feed
         self.feed = ThreatFeed.objects.create(
-            name="Test Feed",
+            name=f"Test Feed - {uuid.uuid4().hex[:8]}",
             description="Test Feed for Command",
+            owner=self.institution,
             is_external=True,
             taxii_server_url="https://test.example.com/taxii",
             taxii_api_root="api1",
@@ -55,6 +60,8 @@ class TaxiiOperationsCommandTestCase(TestCase):
     def tearDown(self):
         """Clean up after the test"""
         sys.stderr = self.old_stderr
+        ThreatFeed.objects.all().delete()
+        Institution.objects.all().delete()
 
     @patch('core.services.stix_taxii_service.StixTaxiiService.discover_collections')
     def test_discover_command(self, mock_discover_collections):
@@ -146,14 +153,14 @@ class TaxiiOperationsCommandTestCase(TestCase):
         
         # Call the command with non-existent feed ID
         call_command('taxii_operations', 'consume', 
-                    feed_id=999,
+                    feed_id=999999,
                     stderr=err)
         
         # Check that error was handled and written to stderr
         error_output = err.getvalue()
         import re
         clean_output = re.sub(r'\x1b\[[0-9;]*m', '', error_output)
-        self.assertIn("Feed with ID 999 does not exist", clean_output)
+        self.assertIn("Feed with ID 999999 does not exist", clean_output)
 
     def test_add_command(self):
         """Test the 'add' command."""
@@ -161,7 +168,7 @@ class TaxiiOperationsCommandTestCase(TestCase):
         out = StringIO()
         err = StringIO()
         
-        # Call the command with explicit stdout/stderr
+        # Call the command with explicit stdout/stderr and all required fields
         call_command('taxii_operations', 'add',
                     name='New Feed',
                     description='New Test Feed',
@@ -169,6 +176,8 @@ class TaxiiOperationsCommandTestCase(TestCase):
                     api_root='api2',
                     collection_id='collection2',
                     owner_id=self.institution.id,
+                    username='test-user',
+                    password='test-pass',
                     stdout=out,
                     stderr=err)
         
@@ -178,6 +187,8 @@ class TaxiiOperationsCommandTestCase(TestCase):
         self.assertEqual(feed.taxii_server_url, 'https://new.example.com/taxii')
         self.assertEqual(feed.taxii_api_root, 'api2')
         self.assertEqual(feed.taxii_collection_id, 'collection2')
+        self.assertEqual(feed.taxii_username, 'test-user')
+        self.assertEqual(feed.taxii_password, 'test-pass')
         self.assertTrue(feed.is_external)
         
         # Check the output
@@ -191,15 +202,19 @@ class TaxiiOperationsCommandTestCase(TestCase):
             call_command('taxii_operations', 'invalid_command')
 
 
-class TestTaxiiCommandTestCase(TestCase):
-    """Test cases for the 'test_taxii' management command"""
+class TestTaxiiCommandTestCase(TransactionTestCase):
+    """Test cases for the 'test_taxii' management command - Using TransactionTestCase for better isolation"""
 
     def setUp(self):
         """Set up the test environment"""
+        # Clear any existing data
+        ThreatFeed.objects.all().delete()
+        Institution.objects.all().delete()
+        
         super().setUp()
         # Create an Institution
         self.institution = Institution.objects.create(
-            name="Test Institution",
+            name=f"Test Institution - {uuid.uuid4().hex[:8]}",
             description="Test description"
         )
 
@@ -211,6 +226,11 @@ class TestTaxiiCommandTestCase(TestCase):
         self.stderr = StringIO()
         self.command.stdout = self.stdout
         self.command.stderr = self.stderr
+
+    def tearDown(self):
+        """Clean up after each test"""
+        ThreatFeed.objects.all().delete()
+        Institution.objects.all().delete()
 
     @patch('core.services.otx_taxii_service.OTXTaxiiService.get_collections')
     def test_list_collections(self, mock_get_collections):
@@ -300,7 +320,6 @@ class TestTaxiiCommandTestCase(TestCase):
         # Check the error output
         error_output = err.getvalue()
         self.assertIn("Error consuming feed: Test error", error_output)
-
 
     def test_consume_without_collection(self):
         """Test the '--consume' option without providing a collection name"""

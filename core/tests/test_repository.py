@@ -2,8 +2,9 @@
 Unit tests for repository implementations
 """
 import unittest
+import uuid
 from unittest.mock import patch, MagicMock
-from django.test import TestCase
+from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 
 from core.repositories.threat_feed_repository import ThreatFeedRepository
@@ -14,16 +15,19 @@ from core.models.indicator import Indicator
 from core.models.ttp_data import TTPData
 
 
-class ThreatFeedRepositoryTestCase(TestCase):
-    """Test cases for the ThreatFeedRepository"""
+class ThreatFeedRepositoryTestCase(TransactionTestCase):
+    """Test cases for the ThreatFeedRepository - Using TransactionTestCase for better isolation"""
 
     def setUp(self):
         """Set up the test environment"""
+        # Clear any existing data
+        ThreatFeed.objects.all().delete()
+        
         self.repository = ThreatFeedRepository()
         
-        # Create test threat feeds
+        # Create test threat feeds with unique identifiers
         self.feed1 = ThreatFeed.objects.create(
-            name="Feed 1",
+            name=f"Feed 1 - {uuid.uuid4().hex[:8]}",
             description="Test Feed 1",
             is_external=True,
             taxii_server_url="https://test1.example.com/taxii",
@@ -32,16 +36,20 @@ class ThreatFeedRepositoryTestCase(TestCase):
         )
         
         self.feed2 = ThreatFeed.objects.create(
-            name="Feed 2",
+            name=f"Feed 2 - {uuid.uuid4().hex[:8]}",
             description="Test Feed 2",
             is_external=False
         )
         
         self.feed3 = ThreatFeed.objects.create(
-            name="Feed 3",
+            name=f"Feed 3 - {uuid.uuid4().hex[:8]}",
             description="External Feed without TAXII details",
             is_external=True
         )
+
+    def tearDown(self):
+        """Clean up after each test"""
+        ThreatFeed.objects.all().delete()
 
     def test_get_by_id(self):
         """Test retrieving a threat feed by ID"""
@@ -49,10 +57,10 @@ class ThreatFeedRepositoryTestCase(TestCase):
         
         # Check that the correct feed was retrieved
         self.assertEqual(feed.id, self.feed1.id)
-        self.assertEqual(feed.name, "Feed 1")
+        self.assertEqual(feed.name, self.feed1.name)
         
         # Test with non-existent ID
-        feed = self.repository.get_by_id(999)
+        feed = self.repository.get_by_id(999999)
         self.assertIsNone(feed)
 
     def test_get_all(self):
@@ -62,9 +70,10 @@ class ThreatFeedRepositoryTestCase(TestCase):
         
         # Check that all feeds were retrieved
         self.assertEqual(feeds.count(), 3)
-        self.assertIn(self.feed1, feeds)
-        self.assertIn(self.feed2, feeds)
-        self.assertIn(self.feed3, feeds)
+        feed_ids = [f.id for f in feeds]
+        self.assertIn(self.feed1.id, feed_ids)
+        self.assertIn(self.feed2.id, feed_ids)
+        self.assertIn(self.feed3.id, feed_ids)
 
     def test_get_external_feeds(self):
         """Test retrieving external threat feeds with TAXII details"""
@@ -73,15 +82,13 @@ class ThreatFeedRepositoryTestCase(TestCase):
         
         # Check that only the external feed with TAXII details was retrieved
         self.assertEqual(feeds.count(), 1)
-        self.assertIn(self.feed1, feeds)
-        self.assertNotIn(self.feed2, feeds)
-        self.assertNotIn(self.feed3, feeds)
+        self.assertEqual(feeds.first().id, self.feed1.id)
 
     def test_create(self):
         """Test creating a new threat feed"""
         # Create a new feed
         feed_data = {
-            'name': 'New Feed',
+            'name': f'New Feed - {uuid.uuid4().hex[:8]}',
             'description': 'New Test Feed',
             'is_external': True,
             'taxii_server_url': 'https://new.example.com/taxii',
@@ -93,20 +100,20 @@ class ThreatFeedRepositoryTestCase(TestCase):
         
         # Check that the feed was created correctly
         self.assertIsNotNone(new_feed.id)
-        self.assertEqual(new_feed.name, 'New Feed')
+        self.assertEqual(new_feed.name, feed_data['name'])
         self.assertEqual(new_feed.description, 'New Test Feed')
         self.assertTrue(new_feed.is_external)
         self.assertEqual(new_feed.taxii_server_url, 'https://new.example.com/taxii')
         
         # Check that it exists in the database
         feed_in_db = ThreatFeed.objects.get(id=new_feed.id)
-        self.assertEqual(feed_in_db.name, 'New Feed')
+        self.assertEqual(feed_in_db.name, feed_data['name'])
 
     def test_update(self):
         """Test updating an existing threat feed."""
         # Update the first feed
         update_data = {
-            'name': 'Updated Feed 1',
+            'name': f'Updated Feed 1 - {uuid.uuid4().hex[:8]}',
             'description': 'Updated description',
             'is_public': True
         }
@@ -115,7 +122,7 @@ class ThreatFeedRepositoryTestCase(TestCase):
         
         # Check that the feed was updated correctly
         self.assertEqual(updated_feed.id, self.feed1.id)
-        self.assertEqual(updated_feed.name, 'Updated Feed 1')
+        self.assertEqual(updated_feed.name, update_data['name'])
         self.assertEqual(updated_feed.description, 'Updated description')
         self.assertTrue(updated_feed.is_public)
         
@@ -124,10 +131,12 @@ class ThreatFeedRepositoryTestCase(TestCase):
         
         # Check that it was updated in the database
         feed_in_db = ThreatFeed.objects.get(id=self.feed1.id)
-        self.assertEqual(feed_in_db.name, 'Updated Feed 1')
+        self.assertEqual(feed_in_db.name, update_data['name'])
 
     def test_delete(self):
         """Test deleting a threat feed"""
+        initial_count = ThreatFeed.objects.count()
+        
         # Delete the first feed
         self.repository.delete(self.feed1.id)
         
@@ -135,30 +144,34 @@ class ThreatFeedRepositoryTestCase(TestCase):
         with self.assertRaises(ThreatFeed.DoesNotExist):
             ThreatFeed.objects.get(id=self.feed1.id)
         
-        # The other feeds should still exist
-        self.assertEqual(ThreatFeed.objects.count(), 2)
+        # The count should be reduced by 1
+        self.assertEqual(ThreatFeed.objects.count(), initial_count - 1)
 
 
-class IndicatorRepositoryTestCase(TestCase):
-    """Test cases for the IndicatorRepository"""
+class IndicatorRepositoryTestCase(TransactionTestCase):
+    """Test cases for the IndicatorRepository - Using TransactionTestCase for better isolation"""
 
     def setUp(self):
         """Set up the test environment."""
+        # Clear any existing data
+        Indicator.objects.all().delete()
+        ThreatFeed.objects.all().delete()
+        
         self.repository = IndicatorRepository()
         
         # Create a test threat feed
         self.feed = ThreatFeed.objects.create(
-            name="Test Feed",
+            name=f"Test Feed - {uuid.uuid4().hex[:8]}",
             description="Test Feed for Indicators"
         )
         
-        # Create test indicators
+        # Create test indicators with unique STIX IDs
         self.indicator1 = Indicator.objects.create(
             threat_feed=self.feed,
             type='ip',
             value='192.168.1.1',
             description='Test IP Indicator',
-            stix_id='indicator-test-1',
+            stix_id=f'indicator-test-{uuid.uuid4().hex[:8]}',
             confidence=75
         )
         
@@ -167,7 +180,7 @@ class IndicatorRepositoryTestCase(TestCase):
             type='domain',
             value='malicious-domain.com',
             description='Test Domain Indicator',
-            stix_id='indicator-test-2',
+            stix_id=f'indicator-test-{uuid.uuid4().hex[:8]}',
             confidence=80
         )
         
@@ -176,9 +189,14 @@ class IndicatorRepositoryTestCase(TestCase):
             type='ip',
             value='10.0.0.1',
             description='Another Test IP Indicator',
-            stix_id='indicator-test-3',
+            stix_id=f'indicator-test-{uuid.uuid4().hex[:8]}',
             confidence=65
         )
+
+    def tearDown(self):
+        """Clean up after each test"""
+        Indicator.objects.all().delete()
+        ThreatFeed.objects.all().delete()
 
     def test_get_by_id(self):
         """Test retrieving an indicator by ID"""
@@ -190,13 +208,13 @@ class IndicatorRepositoryTestCase(TestCase):
         self.assertEqual(indicator.value, '192.168.1.1')
         
         # Test with non-existent ID
-        indicator = self.repository.get_by_id(999)
+        indicator = self.repository.get_by_id(999999)
         self.assertIsNone(indicator)
 
     def test_get_by_stix_id(self):
         """Test retrieving an indicator by STIX ID"""
         # Get by STIX ID
-        indicator = self.repository.get_by_stix_id('indicator-test-2')
+        indicator = self.repository.get_by_stix_id(self.indicator2.stix_id)
         
         # Check that the correct indicator was retrieved
         self.assertEqual(indicator.id, self.indicator2.id)
@@ -213,9 +231,10 @@ class IndicatorRepositoryTestCase(TestCase):
         
         # Check that all indicators for the feed were retrieved
         self.assertEqual(indicators.count(), 3)
-        self.assertIn(self.indicator1, indicators)
-        self.assertIn(self.indicator2, indicators)
-        self.assertIn(self.indicator3, indicators)
+        indicator_ids = [i.id for i in indicators]
+        self.assertIn(self.indicator1.id, indicator_ids)
+        self.assertIn(self.indicator2.id, indicator_ids)
+        self.assertIn(self.indicator3.id, indicator_ids)
 
     def test_get_by_type(self):
         """Test retrieving indicators by type."""
@@ -224,9 +243,10 @@ class IndicatorRepositoryTestCase(TestCase):
         
         # Check that all IP indicators were retrieved
         self.assertEqual(indicators.count(), 2)
-        self.assertIn(self.indicator1, indicators)
-        self.assertIn(self.indicator3, indicators)
-        self.assertNotIn(self.indicator2, indicators)
+        indicator_ids = [i.id for i in indicators]
+        self.assertIn(self.indicator1.id, indicator_ids)
+        self.assertIn(self.indicator3.id, indicator_ids)
+        self.assertNotIn(self.indicator2.id, indicator_ids)
 
     def test_create(self):
         """Test creating a new indicator."""
@@ -236,7 +256,7 @@ class IndicatorRepositoryTestCase(TestCase):
             'type': 'url',
             'value': 'https://malicious-site.com/page',
             'description': 'Test URL Indicator',
-            'stix_id': 'indicator-test-new',
+            'stix_id': f'indicator-test-{uuid.uuid4().hex[:8]}',
             'confidence': 70
         }
         
@@ -276,6 +296,8 @@ class IndicatorRepositoryTestCase(TestCase):
 
     def test_delete(self):
         """Test deleting an indicator"""
+        initial_count = Indicator.objects.count()
+        
         # Delete the first indicator
         self.repository.delete(self.indicator1.id)
         
@@ -283,31 +305,35 @@ class IndicatorRepositoryTestCase(TestCase):
         with self.assertRaises(Indicator.DoesNotExist):
             Indicator.objects.get(id=self.indicator1.id)
         
-        # The other indicators should still exist
-        self.assertEqual(Indicator.objects.count(), 2)
+        # The count should be reduced by 1
+        self.assertEqual(Indicator.objects.count(), initial_count - 1)
 
 
-class TTPRepositoryTestCase(TestCase):
-    """Test cases for the TTPRepository"""
+class TTPRepositoryTestCase(TransactionTestCase):
+    """Test cases for the TTPRepository - Using TransactionTestCase for better isolation"""
 
     def setUp(self):
         """Set up the test environment"""
+        # Clear any existing data
+        TTPData.objects.all().delete()
+        ThreatFeed.objects.all().delete()
+        
         self.repository = TTPRepository()
         
         # Create a test threat feed
         self.feed = ThreatFeed.objects.create(
-            name="Test Feed",
+            name=f"Test Feed - {uuid.uuid4().hex[:8]}",
             description="Test Feed for TTPs"
         )
         
-        # Create test TTPs
+        # Create test TTPs with unique STIX IDs
         self.ttp1 = TTPData.objects.create(
             threat_feed=self.feed,
             name='Phishing Attack',
             description='Test Phishing TTP',
             mitre_technique_id='T1566.001',
             mitre_tactic='initial_access',
-            stix_id='ttp-test-1'
+            stix_id=f'ttp-test-{uuid.uuid4().hex[:8]}'
         )
         
         self.ttp2 = TTPData.objects.create(
@@ -316,7 +342,7 @@ class TTPRepositoryTestCase(TestCase):
             description='Test Drive-by TTP',
             mitre_technique_id='T1189',
             mitre_tactic='initial_access',
-            stix_id='ttp-test-2'
+            stix_id=f'ttp-test-{uuid.uuid4().hex[:8]}'
         )
         
         self.ttp3 = TTPData.objects.create(
@@ -325,8 +351,13 @@ class TTPRepositoryTestCase(TestCase):
             description='Test PowerShell TTP',
             mitre_technique_id='T1059.001',
             mitre_tactic='execution',
-            stix_id='ttp-test-3'
+            stix_id=f'ttp-test-{uuid.uuid4().hex[:8]}'
         )
+
+    def tearDown(self):
+        """Clean up after each test"""
+        TTPData.objects.all().delete()
+        ThreatFeed.objects.all().delete()
 
     def test_get_by_id(self):
         """Test retrieving a TTP by ID"""
@@ -338,13 +369,13 @@ class TTPRepositoryTestCase(TestCase):
         self.assertEqual(ttp.name, 'Phishing Attack')
         
         # Test with non-existent ID
-        ttp = self.repository.get_by_id(999)
+        ttp = self.repository.get_by_id(999999)
         self.assertIsNone(ttp)
 
     def test_get_by_stix_id(self):
         """Test retrieving a TTP by STIX ID"""
         # Get by STIX ID
-        ttp = self.repository.get_by_stix_id('ttp-test-2')
+        ttp = self.repository.get_by_stix_id(self.ttp2.stix_id)
         
         # Check that the correct TTP was retrieved
         self.assertEqual(ttp.id, self.ttp2.id)
@@ -361,9 +392,10 @@ class TTPRepositoryTestCase(TestCase):
         
         # Check that all TTPs for the feed were retrieved
         self.assertEqual(ttps.count(), 3)
-        self.assertIn(self.ttp1, ttps)
-        self.assertIn(self.ttp2, ttps)
-        self.assertIn(self.ttp3, ttps)
+        ttp_ids = [t.id for t in ttps]
+        self.assertIn(self.ttp1.id, ttp_ids)
+        self.assertIn(self.ttp2.id, ttp_ids)
+        self.assertIn(self.ttp3.id, ttp_ids)
 
     def test_get_by_mitre_id(self):
         """Test retrieving TTPs by MITRE technique ID"""
@@ -372,9 +404,7 @@ class TTPRepositoryTestCase(TestCase):
         
         # Check that the correct TTP was retrieved
         self.assertEqual(ttps.count(), 1)
-        self.assertIn(self.ttp1, ttps)
-        self.assertNotIn(self.ttp2, ttps)
-        self.assertNotIn(self.ttp3, ttps)
+        self.assertEqual(ttps.first().id, self.ttp1.id)
 
     def test_create(self):
         """Test creating a new TTP"""
@@ -385,7 +415,7 @@ class TTPRepositoryTestCase(TestCase):
             'description': 'Test Data Exfiltration TTP',
             'mitre_technique_id': 'T1048',
             'mitre_tactic': 'exfiltration',
-            'stix_id': 'ttp-test-new'
+            'stix_id': f'ttp-test-{uuid.uuid4().hex[:8]}'
         }
         
         new_ttp = self.repository.create(ttp_data)
@@ -423,6 +453,8 @@ class TTPRepositoryTestCase(TestCase):
 
     def test_delete(self):
         """Test deleting a TTP"""
+        initial_count = TTPData.objects.count()
+        
         # Delete the first TTP
         self.repository.delete(self.ttp1.id)
         
@@ -430,8 +462,8 @@ class TTPRepositoryTestCase(TestCase):
         with self.assertRaises(TTPData.DoesNotExist):
             TTPData.objects.get(id=self.ttp1.id)
         
-        # The other TTPs should still exist
-        self.assertEqual(TTPData.objects.count(), 2)
+        # The count should be reduced by 1
+        self.assertEqual(TTPData.objects.count(), initial_count - 1)
 
 
 if __name__ == '__main__':

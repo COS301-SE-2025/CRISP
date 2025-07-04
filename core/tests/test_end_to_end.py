@@ -1,7 +1,8 @@
 """
-End-to-end tests for the complete TAXII feed consumption process in the CRISP platform.
+End-to-end tests for the complete TAXII feed consumption process in the CRISP platform
 """
 import unittest
+import uuid
 from unittest.mock import patch, MagicMock, call
 import json
 from datetime import datetime, timedelta
@@ -23,20 +24,26 @@ from core.tests.test_stix_mock_data import TAXII1_CONTENT_BLOCK, STIX20_BUNDLE, 
 
 
 class EndToEndConsumptionTestCase(TransactionTestCase):
-    """End-to-end test cases for TAXII feed consumption process."""
+    """End-to-end test cases for TAXII feed consumption process - Using TransactionTestCase for better isolation"""
 
     def setUp(self):
         """Set up the test environment."""
+        # Clear any existing data
+        ThreatFeed.objects.all().delete()
+        Institution.objects.all().delete()
+        Indicator.objects.all().delete()
+        TTPData.objects.all().delete()
+        
         # Create a test institution
         self.institution = Institution.objects.create(
-            name="Test Institution",
+            name=f"Test Institution - {uuid.uuid4().hex[:8]}",
             description="Test Institution for E2E",
             contact_email="test@example.com"
         )
         
         # Create an OTX TAXII 1.x feed
         self.otx_feed = ThreatFeed.objects.create(
-            name="OTX Feed",
+            name=f"OTX Feed - {uuid.uuid4().hex[:8]}",
             description="AlienVault OTX Feed",
             owner=self.institution,
             is_external=True,
@@ -48,7 +55,7 @@ class EndToEndConsumptionTestCase(TransactionTestCase):
         
         # Create a STIX 2.x TAXII feed
         self.stix2_feed = ThreatFeed.objects.create(
-            name="STIX 2.x Feed",
+            name=f"STIX 2.x Feed - {uuid.uuid4().hex[:8]}",
             description="STIX 2.x Test Feed",
             owner=self.institution,
             is_external=True,
@@ -58,6 +65,13 @@ class EndToEndConsumptionTestCase(TransactionTestCase):
             taxii_username="test-user",
             taxii_password="test-pass"
         )
+
+    def tearDown(self):
+        """Clean up after each test"""
+        ThreatFeed.objects.all().delete()
+        Institution.objects.all().delete()
+        Indicator.objects.all().delete()
+        TTPData.objects.all().delete()
 
     @patch('core.services.otx_taxii_service.OTXTaxiiService.poll_collection')
     @patch('core.parsers.stix1_parser.STIX1Parser.parse_content_block')
@@ -70,13 +84,14 @@ class EndToEndConsumptionTestCase(TransactionTestCase):
         # Mock poll_collection to return the blocks
         mock_poll_collection.return_value = [mock_block]
         
-        # Mock the parser with controlled STIX ID
+        # Mock the parser with controlled STIX ID using unique values
         def side_effect_parser(content, threat_feed):
+            unique_id = uuid.uuid4().hex[:8]
             indicator = Indicator.objects.create(
                 threat_feed=threat_feed,
                 type='ip',
                 value='192.168.1.1',
-                stix_id='indicator-test-1',  # Fixed STIX ID for testing
+                stix_id=f'indicator-test-{unique_id}',
                 description='Test IP Indicator',
                 confidence=85
             )
@@ -84,7 +99,7 @@ class EndToEndConsumptionTestCase(TransactionTestCase):
             ttp = TTPData.objects.create(
                 threat_feed=threat_feed,
                 name='Phishing Attack',
-                stix_id='attack-pattern-test-1',  # Fixed STIX ID for testing
+                stix_id=f'attack-pattern-test-{unique_id}',
                 mitre_technique_id='T1566.001',
                 mitre_tactic='initial_access',
                 description='Phishing attack technique'
@@ -122,7 +137,7 @@ class EndToEndConsumptionTestCase(TransactionTestCase):
         
         self.assertEqual(indicator.type, 'ip')
         self.assertEqual(indicator.value, '192.168.1.1')
-        self.assertEqual(indicator.stix_id, 'indicator-test-1')  # Now this will match
+        self.assertTrue(indicator.stix_id.startswith('indicator-test-'))
         
         self.assertEqual(ttp.name, 'Phishing Attack')
         self.assertEqual(ttp.mitre_technique_id, 'T1566.001')
@@ -246,20 +261,29 @@ class EndToEndConsumptionTestCase(TransactionTestCase):
 
 
 class APIEndpointTestCase(APITestCase):
-    """Test cases for API endpoints related to threat feed consumption."""
+    """Test cases for API endpoints related to threat feed consumption - FIXED VERSION"""
 
     def setUp(self):
         """Set up the test environment."""
+        # Ensure we call the parent setUp to initialize the client
+        super().setUp()
+        
+        # Clear any existing data
+        ThreatFeed.objects.all().delete()
+        Institution.objects.all().delete()
+        Indicator.objects.all().delete()
+        TTPData.objects.all().delete()
+        
         # Create a test institution
         self.institution = Institution.objects.create(
-            name="Test Institution",
+            name=f"Test Institution - {uuid.uuid4().hex[:8]}",
             description="Test Institution for API",
             contact_email="test@example.com"
         )
         
         # Create a test threat feed
         self.feed = ThreatFeed.objects.create(
-            name="Test Feed",
+            name=f"Test Feed - {uuid.uuid4().hex[:8]}",
             description="Test Feed for API",
             owner=self.institution,
             is_external=True,
@@ -274,6 +298,19 @@ class APIEndpointTestCase(APITestCase):
         self.feed_consume_url = reverse('threat-feed-consume', args=[self.feed.id])
         self.feed_status_url = reverse('threat-feed-status', args=[self.feed.id])
         self.available_collections_url = reverse('threat-feed-available-collections')
+        
+        # Explicitly ensure client exists (for debugging)
+        if not hasattr(self, 'client'):
+            from rest_framework.test import APIClient
+            self.client = APIClient()
+
+    def tearDown(self):
+        """Clean up after each test"""
+        ThreatFeed.objects.all().delete()
+        Institution.objects.all().delete()
+        Indicator.objects.all().delete()
+        TTPData.objects.all().delete()
+        super().tearDown()
 
     @patch('core.services.otx_taxii_service.OTXTaxiiService.get_collections')
     def test_available_collections_endpoint(self, mock_get_collections):
@@ -363,14 +400,14 @@ class APIEndpointTestCase(APITestCase):
 
     def test_status_endpoint(self):
         """Test the status endpoint."""
-        # Create test indicators and TTPs
+        # Create test indicators and TTPs with unique STIX IDs
         for i in range(3):
             Indicator.objects.create(
                 threat_feed=self.feed,
                 type='ip',
                 value=f'192.168.1.{i}',
                 description=f'Test Indicator {i}',
-                stix_id=f'indicator-test-{i}',
+                stix_id=f'indicator-test-{uuid.uuid4().hex[:8]}-{i}',
                 confidence=70 + i
             )
         
@@ -380,7 +417,7 @@ class APIEndpointTestCase(APITestCase):
             description='Test TTP',
             mitre_technique_id='T1566.001',
             mitre_tactic='initial_access',
-            stix_id='ttp-test-1'
+            stix_id=f'ttp-test-{uuid.uuid4().hex[:8]}'
         )
         
         # Set last_sync
@@ -392,7 +429,7 @@ class APIEndpointTestCase(APITestCase):
         
         # Check the response
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['name'], 'Test Feed')
+        self.assertEqual(response.data['name'], self.feed.name)
         self.assertEqual(response.data['is_external'], True)
         self.assertEqual(response.data['indicator_count'], 3)
         self.assertEqual(response.data['ttp_count'], 1)

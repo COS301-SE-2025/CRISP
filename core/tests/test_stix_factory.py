@@ -2,11 +2,12 @@
 Unit tests for STIX factory pattern implementations
 """
 import unittest
+import uuid
 from unittest.mock import patch, MagicMock
 import json
 from datetime import datetime
 import pytz
-from django.test import TestCase
+from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 
 from core.patterns.factory.stix_indicator_creator import StixIndicatorCreator
@@ -17,28 +18,32 @@ from core.patterns.observer.threat_feed import ThreatFeed
 from core.tests.test_stix_mock_data import STIX20_BUNDLE, STIX21_BUNDLE
 
 
-class StixIndicatorCreatorTestCase(TestCase):
-    """Test cases for the StixIndicatorCreator factory"""
+class StixIndicatorCreatorTestCase(TransactionTestCase):
+    """Test cases for the StixIndicatorCreator factory - Using TransactionTestCase for better isolation"""
 
     def setUp(self):
         """Set up the test environment"""
+        # Clear any existing data
+        Indicator.objects.all().delete()
+        ThreatFeed.objects.all().delete()
+        
         self.indicator_creator = StixIndicatorCreator()
         
         # Create a mock ThreatFeed for testing
         self.threat_feed = ThreatFeed.objects.create(
-            name="Test Feed",
+            name=f"Test Feed - {uuid.uuid4().hex[:8]}",
             description="Test Feed for Factory",
             is_external=True
         )
         
-        # Create a mock Indicator for testing
+        # Create a mock Indicator for testing with unique STIX ID
         self.indicator = Indicator.objects.create(
             threat_feed=self.threat_feed,
             type='domain',
             value='malicious-domain.com',
             description='Test Indicator',
             confidence=80,
-            stix_id='indicator--test-123',
+            stix_id=f'indicator--test-{uuid.uuid4().hex}',
             created_at=timezone.now(),
             is_anonymized=False
         )
@@ -48,6 +53,11 @@ class StixIndicatorCreatorTestCase(TestCase):
         
         # Parse a STIX 2.1 indicator from the mock data
         self.stix21_indicator = next(obj for obj in STIX21_BUNDLE['objects'] if obj['type'] == 'indicator')
+
+    def tearDown(self):
+        """Clean up after each test"""
+        Indicator.objects.all().delete()
+        ThreatFeed.objects.all().delete()
 
     def test_create_from_stix20_indicator(self):
         """Test creating a CRISP Indicator from a STIX 2.0 indicator"""
@@ -148,28 +158,32 @@ class StixIndicatorCreatorTestCase(TestCase):
         self.assertEqual(pattern, "[x-custom-indicator:value = 'some-value']")
 
 
-class StixTTPCreatorTestCase(TestCase):
-    """Test cases for the StixTTPCreator factory"""
+class StixTTPCreatorTestCase(TransactionTestCase):
+    """Test cases for the StixTTPCreator factory - Using TransactionTestCase for better isolation"""
 
     def setUp(self):
         """Set up the test environment."""
+        # Clear any existing data
+        TTPData.objects.all().delete()
+        ThreatFeed.objects.all().delete()
+        
         self.ttp_creator = StixTTPCreator()
         
         # Create a mock ThreatFeed for testing
         self.threat_feed = ThreatFeed.objects.create(
-            name="Test Feed",
+            name=f"Test Feed - {uuid.uuid4().hex[:8]}",
             description="Test Feed for Factory",
             is_external=True
         )
         
-        # Create a mock TTPData for testing
+        # Create a mock TTPData for testing with unique STIX ID
         self.ttp = TTPData.objects.create(
             threat_feed=self.threat_feed,
             name='Phishing Attack',
             description='Test TTP',
             mitre_technique_id='T1566.001',
             mitre_tactic='initial_access',
-            stix_id='attack-pattern--test-123',
+            stix_id=f'attack-pattern--test-{uuid.uuid4().hex}',
             created_at=timezone.now(),
             is_anonymized=False
         )
@@ -179,6 +193,11 @@ class StixTTPCreatorTestCase(TestCase):
         
         # Parse a STIX 2.1 attack pattern from the mock data
         self.stix21_ttp = next(obj for obj in STIX21_BUNDLE['objects'] if obj['type'] == 'attack-pattern')
+
+    def tearDown(self):
+        """Clean up after each test"""
+        TTPData.objects.all().delete()
+        ThreatFeed.objects.all().delete()
 
     def test_create_from_stix20_ttp(self):
         """Test creating a CRISP TTP from a STIX 2.0 attack pattern"""
