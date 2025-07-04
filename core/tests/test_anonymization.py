@@ -9,9 +9,9 @@ import json
 # Add the parent directory to the Python path to import our package
 sys.path.insert(0, os.path.abspath('.'))
 
-# Import from core.patterns.strategy
-from core.patterns.strategy.enums import AnonymizationLevel
-from core.patterns.strategy.context import AnonymizationContext
+# Import from crisp_anonymization
+from crisp_anonymization.enums import AnonymizationLevel
+from crisp_anonymization.context import AnonymizationContext
 
 def test_stix_anonymization():
     """Test STIX object anonymization with different trust levels"""

@@ -11,7 +11,7 @@ import re
 # Add the current directory to Python path to import our package
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from core.patterns.strategy import (
+from crisp_anonymization import (
     AnonymizationLevel,
     DataType,
     IPAddressAnonymizationStrategy,

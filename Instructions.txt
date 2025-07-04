@@ -1,4 +1,0 @@
-To run it with a stix file :
-python3 main.py --mode stix --file tests/data/stix_test_bundle.json --output anonymized.json --trust low
-Simply add the file location of your STIX file in the `--file` argument and specify the output file with `--output`. 
-The `--trust` argument allows you to set the trust level for anonymization (low, medium, high).
