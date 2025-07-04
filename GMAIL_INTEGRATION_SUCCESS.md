@@ -58,20 +58,7 @@ $ python3 test_complete_integration.py
 
 ## 🔧 Gmail Configuration Details
 
-### Environment Variables (`.env`)
-```env
-# Gmail SMTP Configuration
-EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USE_TLS=True
-EMAIL_HOST_USER=cos332practical6@gmail.com
-EMAIL_HOST_PASSWORD=glrk anea ypnl hruw
 
-CRISP_SENDER_NAME=CRISP Threat Intelligence Platform
-CRISP_SENDER_EMAIL=datadefenders.sa@gmail.com
-DEFAULT_ADMIN_EMAIL=cos332practical6@gmail.com
-```
 
 ### Django Settings Integration
 - **File**: `crisp/crisp_threat_intel/settings.py:174-188`
