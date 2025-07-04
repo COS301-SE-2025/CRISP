@@ -1,3 +1,13 @@
+<<<<<<< HEAD:.gitignore
+=======
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+>>>>>>> feature/userManagment:UserManagment/.gitignore
 # Python
 __pycache__/
 *.py[cod]
@@ -27,15 +37,24 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 media/
+<<<<<<< HEAD:.gitignore
+=======
+staticfiles/
+>>>>>>> feature/userManagment:UserManagment/.gitignore
 
 # Environment
 .env
+<<<<<<< HEAD:.gitignore
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+=======
+.env.local
+.env.production
+>>>>>>> feature/userManagment:UserManagment/.gitignore
 
 # IDE
 .vscode/
@@ -56,7 +75,9 @@ Thumbs.db
 # Testing
 .coverage
 .pytest_cache/
+htmlcov/
 .tox/
+<<<<<<< HEAD:.gitignore
 htmlcov/
 .cache
 coverage.xml
@@ -92,3 +113,14 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+=======
+.nox/
+
+# Documentation
+docs/_build/
+
+# Backup files
+*.bak
+*.tmp
+*.temp
+>>>>>>> feature/userManagment:UserManagment/.gitignore
