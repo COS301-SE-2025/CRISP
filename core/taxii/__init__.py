@@ -1,1 +1,0 @@
-# TAXII 2.1 API implementation package
