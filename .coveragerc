@@ -1,21 +1,25 @@
 [run]
-source = core
+source = core, crisp
 omit = 
     */migrations/*
     */venv/*
     */env/*
     */tests/*
     */test_*
+    */legacy_tests/*
     manage.py
     */settings/*
     */wsgi.py
     */asgi.py
     */__pycache__/*
-    */trust_group_service.py
-    */trust_repository.py
-    */trust_observers.py
-    */validators.py
-    */trust_service.py
+    */node_modules/*
+    */staticfiles/*
+    */media/*
+    */logs/*
+    crisp/tools/*
+    crisp/scripts/*
+    crisp/config/*
+    crisp/reset_database.py
 
 [report]
 exclude_lines =

@@ -294,7 +294,7 @@ if __name__ == "__main__":
     
     formatter.print_summary({
         "Environment": "Test",
-        "Database": "SQLite",
+        "Database": "PostgreSQL",
         "Cache": "In-Memory"
     })
     

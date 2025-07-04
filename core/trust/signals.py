@@ -42,7 +42,7 @@ def trust_group_membership_saved(sender, instance, created, **kwargs):
             'membership': instance,
             'organization': instance.organization,
             'trust_group': instance.trust_group,
-            'user': 'system'  # Would be actual user in real implementation
+            'user': None  # System events don't have a specific user
         })
 
 

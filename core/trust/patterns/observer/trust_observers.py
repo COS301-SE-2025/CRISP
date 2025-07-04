@@ -207,10 +207,27 @@ class TrustNotificationObserver(TrustObserver):
     def _log_notification(self, notification_type: str, data: Dict[str, Any]):
         """Log notification details for audit purposes."""
         try:
+            # Convert complex objects to serializable format
+            serializable_data = self._make_serializable(data)
             # In a real implementation, this might store notifications in a separate table
-            logger.debug(f"Notification logged: {notification_type} - {json.dumps(data)}")
+            logger.debug(f"Notification logged: {notification_type} - {json.dumps(serializable_data)}")
         except Exception as e:
             logger.error(f"Failed to log notification: {str(e)}")
+    
+    def _make_serializable(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Convert data to JSON-serializable format."""
+        serializable = {}
+        for key, value in data.items():
+            if hasattr(value, 'id'):
+                # Django model instance
+                serializable[key] = str(value.id)
+            elif hasattr(value, '__dict__'):
+                # Other objects with attributes
+                serializable[key] = str(value)
+            else:
+                # Basic types
+                serializable[key] = value
+        return serializable
 
 
 class TrustMetricsObserver(TrustObserver):
@@ -262,7 +279,7 @@ class TrustAuditObserver(TrustObserver):
         trust_group = event_data.get('trust_group')
         source_org = event_data.get('source_organization') or event_data.get('requesting_organization')
         target_org = event_data.get('target_organization')
-        user = event_data.get('user', 'system')
+        user = event_data.get('user')  # None for system events
         
         # Map event types to trust log actions
         action_mapping = {

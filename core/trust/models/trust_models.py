@@ -222,13 +222,17 @@ class TrustRelationship(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
     # Organizations involved in the trust relationship
-    source_organization = models.CharField(
-        max_length=255,
-        help_text="UUID of the source organization (references user_management.Organization)"
+    source_organization = models.ForeignKey(
+        'user_management.Organization',
+        on_delete=models.CASCADE,
+        related_name='trust_relationships_as_source',
+        help_text="Source organization in the trust relationship"
     )
-    target_organization = models.CharField(
-        max_length=255,
-        help_text="UUID of the target organization (references user_management.Organization)"
+    target_organization = models.ForeignKey(
+        'user_management.Organization',
+        on_delete=models.CASCADE,
+        related_name='trust_relationships_as_target',
+        help_text="Target organization in the trust relationship"
     )
     
     # Trust relationship configuration
@@ -306,16 +310,20 @@ class TrustRelationship(models.Model):
         default=False,
         help_text="Whether target organization has approved"
     )
-    approved_by_source_user = models.CharField(
-        max_length=255,
+    approved_by_source_user = models.ForeignKey(
+        'user_management.CustomUser',
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
+        related_name='trust_approvals_as_source',
         help_text="User who approved on behalf of source organization"
     )
-    approved_by_target_user = models.CharField(
-        max_length=255,
+    approved_by_target_user = models.ForeignKey(
+        'user_management.CustomUser',
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
+        related_name='trust_approvals_as_target',
         help_text="User who approved on behalf of target organization"
     )
     
@@ -344,18 +352,28 @@ class TrustRelationship(models.Model):
     )
     
     # Audit fields
-    created_by = models.CharField(
-        max_length=255,
-        help_text="User who created this relationship"
-    )
-    last_modified_by = models.CharField(
-        max_length=255,
-        help_text="User who last modified this relationship"
-    )
-    revoked_by = models.CharField(
-        max_length=255,
+    created_by = models.ForeignKey(
+        'user_management.CustomUser',
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
+        related_name='created_trust_relationships',
+        help_text="User who created this relationship"
+    )
+    last_modified_by = models.ForeignKey(
+        'user_management.CustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='modified_trust_relationships',
+        help_text="User who last modified this relationship"
+    )
+    revoked_by = models.ForeignKey(
+        'user_management.CustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='revoked_trust_relationships',
         help_text="User who revoked this relationship"
     )
 
@@ -424,18 +442,18 @@ class TrustRelationship(models.Model):
         if approving_org == self.source_organization:
             self.approved_by_source = True
             if user:
-                self.approved_by_source_user = str(user)
+                self.approved_by_source_user = user
         elif approving_org == self.target_organization:
             self.approved_by_target = True
             if user:
-                self.approved_by_target_user = str(user)
+                self.approved_by_target_user = user
         else:
             # If no specific org, assume bilateral approval
             self.approved_by_source = True
             self.approved_by_target = True
             if user:
-                self.approved_by_source_user = str(user)
-                self.approved_by_target_user = str(user)
+                self.approved_by_source_user = user
+                self.approved_by_target_user = user
         
         self.save(update_fields=['approved_by_source', 'approved_by_target', 
                                 'approved_by_source_user', 'approved_by_target_user'])
@@ -452,7 +470,7 @@ class TrustRelationship(models.Model):
         if reason:
             self.notes = f"{self.notes}\nDenied: {reason}" if self.notes else f"Denied: {reason}"
         if user:
-            self.last_modified_by = str(user)
+            self.last_modified_by = user
         self.save(update_fields=['status', 'notes', 'last_modified_by'])
         return True
 
@@ -496,9 +514,11 @@ class TrustGroupMembership(models.Model):
         on_delete=models.CASCADE,
         related_name='group_memberships'
     )
-    organization = models.CharField(
-        max_length=255,
-        help_text="UUID of the organization (references user_management.Organization)"
+    organization = models.ForeignKey(
+        'user_management.Organization',
+        on_delete=models.CASCADE,
+        related_name='trust_group_memberships',
+        help_text="Organization that is a member of this trust group"
     )
     membership_type = models.CharField(
         max_length=20,
@@ -575,16 +595,20 @@ class TrustLog(models.Model):
         choices=ACTION_CHOICES,
         help_text="Type of trust action performed"
     )
-    source_organization = models.CharField(
-        max_length=255,
+    source_organization = models.ForeignKey(
+        'user_management.Organization',
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
+        related_name='trust_logs_as_source',
         help_text="Organization that initiated the action"
     )
-    target_organization = models.CharField(
-        max_length=255,
+    target_organization = models.ForeignKey(
+        'user_management.Organization',
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
+        related_name='trust_logs_as_target',
         help_text="Target organization (if applicable)"
     )
     trust_relationship = models.ForeignKey(
@@ -599,10 +623,14 @@ class TrustLog(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='trust_logs'
+        related_name='trust_logs_as_user'
     )
-    user = models.CharField(
-        max_length=255,
+    user = models.ForeignKey(
+        'user_management.CustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='performed_trust_logs',
         help_text="User who performed the action"
     )
     ip_address = models.GenericIPAddressField(

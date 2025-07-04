@@ -20,6 +20,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'core.trust',  # The app being tested
+    'core.user_management',  # User management system
     'core.tests',  # Test modules
 ]
 
@@ -48,17 +49,17 @@ TEMPLATES = [
     },
 ]
 
-# Use SQLite for tests with better concurrency handling
+# Use PostgreSQL for tests (consistent with production)
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': ':memory:',
-        'OPTIONS': {
-            'timeout': 30,
-            'check_same_thread': False,
-        },
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('TEST_DB_NAME', 'crisp_trust_test_db'),
+        'USER': os.getenv('TEST_DB_USER', 'crisp_user'),
+        'PASSWORD': os.getenv('TEST_DB_PASSWORD', 'crisp_password'),
+        'HOST': os.getenv('TEST_DB_HOST', 'localhost'),
+        'PORT': os.getenv('TEST_DB_PORT', '5432'),
         'TEST': {
-            'NAME': ':memory:',
+            'NAME': os.getenv('TEST_DB_NAME', 'crisp_trust_test_db'),
         }
     }
 }
@@ -79,8 +80,8 @@ CACHES = {
     }
 }
 
-# Use a mock user model for tests since the main project's user model is not available
-AUTH_USER_MODEL = 'auth.User'
+# Use the custom user model for tests
+AUTH_USER_MODEL = 'user_management.CustomUser'
 
 # Internationalization
 LANGUAGE_CODE = 'en-us'
