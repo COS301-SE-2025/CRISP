@@ -1,14 +1,35 @@
 """
 Observer Pattern Implementation for Feed Updates
-Following CRISP design specification precisely.
-Uses Django signals for loose coupling.
+Integrates core observer pattern with Django signals.
+Uses unified observer system from core patterns.
 """
-from abc import ABC, abstractmethod
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'core', 'patterns', 'observer'))
+
 from typing import Dict, Any
 from django.dispatch import receiver, Signal
 from django.core.mail import send_mail
 from django.conf import settings
 import logging
+
+# Import core observer components
+try:
+    from core.patterns.observer.email_notification_observer import EmailNotificationObserver
+    from core.patterns.observer.alert_system_observer import AlertSystemObserver
+except ImportError:
+    # Fallback classes for development
+    class EmailNotificationObserver:
+        def __init__(self, **kwargs):
+            pass
+        def update(self, subject, **kwargs):
+            pass
+    
+    class AlertSystemObserver:
+        def __init__(self, **kwargs):
+            pass
+        def update(self, subject, **kwargs):
+            pass
 
 logger = logging.getLogger(__name__)
 
@@ -17,14 +38,10 @@ feed_updated = Signal()
 feed_published = Signal()
 feed_error = Signal()
 
-
-class Observer(ABC):
-    """
-    Abstract base class for observers.
-    Defines the interface for all observers.
-    """
+# Observer pattern interfaces (for Django compatibility)
+class ObserverInterface:
+    """Interface for all observers in the Django integration."""
     
-    @abstractmethod
     def update(self, subject, **kwargs):
         """
         Update method called when the subject notifies observers.
@@ -33,16 +50,12 @@ class Observer(ABC):
             subject: The object that triggered the update
             **kwargs: Additional context data
         """
-        pass
+        raise NotImplementedError("Subclasses must implement update method")
 
 
-class Subject(ABC):
-    """
-    Abstract base class for subjects in the Observer pattern.
-    In Django, this is implemented using signals.
-    """
+class SubjectInterface:
+    """Interface for subjects in the Django integration."""
     
-    @abstractmethod
     def notify_observers(self, **kwargs):
         """
         Notify all observers about an event.
@@ -50,64 +63,75 @@ class Subject(ABC):
         Args:
             **kwargs: Event data to pass to observers
         """
-        pass
+        raise NotImplementedError("Subclasses must implement notify_observers method")
 
 
-class InstitutionObserver(Observer):
+class DjangoEmailNotificationObserver(EmailNotificationObserver, ObserverInterface):
     """
-    Observer that notifies institutions about feed updates.
-    Implements notifications to organization members.
+    Django-integrated email notification observer.
+    Bridges core EmailNotificationObserver with Django signals.
     """
     
-    def __init__(self, organization):
+    def __init__(self, organization=None, **kwargs):
         """
-        Initialize observer for a specific organization.
+        Initialize Django email notification observer.
         
         Args:
             organization: Organization to notify
+            **kwargs: Additional configuration
         """
+        super().__init__(**kwargs)
         self.organization = organization
     
     def update(self, subject, **kwargs):
         """
-        Handle feed update notifications for institutions.
+        Handle Django signal notifications and forward to core observer.
         
         Args:
-            subject: The feed that was updated
-            **kwargs: Additional context (bundle, event_type, etc.)
-        """
-        event_type = kwargs.get('event_type', 'unknown')
-        bundle = kwargs.get('bundle')
-        
-        logger.info(f"Institution observer notified: {self.organization.name} - {event_type}")
-        
-        # Send notification to organization members
-        if event_type == 'feed_published':
-            self._notify_feed_published(subject, bundle)
-        elif event_type == 'feed_updated':
-            self._notify_feed_updated(subject, bundle)
-        elif event_type == 'feed_error':
-            self._notify_feed_error(subject, kwargs.get('error'))
-    
-    def _notify_feed_published(self, feed, bundle):
-        """
-        Notify organization about a published feed.
-        
-        Args:
-            feed: The published feed
-            bundle: The STIX bundle that was published
+            subject: The subject that triggered the notification
+            **kwargs: Additional context data
         """
         try:
-            # Get organization contact email
-            if self.organization.contact_email:
-                subject_line = f"Feed Published: {feed.name}"
+            # Convert Django signal data to core observer format
+            event_type = kwargs.get('event_type', 'unknown')
+            bundle = kwargs.get('bundle')
+            
+            logger.info(f"Django email observer processing: {event_type}")
+            
+            # Convert to core observer event format
+            event_data = {
+                'event_type': event_type,
+                'feed_id': getattr(subject, 'id', None),
+                'feed_name': getattr(subject, 'name', 'Unknown Feed'),
+                'timestamp': kwargs.get('timestamp'),
+                'bundle': bundle
+            }
+            
+            # Forward to core observer
+            super().update(subject, event_data)
+            
+            # Django-specific handling
+            if event_type == 'feed_published':
+                self._handle_django_feed_published(subject, bundle)
+            elif event_type == 'feed_updated':
+                self._handle_django_feed_updated(subject, bundle)
+            elif event_type == 'feed_error':
+                self._handle_django_feed_error(subject, kwargs.get('error'))
+                
+        except Exception as e:
+            logger.error(f"Error in Django email observer: {e}")
+    
+    def _handle_django_feed_published(self, feed, bundle):
+        """Handle Django-specific feed published notifications."""
+        if self.organization and self.organization.contact_email:
+            try:
+                subject_line = f"Feed Published: {getattr(feed, 'name', 'Unknown')}"
                 message = f"""
                 A new threat intelligence feed has been published:
                 
-                Feed: {feed.name}
-                Collection: {feed.collection.title}
-                Objects: {len(bundle.get('objects', []))}
-                Published: {feed.last_published_time}
+                Feed: {getattr(feed, 'name', 'Unknown')}
+                Objects: {len(bundle.get('objects', [])) if bundle else 0}
+                Published: {getattr(feed, 'last_published_time', 'Unknown')}
                 
                 Visit the platform to access the latest threat intelligence.
                 """
@@ -121,112 +145,108 @@ class InstitutionObserver(Observer):
                 )
                 
                 logger.info(f"Email notification sent to {self.organization.name}")
-        
-        except Exception as e:
-            logger.error(f"Failed to send email notification to {self.organization.name}: {e}")
+                
+            except Exception as e:
+                logger.error(f"Failed to send email notification: {e}")
     
-    def _notify_feed_updated(self, feed, bundle):
-        """
-        Notify organization about an updated feed.
-        
-        Args:
-            feed: The updated feed
-            bundle: The updated STIX bundle
-        """
-        logger.info(f"Feed updated notification for {self.organization.name}: {feed.name}")
+    def _handle_django_feed_updated(self, feed, bundle):
+        """Handle Django-specific feed updated notifications."""
+        if self.organization:
+            logger.info(f"Feed updated notification for {self.organization.name}: {getattr(feed, 'name', 'Unknown')}")
     
-    def _notify_feed_error(self, feed, error):
-        """
-        Notify organization about a feed error.
-        
-        Args:
-            feed: The feed with error
-            error: Error details
-        """
-        logger.warning(f"Feed error notification for {self.organization.name}: {feed.name} - {error}")
+    def _handle_django_feed_error(self, feed, error):
+        """Handle Django-specific feed error notifications."""
+        if self.organization:
+            logger.warning(f"Feed error notification for {self.organization.name}: {getattr(feed, 'name', 'Unknown')} - {error}")
 
 
-class AlertSystemObserver(Observer):
+class DjangoAlertSystemObserver(AlertSystemObserver, ObserverInterface):
     """
-    Observer that triggers alerts based on feed updates.
-    Implements smart alerting based on threat intelligence.
+    Django-integrated alert system observer.
+    Bridges core AlertSystemObserver with Django signals.
     """
     
-    def __init__(self, alert_config=None):
+    def __init__(self, alert_system_id="django_alert_system", **kwargs):
         """
-        Initialize alert system observer.
+        Initialize Django alert system observer.
         
         Args:
-            alert_config: Configuration for alert thresholds and rules
+            alert_system_id: Unique identifier for the alert system
+            **kwargs: Additional configuration
         """
-        self.alert_config = alert_config or {}
+        super().__init__(alert_system_id, **kwargs)
+        self.alert_config = kwargs.get('alert_config', {})
     
     def update(self, subject, **kwargs):
         """
-        Handle feed updates and trigger alerts if needed.
+        Handle Django signal notifications and forward to core observer.
         
         Args:
-            subject: The feed that was updated
-            **kwargs: Additional context (bundle, event_type, etc.)
+            subject: The subject that triggered the notification
+            **kwargs: Additional context data
         """
-        event_type = kwargs.get('event_type', 'unknown')
-        bundle = kwargs.get('bundle')
-        
-        logger.info(f"Alert system observer notified: {subject.name} - {event_type}")
-        
-        if event_type == 'feed_published' and bundle:
-            self._analyze_bundle_for_alerts(subject, bundle)
+        try:
+            # Convert Django signal data to core observer format
+            event_type = kwargs.get('event_type', 'unknown')
+            bundle = kwargs.get('bundle')
+            
+            logger.info(f"Django alert observer processing: {event_type}")
+            
+            # Convert to core observer event format
+            event_data = {
+                'feed_id': getattr(subject, 'id', None),
+                'feed_name': getattr(subject, 'name', 'Unknown Feed'),
+                'timestamp': kwargs.get('timestamp'),
+                'bundle': bundle
+            }
+            
+            # Add Django-specific data processing
+            if event_type == 'feed_published' and bundle:
+                event_data.update(self._process_django_bundle(bundle))
+            
+            # Forward to core observer
+            super().update(subject, event_type, event_data)
+            
+        except Exception as e:
+            logger.error(f"Error in Django alert observer: {e}")
     
-    def _analyze_bundle_for_alerts(self, feed, bundle):
-        """
-        Analyze STIX bundle for high-priority threats and trigger alerts.
+    def _process_django_bundle(self, bundle):
+        """Process Django STIX bundle for alert analysis."""
+        if not bundle or not isinstance(bundle, dict):
+            return {}
         
-        Args:
-            feed: The feed that was published
-            bundle: The STIX bundle to analyze
-        """
-        high_priority_indicators = []
+        indicators = []
+        ttps = []
         
         for obj in bundle.get('objects', []):
             if obj.get('type') == 'indicator':
-                # Check for high-confidence indicators
-                if obj.get('confidence', 0) >= self.alert_config.get('min_confidence', 80):
-                    high_priority_indicators.append(obj)
-                
-                # Check for specific threat labels
-                threat_labels = self.alert_config.get('alert_labels', ['malicious-activity'])
-                obj_labels = obj.get('labels', [])
-                if any(label in obj_labels for label in threat_labels):
-                    high_priority_indicators.append(obj)
+                indicators.append({
+                    'type': obj.get('type'),
+                    'value': obj.get('pattern', 'Unknown'),
+                    'severity': obj.get('x_severity', 'medium'),
+                    'confidence': obj.get('confidence', 50)
+                })
+            elif obj.get('type') == 'attack-pattern':
+                ttps.append({
+                    'name': obj.get('name', 'Unknown'),
+                    'tactic': obj.get('x_mitre_tactic', 'unknown'),
+                    'technique': obj.get('x_mitre_technique', 'unknown'),
+                    'severity': obj.get('x_severity', 'medium')
+                })
         
-        if high_priority_indicators:
-            self._trigger_alert(feed, high_priority_indicators)
-    
-    def _trigger_alert(self, feed, indicators):
-        """
-        Trigger alert for high-priority indicators.
-        
-        Args:
-            feed: The feed containing the indicators
-            indicators: List of high-priority indicators
-        """
-        logger.warning(f"HIGH PRIORITY ALERT: {len(indicators)} threats detected in feed {feed.name}")
-        
-        # In a real implementation, this would integrate with:
-        # - SIEM systems
-        # - Notification services
-        # - Security orchestration platforms
-        
-        for indicator in indicators:
-            logger.warning(f"Threat detected: {indicator.get('pattern', 'Unknown')} "
-                         f"(Confidence: {indicator.get('confidence', 0)})")
+        return {
+            'indicators': indicators,
+            'ttps': ttps,
+            'indicators_count': len(indicators),
+            'ttps_count': len(ttps)
+        }
 
 
-# Django signal receivers for implementing Observer pattern
+# Django signal receivers for implementing unified Observer pattern
 @receiver(feed_updated)
 def handle_feed_updated(sender, **kwargs):
     """
-    Handle feed updated signal.
+    Handle feed updated signal with unified observer system.
     
     Args:
         sender: The model class that sent the signal
@@ -238,19 +258,35 @@ def handle_feed_updated(sender, **kwargs):
     if not feed:
         return
     
-    # Notify institution observer
-    institution_observer = InstitutionObserver(feed.collection.owner)
-    institution_observer.update(feed, event_type='feed_updated', bundle=bundle)
-    
-    # Notify alert system observer
-    alert_observer = AlertSystemObserver()
-    alert_observer.update(feed, event_type='feed_updated', bundle=bundle)
+    try:
+        # Get organization from feed
+        organization = getattr(feed, 'collection', None)
+        if organization:
+            organization = getattr(organization, 'owner', None)
+        
+        if organization:
+            # Notify Django email observer
+            email_observer = DjangoEmailNotificationObserver(organization)
+            email_observer.update(feed, event_type='feed_updated', bundle=bundle)
+        
+        # Notify Django alert system observer
+        alert_observer = DjangoAlertSystemObserver(
+            alert_system_id="feed_update_alerts",
+            alert_config={
+                'min_confidence': 70,
+                'alert_labels': ['malicious-activity', 'suspicious-activity']
+            }
+        )
+        alert_observer.update(feed, event_type='feed_updated', bundle=bundle)
+        
+    except Exception as e:
+        logger.error(f"Error handling feed updated signal: {e}")
 
 
 @receiver(feed_published)
 def handle_feed_published(sender, **kwargs):
     """
-    Handle feed published signal.
+    Handle feed published signal with unified observer system.
     
     Args:
         sender: The model class that sent the signal
@@ -262,22 +298,35 @@ def handle_feed_published(sender, **kwargs):
     if not feed:
         return
     
-    # Notify institution observer
-    institution_observer = InstitutionObserver(feed.collection.owner)
-    institution_observer.update(feed, event_type='feed_published', bundle=bundle)
-    
-    # Notify alert system observer
-    alert_observer = AlertSystemObserver({
-        'min_confidence': 75,
-        'alert_labels': ['malicious-activity', 'suspicious-activity']
-    })
-    alert_observer.update(feed, event_type='feed_published', bundle=bundle)
+    try:
+        # Get organization from feed
+        organization = getattr(feed, 'collection', None)
+        if organization:
+            organization = getattr(organization, 'owner', None)
+        
+        if organization:
+            # Notify Django email observer
+            email_observer = DjangoEmailNotificationObserver(organization)
+            email_observer.update(feed, event_type='feed_published', bundle=bundle)
+        
+        # Notify Django alert system observer with high-priority settings
+        alert_observer = DjangoAlertSystemObserver(
+            alert_system_id="feed_publication_alerts",
+            alert_config={
+                'min_confidence': 75,
+                'alert_labels': ['malicious-activity', 'suspicious-activity', 'critical-threat']
+            }
+        )
+        alert_observer.update(feed, event_type='feed_published', bundle=bundle)
+        
+    except Exception as e:
+        logger.error(f"Error handling feed published signal: {e}")
 
 
 @receiver(feed_error)
 def handle_feed_error(sender, **kwargs):
     """
-    Handle feed error signal.
+    Handle feed error signal with unified observer system.
     
     Args:
         sender: The model class that sent the signal
@@ -289,24 +338,100 @@ def handle_feed_error(sender, **kwargs):
     if not feed:
         return
     
-    # Notify institution observer
-    institution_observer = InstitutionObserver(feed.collection.owner)
-    institution_observer.update(feed, event_type='feed_error', error=error)
+    try:
+        # Get organization from feed
+        organization = getattr(feed, 'collection', None)
+        if organization:
+            organization = getattr(organization, 'owner', None)
+        
+        if organization:
+            # Notify Django email observer
+            email_observer = DjangoEmailNotificationObserver(organization)
+            email_observer.update(feed, event_type='feed_error', error=error)
+        
+        # Notify Django alert system observer for error handling
+        alert_observer = DjangoAlertSystemObserver(
+            alert_system_id="feed_error_alerts",
+            alert_config={'error_alerts_enabled': True}
+        )
+        alert_observer.update(feed, event_type='feed_error', error=error)
+        
+    except Exception as e:
+        logger.error(f"Error handling feed error signal: {e}")
 
 
 # Helper function to connect signals from models
 def connect_feed_signals():
     """
-    Connect Django signals for the Observer pattern.
+    Connect Django signals for the unified Observer pattern.
     This should be called in apps.py ready() method.
     """
-    from django.db.models.signals import post_save
-    from crisp_threat_intel.models import Feed
+    try:
+        from django.db.models.signals import post_save
+        from crisp_threat_intel.models import Feed
+        
+        def feed_post_save(sender, instance, created, **kwargs):
+            """Handle feed model changes."""
+            if not created:  # Only for updates, not creation
+                feed_updated.send(sender=sender, feed=instance)
+        
+        post_save.connect(feed_post_save, sender=Feed)
+        logger.info("Connected unified feed observer signals")
+        
+    except ImportError as e:
+        logger.warning(f"Could not connect feed signals - models not available: {e}")
+    except Exception as e:
+        logger.error(f"Error connecting feed signals: {e}")
+
+
+# Observer registry for managing observers
+class ObserverRegistry:
+    """
+    Registry for managing observers in the unified system.
+    """
     
-    def feed_post_save(sender, instance, created, **kwargs):
-        """Handle feed model changes."""
-        if not created:  # Only for updates, not creation
-            feed_updated.send(sender=sender, feed=instance)
+    def __init__(self):
+        self._observers = {}
+        self._email_observers = {}
+        self._alert_observers = {}
     
-    post_save.connect(feed_post_save, sender=Feed)
-    logger.info("Connected feed observer signals")
+    def register_email_observer(self, observer_id: str, organization, **kwargs):
+        """Register an email notification observer."""
+        observer = DjangoEmailNotificationObserver(organization, **kwargs)
+        self._email_observers[observer_id] = observer
+        self._observers[observer_id] = observer
+        logger.info(f"Registered email observer: {observer_id}")
+        return observer
+    
+    def register_alert_observer(self, observer_id: str, alert_system_id: str, **kwargs):
+        """Register an alert system observer."""
+        observer = DjangoAlertSystemObserver(alert_system_id, **kwargs)
+        self._alert_observers[observer_id] = observer
+        self._observers[observer_id] = observer
+        logger.info(f"Registered alert observer: {observer_id}")
+        return observer
+    
+    def get_observer(self, observer_id: str):
+        """Get an observer by ID."""
+        return self._observers.get(observer_id)
+    
+    def notify_all(self, subject, **kwargs):
+        """Notify all registered observers."""
+        for observer_id, observer in self._observers.items():
+            try:
+                observer.update(subject, **kwargs)
+            except Exception as e:
+                logger.error(f"Error notifying observer {observer_id}: {e}")
+    
+    def get_stats(self):
+        """Get registry statistics."""
+        return {
+            'total_observers': len(self._observers),
+            'email_observers': len(self._email_observers),
+            'alert_observers': len(self._alert_observers),
+            'observers': list(self._observers.keys())
+        }
+
+
+# Global observer registry instance
+observer_registry = ObserverRegistry()

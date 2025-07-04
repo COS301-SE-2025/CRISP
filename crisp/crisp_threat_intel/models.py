@@ -460,7 +460,8 @@ class NetworkMembership(models.Model):
 
 class ThreatFeed(models.Model):
     """
-    External threat feeds that can be consumed via TAXII or other protocols
+    External threat feeds that can be consumed via TAXII or other protocols.
+    Integrates with the core observer pattern for notifications.
     """
     name = models.CharField(max_length=255, unique=True)
     description = models.TextField(blank=True, null=True)
@@ -483,6 +484,7 @@ class ThreatFeed(models.Model):
     is_active = models.BooleanField(default=True)
     last_error = models.TextField(blank=True, null=True)
     sync_count = models.IntegerField(default=0)
+    last_published_time = models.DateTimeField(blank=True, null=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -492,6 +494,88 @@ class ThreatFeed(models.Model):
     
     class Meta:
         ordering = ['name']
+    
+    def notify_observers(self, event_type, **kwargs):
+        """
+        Notify observers using Django signals integration.
+        Bridges Django models with the core observer pattern.
+        
+        Args:
+            event_type: Type of event ('updated', 'published', 'error')
+            **kwargs: Additional event data
+        """
+        from .observers.feed_observers import feed_updated, feed_published, feed_error
+        
+        try:
+            if event_type == 'updated':
+                feed_updated.send(sender=self.__class__, feed=self, **kwargs)
+            elif event_type == 'published':
+                feed_published.send(sender=self.__class__, feed=self, **kwargs)
+            elif event_type == 'error':
+                feed_error.send(sender=self.__class__, feed=self, **kwargs)
+            else:
+                logger.warning(f"Unknown event type: {event_type}")
+        except Exception as e:
+            logger.error(f"Error notifying observers for feed {self.name}: {e}")
+    
+    def publish_feed(self, bundle_data):
+        """
+        Publish feed data and notify observers.
+        
+        Args:
+            bundle_data: STIX bundle data to publish
+        """
+        try:
+            self.last_published_time = timezone.now()
+            self.save()
+            
+            # Notify observers about publication
+            self.notify_observers('published', bundle=bundle_data, timestamp=timezone.now())
+            
+            logger.info(f"Published feed {self.name} with {len(bundle_data.get('objects', []))} objects")
+            
+        except Exception as e:
+            self.last_error = str(e)
+            self.save()
+            self.notify_observers('error', error=str(e))
+            logger.error(f"Failed to publish feed {self.name}: {e}")
+            raise
+    
+    def update_feed_data(self, bundle_data):
+        """
+        Update feed data and notify observers.
+        
+        Args:
+            bundle_data: Updated STIX bundle data
+        """
+        try:
+            self.last_sync = timezone.now()
+            self.sync_count += 1
+            self.save()
+            
+            # Notify observers about update
+            self.notify_observers('updated', bundle=bundle_data, timestamp=timezone.now())
+            
+            logger.info(f"Updated feed {self.name} with {len(bundle_data.get('objects', []))} objects")
+            
+        except Exception as e:
+            self.last_error = str(e)
+            self.save()
+            self.notify_observers('error', error=str(e))
+            logger.error(f"Failed to update feed {self.name}: {e}")
+            raise
+    
+    def save(self, *args, **kwargs):
+        """
+        Override save to trigger observer notifications for updates.
+        """
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        
+        # Only notify for updates, not creation
+        if not is_new:
+            # Don't send bundle data on generic save, only on explicit updates
+            self.notify_observers('updated', bundle=None, timestamp=timezone.now())
 
 
 class Indicator(models.Model):

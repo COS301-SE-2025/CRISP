@@ -171,6 +171,22 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
 CORS_ALLOW_CREDENTIALS = True
 
+# Gmail SMTP Email Configuration
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
+EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() == 'true'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+
+# Default email settings for CRISP notifications
+DEFAULT_FROM_EMAIL = os.environ.get('CRISP_SENDER_EMAIL', 'noreply@crisp-system.org')
+SERVER_EMAIL = os.environ.get('CRISP_SENDER_EMAIL', 'noreply@crisp-system.org')
+
+# Email timeout settings
+EMAIL_TIMEOUT = 30  # 30 seconds timeout for email sending
+
 # OTX Configuration
 OTX_SETTINGS = {
     'API_KEY': os.environ.get('OTX_API_KEY', ''),
