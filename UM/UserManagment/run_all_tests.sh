@@ -26,13 +26,13 @@ SUITES_FAILED=0
 # Function to print section header
 print_section() {
     echo -e "\n${BOLD}${CYAN}$1${NC}"
-    echo -e "${CYAN}$(printf '=%.0s' {1..60})${NC}"
+    echo -e "${CYAN}$(printf '=%.0s' $(seq 1 60))${NC}"
 }
 
 # Function to print test file header
 print_test_header() {
     echo -e "\n${BOLD}${YELLOW}📋 Running: $1${NC}"
-    echo -e "${YELLOW}$(printf '-%.0s' {1..50})${NC}"
+    echo -e "${YELLOW}$(printf -- '-%.0s' $(seq 1 50))${NC}"
 }
 
 # Function to parse Django test output and extract statistics
