@@ -83,7 +83,6 @@ def main():
             django.setup()
             from django.core.cache import cache
             from UserManagement.models import CustomUser, Organization
-            import time
             
             # Clear all caches thoroughly
             cache.clear()
