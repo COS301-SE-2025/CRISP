@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
 Quick system test for CRISP User Management
+Enhanced with improved visual formatting for clear pass/fail status
 """
 
 import requests
 import json
 import sys
+from test_formatting import TestFormatter
 
 BASE_URL = "http://127.0.0.1:8000"
 

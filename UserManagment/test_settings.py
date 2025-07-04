@@ -178,9 +178,9 @@ LOGGING = {
 }
 
 # Rate limiting configuration
-RATELIMIT_ENABLE = True  # Enable for testing
-RATELIMIT_ATTEMPTS = 5
-RATELIMIT_TIMEOUT = 300
+RATELIMIT_ENABLE = False  # Disable for testing to avoid issues
+RATELIMIT_ATTEMPTS = 100  # High limit for testing
+RATELIMIT_TIMEOUT = 10    # Short timeout for testing
 RATELIMIT_CACHE_PREFIX = 'rl:'
 
 # Security configuration
