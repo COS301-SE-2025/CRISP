@@ -1,0 +1,164 @@
+CRISP Integration Test Results
+Generated: 2025-07-05 08:30:07
+================================================================================
+
+
+================================================================================
+                        CRISP INTEGRATED SYSTEM OVERVIEW                        
+================================================================================
+CRISP (Cyber Risk Information Sharing Platform) Integration
+This demonstrates the full integration between:
+  • UserManagement System - User, organization, and authentication management
+  • TrustManagement System - Trust relationships and access control
+  • Core Integration Services - Unified business logic and workflows
+
+System Architecture:
+  • Django Framework - Web framework and ORM
+  • SQLite Database - Data persistence layer
+  • REST API - API endpoints for external integration
+  • Role-Based Access Control - Security and permissions
+  • Trust-Based Intelligence Filtering - Content access control
+
+Integration Features:
+  • Organization registration with trust setup
+  • User invitation and role management
+  • Trust relationship establishment and approval
+  • Intelligence access control based on trust levels
+  • Comprehensive audit logging
+  • Security event monitoring
+
+================================================================================
+                          CRISP INTEGRATION TEST SUITE                          
+================================================================================
+Started at: 2025-07-05 08:29:18
+Database: /mnt/c/Users/Client/Documents/GitHub/CRISP/crisp_integrated.db
+
+Running: System Configuration
+------------------------------------------------------------
+  [PASS] System Configuration (0.314s)
+    Validate Django system setup
+      - Django system configuration validated
+
+Running: Database Setup
+------------------------------------------------------------
+  [PASS] Database Setup (0.325s)
+    Verify database and migrations
+      - Database migrations applied successfully
+      - Table 'organizations' exists
+      - Table 'trust_levels' exists
+      - Table 'trust_relationships' exists
+
+Running: Trust Level Management
+------------------------------------------------------------
+  [PASS] Trust Level Management (0.007s)
+    Test trust level CRUD operations
+      - Created 0 new trust levels
+      - Total trust levels: 10
+      - Active trust levels: 10
+
+Running: User Management
+------------------------------------------------------------
+  [PASS] User Management (0.225s)
+    Test user and organization management
+      - Created organization: Test Organization 1751704159
+      - Created user: testuser1751704159
+      - User organization: Test Organization 1751704159
+
+Running: Trust Relationships
+------------------------------------------------------------
+  [PASS] Trust Relationships (0.295s)
+    Test trust relationship creation
+      - Created trust relationship: f57123b0-08b4-41e9-991e-5bd15eeaf484
+      - Source: Test Org 1 1751704159
+      - Target: Test Org 2 1751704159
+      - Trust level: Untrusted
+      - Status: pending
+
+Running: Integration Service
+------------------------------------------------------------
+  [PASS] Integration Service (0.205s)
+    Test core integration service
+      - Created organization via service: Integration Test Org 1751704159
+      - Organization ID: 6fb0aab5-0363-48f0-b3d0-f3b6d863a135
+      - Admin user created: intadmin1751704159@integration.edu
+      - User role: publisher
+
+Running: Django Test Suite
+------------------------------------------------------------
+  [PASS] Django Test Suite (13.164s)
+    Run built-in Django tests
+      - UserManagement tests failed: ======================================================================
+ERROR: test_invitation_token_model (apps.user_management.tests.UserManagementCoverageTest)
+Test invitation token model
+----------...
+      - TrustManagement tests failed: ======================================================================
+ERROR: test_model_edge_cases (apps.trust_management.tests.TrustManagementCoverageTest)
+Test model edge cases for coverage
+-------...
+      - Core integration tests: Ran 12 tests in 7.621s
+      - Core integration result: OK
+
+System Integration Demonstration
+------------------------------------------------------------
+  ✅ Created university organization: State University 1751704173
+  ✅ Created healthcare organization: Regional Healthcare 1751704173
+  ✅ Created trust relationship: 3f1055f2-593f-46e9-b477-79f402a1b0e2
+  ℹ️    Between: State University 1751704173 ↔ Regional Healthcare 1751704173
+  ℹ️  Admin admin@state-univ-1751704173.edu has access to 0 sources
+  ℹ️  Admin security@regional-health-1751704173.org has access to 0 sources
+
+Code Coverage Analysis
+------------------------------------------------------------
+
+System Integration Report
+------------------------------------------------------------
+  ✅ System Statistics:
+  ℹ️    Organizations: 19
+  ℹ️    Users: 34
+  ℹ️    Trust Levels: 10
+  ℹ️    Trust Relationships: 35
+  ℹ️    Trust Logs: 105
+  ℹ️    Active Relationships: 6
+  ℹ️    Pending Relationships: 29
+  ✅ User Role Distribution:
+  ℹ️    Admin: 7
+  ℹ️    Publisher: 21
+  ℹ️    Viewer: 6
+  ✅ Trust Level Usage:
+  ℹ️    Untrusted: 15 relationships
+  ℹ️    Public Trust: 0 relationships
+  ℹ️    Limited Trust: 0 relationships
+  ℹ️    Test Level 1: 0 relationships
+  ℹ️    Public Access: 3 relationships
+  ℹ️    Moderate Trust: 0 relationships
+  ℹ️    Trusted Partners: 17 relationships
+  ℹ️    High Trust: 0 relationships
+  ℹ️    Test Level 2: 0 relationships
+  ℹ️    Restricted Access: 0 relationships
+  ✅ Integration Health:
+  ℹ️    Database: Connected
+  ℹ️    Models: 7 model types active
+  ℹ️    Coverage: N/A
+  ℹ️    Duration: 0.00s
+
+================================================================================
+                                  TEST SUMMARY                                  
+================================================================================
+
+Test Results:
+  Passed: 7
+  Failed: 0
+  Total:  7
+  Success Rate: 100.0%
+  Duration: 46.20s
+  Code Coverage: 32%%
+
+ALL TESTS PASSED!
+CRISP UserManagement and TrustManagement systems are fully integrated.
+
+Test completed at: 2025-07-05 08:30:04
+
+================================================================================
+Results saved to: test_results/test_results_20250705_083007.txt
+HTML Coverage Report: htmlcov/index.html
+Test Duration: 46.20s

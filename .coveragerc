@@ -1,21 +1,33 @@
 [run]
-source = core
+source = apps
 omit = 
     */migrations/*
     */venv/*
     */env/*
-    */tests/*
-    */test_*
     manage.py
+    manage_unified.py
+    managetrust.py
     */settings/*
     */wsgi.py
     */asgi.py
     */__pycache__/*
-    */trust_group_service.py
-    */trust_repository.py
-    */trust_observers.py
-    */validators.py
-    */trust_service.py
+    */test_*integration*
+    */test_*api*
+    */test_*admin*
+    */test_*formatting*
+    */test_*comprehensive*
+    */test_*server*
+    */test_*final*
+    */test_*simple*
+    */test_*system*
+    */clear_*
+    */debug_*
+    */prepare_*
+    */remove_*
+    */reset_*
+    */run_*
+    */simple_*
+    */verify_*
 
 [report]
 exclude_lines =
