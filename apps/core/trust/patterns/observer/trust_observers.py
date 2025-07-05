@@ -29,6 +29,141 @@ class TrustObserver(ABC):
         pass
 
 
+class TrustSubject:
+    """
+    Subject class that maintains a list of observers and notifies them of events.
+    """
+    
+    def __init__(self):
+        self._observers: List[TrustObserver] = []
+    
+    def attach(self, observer: TrustObserver):
+        """Attach an observer to the subject."""
+        if observer not in self._observers:
+            self._observers.append(observer)
+    
+    def detach(self, observer: TrustObserver):
+        """Detach an observer from the subject."""
+        if observer in self._observers:
+            self._observers.remove(observer)
+    
+    def notify(self, event_type: str, event_data: Dict[str, Any]):
+        """Notify all observers of an event."""
+        for observer in self._observers:
+            try:
+                observer.update(event_type, event_data)
+            except Exception as e:
+                logger.error(f"Observer {observer.__class__.__name__} failed: {str(e)}")
+
+
+class TrustPerformanceObserver(TrustObserver):
+    """
+    Observer that monitors trust system performance metrics.
+    """
+    
+    def update(self, event_type: str, event_data: Dict[str, Any]):
+        """
+        Monitor performance metrics for trust operations.
+        """
+        try:
+            if event_type == 'performance_metric':
+                self._record_performance_metric(event_data)
+            elif event_type == 'slow_operation':
+                self._handle_slow_operation(event_data)
+        except Exception as e:
+            logger.error(f"Failed to record performance metric: {str(e)}")
+    
+    def _record_performance_metric(self, event_data: Dict[str, Any]):
+        """Record performance metric."""
+        operation = event_data.get('operation')
+        duration = event_data.get('duration')
+        success = event_data.get('success', True)
+        
+        logger.info(f"PERFORMANCE: {operation} took {duration}s (success: {success})")
+        
+        # In a real implementation, this would send metrics to monitoring systems
+        if duration > 1.0:  # Slow operation threshold
+            logger.warning(f"Slow trust operation detected: {operation} took {duration}s")
+    
+    def _handle_slow_operation(self, event_data: Dict[str, Any]):
+        """Handle slow operation alerts."""
+        logger.warning(f"SLOW OPERATION: {event_data}")
+
+
+class TrustSecurityObserver(TrustObserver):
+    """
+    Observer that monitors trust relationships for security anomalies.
+    """
+    
+    def update(self, event_type: str, event_data: Dict[str, Any]):
+        """
+        Monitor trust events for security concerns.
+        """
+        try:
+            if event_type == 'suspicious_activity':
+                self._handle_suspicious_activity(event_data)
+            elif event_type == 'unauthorized_access':
+                self._handle_unauthorized_access(event_data)
+            elif event_type == 'trust_violation':
+                self._handle_trust_violation(event_data)
+            elif event_type == 'access_denied':
+                self._check_access_denial_patterns(event_data)
+            elif event_type == 'relationship_revoked':
+                self._check_revocation_patterns(event_data)
+            elif event_type == 'multiple_failed_access':
+                self._handle_suspicious_access_attempts(event_data)
+        except Exception as e:
+            logger.error(f"Failed to process security monitoring: {str(e)}")
+    
+    def _handle_suspicious_activity(self, event_data: Dict[str, Any]):
+        """Handle suspicious activity alerts."""
+        user = event_data.get('user')
+        activity = event_data.get('activity')
+        
+        logger.warning(f"SECURITY ALERT: Suspicious activity by {user}: {activity}")
+    
+    def _handle_unauthorized_access(self, event_data: Dict[str, Any]):
+        """Handle unauthorized access attempts."""
+        user = event_data.get('user')
+        resource = event_data.get('resource')
+        
+        logger.warning(f"SECURITY ALERT: Unauthorized access attempt by {user} to {resource}")
+    
+    def _handle_trust_violation(self, event_data: Dict[str, Any]):
+        """Handle trust policy violations."""
+        relationship_id = event_data.get('relationship_id')
+        violation_type = event_data.get('violation_type')
+        
+        logger.warning(f"SECURITY ALERT: Trust violation in relationship {relationship_id}: {violation_type}")
+    
+    def _check_access_denial_patterns(self, event_data: Dict[str, Any]):
+        """Check for suspicious access denial patterns."""
+        requesting_org = event_data.get('requesting_organization')
+        if not requesting_org:
+            return
+        
+        # In a real implementation, this would check for patterns like:
+        # - Multiple rapid access attempts
+        # - Access attempts to sensitive resources
+        # - Unusual access patterns
+        
+        logger.debug(f"Security check: Access denial for {requesting_org}")
+    
+    def _check_revocation_patterns(self, event_data: Dict[str, Any]):
+        """Check for suspicious trust revocation patterns."""
+        relationship = event_data.get('relationship')
+        if not relationship:
+            return
+        
+        # Check if this is part of a pattern of revocations
+        logger.debug(f"Security check: Trust revocation for relationship {relationship.id}")
+    
+    def _handle_suspicious_access_attempts(self, event_data: Dict[str, Any]):
+        """Handle potentially suspicious access attempts."""
+        # This would trigger security alerts, rate limiting, etc.
+        logger.warning(f"SECURITY ALERT: Suspicious access pattern detected - {event_data}")
+
+
 class TrustNotificationObserver(TrustObserver):
     """
     Observer that handles trust relationship notifications.

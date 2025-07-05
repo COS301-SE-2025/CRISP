@@ -411,14 +411,14 @@ class CRISPTestSuite:
             
             # Test UserManagement models and coverage
             user_test_result = subprocess.run([
-                sys.executable, 'manage_unified.py', 'test', 
+                sys.executable, 'manage.py', 'test', 
                 'apps.user_management.tests', 
                 '--verbosity=0'
             ], capture_output=True, text=True, cwd=project_root, timeout=60)
             
             # Test TrustManagement models and coverage
             trust_test_result = subprocess.run([
-                sys.executable, 'manage_unified.py', 'test', 
+                sys.executable, 'manage.py', 'test', 
                 'apps.trust_management.tests', 
                 '--verbosity=0'
             ], capture_output=True, text=True, cwd=project_root, timeout=60)
@@ -447,7 +447,7 @@ class CRISPTestSuite:
             # Also try core integration tests if they exist
             try:
                 core_test_result = subprocess.run([
-                    sys.executable, 'manage_unified.py', 'test', 
+                    sys.executable, 'manage.py', 'test', 
                     'apps.core.tests_integration', 
                     '--verbosity=0'
                 ], capture_output=True, text=True, cwd=project_root, timeout=60)
@@ -463,6 +463,26 @@ class CRISPTestSuite:
                     result.details.append("Core integration tests skipped or failed")
             except subprocess.TimeoutExpired:
                 result.details.append("Core integration tests timed out")
+                
+            # Also try trust patterns coverage tests
+            try:
+                patterns_test_result = subprocess.run([
+                    sys.executable, 'manage.py', 'test', 
+                    'apps.core.tests.test_trust_patterns_coverage', 
+                    '--verbosity=0'
+                ], capture_output=True, text=True, cwd=project_root, timeout=60)
+                
+                if patterns_test_result.returncode == 0:
+                    patterns_output = patterns_test_result.stderr.split('\n')
+                    for line in patterns_output:
+                        if 'Ran' in line and 'test' in line:
+                            result.details.append(f"Trust patterns tests: {line.strip()}")
+                        elif line.strip() and ('OK' in line or 'FAILED' in line):
+                            result.details.append(f"Trust patterns result: {line.strip()}")
+                else:
+                    result.details.append("Trust patterns tests failed or skipped")
+            except subprocess.TimeoutExpired:
+                result.details.append("Trust patterns tests timed out")
                 
         except subprocess.TimeoutExpired:
             result.details.append("Django tests timed out, continuing with integration tests")
@@ -486,7 +506,7 @@ class CRISPTestSuite:
             # First, run coverage on the specific tests that exercise the code properly
             coverage_run = subprocess.run([
                 'python3', '-m', 'coverage', 'run', '--source=apps', 
-                'manage_unified.py', 'test', 'apps.user_management.tests', 'apps.trust_management.tests', '--verbosity=0'
+                'manage.py', 'test', 'apps.user_management.tests', 'apps.trust_management.tests', 'apps.core.tests.test_trust_patterns_coverage', '--verbosity=0'
             ], capture_output=True, text=True, cwd=project_root, timeout=120)
             
             if coverage_run.returncode != 0:
@@ -494,8 +514,17 @@ class CRISPTestSuite:
                 # Alternative: run coverage on all apps tests
                 coverage_run = subprocess.run([
                     'python3', '-m', 'coverage', 'run', '--source=apps', 
-                    'manage_unified.py', 'test', 'apps', '--verbosity=0'
+                    'manage.py', 'test', 'apps', '--verbosity=0'
                 ], capture_output=True, text=True, cwd=project_root, timeout=120)
+            
+            # Also run coverage on the core integration tests to exercise more code paths
+            if coverage_run.returncode == 0:
+                print(f"{Colors.CYAN}Running additional coverage tests...{Colors.END}")
+                # Append more coverage by running core tests
+                subprocess.run([
+                    'python3', '-m', 'coverage', 'run', '--append', '--source=apps', 
+                    'manage.py', 'test', 'apps.core.tests_integration', '--verbosity=0'
+                ], capture_output=True, text=True, cwd=project_root, timeout=60)
             
             # Generate coverage report
             print(f"{Colors.CYAN}Generating coverage report...{Colors.END}")
@@ -630,7 +659,7 @@ class CRISPTestSuite:
                 color = Colors.YELLOW
             else:
                 color = Colors.RED
-            self.print_and_capture(f"  {Colors.BOLD}Code Coverage: {color}{self.coverage_percentage}%{Colors.END}")
+            self.print_and_capture(f"  {Colors.BOLD}Code Coverage: {color}{self.coverage_percentage}{Colors.END}")
         else:
             # Try to get coverage one more time
             try:

@@ -1,5 +1,5 @@
 CRISP Integration Test Results
-Generated: 2025-07-05 08:30:07
+Generated: 2025-07-05 08:53:55
 ================================================================================
 
 
@@ -30,18 +30,18 @@ Integration Features:
 ================================================================================
                           CRISP INTEGRATION TEST SUITE                          
 ================================================================================
-Started at: 2025-07-05 08:29:18
+Started at: 2025-07-05 08:53:03
 Database: /mnt/c/Users/Client/Documents/GitHub/CRISP/crisp_integrated.db
 
 Running: System Configuration
 ------------------------------------------------------------
-  [PASS] System Configuration (0.314s)
+  [PASS] System Configuration (0.281s)
     Validate Django system setup
       - Django system configuration validated
 
 Running: Database Setup
 ------------------------------------------------------------
-  [PASS] Database Setup (0.325s)
+  [PASS] Database Setup (0.316s)
     Verify database and migrations
       - Database migrations applied successfully
       - Table 'organizations' exists
@@ -50,7 +50,7 @@ Running: Database Setup
 
 Running: Trust Level Management
 ------------------------------------------------------------
-  [PASS] Trust Level Management (0.007s)
+  [PASS] Trust Level Management (0.010s)
     Test trust level CRUD operations
       - Created 0 new trust levels
       - Total trust levels: 10
@@ -58,54 +58,52 @@ Running: Trust Level Management
 
 Running: User Management
 ------------------------------------------------------------
-  [PASS] User Management (0.225s)
+  [PASS] User Management (0.288s)
     Test user and organization management
-      - Created organization: Test Organization 1751704159
-      - Created user: testuser1751704159
-      - User organization: Test Organization 1751704159
+      - Created organization: Test Organization 1751705583
+      - Created user: testuser1751705583
+      - User organization: Test Organization 1751705583
 
 Running: Trust Relationships
 ------------------------------------------------------------
-  [PASS] Trust Relationships (0.295s)
+  [PASS] Trust Relationships (0.291s)
     Test trust relationship creation
-      - Created trust relationship: f57123b0-08b4-41e9-991e-5bd15eeaf484
-      - Source: Test Org 1 1751704159
-      - Target: Test Org 2 1751704159
+      - Created trust relationship: aa3e3ed1-27ca-46fa-863b-6f4849fbb8d9
+      - Source: Test Org 1 1751705583
+      - Target: Test Org 2 1751705583
       - Trust level: Untrusted
       - Status: pending
 
 Running: Integration Service
 ------------------------------------------------------------
-  [PASS] Integration Service (0.205s)
+  [PASS] Integration Service (0.210s)
     Test core integration service
-      - Created organization via service: Integration Test Org 1751704159
-      - Organization ID: 6fb0aab5-0363-48f0-b3d0-f3b6d863a135
-      - Admin user created: intadmin1751704159@integration.edu
+      - Created organization via service: Integration Test Org 1751705584
+      - Organization ID: c12b6710-668e-470b-819f-dbf016e9a432
+      - Admin user created: intadmin1751705584@integration.edu
       - User role: publisher
 
 Running: Django Test Suite
 ------------------------------------------------------------
-  [PASS] Django Test Suite (13.164s)
+  [PASS] Django Test Suite (14.305s)
     Run built-in Django tests
       - UserManagement tests failed: ======================================================================
-ERROR: test_invitation_token_model (apps.user_management.tests.UserManagementCoverageTest)
-Test invitation token model
-----------...
+FAIL: test_user_model_properties (apps.user_management.tests.UserManagementCoverageTest)
+Test all user model properties for cover...
       - TrustManagement tests failed: ======================================================================
-ERROR: test_model_edge_cases (apps.trust_management.tests.TrustManagementCoverageTest)
-Test model edge cases for coverage
--------...
-      - Core integration tests: Ran 12 tests in 7.621s
+ERROR: test_service_integration_comprehensive (apps.trust_management.tests.TrustManagementCoverageTest)
+Test service integration ...
+      - Core integration tests: Ran 12 tests in 7.553s
       - Core integration result: OK
 
 System Integration Demonstration
 ------------------------------------------------------------
-  ✅ Created university organization: State University 1751704173
-  ✅ Created healthcare organization: Regional Healthcare 1751704173
-  ✅ Created trust relationship: 3f1055f2-593f-46e9-b477-79f402a1b0e2
-  ℹ️    Between: State University 1751704173 ↔ Regional Healthcare 1751704173
-  ℹ️  Admin admin@state-univ-1751704173.edu has access to 0 sources
-  ℹ️  Admin security@regional-health-1751704173.org has access to 0 sources
+  ✅ Created university organization: State University 1751705598
+  ✅ Created healthcare organization: Regional Healthcare 1751705598
+  ✅ Created trust relationship: 73c99a1a-0b18-43f4-b221-e218d9bf6d45
+  ℹ️    Between: State University 1751705598 ↔ Regional Healthcare 1751705598
+  ℹ️  Admin admin@state-univ-1751705598.edu has access to 0 sources
+  ℹ️  Admin security@regional-health-1751705598.org has access to 0 sources
 
 Code Coverage Analysis
 ------------------------------------------------------------
@@ -113,25 +111,25 @@ Code Coverage Analysis
 System Integration Report
 ------------------------------------------------------------
   ✅ System Statistics:
-  ℹ️    Organizations: 19
-  ℹ️    Users: 34
+  ℹ️    Organizations: 53
+  ℹ️    Users: 62
   ℹ️    Trust Levels: 10
-  ℹ️    Trust Relationships: 35
-  ℹ️    Trust Logs: 105
+  ℹ️    Trust Relationships: 46
+  ℹ️    Trust Logs: 132
   ℹ️    Active Relationships: 6
-  ℹ️    Pending Relationships: 29
+  ℹ️    Pending Relationships: 40
   ✅ User Role Distribution:
-  ℹ️    Admin: 7
-  ℹ️    Publisher: 21
-  ℹ️    Viewer: 6
+  ℹ️    Admin: 13
+  ℹ️    Publisher: 37
+  ℹ️    Viewer: 12
   ✅ Trust Level Usage:
-  ℹ️    Untrusted: 15 relationships
+  ℹ️    Untrusted: 21 relationships
   ℹ️    Public Trust: 0 relationships
   ℹ️    Limited Trust: 0 relationships
   ℹ️    Test Level 1: 0 relationships
   ℹ️    Public Access: 3 relationships
   ℹ️    Moderate Trust: 0 relationships
-  ℹ️    Trusted Partners: 17 relationships
+  ℹ️    Trusted Partners: 22 relationships
   ℹ️    High Trust: 0 relationships
   ℹ️    Test Level 2: 0 relationships
   ℹ️    Restricted Access: 0 relationships
@@ -150,15 +148,15 @@ Test Results:
   Failed: 0
   Total:  7
   Success Rate: 100.0%
-  Duration: 46.20s
-  Code Coverage: 32%%
+  Duration: 49.60s
+  Code Coverage: 34%
 
 ALL TESTS PASSED!
 CRISP UserManagement and TrustManagement systems are fully integrated.
 
-Test completed at: 2025-07-05 08:30:04
+Test completed at: 2025-07-05 08:53:52
 
 ================================================================================
-Results saved to: test_results/test_results_20250705_083007.txt
+Results saved to: test_results/test_results_20250705_085355.txt
 HTML Coverage Report: htmlcov/index.html
-Test Duration: 46.20s
+Test Duration: 49.60s

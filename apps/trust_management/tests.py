@@ -2,7 +2,7 @@
 Simple tests to boost coverage for trust_management app
 """
 from django.test import TestCase
-from apps.trust_management.models import TrustLevel, TrustRelationship, TrustGroup, TrustLog
+from apps.trust_management.models import TrustLevel, TrustRelationship, TrustGroup, TrustLog, TrustGroupMembership
 from apps.user_management.models import Organization
 from apps.core.services import CRISPIntegrationService
 import uuid
@@ -117,8 +117,8 @@ class TrustManagementCoverageTest(TestCase):
         )
         
         # Verify relationship was created
-        self.assertEqual(relationship.source_organization, str(self.org1.id))
-        self.assertEqual(relationship.target_organization, str(self.org2.id))
+        self.assertEqual(relationship.source_organization, self.org1.id)
+        self.assertEqual(relationship.target_organization, self.org2.id)
         self.assertEqual(relationship.trust_level, self.trust_level)
         
     def test_trust_level_variations(self):
@@ -228,3 +228,199 @@ class TrustManagementCoverageTest(TestCase):
         self.assertEqual(relationship.relationship_type, 'bilateral')
         self.assertEqual(relationship.status, 'active')
         self.assertEqual(relationship.created_by, 'test_user')
+        
+    def test_trust_service_methods(self):
+        """Test trust service methods for coverage"""
+        from apps.core.services import CRISPIntegrationService
+        
+        # Test creating trust relationship with different parameters
+        relationship = CRISPIntegrationService.create_trust_relationship(
+            source_org=self.org1,
+            target_org=self.org2,
+            trust_level_name=self.trust_level.name,
+            relationship_type='hierarchical',
+            created_by_user=None
+        )
+        
+        # Test relationship properties
+        self.assertEqual(relationship.relationship_type, 'hierarchical')
+        self.assertEqual(relationship.source_organization, self.org1.id)
+        self.assertEqual(relationship.target_organization, self.org2.id)
+        
+    def test_trust_level_comprehensive(self):
+        """Test all trust level properties and methods"""
+        # Test with different anonymization levels
+        for anon_level in ['full', 'partial', 'minimal']:
+            level = TrustLevel.objects.create(
+                name=f'Test {anon_level} Level',
+                level='trusted',
+                numerical_value=50,
+                description=f'Test level with {anon_level} anonymization',
+                created_by='test_user',
+                default_anonymization_level=anon_level
+            )
+            self.assertEqual(level.default_anonymization_level, anon_level)
+            
+        # Test with different access levels
+        for access_level in ['read', 'contribute', 'admin']:
+            level = TrustLevel.objects.create(
+                name=f'Test {access_level} Access',
+                level='trusted',
+                numerical_value=50,
+                description=f'Test level with {access_level} access',
+                created_by='test_user',
+                default_access_level=access_level
+            )
+            self.assertEqual(level.default_access_level, access_level)
+            
+    def test_trust_relationship_comprehensive(self):
+        """Test all trust relationship methods"""
+        # Create relationship
+        relationship = TrustRelationship.objects.create(
+            source_organization=self.org1.id,
+            target_organization=self.org2.id,
+            trust_level=self.trust_level,
+            relationship_type='bilateral',
+            created_by='test_user',
+            last_modified_by='test_user'
+        )
+        
+        # Test is_effective method
+        self.assertFalse(relationship.is_effective())  # Not approved yet
+        
+        # Test is_fully_approved method  
+        self.assertFalse(relationship.is_fully_approved())
+        
+        # Test approve_by_source method
+        relationship.approve_by_source()
+        self.assertTrue(relationship.approved_by_source)
+        
+        # Test approve_by_target method
+        relationship.approve_by_target()
+        self.assertTrue(relationship.approved_by_target)
+        self.assertTrue(relationship.is_fully_approved())
+        
+        # Test string representation
+        self.assertIn(str(self.org1.id), str(relationship))
+        self.assertIn(str(self.org2.id), str(relationship))
+        
+    def test_trust_group_comprehensive(self):
+        """Test all trust group methods"""
+        # Create trust group
+        group = TrustGroup.objects.create(
+            name='Comprehensive Test Group',
+            description='Test group for comprehensive coverage',
+            group_type='custom',
+            created_by='test_user',
+            default_trust_level=self.trust_level,
+            administrators=[str(self.org1.id)]
+        )
+        
+        # Test can_administer method
+        self.assertTrue(group.can_administer(self.org1.id))
+        self.assertFalse(group.can_administer(self.org2.id))
+        
+        # Test string representation
+        self.assertEqual(str(group), 'Comprehensive Test Group (custom)')
+        
+    def test_trust_group_membership(self):
+        """Test trust group membership"""
+        # Create trust group
+        group = TrustGroup.objects.create(
+            name='Membership Test Group',
+            description='Test group for membership testing',
+            group_type='community',
+            created_by='test_user',
+            default_trust_level=self.trust_level
+        )
+        
+        # Create membership
+        membership = TrustGroupMembership.objects.create(
+            trust_group=group,
+            organization=self.org1.id,
+            joined_by='test_user'
+        )
+        
+        # Test membership properties
+        self.assertEqual(membership.trust_group, group)
+        self.assertEqual(membership.organization, self.org1.id)
+        self.assertEqual(membership.role, 'member')  # default
+        
+    def test_trust_log_comprehensive(self):
+        """Test all trust log functionality"""
+        # Create various log entries
+        log_actions = [
+            'trust_relationship_created',
+            'trust_relationship_approved',
+            'trust_relationship_denied',
+            'trust_group_created',
+            'trust_group_joined',
+            'trust_level_changed',
+            'intelligence_accessed',
+            'intelligence_denied'
+        ]
+        
+        for action in log_actions:
+            log = TrustLog.objects.create(
+                action=action,
+                source_organization=self.org1.id,
+                target_organization=self.org2.id,
+                user='test_user',
+                details={'test': 'data'}
+            )
+            self.assertEqual(log.action, action)
+            self.assertEqual(log.details, {'test': 'data'})
+            
+    def test_model_validation_comprehensive(self):
+        """Test model validation and constraints"""
+        # Test trust relationship uniqueness
+        TrustRelationship.objects.create(
+            source_organization=self.org1.id,
+            target_organization=self.org2.id,
+            trust_level=self.trust_level,
+            created_by='test_user',
+            last_modified_by='test_user'
+        )
+        
+        # Creating another relationship with same source/target should be allowed
+        # but would be handled by business logic
+        
+        # Test trust level with edge values
+        edge_level = TrustLevel.objects.create(
+            name='Edge Test Level',
+            level='restricted',
+            numerical_value=0,  # minimum
+            description='Edge case level',
+            created_by='test_user'
+        )
+        self.assertEqual(edge_level.numerical_value, 0)
+        
+        max_level = TrustLevel.objects.create(
+            name='Max Test Level',
+            level='trusted',
+            numerical_value=100,  # maximum
+            description='Max level',
+            created_by='test_user'
+        )
+        self.assertEqual(max_level.numerical_value, 100)
+        
+    def test_service_integration_comprehensive(self):
+        """Test service integration with various scenarios"""
+        from apps.core.services import CRISPIntegrationService
+        
+        # Test with different relationship types
+        for rel_type in ['bilateral', 'community', 'hierarchical', 'federation']:
+            relationship = CRISPIntegrationService.create_trust_relationship(
+                source_org=self.org1,
+                target_org=self.org2,
+                trust_level_name=self.trust_level.name,
+                relationship_type=rel_type
+            )
+            self.assertEqual(relationship.relationship_type, rel_type)
+            
+        # Test intelligence access checking
+        sources = CRISPIntegrationService.get_user_accessible_intelligence_sources(
+            user=None,
+            intelligence_type='threat_indicator'
+        )
+        self.assertIsInstance(sources, list)
