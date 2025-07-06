@@ -47,6 +47,12 @@ jobs:
         pip install pytest pytest-django pytest-cov coverage
         pip install flake8 bandit safety
 
+    - name: Fix Core Test Imports
+      run: |
+        # Fix import statements in test files
+        sed -i 's/from crisp_anonymization\./from core.patterns.strategy./g' core/tests/test_*.py
+        sed -i 's/import crisp_anonymization\./import core.patterns.strategy./g' core/tests/test_*.py
+        
     - name: Run Core Tests (pytest)
       env:
         PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/core
