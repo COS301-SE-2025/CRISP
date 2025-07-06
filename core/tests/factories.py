@@ -12,8 +12,21 @@ from core.trust.models import (
     TrustLevel, TrustRelationship, TrustGroup, TrustGroupMembership,
     TrustLog, SharingPolicy
 )
+from core.user_management.models import Organization
 
 User = get_user_model()
+
+
+class OrganizationFactory(DjangoModelFactory):
+    class Meta:
+        model = Organization
+    
+    name = factory.Sequence(lambda n: f"Organization {n}")
+    domain = factory.Sequence(lambda n: f"org{n}.edu")
+    contact_email = factory.LazyAttribute(lambda obj: f"contact@{obj.domain}")
+    description = factory.Faker('company')
+    organization_type = 'educational'
+    trust_metadata = factory.Dict({'trust_score': 50, 'verified': True})
 
 
 class UserFactory(DjangoModelFactory):
@@ -21,10 +34,13 @@ class UserFactory(DjangoModelFactory):
         model = User
     
     username = factory.Sequence(lambda n: f"user{n}")
-    email = factory.LazyAttribute(lambda obj: f"{obj.username}@example.com")
+    email = factory.LazyAttribute(lambda obj: f"{obj.username}@{obj.organization.domain}")
     first_name = factory.Faker('first_name')
     last_name = factory.Faker('last_name')
+    organization = factory.SubFactory(OrganizationFactory)
+    role = 'viewer'
     is_active = True
+    is_verified = True
 
 
 class TrustLevelFactory(DjangoModelFactory):
@@ -33,11 +49,11 @@ class TrustLevelFactory(DjangoModelFactory):
     
     name = factory.Sequence(lambda n: f"Trust Level {n}")
     description = factory.Faker('sentence')
-    level = factory.Iterator(['none', 'low', 'medium', 'high', 'complete'])
+    level = factory.Iterator(['public', 'trusted', 'restricted'])
     numerical_value = factory.Faker('random_int', min=0, max=100)
     default_access_level = factory.Iterator(['none', 'read', 'subscribe', 'contribute', 'full'])
     default_anonymization_level = factory.Iterator(['full', 'partial', 'minimal', 'none'])
-    created_by = factory.Faker('name')
+    created_by = factory.LazyAttribute(lambda obj: f"system_user_{obj.name}")
     is_active = True
 
 
@@ -45,8 +61,8 @@ class TrustRelationshipFactory(DjangoModelFactory):
     class Meta:
         model = TrustRelationship
     
-    source_organization = factory.LazyFunction(lambda: str(uuid.uuid4()))
-    target_organization = factory.LazyFunction(lambda: str(uuid.uuid4()))
+    source_organization = factory.SubFactory(OrganizationFactory)
+    target_organization = factory.SubFactory(OrganizationFactory)
     trust_level = factory.SubFactory(TrustLevelFactory)
     relationship_type = factory.Iterator(['bilateral', 'community', 'hierarchical', 'federation'])
     status = 'pending'
@@ -54,7 +70,8 @@ class TrustRelationshipFactory(DjangoModelFactory):
     access_level = 'read'
     notes = factory.Faker('text', max_nb_chars=200)
     valid_until = factory.LazyFunction(lambda: timezone.now() + timedelta(days=365))
-    created_by = factory.LazyFunction(lambda: str(uuid.uuid4()))
+    created_by = factory.SubFactory(UserFactory)
+    last_modified_by = factory.SubFactory(UserFactory)
 
 
 class TrustGroupFactory(DjangoModelFactory):
@@ -63,7 +80,7 @@ class TrustGroupFactory(DjangoModelFactory):
     
     name = factory.Sequence(lambda n: f"Trust Group {n}")
     description = factory.Faker('text', max_nb_chars=500)
-    created_by = factory.LazyFunction(lambda: str(uuid.uuid4()))
+    created_by = factory.LazyAttribute(lambda obj: f"org_{obj.name}")
     group_type = factory.Iterator(['sector', 'geography', 'purpose', 'custom'])
     is_public = factory.Iterator([True, False])
     is_active = True
@@ -75,11 +92,11 @@ class TrustGroupMembershipFactory(DjangoModelFactory):
         model = TrustGroupMembership
     
     trust_group = factory.SubFactory(TrustGroupFactory)
-    organization = factory.LazyFunction(lambda: str(uuid.uuid4()))
-    membership_type = factory.Iterator(['admin', 'member', 'observer'])
-    status = 'active'
-    joined_by = factory.LazyFunction(lambda: str(uuid.uuid4()))
-    created_by = factory.LazyFunction(lambda: str(uuid.uuid4()))
+    organization = factory.SubFactory(OrganizationFactory)
+    membership_type = factory.Iterator(['member', 'administrator', 'moderator'])
+    is_active = True
+    invited_by = factory.LazyAttribute(lambda obj: f"admin_{obj.trust_group.name}")
+    approved_by = factory.LazyAttribute(lambda obj: f"admin_{obj.trust_group.name}")
 
 
 class SharingPolicyFactory(DjangoModelFactory):
@@ -88,14 +105,12 @@ class SharingPolicyFactory(DjangoModelFactory):
     
     name = factory.Sequence(lambda n: f"Policy {n}")
     description = factory.Faker('sentence')
-    trust_level = factory.SubFactory(TrustLevelFactory)
-    resource_types = factory.List(['indicator', 'report', 'signature'])
-    allowed_actions = factory.List(['read', 'download', 'share'])
-    anonymization_rules = factory.Dict({
-        'remove_identifiers': True,
-        'mask_ips': True,
-        'generalize_timestamps': False
-    })
+    created_by = factory.LazyAttribute(lambda obj: f"admin_{obj.name}")
+    allowed_stix_types = factory.List(['indicator', 'malware', 'threat-actor'])
+    allowed_indicator_types = factory.List(['file', 'domain-name', 'ipv4-addr'])
+    max_tlp_level = 'green'
+    require_anonymization = True
+    allow_attribution = False
     is_active = True
 
 
@@ -103,13 +118,12 @@ class TrustLogFactory(DjangoModelFactory):
     class Meta:
         model = TrustLog
     
-    organization_id = factory.LazyFunction(lambda: str(uuid.uuid4()))
-    action = factory.Iterator(['create', 'approve', 'deny', 'revoke', 'access'])
-    resource_type = factory.Iterator(['relationship', 'group', 'membership', 'intelligence'])
-    resource_id = factory.LazyFunction(lambda: str(uuid.uuid4()))
-    target_organization = factory.LazyFunction(lambda: str(uuid.uuid4()))
-    user_id = factory.LazyFunction(lambda: str(uuid.uuid4()))
+    source_organization = factory.SubFactory(OrganizationFactory)
+    action = factory.Iterator(['relationship_created', 'relationship_approved', 'group_created', 'access_granted'])
+    target_organization = factory.SubFactory(OrganizationFactory)
+    user = factory.SubFactory(UserFactory)
     ip_address = factory.Faker('ipv4')
     user_agent = factory.Faker('user_agent')
     details = factory.Dict({'test': 'data'})
+    metadata = factory.Dict({'source': 'test'})
     success = True

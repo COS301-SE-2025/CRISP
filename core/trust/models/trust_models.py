@@ -693,6 +693,32 @@ class TrustLog(models.Model):
                        trust_group=None, ip_address=None, user_agent=None,
                        success=True, failure_reason=None, details=None):
         """Convenience method to log trust events"""
+        from core.user_management.models import Organization, CustomUser
+        
+        # Convert source organization if it's a string UUID
+        if isinstance(source_organization, str):
+            try:
+                source_organization = Organization.objects.get(id=source_organization)
+            except Organization.DoesNotExist:
+                source_organization = None
+        
+        # Convert target organization if it's a string UUID
+        if isinstance(target_organization, str):
+            try:
+                target_organization = Organization.objects.get(id=target_organization)
+            except Organization.DoesNotExist:
+                target_organization = None
+        
+        # Handle user - if it's 'system' string, set to None
+        if isinstance(user, str):
+            if user == 'system':
+                user = None
+            else:
+                try:
+                    user = CustomUser.objects.get(id=user)
+                except (CustomUser.DoesNotExist, ValueError):
+                    user = None
+        
         return cls.objects.create(
             action=action,
             source_organization=source_organization,

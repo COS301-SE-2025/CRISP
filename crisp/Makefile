@@ -6,27 +6,24 @@
 # Variables
 PYTHON = python3
 COVERAGE = coverage
-MANAGE = $(PYTHON) manage.py
-TEST_PATH = TrustManagement.tests
-SOURCE = TrustManagement
+MANAGE = python3 manage.py
+TEST_PATH = core.tests core.user_management core.trust
+SOURCE = ../core
 
 # Default target
 help:
-	@echo "🚀 Trust Management Test Commands"
-	@echo "================================="
-	@echo "test                 - Run all tests with coverage"
+	@echo "🚀 CRISP Trust Management Test Commands"
+	@echo "========================================"
+	@echo "test                 - Run all 143 tests with coverage"
 	@echo "test-verbose         - Run all tests with verbose output"
 	@echo "test-coverage        - Run tests and generate all coverage reports"
 	@echo "test-models          - Run model tests only"
 	@echo "test-services        - Run service tests only" 
-	@echo "test-api             - Run API tests only"
-	@echo "test-views           - Run view tests only"
-	@echo "test-commands        - Run management command tests only"
-	@echo "test-access          - Run access control tests only"
-	@echo "test-anon            - Run anonymization tests only"
-	@echo "test-utils           - Run utility tests only"
+	@echo "test-user-management - Run user management tests only"
+	@echo "test-trust           - Run trust management tests only"
 	@echo "test-integration     - Run integration tests only"
-	@echo "test-performance     - Run performance tests only"
+	@echo "test-repositories    - Run repository tests only"
+	@echo "test-validators      - Run validator tests only"
 	@echo "coverage-report      - Generate console coverage report"
 	@echo "coverage-html        - Generate HTML coverage report"
 	@echo "coverage-xml         - Generate XML coverage report"
@@ -34,6 +31,8 @@ help:
 	@echo "clean-coverage       - Clean coverage data"
 	@echo "install-deps         - Install test dependencies"
 	@echo "setup-test           - Setup test environment"
+	@echo ""
+	@echo "🎯 Quick start: make test (runs all 143 tests)"
 
 # Install dependencies
 install-deps:
@@ -52,27 +51,18 @@ clean-coverage:
 
 # Run all tests with coverage
 test: clean-coverage
-	$(COVERAGE) run --source=$(SOURCE) $(MANAGE) test $(TEST_PATH)
+	$(COVERAGE) run --source=$(SOURCE) manage.py test $(TEST_PATH) --settings=test_settings
 	$(COVERAGE) report --show-missing
 
 # Run all tests with verbose output
 test-verbose: clean-coverage
-	$(COVERAGE) run --source=$(SOURCE) $(MANAGE) test $(TEST_PATH) -v 2
+	$(COVERAGE) run --source=$(SOURCE) manage.py test $(TEST_PATH) --settings=test_settings -v 2
 	$(COVERAGE) report --show-missing
 
 # Run comprehensive test suite with all reports
 test-coverage: clean-coverage
 	@echo "🧪 Running comprehensive test suite..."
-	$(COVERAGE) run --source=$(SOURCE) $(MANAGE) test $(TEST_PATH).test_models -v 2
-	$(COVERAGE) run -a --source=$(SOURCE) $(MANAGE) test $(TEST_PATH).test_services -v 2
-	$(COVERAGE) run -a --source=$(SOURCE) $(MANAGE) test $(TEST_PATH).test_api -v 2
-	$(COVERAGE) run -a --source=$(SOURCE) $(MANAGE) test $(TEST_PATH).test_views -v 2
-	$(COVERAGE) run -a --source=$(SOURCE) $(MANAGE) test $(TEST_PATH).test_management_commands -v 2
-	$(COVERAGE) run -a --source=$(SOURCE) $(MANAGE) test $(TEST_PATH).test_access_control -v 2
-	$(COVERAGE) run -a --source=$(SOURCE) $(MANAGE) test $(TEST_PATH).test_anonymization -v 2
-	$(COVERAGE) run -a --source=$(SOURCE) $(MANAGE) test $(TEST_PATH).test_utils -v 2
-	$(COVERAGE) run -a --source=$(SOURCE) $(MANAGE) test $(TEST_PATH).test_integrations -v 2
-	$(COVERAGE) run -a --source=$(SOURCE) $(MANAGE) test $(TEST_PATH).test_performance -v 2
+	$(COVERAGE) run --source=$(SOURCE) manage.py test $(TEST_PATH) --settings=test_settings -v 2
 	$(COVERAGE) combine
 	@echo "📊 Generating coverage reports..."
 	$(COVERAGE) report --show-missing --fail-under=96
@@ -83,34 +73,25 @@ test-coverage: clean-coverage
 
 # Individual test categories
 test-models:
-	$(COVERAGE) run --source=$(SOURCE) $(MANAGE) test $(TEST_PATH).test_models -v 2
+	$(COVERAGE) run --source=$(SOURCE) manage.py test $(TEST_PATH).tests.test_models --settings=test_settings -v 2
 
 test-services:
-	$(COVERAGE) run --source=$(SOURCE) $(MANAGE) test $(TEST_PATH).test_services -v 2
+	$(COVERAGE) run --source=$(SOURCE) manage.py test $(TEST_PATH).tests.test_services --settings=test_settings -v 2
 
-test-api:
-	$(COVERAGE) run --source=$(SOURCE) $(MANAGE) test $(TEST_PATH).test_api -v 2
+test-user-management:
+	$(COVERAGE) run --source=$(SOURCE) manage.py test $(TEST_PATH).user_management --settings=test_settings -v 2
 
-test-views:
-	$(COVERAGE) run --source=$(SOURCE) $(MANAGE) test $(TEST_PATH).test_views -v 2
-
-test-commands:
-	$(COVERAGE) run --source=$(SOURCE) $(MANAGE) test $(TEST_PATH).test_management_commands -v 2
-
-test-access:
-	$(COVERAGE) run --source=$(SOURCE) $(MANAGE) test $(TEST_PATH).test_access_control -v 2
-
-test-anon:
-	$(COVERAGE) run --source=$(SOURCE) $(MANAGE) test $(TEST_PATH).test_anonymization -v 2
-
-test-utils:
-	$(COVERAGE) run --source=$(SOURCE) $(MANAGE) test $(TEST_PATH).test_utils -v 2
+test-trust:
+	$(COVERAGE) run --source=$(SOURCE) manage.py test $(TEST_PATH).trust --settings=test_settings -v 2
 
 test-integration:
-	$(COVERAGE) run --source=$(SOURCE) $(MANAGE) test $(TEST_PATH).test_integrations -v 2
+	$(COVERAGE) run --source=$(SOURCE) manage.py test $(TEST_PATH).tests.test_integration --settings=test_settings -v 2
 
-test-performance:
-	$(COVERAGE) run --source=$(SOURCE) $(MANAGE) test $(TEST_PATH).test_performance -v 2
+test-repositories:
+	$(COVERAGE) run --source=$(SOURCE) manage.py test $(TEST_PATH).tests.test_repositories --settings=test_settings -v 2
+
+test-validators:
+	$(COVERAGE) run --source=$(SOURCE) manage.py test $(TEST_PATH).tests.test_validators --settings=test_settings -v 2
 
 # Coverage reports
 coverage-report:

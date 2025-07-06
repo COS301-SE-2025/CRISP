@@ -38,9 +38,23 @@ class AuditService:
         try:
             from ..user_management.models import AuthenticationLog
             
+            # Skip logging if user doesn't exist in database
+            if user and hasattr(user, 'pk') and not user.pk:
+                self.logger.warning("Skipping log for user without primary key")
+                return False
+                
             # Ensure additional_data is serializable
             if additional_data:
                 additional_data = self._sanitize_data(additional_data)
+            
+            # Add target user/org info to additional_data since model doesn't have these fields
+            enhanced_data = additional_data or {}
+            if target_user:
+                enhanced_data['target_user_id'] = str(target_user.id) if hasattr(target_user, 'id') else str(target_user)
+                enhanced_data['target_username'] = target_user.username if hasattr(target_user, 'username') else str(target_user)
+            if target_organization:
+                enhanced_data['target_organization_id'] = str(target_organization.id) if hasattr(target_organization, 'id') else str(target_organization)
+                enhanced_data['target_organization_name'] = target_organization.name if hasattr(target_organization, 'name') else str(target_organization)
             
             log_entry = AuthenticationLog.objects.create(
                 user=user,
@@ -49,9 +63,7 @@ class AuditService:
                 user_agent=user_agent or 'Unknown',
                 success=success,
                 failure_reason=failure_reason,
-                additional_data=additional_data or {},
-                target_user=target_user,
-                target_organization=target_organization
+                additional_data=enhanced_data
             )
             
             self.logger.info(
@@ -63,10 +75,11 @@ class AuditService:
             
         except Exception as e:
             self.logger.error(f"Failed to log user event: {str(e)}")
-            raise
+            return False
     
-    def log_trust_event(self, user, action: str, success: bool = True, 
-                       details: str = None, trust_relationship=None, 
+    def log_trust_event(self, user, action: str, source_organization=None,
+                       target_organization=None, success: bool = True, 
+                       failure_reason: str = None, trust_relationship=None, 
                        trust_group=None, additional_data: Dict = None):
         """
         Log trust management events.
@@ -74,14 +87,21 @@ class AuditService:
         Args:
             user: User performing the action
             action: Action type (must be in ACTION_CHOICES)
+            source_organization: Source organization for the action
+            target_organization: Target organization for the action
             success: Whether the action was successful
-            details: Additional details about the action
+            failure_reason: Reason for failure (if applicable)
             trust_relationship: Related trust relationship (if applicable)
             trust_group: Related trust group (if applicable)
             additional_data: Additional context data
         """
         try:
             from ..trust.models import TrustLog
+            
+            # Skip logging if user doesn't exist in database
+            if user and hasattr(user, 'pk') and not user.pk:
+                self.logger.warning("Skipping log for user without primary key")
+                return False
             
             # Ensure additional_data is serializable
             if additional_data:
@@ -90,11 +110,13 @@ class AuditService:
             log_entry = TrustLog.objects.create(
                 user=user,
                 action=action,
+                source_organization=source_organization,
+                target_organization=target_organization,
                 success=success,
-                details=details or '',
+                failure_reason=failure_reason,
+                details=additional_data or {},
                 trust_relationship=trust_relationship,
-                trust_group=trust_group,
-                additional_data=additional_data or {}
+                trust_group=trust_group
             )
             
             self.logger.info(
@@ -106,7 +128,7 @@ class AuditService:
             
         except Exception as e:
             self.logger.error(f"Failed to log trust event: {str(e)}")
-            raise
+            return False
     
     def log_combined_event(self, user, user_action: str, trust_action: str, 
                           success: bool = True, ip_address: str = None, 
@@ -216,6 +238,7 @@ class AuditService:
         """
         try:
             from datetime import timedelta
+            from django.db import models
             from ..user_management.models import AuthenticationLog
             from ..trust.models import TrustLog
             
@@ -359,7 +382,7 @@ class AuditService:
         try:
             from ..user_management.models import AuthenticationLog
             
-            query = AuthenticationLog.objects.select_related('user', 'target_user')
+            query = AuthenticationLog.objects.select_related('user')  # Remove 'target_user' as it doesn't exist
             
             if filters:
                 if 'action' in filters:
@@ -372,7 +395,7 @@ class AuditService:
                     query = query.filter(timestamp__gte=filters['start_date'])
                 if 'end_date' in filters:
                     query = query.filter(timestamp__lte=filters['end_date'])
-            
+        
             logs = query.order_by('-timestamp')[offset:offset+limit]
             
             return [self._format_user_log(log) for log in logs]
@@ -422,8 +445,9 @@ class AuditService:
             'failure_reason': log.failure_reason,
             'timestamp': log.timestamp.isoformat(),
             'additional_data': log.additional_data,
-            'target_user': log.target_user.username if log.target_user else None,
-            'target_organization': log.target_organization.name if log.target_organization else None
+            # Remove these fields since they don't exist in the model
+            # 'target_user': log.target_user.username if log.target_user else None,
+            # 'target_organization': log.target_organization.name if log.target_organization else None
         }
     
     def _format_trust_log(self, log) -> Dict:

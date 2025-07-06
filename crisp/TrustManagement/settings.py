@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     # CRISP core applications
     'core.trust',
     'core.user_management',
+    'core.tests',
 ]
 
 MIDDLEWARE = [

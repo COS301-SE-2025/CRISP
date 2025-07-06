@@ -12,34 +12,23 @@ from core.trust.patterns.repository.trust_repository import (
     TrustLevelRepository, 
     TrustLogRepository
 )
+from core.tests.test_fixtures import BaseTestCase
 
 
-class TrustRelationshipRepositoryTest(TestCase):
+class TrustRelationshipRepositoryTest(BaseTestCase):
     """Test trust relationship repository"""
     
     def setUp(self):
+        super().setUp()
         self.repository = TrustRelationshipRepository()
-        self.source_org = str(uuid.uuid4())
-        self.target_org = str(uuid.uuid4())
-        
-        # Create test trust level
-        self.trust_level = TrustLevel.objects.create(
-            name='Test Level',
-            level='medium',
-            numerical_value=50,
-            description='Test description',
-            default_anonymization_level='partial',
-            default_access_level='read',
-            created_by='test_user'
-        )
         
         # Create test relationship
         self.relationship = TrustRelationship.objects.create(
             source_organization=self.source_org,
             target_organization=self.target_org,
-            trust_level=self.trust_level,
-            created_by='test_user',
-            last_modified_by='test_user'
+            trust_level=self.medium_trust,
+            created_by=self.admin_user,
+            last_modified_by=self.admin_user
         )
     
     def test_get_by_id(self):
@@ -58,10 +47,11 @@ class TrustRelationshipRepositoryTest(TestCase):
         self.assertIn(self.relationship, results)
 
 
-class TrustLevelRepositoryTest(TestCase):
+class TrustLevelRepositoryTest(BaseTestCase):
     """Test trust level repository"""
     
     def setUp(self):
+        super().setUp()
         self.repository = TrustLevelRepository()
     
     def test_create_success(self):
@@ -71,7 +61,7 @@ class TrustLevelRepositoryTest(TestCase):
             level='high',
             numerical_value=75,
             description='Test description',
-            created_by='test_user'
+            created_by=self.admin_user
         )
         self.assertIsInstance(level, TrustLevel)
         self.assertEqual(level.name, 'New Level')
@@ -83,23 +73,23 @@ class TrustLevelRepositoryTest(TestCase):
             level='medium',
             numerical_value=50,
             description='Test',
-            created_by='test_user'
+            created_by=self.admin_user
         )
         result = self.repository.get_by_name('Test Level')
         self.assertEqual(result, level)
 
 
-class TrustLogRepositoryTest(TestCase):
+class TrustLogRepositoryTest(BaseTestCase):
     """Test trust log repository"""
     
     def setUp(self):
+        super().setUp()
         self.repository = TrustLogRepository()
-        self.org_id = str(uuid.uuid4())
         
         self.log = TrustLog.objects.create(
-            source_organization=self.org_id,
+            source_organization=self.test_org,
             action='relationship_created',
-            user='test_user',
+            user=self.test_user,
             details={'test': 'data'},
             success=True
         )
@@ -113,8 +103,8 @@ class TrustLogRepositoryTest(TestCase):
         """Test creating a log entry"""
         log = self.repository.create(
             action='group_created',
-            source_organization=str(uuid.uuid4()),
-            user='test_user',
+            source_organization=self.test_org,
+            user=self.test_user,
             details={'test': 'data'}
         )
         self.assertIsInstance(log, TrustLog)

@@ -453,6 +453,25 @@ class UserService:
             logger.error(f"Error deactivating user: {str(e)}")
             raise ValidationError(f"Failed to deactivate user: {str(e)}")
     
+    def delete_user(self, deleting_user: CustomUser, user_id: str, reason: str = '') -> bool:
+        """
+        Delete a user account (soft delete by deactivation).
+        
+        Args:
+            deleting_user: User performing the deletion
+            user_id: ID of user to delete
+            reason: Reason for deletion
+            
+        Returns:
+            bool: True if successful
+            
+        Raises:
+            PermissionDenied: If deleting user doesn't have permission
+        """
+        # Use deactivate_user for soft delete
+        self.deactivate_user(deleting_user, user_id, reason)
+        return True
+    
     def change_user_password(self, requesting_user: CustomUser,
                            user_id: str, new_password: str,
                            current_password: Optional[str] = None) -> bool:

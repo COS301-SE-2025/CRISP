@@ -42,17 +42,17 @@ fi
 cd crisp
 
 print_status "Checking Python environment..."
-python --version
+python3 --version
 pip --version
 
 print_status "Checking database connection..."
-python manage.py check --database default
+python3 manage.py check --database default
 
 print_status "Running Django system checks..."
-python manage.py check
+python3 manage.py check
 
 print_status "Checking for pending migrations..."
-python manage.py showmigrations
+python3 manage.py showmigrations
 
 print_status "Running linting checks..."
 if command -v flake8 &> /dev/null; then
@@ -65,19 +65,19 @@ print_status "Running unit tests for core applications..."
 
 echo ""
 echo "📋 Testing User Management System..."
-python manage.py test core.user_management --verbosity=2
+python3 manage.py test core.user_management --verbosity=2
 
 echo ""
 echo "🔐 Testing Trust Management System..."
-python manage.py test core.trust --verbosity=2
+python3 manage.py test core.trust --verbosity=2
 
 echo ""
 echo "🔍 Testing Integration..."
-python manage.py test core.tests --verbosity=2
+python3 manage.py test core.tests --verbosity=2
 
 echo ""
 print_status "Running comprehensive test suite..."
-python manage.py test --verbosity=2
+python3 manage.py test --verbosity=2
 
 echo ""
 print_status "Running test coverage analysis..."
@@ -94,13 +94,13 @@ fi
 echo ""
 print_status "Testing API endpoints..."
 if [ -f "legacy_tests/test_api_endpoints.py" ]; then
-    python legacy_tests/test_api_endpoints.py || print_warning "API endpoint tests had issues"
+    python3 legacy_tests/test_api_endpoints.py || print_warning "API endpoint tests had issues"
 fi
 
 echo ""
 print_status "Running performance tests..."
 if [ -f "tools/test_runners/run_tests.py" ]; then
-    python tools/test_runners/run_tests.py || print_warning "Performance tests had issues"
+    python3 tools/test_runners/run_tests.py || print_warning "Performance tests had issues"
 fi
 
 echo ""
@@ -118,7 +118,7 @@ echo ""
 echo "📝 Next steps:"
 echo "  1. Review test coverage in htmlcov/index.html"
 echo "  2. Check logs in logs/ directory"
-echo "  3. Run the development server: python manage.py runserver"
+echo "  3. Run the development server: python3 manage.py runserver"
 
 echo ""
 print_success "All tests completed successfully! 🎉"

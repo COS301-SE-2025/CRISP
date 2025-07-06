@@ -122,15 +122,42 @@ class TrustLogCreator(TrustObjectCreator):
         
         Args:
             action: Action performed
-            source_organization: Organization performing action
-            user: User performing action
+            source_organization: Organization performing action (UUID string or instance)
+            user: User performing action (User instance or 'system')
             **kwargs: Additional log parameters
             
         Returns:
             TrustLog: Created log entry
         """
+        from core.user_management.models import Organization, CustomUser
+        
+        # Convert source organization if it's a string UUID
+        if isinstance(source_organization, str):
+            try:
+                source_organization = Organization.objects.get(id=source_organization)
+            except Organization.DoesNotExist:
+                source_organization = None
+        
+        # Convert target organization if it's a string UUID
+        target_organization = kwargs.get('target_organization')
+        if isinstance(target_organization, str):
+            try:
+                target_organization = Organization.objects.get(id=target_organization)
+            except Organization.DoesNotExist:
+                target_organization = None
+        
+        # Handle user - if it's 'system' string, set to None
+        if isinstance(user, str):
+            if user == 'system':
+                user = None
+            else:
+                try:
+                    user = CustomUser.objects.get(id=user)
+                except (CustomUser.DoesNotExist, ValueError):
+                    user = None
+        
         defaults = {
-            'target_organization': kwargs.get('target_organization'),
+            'target_organization': target_organization,
             'trust_relationship': kwargs.get('trust_relationship'),
             'trust_group': kwargs.get('trust_group'),
             'ip_address': kwargs.get('ip_address'),

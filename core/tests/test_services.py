@@ -10,33 +10,19 @@ from django.test import TestCase
 from core.trust.models import TrustLevel, TrustRelationship, TrustGroup
 from core.trust.services.trust_service import TrustService
 from core.trust.services.trust_group_service import TrustGroupService
+from core.tests.test_fixtures import BaseTestCase
 
 
-class TrustServiceTest(TestCase):
+class TrustServiceTest(BaseTestCase):
     """Test core trust service functionality"""
-    
-    def setUp(self):
-        self.source_org = str(uuid.uuid4())
-        self.target_org = str(uuid.uuid4())
-        
-        # Create test trust level
-        self.trust_level = TrustLevel.objects.create(
-            name='Test Level',
-            level='medium', 
-            numerical_value=50,
-            description='Test description',
-            default_anonymization_level='partial',
-            default_access_level='read',
-            created_by='test_user'
-        )
     
     def test_create_trust_relationship(self):
         """Test creating a trust relationship"""
         relationship = TrustService.create_trust_relationship(
             source_org=self.source_org,
             target_org=self.target_org,
-            trust_level_name='Test Level',
-            created_by='test_user'
+            trust_level_name='Medium Trust',
+            created_by=self.admin_user
         )
         
         self.assertIsInstance(relationship, TrustRelationship)
@@ -49,18 +35,18 @@ class TrustServiceTest(TestCase):
         relationship = TrustRelationship.objects.create(
             source_organization=self.source_org,
             target_organization=self.target_org,
-            trust_level=self.trust_level,
+            trust_level=self.medium_trust,
             status='active',
             approved_by_source=True,
             approved_by_target=True,
-            created_by='test_user',
-            last_modified_by='test_user'
+            created_by=self.admin_user,
+            last_modified_by=self.admin_user
         )
         
         result = TrustService.check_trust_level(self.source_org, self.target_org)
         self.assertIsNotNone(result)
         trust_level, rel = result
-        self.assertEqual(trust_level, self.trust_level)
+        self.assertEqual(trust_level, self.medium_trust)
         self.assertEqual(rel, relationship)
     
     def test_approve_trust_relationship(self):
@@ -68,16 +54,16 @@ class TrustServiceTest(TestCase):
         relationship = TrustRelationship.objects.create(
             source_organization=self.source_org,
             target_organization=self.target_org,
-            trust_level=self.trust_level,
+            trust_level=self.medium_trust,
             status='pending',
-            created_by='test_user',
-            last_modified_by='test_user'
+            created_by=self.admin_user,
+            last_modified_by=self.admin_user
         )
         
         result = TrustService.approve_trust_relationship(
             relationship_id=str(relationship.id),
             approving_org=self.source_org,
-            approved_by_user='test_user'
+            approved_by_user=self.admin_user
         )
         
         # Should return False since only source approved (need both approvals to activate)
@@ -86,32 +72,18 @@ class TrustServiceTest(TestCase):
         self.assertTrue(relationship.approved_by_source)
 
 
-class TrustGroupServiceTest(TestCase):
+class TrustGroupServiceTest(BaseTestCase):
     """Test trust group service functionality"""
-    
-    def setUp(self):
-        self.organization_id = str(uuid.uuid4())
-        
-        # Create test trust level
-        self.trust_level = TrustLevel.objects.create(
-            name='Group Level',
-            level='medium',
-            numerical_value=50,
-            description='Test description',
-            default_anonymization_level='partial',
-            default_access_level='read',
-            created_by='test_user'
-        )
     
     def test_create_trust_group(self):
         """Test creating a trust group"""
         group = TrustGroupService.create_trust_group(
             name='Test Group',
             description='Test description',
-            creator_org=str(uuid.uuid4()),
+            creator_org=str(self.source_org.id),
             group_type='community',
-            default_trust_level_name=self.trust_level.level,
-            created_by='test_user'
+            default_trust_level_name=self.medium_trust.level,
+            created_by=self.admin_user
         )
         
         self.assertIsInstance(group, TrustGroup)
@@ -124,18 +96,18 @@ class TrustGroupServiceTest(TestCase):
             name='Test Group',
             description='Test description',
             group_type='community',
-            default_trust_level=self.trust_level,
-            created_by='test_user'
+            default_trust_level=self.medium_trust,
+            created_by=self.admin_user
         )
         
         result = TrustGroupService.join_trust_group(
             group_id=str(group.id),
-            organization=self.organization_id,
-            user='test_user'
+            organization=str(self.target_org.id),
+            user=self.publisher_user
         )
         
         self.assertIsNotNone(result)
         # Verify membership was created
         self.assertTrue(group.group_memberships.filter(
-            organization=self.organization_id
+            organization=self.target_org
         ).exists())

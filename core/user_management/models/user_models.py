@@ -254,15 +254,45 @@ class CustomUser(AbstractUser):
         return f"{self.username} ({self.get_role_display()})"
 
     def clean(self):
-        if not self.organization:
-            raise ValidationError("User must belong to an organization")
+        """Validate user data"""
+        super().clean()
+        errors = {}
         
-        # Validate role-based permissions
-        if self.role == 'viewer' and self.is_publisher:
-            raise ValidationError("Viewers cannot be publishers")
+        # Only validate organization if the user instance has been saved or organization is set
+        if self.pk or hasattr(self, '_organization_id') or self.organization_id:
+            try:
+                if not self.organization:
+                    errors['organization'] = ValidationError("User must belong to an organization")
+            except self.organization.RelatedObjectDoesNotExist:
+                errors['organization'] = ValidationError("User must belong to an organization")
         
-        if self.role in ['publisher', 'BlueVisionAdmin'] and not self.is_publisher:
-            self.is_publisher = True
+        # Email validation
+        if self.email:
+            # Check for duplicate emails
+            if CustomUser.objects.filter(email=self.email).exclude(pk=self.pk).exists():
+                errors['email'] = ValidationError("Email address is already in use")
+            
+            # Validate email format more strictly
+            if '@' not in self.email or '.' not in self.email.split('@')[-1]:
+                errors['email'] = ValidationError("Invalid email format")
+        
+        # Username validation
+        if self.username:
+            # Check for duplicate usernames
+            if CustomUser.objects.filter(username=self.username).exclude(pk=self.pk).exists():
+                errors['username'] = ValidationError("Username is already taken")
+            
+            # Additional username format validation
+            if len(self.username) < 3:
+                errors['username'] = ValidationError("Username must be at least 3 characters long")
+        
+        # Role validation
+        valid_roles = ['viewer', 'publisher', 'BlueVisionAdmin']
+        if self.role and self.role not in valid_roles:
+            errors['role'] = ValidationError(f"Invalid role. Must be one of: {', '.join(valid_roles)}")
+        
+        if errors:
+            raise ValidationError(errors)
 
     @property
     def is_account_locked(self):

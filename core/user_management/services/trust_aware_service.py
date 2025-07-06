@@ -540,3 +540,179 @@ class TrustAwareService:
             logger.error(f"Error getting trust metrics: {str(e)}")
         
         return metrics
+    
+    def get_accessible_organizations(self, user: CustomUser) -> List[Organization]:
+        """
+        Get organizations accessible to the user through trust relationships.
+        
+        Args:
+            user: User to get accessible organizations for
+            
+        Returns:
+            List[Organization]: Accessible organizations
+        """
+        accessible = [user.organization]  # Always include own organization
+        
+        try:
+            # Get organizations through trust relationships
+            relationships = TrustRelationship.objects.filter(
+                source_organization=user.organization,
+                is_active=True,
+                status='active'
+            ).select_related('target_organization')
+            
+            for rel in relationships:
+                if rel.target_organization not in accessible:
+                    accessible.append(rel.target_organization)
+            
+            # Get organizations through trust groups
+            from core.trust.models import TrustGroupMembership
+            memberships = TrustGroupMembership.objects.filter(
+                organization=user.organization,
+                is_active=True
+            ).select_related('trust_group')
+            
+            for membership in memberships:
+                other_memberships = TrustGroupMembership.objects.filter(
+                    trust_group=membership.trust_group,
+                    is_active=True
+                ).exclude(organization=user.organization).select_related('organization')
+                
+                for other_membership in other_memberships:
+                    if other_membership.organization not in accessible:
+                        accessible.append(other_membership.organization)
+        
+        except Exception as e:
+            logger.error(f"Error getting accessible organizations: {str(e)}")
+        
+        return accessible
+    
+    def calculate_trust_score(self, source_org: Organization, target_org: Organization) -> float:
+        """
+        Calculate trust score between two organizations.
+        
+        Args:
+            source_org: Source organization
+            target_org: Target organization
+            
+        Returns:
+            float: Trust score (0-100)
+        """
+        try:
+            # Get direct relationship
+            relationship = TrustRelationship.objects.filter(
+                source_organization=source_org,
+                target_organization=target_org,
+                is_active=True,
+                status='active'
+            ).first()
+            
+            if relationship:
+                return float(relationship.trust_level.numerical_value)
+            
+            # Check for mutual trust groups
+            from core.trust.models import TrustGroupMembership
+            common_groups = TrustGroupMembership.objects.filter(
+                organization=source_org,
+                is_active=True,
+                trust_group__in=TrustGroupMembership.objects.filter(
+                    organization=target_org,
+                    is_active=True
+                ).values_list('trust_group', flat=True)
+            )
+            
+            if common_groups.exists():
+                # Return average of common group trust levels
+                total_score = 0
+                count = 0
+                for membership in common_groups:
+                    if membership.trust_group.default_trust_level:
+                        total_score += membership.trust_group.default_trust_level.numerical_value
+                        count += 1
+                return float(total_score / count) if count > 0 else 0.0
+            
+            return 0.0  # No relationship
+            
+        except Exception as e:
+            logger.error(f"Error calculating trust score: {str(e)}")
+            return 0.0
+    
+    def get_trust_context(self, user: CustomUser) -> Dict[str, Any]:
+        """
+        Get trust context for user including relationships and permissions.
+        
+        Args:
+            user: User to get trust context for
+            
+        Returns:
+            Dict[str, Any]: Trust context data
+        """
+        try:
+            context = {
+                'user_organization': {
+                    'id': str(user.organization.id),
+                    'name': user.organization.name,
+                    'domain': user.organization.domain
+                },
+                'trust_relationships': [],
+                'trust_groups': [],
+                'accessible_organizations': [],
+                'trust_permissions': list(self.access_control.get_user_permissions(user))
+            }
+            
+            # Get trust relationships
+            relationships = TrustRelationship.objects.filter(
+                source_organization=user.organization,
+                is_active=True
+            ).select_related('target_organization', 'trust_level')
+            
+            for rel in relationships:
+                context['trust_relationships'].append({
+                    'id': str(rel.id),
+                    'target_organization': rel.target_organization.name,
+                    'trust_level': rel.trust_level.name,
+                    'status': rel.status,
+                    'access_level': rel.access_level
+                })
+            
+            # Get trust groups
+            from core.trust.models import TrustGroupMembership
+            memberships = TrustGroupMembership.objects.filter(
+                organization=user.organization,
+                is_active=True
+            ).select_related('trust_group')
+            
+            for membership in memberships:
+                context['trust_groups'].append({
+                    'id': str(membership.trust_group.id),
+                    'name': membership.trust_group.name,
+                    'membership_type': membership.membership_type,
+                    'member_count': membership.trust_group.member_count
+                })
+            
+            # Get accessible organizations
+            accessible = self.get_accessible_organizations(user)
+            context['accessible_organizations'] = [
+                {
+                    'id': str(org.id),
+                    'name': org.name,
+                    'domain': org.domain
+                }
+                for org in accessible
+            ]
+            
+            return context
+            
+        except Exception as e:
+            logger.error(f"Error getting trust context: {str(e)}")
+            return {
+                'error': 'Failed to get trust context',
+                'user_organization': {
+                    'id': str(user.organization.id),
+                    'name': user.organization.name
+                },
+                'trust_relationships': [],
+                'trust_groups': [],
+                'accessible_organizations': [],
+                'trust_permissions': []
+            }

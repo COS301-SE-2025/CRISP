@@ -24,30 +24,32 @@ class TrustGroupService:
         description: str,
         creator_org: str,
         group_type: str = 'community',
-        is_public: bool = False,
-        requires_approval: bool = True,
-        default_trust_level_name: str = 'medium',
-        group_policies: Dict = None,
-        created_by: str = None,
+        default_trust_level_name: str = None,
+        created_by: 'CustomUser' = None,
         **kwargs
-    ) -> TrustGroup:
-        """
-        Create a new trust group.
-        
-        Args:
-            name: Name of the trust group
-            description: Description of the group's purpose
-            creator_org: UUID of the organization creating the group
-            group_type: Type of trust group
-            is_public: Whether the group is publicly visible
-            requires_approval: Whether membership requires approval
-            default_trust_level_name: Default trust level for group members
-            group_policies: Group-specific policies
-            
-        Returns:
-            TrustGroup: The created trust group
-        """
+    ) -> 'TrustGroup':
+        """Create a new trust group"""
         try:
+            # Use first() instead of get() to handle multiple results gracefully
+            if default_trust_level_name:
+                default_trust_level = TrustLevel.objects.filter(
+                    level=default_trust_level_name
+                ).first()
+            else:
+                default_trust_level = TrustLevel.objects.filter(
+                    level='public'
+                ).first()
+            
+            if not default_trust_level:
+                # Create a default trust level if none exists
+                default_trust_level = TrustLevel.objects.create(
+                    name='Default Group Level',
+                    level='public',
+                    numerical_value=30,
+                    description='Default trust level for groups',
+                    created_by=created_by or 'system'
+                )
+            
             with transaction.atomic():
                 # Validate unique name
                 if TrustGroup.objects.filter(name=name).exists():
@@ -57,47 +59,41 @@ class TrustGroupService:
                 if not name or not name.strip():
                     raise ValidationError("Trust group name is required")
                 
-                # Get default trust level by level field, not name
-                try:
-                    default_trust_level = TrustLevel.objects.get(
-                        level=default_trust_level_name,
-                        is_active=True
-                    )
-                except TrustLevel.DoesNotExist:
-                    raise ValidationError(f"Trust level '{default_trust_level_name}' not found or inactive")
+                # Convert creator_org to Organization instance if it's a string
+                from core.user_management.models import Organization
+                if isinstance(creator_org, str):
+                    creator_org_instance = Organization.objects.get(id=creator_org)
+                else:
+                    creator_org_instance = creator_org
                 
                 # Create the trust group
                 trust_group = TrustGroup.objects.create(
                     name=name,
                     description=description,
                     group_type=group_type,
-                    is_public=is_public,
-                    requires_approval=requires_approval,
                     default_trust_level=default_trust_level,
-                    group_policies=group_policies or {},
                     created_by=created_by or creator_org,
-                    administrators=[creator_org],
+                    administrators=[str(creator_org_instance.id)],  # Store as string in administrators list
                     **kwargs
                 )
                 
-                # Add creator as administrator member
+                # Add creator as administrator member using Organization instance
                 TrustGroupMembership.objects.create(
                     trust_group=trust_group,
-                    organization=creator_org,
+                    organization=creator_org_instance,  # Use Organization instance
                     membership_type='administrator',
                     is_active=True
                 )
                 
-                # Log the creation
+                # Log the creation with Organization instance
                 TrustLog.log_trust_event(
                     action='group_created',
-                    source_organization=creator_org,
+                    source_organization=creator_org_instance,  # Use Organization instance
                     trust_group=trust_group,
                     user=created_by or 'system',
                     details={
                         'group_name': name,
                         'group_type': group_type,
-                        'is_public': is_public
                     }
                 )
                 
@@ -121,7 +117,7 @@ class TrustGroupService:
         
         Args:
             group_id: UUID of the trust group
-            organization: UUID of the organization joining
+            organization: UUID string or Organization instance of the organization joining
             membership_type: Type of membership
             invited_by: Organization that invited this member
             user: User performing the action
@@ -136,10 +132,17 @@ class TrustGroupService:
                     is_active=True
                 )
                 
+                # Convert organization string to Organization instance if needed
+                from core.user_management.models import Organization
+                if isinstance(organization, str):
+                    organization_obj = Organization.objects.get(id=organization)
+                else:
+                    organization_obj = organization
+                
                 # Check if organization is already a member (active or inactive)
                 existing_membership = TrustGroupMembership.objects.filter(
                     trust_group=trust_group,
-                    organization=organization
+                    organization=organization_obj
                 ).first()
                 
                 if existing_membership:
@@ -167,7 +170,7 @@ class TrustGroupService:
                 # Create membership
                 membership = TrustGroupMembership.objects.create(
                     trust_group=trust_group,
-                    organization=organization,
+                    organization=organization_obj,  # Use the Organization instance
                     membership_type=final_membership_type,
                     invited_by=invited_by,
                     is_active=is_active
@@ -176,7 +179,7 @@ class TrustGroupService:
                 # Log the join
                 TrustLog.log_trust_event(
                     action='group_joined',
-                    source_organization=organization,
+                    source_organization=organization_obj,  # Use Organization instance instead of string
                     trust_group=trust_group,
                     user=user or 'system',
                     details={
