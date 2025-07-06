@@ -2,8 +2,7 @@
 Tests for URL configuration to improve coverage.
 """
 from django.test import TestCase
-from django.urls import reverse, resolve
-from django.core.exceptions import NoReverseMatch
+from django.urls import reverse, resolve, NoReverseMatch
 import uuid
 
 from core.user_management.views import (

@@ -4,11 +4,15 @@ This file is self-contained and does not depend on any external project.
 """
 
 import os
+from pathlib import Path
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent
 
 # Basic Django settings
 SECRET_KEY = os.getenv('TEST_SECRET_KEY', 'a-test-secret-key-for-trust-management')
 DEBUG = True
-ALLOWED_HOSTS = ['testserver', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['testserver', 'localhost', '127.0.0.1', '*']
 
 # Application definition
 INSTALLED_APPS = [
@@ -49,32 +53,90 @@ TEMPLATES = [
     },
 ]
 
-# Use SQLite for tests (faster, no external dependencies)
+# Set testing flag
+TESTING = True
+
+# Use in-memory database for tests
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': ':memory:',
+        'OPTIONS': {
+            'timeout': 20,
+        }
     }
 }
 
-# Disable database migrations for tests for speed
+# Custom User Model
+AUTH_USER_MODEL = 'user_management.CustomUser'
+
+# Password validation
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+# Disable migrations for faster tests
 class DisableMigrations:
     def __contains__(self, item):
         return True
+    
     def __getitem__(self, item):
         return None
 
 MIGRATION_MODULES = DisableMigrations()
 
-# Cache configuration for tests
+# Disable logging during tests
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'null': {
+            'class': 'logging.NullHandler',
+        },
+    },
+    'root': {
+        'handlers': ['null'],
+    },
+}
+
+# Disable audit logging in tests
+ENABLE_AUDIT_LOGGING = False
+
+# Speed up password hashing in tests
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.MD5PasswordHasher',
+]
+
+# Disable caching
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
     }
 }
 
-# Use the custom user model for tests
-AUTH_USER_MODEL = 'user_management.CustomUser'
+# Disable rate limiting in tests
+RATELIMIT_ENABLE = False
+
+# Use simple email backend for tests
+EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+
+# Disable CSRF for tests
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = False
+
+# Debug mode for tests
+DEBUG = True
 
 # Internationalization
 LANGUAGE_CODE = 'en-us'

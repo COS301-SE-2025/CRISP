@@ -45,6 +45,9 @@ class AuthenticationServiceTest(TestCase):
             is_active=True,
             role="viewer"
         )
+        # Ensure password is properly set
+        self.user.set_password("ComplexPassword123!")
+        self.user.save()
         
         # Create inactive user
         self.inactive_user = CustomUser.objects.create_user(
@@ -54,6 +57,8 @@ class AuthenticationServiceTest(TestCase):
             organization=self.org,
             is_active=False
         )
+        self.inactive_user.set_password("ComplexPassword123!")
+        self.inactive_user.save()
         
         # Create locked user
         self.locked_user = CustomUser.objects.create_user(
@@ -107,8 +112,9 @@ class AuthenticationServiceTest(TestCase):
         self.assertEqual(fingerprint, 'unknown_device')
         self.assertEqual(len(fingerprint), 14)
     
+    @patch.object(CustomUser, 'check_password', return_value=True)
     @patch.object(AuthenticationService, '_log_failed_authentication')
-    def test_authenticate_user_not_found(self, mock_log):
+    def test_authenticate_user_not_found(self, mock_log, mock_check_password):
         """Test authentication with non-existent user."""
         result = self.service.authenticate_user("nonexistent", "password")
         
@@ -118,14 +124,16 @@ class AuthenticationServiceTest(TestCase):
         mock_log.assert_called_once()
     
     @patch.object(AuthenticationService, '_log_failed_authentication')
+    @patch.object(CustomUser, 'check_password', return_value=True)
     def test_authenticate_user_by_email(self, mock_log):
         """Test authentication using email instead of username."""
         # First test with wrong password
         result = self.service.authenticate_user(self.user.email, "wrongpassword")
         self.assertFalse(result['success'])
     
+    @patch.object(CustomUser, 'check_password', return_value=True)
     @patch.object(AuthenticationService, '_log_failed_authentication')
-    def test_authenticate_inactive_user(self, mock_log):
+    def test_authenticate_inactive_user(self, mock_log, mock_check_password):
         """Test authentication with inactive user."""
         result = self.service.authenticate_user(
             self.inactive_user.username, 
@@ -136,8 +144,9 @@ class AuthenticationServiceTest(TestCase):
         self.assertEqual(result['message'], 'Account is inactive')
         mock_log.assert_called_once()
     
+    @patch.object(CustomUser, 'check_password', return_value=True)
     @patch.object(AuthenticationService, '_log_failed_authentication')
-    def test_authenticate_locked_user(self, mock_log):
+    def test_authenticate_locked_user(self, mock_log, mock_check_password):
         """Test authentication with locked user."""
         result = self.service.authenticate_user(
             self.locked_user.username,
@@ -148,8 +157,9 @@ class AuthenticationServiceTest(TestCase):
         self.assertIn('locked', result['message'])
         mock_log.assert_called_once()
     
+    @patch.object(CustomUser, 'check_password', return_value=True)
     @patch.object(AuthenticationService, '_log_failed_authentication')
-    def test_authenticate_inactive_organization(self, mock_log):
+    def test_authenticate_inactive_organization(self, mock_log, mock_check_password):
         """Test authentication with user from inactive organization."""
         self.org.is_active = False
         self.org.save()
@@ -175,7 +185,8 @@ class AuthenticationServiceTest(TestCase):
         self.assertEqual(result['message'], 'Invalid credentials')
         mock_handle_failed.assert_called_once()
     
-    def test_authenticate_2fa_required(self):
+    @patch.object(CustomUser, 'check_password', return_value=True)
+    def test_authenticate_2fa_required(self, mock_check_password):
         """Test authentication when 2FA is required."""
         self.user.two_factor_enabled = True
         self.user.save()
@@ -188,18 +199,18 @@ class AuthenticationServiceTest(TestCase):
         self.assertFalse(result['success'])
         self.assertTrue(result['requires_2fa'])
     
-    @patch('core.user_management.services.auth_service.AuthenticationLog.objects.create')
-    def test_log_failed_authentication(self, mock_create):
+    @patch('core.user_management.services.auth_service.AuthenticationLog.log_authentication_event')
+    def test_log_failed_authentication(self, mock_log):
         """Test logging of failed authentication attempts."""
         self.service._log_failed_authentication(
             self.user, "testuser", "192.168.1.1", "Test Browser", "Test failure"
         )
         
-        mock_create.assert_called_once()
-        args, kwargs = mock_create.call_args
+        mock_log.assert_called_once()
+        args, kwargs = mock_log.call_args
         self.assertEqual(kwargs['user'], self.user)
-        self.assertEqual(kwargs['username'], "testuser")
         self.assertEqual(kwargs['ip_address'], "192.168.1.1")
+        self.assertEqual(kwargs['user_agent'], "Test Browser")
         self.assertEqual(kwargs['failure_reason'], "Test failure")
         self.assertFalse(kwargs['success'])
     
@@ -276,34 +287,34 @@ class UserServiceTest(TestCase):
         self.assertIsInstance(self.service.access_control, AccessControlService)
         self.assertIsNotNone(self.service.user_factory)
     
-    @patch.object(UserService, 'access_control')
     @patch('core.user_management.services.user_service.UserFactory')
-    def test_create_user_success(self, mock_factory_class, mock_access_control):
+    def test_create_user_success(self, mock_factory_class):
         """Test successful user creation."""
-        # Mock permissions
-        mock_access_control.can_create_user_with_role.return_value = True
-        
-        # Mock factory
-        mock_factory_instance = Mock()
-        mock_user = Mock()
-        mock_user.username = "newuser"
-        mock_factory_instance.create_user.return_value = mock_user
-        mock_factory_class.return_value = mock_factory_instance
-        self.service.user_factory = mock_factory_instance
-        
-        user_data = {
-            'username': 'newuser',
-            'email': 'newuser@ua.edu',
-            'password': 'NewPass123!',
-            'role': 'viewer',
-            'organization_id': str(self.org1.id)
-        }
-        
-        result = self.service.create_user(self.admin_user, user_data)
-        
-        self.assertEqual(result, mock_user)
-        mock_access_control.can_create_user_with_role.assert_called_once()
-        mock_factory_instance.create_user.assert_called_once()
+        with patch.object(self.service, 'access_control') as mock_access_control:
+            # Mock permissions
+            mock_access_control.can_create_user_with_role.return_value = True
+            
+            # Mock factory
+            mock_factory_instance = Mock()
+            mock_user = Mock()
+            mock_user.username = "newuser"
+            mock_factory_instance.create_user.return_value = mock_user
+            mock_factory_class.return_value = mock_factory_instance
+            self.service.user_factory = mock_factory_instance
+            
+            user_data = {
+                'username': 'newuser',
+                'email': 'newuser@ua.edu',
+                'password': 'NewPass123!',
+                'role': 'viewer',
+                'organization_id': str(self.org1.id)
+            }
+            
+            result = self.service.create_user(self.admin_user, user_data)
+            
+            self.assertEqual(result, mock_user)
+            mock_access_control.can_create_user_with_role.assert_called_once()
+            mock_factory_instance.create_user.assert_called_once()
     
     def test_create_user_no_organization(self):
         """Test user creation without organization."""
@@ -334,43 +345,43 @@ class UserServiceTest(TestCase):
         
         self.assertIn("Invalid organization", str(context.exception))
     
-    @patch.object(UserService, 'access_control')
-    def test_create_user_permission_denied(self, mock_access_control):
+    def test_create_user_permission_denied(self):
         """Test user creation without proper permissions."""
-        mock_access_control.can_create_user_with_role.return_value = False
-        
-        user_data = {
-            'username': 'newuser',
-            'email': 'newuser@ua.edu',
-            'password': 'NewPass123!',
-            'role': 'admin',
-            'organization_id': str(self.org1.id)
-        }
-        
-        with self.assertRaises(PermissionDenied):
-            self.service.create_user(self.regular_user, user_data)
+        with patch.object(self.service, 'access_control') as mock_access_control:
+            mock_access_control.can_create_user_with_role.return_value = False
+            
+            user_data = {
+                'username': 'newuser',
+                'email': 'newuser@ua.edu',
+                'password': 'NewPass123!',
+                'role': 'admin',
+                'organization_id': str(self.org1.id)
+            }
+            
+            with self.assertRaises(PermissionDenied):
+                self.service.create_user(self.regular_user, user_data)
     
-    @patch.object(UserService, 'access_control')
     @patch('core.user_management.services.user_service.UserFactory')
-    def test_create_user_factory_validation_error(self, mock_factory_class, mock_access_control):
+    def test_create_user_factory_validation_error(self, mock_factory_class):
         """Test handling of factory validation errors."""
-        mock_access_control.can_create_user_with_role.return_value = True
-        
-        mock_factory_instance = Mock()
-        mock_factory_instance.create_user.side_effect = ValidationError("Factory error")
-        mock_factory_class.return_value = mock_factory_instance
-        self.service.user_factory = mock_factory_instance
-        
-        user_data = {
-            'username': 'newuser',
-            'email': 'newuser@ua.edu',
-            'password': 'NewPass123!',
-            'role': 'viewer',
-            'organization_id': str(self.org1.id)
-        }
-        
-        with self.assertRaises(ValidationError):
-            self.service.create_user(self.admin_user, user_data)
+        with patch.object(self.service, 'access_control') as mock_access_control:
+            mock_access_control.can_create_user_with_role.return_value = True
+            
+            mock_factory_instance = Mock()
+            mock_factory_instance.create_user.side_effect = ValidationError("Factory error")
+            mock_factory_class.return_value = mock_factory_instance
+            self.service.user_factory = mock_factory_instance
+            
+            user_data = {
+                'username': 'newuser',
+                'email': 'newuser@ua.edu',
+                'password': 'NewPass123!',
+                'role': 'viewer',
+                'organization_id': str(self.org1.id)
+            }
+            
+            with self.assertRaises(ValidationError):
+                self.service.create_user(self.admin_user, user_data)
     
     def test_update_user_not_found(self):
         """Test updating non-existent user."""
@@ -382,38 +393,38 @@ class UserServiceTest(TestCase):
         
         self.assertIn("User not found", str(context.exception))
     
-    @patch.object(UserService, 'access_control')
-    def test_update_user_permission_denied(self, mock_access_control):
+    def test_update_user_permission_denied(self):
         """Test updating user without permission."""
-        mock_access_control.can_manage_user.return_value = False
-        
-        update_data = {'email': 'new@email.com'}
-        
-        with self.assertRaises(PermissionDenied):
-            self.service.update_user(
-                self.regular_user, 
-                str(self.admin_user.id), 
+        with patch.object(self.service, 'access_control') as mock_access_control:
+            mock_access_control.can_manage_user.return_value = False
+            
+            update_data = {'email': 'new@email.com'}
+            
+            with self.assertRaises(PermissionDenied):
+                self.service.update_user(
+                    self.regular_user, 
+                    str(self.admin_user.id), 
+                    update_data
+                )
+    
+    def test_update_user_success(self):
+        """Test successful user update."""
+        with patch.object(self.service, 'access_control') as mock_access_control:
+            mock_access_control.can_manage_user.return_value = True
+            
+            update_data = {
+                'email': 'updated@email.com',
+                'first_name': 'Updated'
+            }
+            
+            result = self.service.update_user(
+                self.admin_user,
+                str(self.regular_user.id),
                 update_data
             )
-    
-    @patch.object(UserService, 'access_control')
-    def test_update_user_success(self, mock_access_control):
-        """Test successful user update."""
-        mock_access_control.can_manage_user.return_value = True
-        
-        update_data = {
-            'email': 'updated@email.com',
-            'first_name': 'Updated'
-        }
-        
-        result = self.service.update_user(
-            self.admin_user,
-            str(self.regular_user.id),
-            update_data
-        )
-        
-        self.assertEqual(result.email, 'updated@email.com')
-        self.assertEqual(result.first_name, 'Updated')
+            
+            self.assertEqual(result.email, 'updated@email.com')
+            self.assertEqual(result.first_name, 'Updated')
     
     def test_update_user_role_requires_permission(self):
         """Test that role updates require proper permissions."""
@@ -428,34 +439,34 @@ class UserServiceTest(TestCase):
         with self.assertRaises(ValidationError):
             self.service.delete_user(self.admin_user, str(fake_id))
     
-    @patch.object(UserService, 'access_control')
-    def test_delete_user_permission_denied(self, mock_access_control):
+    def test_delete_user_permission_denied(self):
         """Test deleting user without permission."""
-        mock_access_control.can_manage_user.return_value = False
-        
-        with self.assertRaises(PermissionDenied):
-            self.service.delete_user(
-                self.regular_user,
-                str(self.admin_user.id)
-            )
+        with patch.object(self.service, 'access_control') as mock_access_control:
+            mock_access_control.can_manage_user.return_value = False
+            
+            with self.assertRaises(PermissionDenied):
+                self.service.delete_user(
+                    self.regular_user,
+                    str(self.admin_user.id)
+                )
     
-    @patch.object(UserService, 'access_control')
-    def test_delete_user_success(self, mock_access_control):
+    def test_delete_user_success(self):
         """Test successful user deletion (soft delete)."""
-        mock_access_control.can_manage_user.return_value = True
-        
-        # Create user to delete
-        user_to_delete = CustomUser.objects.create_user(
-            username="todelete",
-            email="delete@ua.edu",
-            password="DeletePass123!",
-            organization=self.org1,
-            role="viewer"
-        )
-        
-        result = self.service.delete_user(self.admin_user, str(user_to_delete.id))
-        
-        self.assertTrue(result)
+        with patch.object(self.service, 'access_control') as mock_access_control:
+            mock_access_control.can_manage_user.return_value = True
+            
+            # Create user to delete
+            user_to_delete = CustomUser.objects.create_user(
+                username="todelete",
+                email="delete@ua.edu",
+                password="DeletePass123!",
+                organization=self.org1,
+                role="viewer"
+            )
+            
+            result = self.service.delete_user(self.admin_user, str(user_to_delete.id))
+            
+            self.assertTrue(result)
         user_to_delete.refresh_from_db()
         self.assertFalse(user_to_delete.is_active)
 
@@ -619,37 +630,37 @@ class OrganizationServiceTest(TestCase):
         """Test service initializes with access control."""
         self.assertIsNotNone(self.service.access_control)
     
-    @patch.object(OrganizationService, 'access_control')
-    def test_create_organization_success(self, mock_access_control):
+    def test_create_organization_success(self):
         """Test successful organization creation."""
-        mock_access_control.has_permission.return_value = True
-        
-        org_data = {
-            'name': 'New University',
-            'domain': 'new.edu',
-            'organization_type': 'university',
-            'is_publisher': False
-        }
-        
-        result = self.service.create_organization(self.admin, org_data)
-        
-        self.assertEqual(result.name, 'New University')
-        self.assertEqual(result.domain, 'new.edu')
-        self.assertEqual(result.organization_type, 'university')
+        with patch.object(self.service, 'access_control') as mock_access_control:
+            mock_access_control.has_permission.return_value = True
+            
+            org_data = {
+                'name': 'New University',
+                'domain': 'new.edu',
+                'organization_type': 'university',
+                'is_publisher': False
+            }
+            
+            result = self.service.create_organization(self.admin, org_data)
+            
+            self.assertEqual(result.name, 'New University')
+            self.assertEqual(result.domain, 'new.edu')
+            self.assertEqual(result.organization_type, 'university')
     
-    @patch.object(OrganizationService, 'access_control')
-    def test_create_organization_permission_denied(self, mock_access_control):
+    def test_create_organization_permission_denied(self):
         """Test organization creation without permission."""
-        mock_access_control.has_permission.return_value = False
-        
-        org_data = {
-            'name': 'New University',
-            'domain': 'new.edu',
-            'organization_type': 'university'
-        }
-        
-        with self.assertRaises(PermissionDenied):
-            self.service.create_organization(self.admin, org_data)
+        with patch.object(self.service, 'access_control') as mock_access_control:
+            mock_access_control.has_permission.return_value = False
+            
+            org_data = {
+                'name': 'New University',
+                'domain': 'new.edu',
+                'organization_type': 'university'
+            }
+            
+            with self.assertRaises(PermissionDenied):
+                self.service.create_organization(self.admin, org_data)
 
 
 class TrustAwareServiceTest(TestCase):
@@ -703,7 +714,7 @@ class TrustAwareServiceTest(TestCase):
         self.assertIn('user_organization', context)
         self.assertIn('accessible_organizations', context)
         self.assertIn('trust_relationships', context)
-        self.assertEqual(context['user_organization'], self.org1)
+        self.assertEqual(context['user_organization']['id'], str(self.org1.id))
 
 
 class UserManagementServicesIntegrationTest(TestCase):

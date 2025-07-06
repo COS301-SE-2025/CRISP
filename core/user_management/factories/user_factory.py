@@ -362,12 +362,13 @@ class UserFactory:
 # Test Factories using Factory Boy pattern
 try:
     import factory
-    from factory import django
+    import factory.django  # Add this import
     from django.contrib.auth import get_user_model
-    
+    from core.user_management.models import Organization
+
     User = get_user_model()
-    
-    class OrganizationFactory(django.DjangoModelFactory):
+
+    class OrganizationFactory(factory.django.DjangoModelFactory):  # Fix: change django.DjangoModelFactory to factory.django.DjangoModelFactory
         """Factory for creating test Organization instances"""
         class Meta:
             model = Organization
@@ -380,25 +381,21 @@ try:
         is_active = True
         is_publisher = False
     
-    class UserFactory(django.DjangoModelFactory):
+    class UserFactory(factory.django.DjangoModelFactory):  # Fix: change to factory.django.DjangoModelFactory
         """Factory for creating test User instances"""
         class Meta:
             model = User
-        
-        username = factory.Sequence(lambda n: f"testuser{n}@example.com")
-        email = factory.LazyAttribute(lambda obj: obj.username)
+    
+        username = factory.Sequence(lambda n: f"user{n}")
+        email = factory.LazyAttribute(lambda obj: f"{obj.username}@example.com")
         first_name = factory.Faker('first_name')
         last_name = factory.Faker('last_name')
-        role = 'viewer'
-        is_active = True
-        is_verified = False
-        organization = factory.SubFactory(OrganizationFactory)
-        
+        organization = factory.SubFactory(OrganizationFactory)  # Add this line
+    
         @factory.post_generation
         def password(obj, create, extracted, **kwargs):
             if not create:
                 return
-            
             password = extracted or 'testpass123'
             obj.set_password(password)
             obj.save()

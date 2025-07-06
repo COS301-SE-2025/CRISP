@@ -91,7 +91,7 @@ class BaseTestCase(TestCase):
             description='High trust level for testing',
             default_anonymization_level='none',
             default_access_level='full',
-            created_by=self.admin_user
+            created_by=f'user_{self.admin_user.username}'
         )
         
         self.medium_trust = TrustLevel.objects.create(
@@ -101,7 +101,7 @@ class BaseTestCase(TestCase):
             description='Medium trust level for testing',
             default_anonymization_level='partial',
             default_access_level='read',
-            created_by=self.admin_user
+            created_by=f'user_{self.admin_user.username}'
         )
         
         self.low_trust = TrustLevel.objects.create(
@@ -111,7 +111,7 @@ class BaseTestCase(TestCase):
             description='Low trust level for testing',
             default_anonymization_level='full',
             default_access_level='none',
-            created_by=self.admin_user
+            created_by=f'user_{self.admin_user.username}'
         )
         
         # Default trust level for backward compatibility
@@ -159,7 +159,7 @@ def create_test_trust_level(created_by, name_suffix="", **kwargs):
         'description': f'Test trust level {unique_suffix}',
         'default_anonymization_level': 'partial',
         'default_access_level': 'read',
-        'created_by': created_by  # IMPORTANT: Pass the actual CustomUser instance
+        'created_by': f'user_{created_by.username}'  # Convert user to string representation
     }
     defaults.update(kwargs)
     return TrustLevel.objects.create(**defaults)

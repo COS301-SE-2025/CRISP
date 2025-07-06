@@ -400,13 +400,31 @@ class TrustRelationshipRepository(BaseRepository):
         }
 
 
-class TrustGroupRepository(BaseRepository):
-    """
-    Repository for TrustGroup entities.
-    """
+class TrustGroupRepository:
+    """Repository for trust group operations."""
     
     def __init__(self):
-        super().__init__(TrustGroup)
+        self.logger = logging.getLogger(__name__)
+        self.model_class = TrustGroup  # Add this line
+    
+    def can_administer(self, group_id: str, user_id: str) -> bool:
+        """Check if user can administer the trust group."""
+        try:
+            from ...models import TrustGroupMembership  # Fix import path
+            
+            # Check if user is an admin member of the group
+            membership = TrustGroupMembership.objects.filter(
+                trust_group_id=group_id,
+                organization__customuser__id=user_id,
+                membership_type='admin',
+                is_active=True
+            ).first()
+            
+            return membership is not None
+            
+        except Exception as e:
+            self.logger.error(f"Error checking administration rights: {str(e)}")
+            return False
     
     def get_by_id(self, group_id: str) -> Optional[TrustGroup]:
         """Get trust group by ID."""
@@ -508,22 +526,28 @@ class TrustGroupRepository(BaseRepository):
         
         return self.model_class.objects.filter(groups_filter).order_by('name')
     
-    def can_administer(self, group_id: str, organization: str) -> bool:
-        """Check if organization can administer group."""
-        try:
-            group = self.get_by_id(group_id)
-            return group and group.can_administer(organization)
-        except Exception:
-            return False
 
-
-class TrustLevelRepository(BaseRepository):
-    """
-    Repository for TrustLevel entities.
-    """
+class TrustLevelRepository:
+    """Repository for trust level operations."""
     
     def __init__(self):
-        super().__init__(TrustLevel)
+        self.logger = logging.getLogger(__name__)
+        self.model_class = TrustLevel  # Add this line
+    
+    def get_all(self, include_inactive: bool = False) -> 'QuerySet':
+        """Get all trust levels."""
+        try:
+            queryset = self.model_class.objects.all()
+            
+            if not include_inactive:
+                queryset = queryset.filter(is_active=True)
+            
+            # Order by numerical value
+            return queryset.order_by('numerical_value')
+            
+        except Exception as e:
+            self.logger.error(f"Error getting trust levels: {str(e)}")
+            return self.model_class.objects.none()
     
     def get_by_id(self, level_id: str) -> Optional[TrustLevel]:
         """Get trust level by ID."""
@@ -531,15 +555,6 @@ class TrustLevelRepository(BaseRepository):
             return self.model_class.objects.get(id=level_id)
         except ObjectDoesNotExist:
             return None
-    
-    def get_all(self, include_inactive: bool = False) -> models.QuerySet:
-        """Get all trust levels."""
-        queryset = self.model_class.objects.all()
-        
-        if not include_inactive:
-            queryset = queryset.filter(is_active=True)
-        
-        return queryset.order_by('numerical_value')
     
     def create(self, name: str, level: str, numerical_value: int,
                description: str, created_by: str, **kwargs) -> TrustLevel:

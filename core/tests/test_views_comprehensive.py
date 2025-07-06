@@ -392,7 +392,7 @@ class OrganizationViewSetTest(APITestCase):
         """Test viewset initialization."""
         from core.user_management.views.organization_views import OrganizationViewSet
         viewset = OrganizationViewSet()
-        self.assertIsNotNone(viewset.organization_service)
+        self.assertIsNotNone(viewset.org_service)
         self.assertIsNotNone(viewset.access_control)
     
     def test_list_organizations(self):
@@ -507,7 +507,7 @@ class AdminViewSetTest(APITestCase):
                 pass
 
 
-class ViewSecurityTest(APITestCase):
+class ViewSecurityTest(TestCase):
     """Security tests for views."""
     
     def setUp(self):
@@ -583,7 +583,7 @@ class ViewSecurityTest(APITestCase):
                 break
 
 
-class ViewResponseFormatTest(APITestCase):
+class ViewResponseFormatTest(TestCase):
     """Tests for view response formats."""
     
     def setUp(self):
@@ -662,7 +662,7 @@ class ViewResponseFormatTest(APITestCase):
             pass
 
 
-class ViewPerformanceTest(APITestCase):
+class ViewPerformanceTest(TestCase):
     """Performance tests for views."""
     
     def setUp(self):
@@ -676,11 +676,11 @@ class ViewPerformanceTest(APITestCase):
         )
         
         self.admin_user = CustomUser.objects.create_user(
-            username="admin",
-            email="admin@test.edu",
-            password="AdminPass123!",
+            username='admin',
+            email='admin@example.com',
+            password='adminpass123',
             organization=self.org,
-            role="admin"
+            role='admin'
         )
     
     def test_response_time(self):

@@ -131,16 +131,29 @@ class TrustServiceTest(TestCase):
         
         self.assertIn("not found or inactive", str(context.exception))
     
+    @patch('core.trust.services.trust_service.trust_factory')
+    @patch('core.trust.services.trust_service.notify_trust_relationship_event')
     @patch('core.trust.services.trust_service.trust_repository_manager')
-    def test_create_trust_relationship_community_auto_approve(self, mock_repo_manager):
+    def test_create_trust_relationship_community_auto_approve(self, mock_repo_manager, mock_notify, mock_trust_factory):
         """Test auto-approval for community relationships."""
         # Mock repository manager
         mock_repo_manager.levels.get_by_name.return_value = self.medium_trust
-        mock_relationship = Mock()
-        mock_relationship.approved_by_source = False
+        
+        # Create a proper TrustRelationship instance instead of a Mock
+        mock_relationship = TrustRelationship(
+            source_organization=self.org1,
+            target_organization=self.org2,
+            trust_level=self.medium_trust,
+            created_by=self.user1,
+            relationship_type="community",
+            approved_by_source=False
+        )
         mock_repo_manager.relationships.create.return_value = mock_relationship
         
-        TrustService.create_trust_relationship(
+        # Mock the factory to avoid database issues
+        mock_trust_factory.create_log.return_value = None
+        
+        result = TrustService.create_trust_relationship(
             source_org=str(self.org1.id),
             target_org=str(self.org2.id),
             trust_level_name="medium",
@@ -149,9 +162,9 @@ class TrustServiceTest(TestCase):
         )
         
         # Verify auto-approval
-        self.assertTrue(mock_relationship.approved_by_source)
-        self.assertEqual(mock_relationship.approved_by_source_user, self.user1)
-        mock_relationship.save.assert_called_once()
+        self.assertTrue(result.approved_by_source)
+        self.assertEqual(result.approved_by_source_user, self.user1)
+        mock_trust_factory.create_log.assert_called_once()
     
     @patch('core.trust.services.trust_service.trust_repository_manager')
     def test_create_trust_relationship_integrity_error(self, mock_repo_manager):
@@ -201,13 +214,11 @@ class TrustServiceTest(TestCase):
         )
         
         # Approve as source
-        with patch.object(relationship, 'is_fully_approved', True):
-            with patch.object(relationship, 'activate', return_value=True):
-                activated = TrustService.approve_trust_relationship(
-                    relationship_id=str(relationship.id),
-                    approving_org=str(self.org1.id),
-                    approved_by_user=self.user1
-                )
+        activated = TrustService.approve_trust_relationship(
+            relationship_id=str(relationship.id),
+            approving_org=str(self.org1.id),
+            approved_by_user=self.user1
+        )
         
         # Verify approval
         relationship.refresh_from_db()

@@ -587,3 +587,26 @@ class OrganizationService:
             logger.error(f"Error getting organization statistics: {str(e)}")
         
         return stats
+
+    def create_organization(self, name, organization_type, primary_user_data, **kwargs):
+        """Create organization with primary user"""
+        try:
+            organization = Organization.objects.create(
+                name=name,
+                organization_type=organization_type,
+                trust_metadata=kwargs.get('trust_metadata', {}),
+                **{k: v for k, v in kwargs.items() if k != 'trust_metadata'}
+            )
+            
+            primary_user = CustomUser.objects.create_user(
+                username=primary_user_data['username'],
+                email=primary_user_data['email'],
+                password=primary_user_data['password'],
+                organization=organization,
+                role=primary_user_data.get('role', 'admin')
+            )
+            
+            return organization, primary_user
+            
+        except Exception as e:
+            raise ValidationError(f"Failed to create organization: {str(e)}")

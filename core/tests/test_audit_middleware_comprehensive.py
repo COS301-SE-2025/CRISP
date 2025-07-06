@@ -374,129 +374,129 @@ class AuditMiddlewareTest(TestCase):
             mock_logger.error.assert_called_once()
             self.assertIn("Failed to log request exception", mock_logger.error.call_args[0][0])
     
-    @patch.object(AuditMiddleware, 'audit_service')
-    def test_log_request_start_authenticated_user(self, mock_audit_service):
+    def test_log_request_start_authenticated_user(self):
         """Test logging request start with authenticated user."""
         request = self.factory.post('/api/v1/auth/login/')
         request.user = self.user
         request.META['HTTP_USER_AGENT'] = 'Test Browser'
         request.META['HTTP_X_FORWARDED_FOR'] = '192.168.1.1'
         
-        self.middleware._log_request_start(request)
-        
-        mock_audit_service.log_user_event.assert_called_once()
-        args, kwargs = mock_audit_service.log_user_event.call_args
-        
-        self.assertEqual(kwargs['user'], self.user)
-        self.assertEqual(kwargs['action'], 'api_request_start')
-        self.assertEqual(kwargs['ip_address'], '192.168.1.1')
-        self.assertEqual(kwargs['user_agent'], 'Test Browser')
-        self.assertTrue(kwargs['success'])
-        self.assertIn('method', kwargs['additional_data'])
-        self.assertIn('path', kwargs['additional_data'])
-        self.assertEqual(kwargs['additional_data']['event_type'], 'request_start')
+        with patch.object(self.middleware, 'audit_service') as mock_audit_service:
+            self.middleware._log_request_start(request)
+            
+            mock_audit_service.log_user_event.assert_called_once()
+            args, kwargs = mock_audit_service.log_user_event.call_args
+            
+            self.assertEqual(kwargs['user'], self.user)
+            self.assertEqual(kwargs['action'], 'api_request_start')
+            self.assertEqual(kwargs['ip_address'], '192.168.1.1')
+            self.assertEqual(kwargs['user_agent'], 'Test Browser')
+            self.assertTrue(kwargs['success'])
+            self.assertIn('method', kwargs['additional_data'])
+            self.assertIn('path', kwargs['additional_data'])
+            self.assertEqual(kwargs['additional_data']['event_type'], 'request_start')
     
-    @patch.object(AuditMiddleware, 'audit_service')
-    def test_log_request_start_anonymous_user(self, mock_audit_service):
+    def test_log_request_start_anonymous_user(self):
         """Test logging request start with anonymous user."""
         request = self.factory.post('/api/v1/auth/login/')
         request.user = Mock()
         request.user.is_authenticated = False
         
-        self.middleware._log_request_start(request)
-        
-        mock_audit_service.log_user_event.assert_called_once()
-        args, kwargs = mock_audit_service.log_user_event.call_args
-        
-        self.assertIsNone(kwargs['user'])
+        with patch.object(self.middleware, 'audit_service') as mock_audit_service:
+            self.middleware._log_request_start(request)
+            
+            mock_audit_service.log_user_event.assert_called_once()
+            args, kwargs = mock_audit_service.log_user_event.call_args
+            
+            self.assertIsNone(kwargs['user'])
     
-    @patch.object(AuditMiddleware, 'audit_service')
-    def test_log_request_complete_with_timing(self, mock_audit_service):
+    def test_log_request_complete_with_timing(self):
         """Test logging request completion with timing information."""
         request = self.factory.get('/api/v1/users/')
         request.user = self.user
         request._audit_start_time = timezone.now() - timedelta(seconds=2)
         response = HttpResponse(status=200, content=b'{"result": "success"}')
         
-        self.middleware._log_request_complete(request, response)
-        
-        mock_audit_service.log_user_event.assert_called_once()
-        args, kwargs = mock_audit_service.log_user_event.call_args
-        
-        self.assertEqual(kwargs['user'], self.user)
-        self.assertTrue(kwargs['success'])
-        self.assertEqual(kwargs['additional_data']['status_code'], 200)
-        self.assertIsNotNone(kwargs['additional_data']['response_time_seconds'])
-        self.assertIn('response_size_bytes', kwargs['additional_data'])
-        self.assertEqual(kwargs['additional_data']['event_type'], 'request_complete')
+        with patch.object(self.middleware, 'audit_service') as mock_audit_service:
+            self.middleware._log_request_complete(request, response)
+            
+            mock_audit_service.log_user_event.assert_called_once()
+            args, kwargs = mock_audit_service.log_user_event.call_args
+            
+            self.assertEqual(kwargs['user'], self.user)
+            self.assertTrue(kwargs['success'])
+            self.assertEqual(kwargs['additional_data']['status_code'], 200)
+            self.assertIsNotNone(kwargs['additional_data']['response_time_seconds'])
+            self.assertIn('response_size_bytes', kwargs['additional_data'])
+            self.assertEqual(kwargs['additional_data']['event_type'], 'request_complete')
     
-    @patch.object(AuditMiddleware, 'audit_service')
-    def test_log_request_complete_error_status(self, mock_audit_service):
+    def test_log_request_complete_error_status(self):
         """Test logging request completion with error status."""
         request = self.factory.get('/api/v1/users/')
         request.user = self.user
         response = HttpResponse(status=404)
         
-        self.middleware._log_request_complete(request, response)
-        
-        mock_audit_service.log_user_event.assert_called_once()
-        args, kwargs = mock_audit_service.log_user_event.call_args
-        
-        self.assertFalse(kwargs['success'])
-        self.assertEqual(kwargs['failure_reason'], 'HTTP 404')
+        with patch.object(self.middleware, 'audit_service') as mock_audit_service:
+            self.middleware._log_request_complete(request, response)
+            
+            mock_audit_service.log_user_event.assert_called_once()
+            args, kwargs = mock_audit_service.log_user_event.call_args
+            
+            self.assertFalse(kwargs['success'])
+            self.assertEqual(kwargs['failure_reason'], 'HTTP 404')
     
-    @patch.object(AuditMiddleware, 'audit_service')
-    def test_log_request_complete_no_timing(self, mock_audit_service):
+    def test_log_request_complete_no_timing(self):
         """Test logging request completion without timing information."""
         request = self.factory.get('/api/v1/users/')
         request.user = self.user
         # No _audit_start_time attribute
         response = HttpResponse(status=200)
         
-        self.middleware._log_request_complete(request, response)
-        
-        mock_audit_service.log_user_event.assert_called_once()
-        args, kwargs = mock_audit_service.log_user_event.call_args
-        
-        self.assertIsNone(kwargs['additional_data']['response_time_seconds'])
+        with patch.object(self.middleware, 'audit_service') as mock_audit_service:
+            self.middleware._log_request_complete(request, response)
+            
+            mock_audit_service.log_user_event.assert_called_once()
+            args, kwargs = mock_audit_service.log_user_event.call_args
+            
+            self.assertIsNone(kwargs['additional_data']['response_time_seconds'])
     
-    @patch.object(AuditMiddleware, 'audit_service')
-    def test_log_request_exception_with_timing(self, mock_audit_service):
+    def test_log_request_exception_with_timing(self):
         """Test logging request exception with timing information."""
         request = self.factory.get('/api/v1/users/')
         request.user = self.user
         request._audit_start_time = timezone.now() - timedelta(seconds=1)
         exception = ValueError("Test exception message")
         
-        self.middleware._log_request_exception(request, exception)
-        
-        mock_audit_service.log_user_event.assert_called_once()
-        args, kwargs = mock_audit_service.log_user_event.call_args
-        
-        self.assertEqual(kwargs['user'], self.user)
-        self.assertEqual(kwargs['action'], 'api_request_exception')
-        self.assertFalse(kwargs['success'])
-        self.assertEqual(kwargs['failure_reason'], 'ValueError: Test exception message')
-        self.assertEqual(kwargs['additional_data']['exception_type'], 'ValueError')
-        self.assertEqual(kwargs['additional_data']['exception_message'], 'Test exception message')
-        self.assertIsNotNone(kwargs['additional_data']['response_time_seconds'])
-        self.assertEqual(kwargs['additional_data']['event_type'], 'request_exception')
+        with patch.object(self.middleware, 'audit_service') as mock_audit_service:
+            self.middleware._log_request_exception(request, exception)
+            
+            mock_audit_service.log_user_event.assert_called_once()
+            args, kwargs = mock_audit_service.log_user_event.call_args
+            
+            self.assertEqual(kwargs['user'], self.user)
+            self.assertEqual(kwargs['action'], 'api_request_exception')
+            self.assertFalse(kwargs['success'])
+            self.assertEqual(kwargs['failure_reason'], 'ValueError: Test exception message')
+            self.assertEqual(kwargs['additional_data']['exception_type'], 'ValueError')
+            self.assertEqual(kwargs['additional_data']['exception_message'], 'Test exception message')
+            self.assertIsNotNone(kwargs['additional_data']['response_time_seconds'])
+            self.assertEqual(kwargs['additional_data']['event_type'], 'request_exception')
     
-    @patch.object(AuditMiddleware, 'audit_service')
-    def test_log_request_exception_no_timing(self, mock_audit_service):
+    def test_log_request_exception_no_timing(self):
         """Test logging request exception without timing information."""
         request = self.factory.get('/api/v1/users/')
         request.user = self.user
         # No _audit_start_time attribute
         exception = RuntimeError("Runtime error")
         
-        self.middleware._log_request_exception(request, exception)
-        
-        mock_audit_service.log_user_event.assert_called_once()
-        args, kwargs = mock_audit_service.log_user_event.call_args
-        
-        self.assertIsNone(kwargs['additional_data']['response_time_seconds'])
-        self.assertEqual(kwargs['additional_data']['exception_type'], 'RuntimeError')
+        with patch.object(self.middleware, 'audit_service') as mock_audit_service:
+            self.middleware._log_request_exception(request, exception)
+            
+            mock_audit_service.log_user_event.assert_called_once()
+            args, kwargs = mock_audit_service.log_user_event.call_args
+            
+            self.assertIsNone(kwargs['additional_data']['response_time_seconds'])
+            self.assertEqual(kwargs['additional_data']['exception_type'], 'RuntimeError')
 
 
 class AuditMiddlewareIntegrationTest(TestCase):

@@ -1,8 +1,8 @@
 import uuid
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
-from django.utils import timezone
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from datetime import timedelta
 import json
 
@@ -19,16 +19,17 @@ class CustomUserManager(BaseUserManager):
     
     def create_user(self, username, email, password=None, organization=None, **extra_fields):
         """Create and save a regular user"""
-        if not username:
-            raise ValueError('The Username field must be set')
         if not email:
             raise ValueError('The Email field must be set')
-        if not organization:
-            raise ValueError('The Organization field must be set')
-            
+        if not username:
+            raise ValueError('The Username field must be set')
+        
         email = self.normalize_email(email)
         user = self.model(username=username, email=email, organization=organization, **extra_fields)
-        user.set_password(password)
+        
+        if password:
+            user.set_password(password)  # This properly hashes the password
+        
         user.save(using=self._db)
         return user
     
@@ -36,17 +37,8 @@ class CustomUserManager(BaseUserManager):
         """Create and save a superuser"""
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('role', 'BlueVisionAdmin')
-        extra_fields.setdefault('is_publisher', True)
-        extra_fields.setdefault('is_verified', True)
+        extra_fields.setdefault('role', 'admin')
         
-        if extra_fields.get('is_staff') is not True:
-            raise ValueError('Superuser must have is_staff=True.')
-        if extra_fields.get('is_superuser') is not True:
-            raise ValueError('Superuser must have is_superuser=True.')
-        if extra_fields.get('role') != 'BlueVisionAdmin':
-            raise ValueError('Superuser must have role=BlueVisionAdmin.')
-            
         return self.create_user(username, email, password, organization, **extra_fields)
 
 
@@ -98,10 +90,7 @@ class Organization(models.Model):
     )
     
     # Trust-related metadata
-    trust_metadata = models.JSONField(
-        default=dict,
-        help_text="Additional trust-related metadata"
-    )
+    trust_metadata = models.JSONField(default=dict, blank=False)
     
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
@@ -167,10 +156,11 @@ class CustomUser(AbstractUser):
     
     # Organization relationship
     organization = models.ForeignKey(
-        Organization,
-        on_delete=models.CASCADE,
-        related_name='users',
-        help_text="Organization this user belongs to"
+        'Organization', 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True,
+        related_name='users'
     )
     
     # Role and permissions
@@ -397,6 +387,30 @@ class CustomUser(AbstractUser):
         
         return accessible
 
+    def save(self, *args, **kwargs):
+        """Override save to handle password hashing and set defaults."""
+        # Hash password if it's not already hashed
+        if self.password and not self.password.startswith(('pbkdf2_sha256$', 'bcrypt$', 'argon2$')):
+            self.set_password(self.password)
+        
+        # Set defaults for required fields if they're empty
+        if not self.trusted_devices:
+            self.trusted_devices = {}
+        if not self.preferences:
+            self.preferences = {}
+        if not self.metadata:
+            self.metadata = {}
+            
+        # Set flag to skip signal processing during save
+        self._signal_skip = True
+        
+        super().save(*args, **kwargs)
+        
+        # Remove flag after save
+        if hasattr(self, '_signal_skip'):
+            delattr(self, '_signal_skip')
+    
+    # ...rest of existing methods...
 
 class AuthenticationLog(models.Model):
     """

@@ -3,7 +3,8 @@ import logging
 from django.utils import timezone
 from django.utils.deprecation import MiddlewareMixin
 from django.core.exceptions import ValidationError
-from ..services.audit_service import AuditService
+from django.http import JsonResponse
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ class AuditMiddleware(MiddlewareMixin):
     
     def __init__(self, get_response):
         self.get_response = get_response
-        self.audit_service = AuditService()
+        self.audit_service = self.get_audit_service()
         
         # Define which paths to audit
         self.audit_paths = [
@@ -44,10 +45,21 @@ class AuditMiddleware(MiddlewareMixin):
         
         super().__init__(get_response)
     
+    def get_audit_service(self):
+        """Get or create audit service instance"""
+        # Import here to avoid circular imports
+        try:
+            from core.services.audit_service import AuditService
+            return AuditService()
+        except ImportError:
+            # Fallback to logging if service doesn't exist
+            return logging.getLogger('audit')
+    
     def process_request(self, request):
         """Process incoming requests."""
-        # Add timestamp for response time calculation
-        request._audit_start_time = timezone.now()
+        # Only audit API endpoints
+        if request.path.startswith('/api/'):
+            request._audit_start_time = time.time()
         
         # Skip non-API requests
         if not self._should_audit_request(request):

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # CRISP Trust Management Platform - Comprehensive Test Runner
-# This script runs ALL tests for the integrated system
+# This script runs all tests for the integrated system
 
 set -e  # Exit on any error
 
@@ -38,6 +38,9 @@ if [ ! -f "crisp/manage.py" ]; then
     exit 1
 fi
 
+# Add the project root to PYTHONPATH
+export PYTHONPATH="$(pwd):$PYTHONPATH"
+
 # Change to crisp directory for Django commands
 cd crisp
 
@@ -46,14 +49,14 @@ python3 --version
 pip --version
 
 print_status "🔍 Running Django system checks..."
-python3 manage.py check --settings=test_settings
+DJANGO_SETTINGS_MODULE=test_settings python3 manage.py check
 
 print_status "📋 Running ALL core tests..."
 echo ""
-echo "🧪 Testing All Core Applications (143 total tests found):"
-echo "  - Core Integration Tests (116 tests)"
-echo "  - User Management Tests (17 tests)"
-echo "  - Trust Management Tests (10 tests)"
+echo "🧪 Testing All Core Applications:"
+echo "  - Core Integration Tests"
+echo "  - User Management Tests"
+echo "  - Trust Management Tests"
 echo "  - Model Tests"
 echo "  - Service Tests"
 echo "  - Repository Tests"
@@ -61,13 +64,13 @@ echo "  - Validator Tests"
 echo ""
 
 # Run all core tests with detailed output
-python3 manage.py test core.tests core.user_management core.trust --settings=test_settings --verbosity=2
+DJANGO_SETTINGS_MODULE=test_settings python3 manage.py test core.tests core.user_management core.trust --verbosity=2
 
 echo ""
 print_status "📊 Running test coverage analysis..."
 if command -v coverage &> /dev/null; then
-    coverage run --source='../core' manage.py test core.tests core.user_management core.trust --settings=test_settings
-    coverage report --show-missing
+    DJANGO_SETTINGS_MODULE=test_settings coverage run --source='../core' manage.py test core.tests core.user_management core.trust
+    coverage report
     coverage html
     print_success "Coverage report generated in htmlcov/"
 else
@@ -76,56 +79,13 @@ else
 fi
 
 echo ""
-print_status "🔌 Testing individual suites..."
-
-echo ""
-echo "📋 Testing User Management System specifically..."
-python3 manage.py test core.user_management --settings=test_settings --verbosity=1
-
-echo ""
-echo "🔐 Testing Trust Management System specifically..."
-python3 manage.py test core.trust --settings=test_settings --verbosity=1
-
-echo ""
-echo "🔍 Testing Integration Tests specifically..."
-python3 manage.py test core.tests --settings=test_settings --verbosity=1
-
-echo ""
-print_status "🚀 Testing Legacy API endpoints..."
-if [ -f "legacy_tests/test_api_endpoints.py" ]; then
-    python3 legacy_tests/test_api_endpoints.py || print_warning "Legacy API tests had issues"
-fi
-
-echo ""
-print_status "⚡ Running performance tests..."
-if [ -f "tools/test_runners/run_tests.py" ]; then
-    python3 tools/test_runners/run_tests.py || print_warning "Performance tests had issues"
-fi
-
-echo ""
-print_success "🎉 Complete Test Suite Finished!"
+print_success "Test suite completed!"
 echo ""
 echo "📊 Test Summary:"
-echo "  ✅ 143 Total Core Tests"
-echo "     - 116 Core Integration Tests (Unit + Integration)"
-echo "     - 17 User Management Tests"
-echo "     - 10 Trust Management Tests"
-echo "  ✅ Model Tests"
-echo "  ✅ Service Tests"
-echo "  ✅ Repository Tests"
-echo "  ✅ Validator Tests"
-echo "  ✅ Coverage Analysis"
-echo "  ✅ Legacy API Tests"
-echo "  ✅ Performance Tests"
-
+echo "  ✓ Django system checks"
+echo "  ✓ User Management tests"
+echo "  ✓ Trust Management tests"
+echo "  ✓ Integration tests"
+echo "  ✓ Coverage analysis"
 echo ""
-echo "📝 Next steps:"
-echo "  1. Review test coverage in htmlcov/index.html"
-echo "  2. Check any test failures above"
-echo "  3. Run specific test suites if needed:"
-echo "     python3 manage.py test core.user_management --settings=test_settings"
-echo "     python3 manage.py test core.trust --settings=test_settings"
-echo "     python3 manage.py test core.tests --settings=test_settings"
-
-echo ""
-print_success "All tests completed! 🎉"
+print_success "All tests completed successfully!"

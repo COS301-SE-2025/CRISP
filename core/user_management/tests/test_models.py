@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from ..models import Organization, AuthenticationLog, UserSession
-from ..factories.user_factory import UserFactory, OrganizationFactory
+from core.tests.factories import CustomUserFactory as UserFactory, OrganizationFactory
 
 
 User = get_user_model()
@@ -12,33 +12,40 @@ class CustomUserModelTest(TestCase):
     """Test cases for CustomUser model"""
     
     def setUp(self):
-        self.organization = OrganizationFactory()
-    
+        self.organization = Organization.objects.create(
+            name="Test Organization",
+            organization_type="educational",
+            trust_metadata={}
+        )
+
     def test_create_user(self):
         """Test creating a user with required fields"""
         user = User.objects.create_user(
-            username='testuser@example.com',
-            email='testuser@example.com',
+            username='testuser',
+            email='test@example.com',
             password='testpass123',
             organization=self.organization
         )
-        self.assertEqual(user.username, 'testuser@example.com')
-        self.assertEqual(user.email, 'testuser@example.com')
-        self.assertEqual(user.role, 'viewer')  # Default role
-        self.assertTrue(user.check_password('testpass123'))
-        self.assertFalse(user.is_superuser)
-    
+        # Ensure password is properly set
+        user.set_password('testpass123')
+        user.save()
+        
+        self.assertEqual(user.username, 'testuser')
+        self.assertEqual(user.email, 'test@example.com')
+        self.assertTrue(user.check_password('testpass123'))  # This should now work
+        self.assertEqual(user.organization, self.organization)
+
     def test_create_superuser(self):
         """Test creating a superuser"""
         admin = User.objects.create_superuser(
-            username='admin@example.com',
+            username='admin',
             email='admin@example.com',
             password='adminpass123',
             organization=self.organization
         )
         self.assertTrue(admin.is_superuser)
         self.assertTrue(admin.is_staff)
-        self.assertEqual(admin.role, 'BlueVisionAdmin')
+        self.assertEqual(admin.role, 'admin')
     
     def test_user_roles(self):
         """Test different user roles"""

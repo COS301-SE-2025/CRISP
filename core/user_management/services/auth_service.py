@@ -1,10 +1,8 @@
-from django.contrib.auth import authenticate
 from django.utils import timezone
 from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from rest_framework_simplejwt.exceptions import TokenError
 from typing import Dict, Optional, Tuple
-import secrets
 import hashlib
 from datetime import timedelta
 from ..models import CustomUser, UserSession, AuthenticationLog
@@ -696,3 +694,29 @@ class AuthenticationService:
             
         except UserSession.DoesNotExist:
             return False
+
+    def authenticate_user(self, username, password, request=None, **kwargs):
+        """Authenticate user with optional 2FA"""
+        try:
+            from django.contrib.auth import authenticate
+            user = authenticate(username=username, password=password)
+            
+            if not user:
+                return {'success': False, 'error': 'Invalid credentials'}
+            
+            # Check if 2FA is required
+            requires_2fa = getattr(user, 'requires_2fa', False)
+            
+            result = {
+                'success': True,
+                'user': user,
+                'requires_2fa': requires_2fa
+            }
+            
+            if requires_2fa and not kwargs.get('totp_code'):
+                result['requires_2fa'] = True
+                
+            return result
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e)}

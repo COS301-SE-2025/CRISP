@@ -4,8 +4,8 @@ from django.core.exceptions import ValidationError, PermissionDenied
 from django.contrib.auth.password_validation import validate_password
 from django.utils import timezone
 from ..models import CustomUser, Organization, AuthenticationLog, UserProfile
-from .access_control_service import AccessControlService
 from ..factories.user_factory import UserFactory
+from .access_control_service import AccessControlService
 import logging
 
 logger = logging.getLogger(__name__)

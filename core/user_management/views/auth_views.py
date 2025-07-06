@@ -1,7 +1,6 @@
-from rest_framework import status, permissions
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.viewsets import GenericViewSet
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.contrib.auth import logout
 from django.utils.decorators import method_decorator
@@ -9,103 +8,62 @@ from django.views.decorators.csrf import csrf_exempt
 from ..services.auth_service import AuthenticationService
 from ..services.user_service import UserService
 from ..services.trust_aware_service import TrustAwareService
-from ..models import CustomUser
 import logging
 
 logger = logging.getLogger(__name__)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
-class AuthenticationViewSet(GenericViewSet):
-    """
-    Authentication API endpoints with trust-aware functionality.
-    Provides login, logout, token refresh, and session management.
-    """
+class AuthenticationViewSet(viewsets.ViewSet):
+    """Authentication viewset for login/logout operations"""
     
     authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.AllowAny]  # Override per action
     
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.auth_service = AuthenticationService()
         self.user_service = UserService()
         self.trust_service = TrustAwareService()
     
-    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    @action(detail=False, methods=['post'])
     def login(self, request):
-        """
-        Authenticate user and return tokens with trust context.
-        
-        Expected payload:
-        {
-            "username": "string",
-            "password": "string", 
-            "remember_device": boolean (optional),
-            "totp_code": "string" (optional, for 2FA)
-        }
-        """
+        """Handle user login"""
         try:
+            from core.user_management.services.authentication_service import AuthenticationService
+            
             username = request.data.get('username')
             password = request.data.get('password')
-            remember_device = request.data.get('remember_device', False)
             totp_code = request.data.get('totp_code')
+            remember_device = request.data.get('remember_device', False)
             
             if not username or not password:
-                return Response({
-                    'success': False,
-                    'message': 'Username and password are required'
-                }, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {'error': 'Username and password required'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             
-            # Authenticate user
-            auth_result = self.auth_service.authenticate_user(
+            auth_service = AuthenticationService()
+            result = auth_service.authenticate_user(
                 username=username,
                 password=password,
                 request=request,
-                remember_device=remember_device,
-                totp_code=totp_code
+                totp_code=totp_code,
+                remember_device=remember_device
             )
             
-            if auth_result['success']:
-                return Response({
-                    'success': True,
-                    'data': {
-                        'user': auth_result['user'],
-                        'tokens': auth_result['tokens'],
-                        'session_id': auth_result['session_id'],
-                        'trust_context': auth_result['trust_context'],
-                        'permissions': auth_result['permissions'],
-                        'accessible_organizations': auth_result['accessible_organizations'],
-                        'is_trusted_device': auth_result.get('is_trusted_device', False)
-                    },
-                    'message': auth_result['message']
-                }, status=status.HTTP_200_OK)
+            if result.get('success'):
+                return Response(result, status=status.HTTP_200_OK)
             else:
-                # Handle different failure scenarios
-                if auth_result.get('requires_2fa'):
-                    return Response({
-                        'success': False,
-                        'requires_2fa': True,
-                        'message': auth_result['message']
-                    }, status=status.HTTP_200_OK)
+                return Response(
+                    {'error': result.get('error')}, 
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
                 
-                if auth_result.get('requires_device_trust'):
-                    return Response({
-                        'success': False,
-                        'requires_device_trust': True,
-                        'message': auth_result['message']
-                    }, status=status.HTTP_200_OK)
-                
-                return Response({
-                    'success': False,
-                    'message': auth_result['message']
-                }, status=status.HTTP_401_UNAUTHORIZED)
-        
         except Exception as e:
-            logger.error(f"Login error: {str(e)}")
-            return Response({
-                'success': False,
-                'message': 'Authentication system error'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {'error': 'Internal server error'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     @action(detail=False, methods=['post'])
     def refresh(self, request):

@@ -31,7 +31,7 @@ class TrustServiceTest(BaseTestCase):
             level='trusted',
             numerical_value=75,
             description='Level for service testing',
-            created_by=self.admin_user
+            created_by=f'user_{self.admin_user.username}'
         )
     
     def test_service_instantiation(self):
@@ -63,7 +63,7 @@ class TrustServiceTest(BaseTestCase):
                     source_org=self.source_org,
                     target_org=self.target_org,
                     trust_level=self.trust_level,
-                    created_by=self.admin_user
+                    created_by=f'user_{self.admin_user.username}'
                 )
                 self.assertIsInstance(relationship, TrustRelationship)
             except Exception as e:
@@ -120,7 +120,7 @@ class TrustServiceTest(BaseTestCase):
                         source_org=None,
                         target_org=self.target_org,
                         trust_level=self.trust_level,
-                        created_by=self.admin_user
+                        created_by=f'user_{self.admin_user.username}'
                     )
             except Exception:
                 # Service might handle errors differently
@@ -140,7 +140,7 @@ class TrustGroupServiceTest(BaseTestCase):
             level='trusted',
             numerical_value=70,
             description='Level for group service testing',
-            created_by=self.admin_user
+            created_by=f'user_{self.admin_user.username}'
         )
     
     def test_service_instantiation(self):
@@ -172,7 +172,7 @@ class TrustGroupServiceTest(BaseTestCase):
                     name='Test Service Group',
                     description='Created by service test',
                     group_type='community',
-                    created_by=self.admin_user
+                    created_by=f'user_{self.admin_user.username}'
                 )
                 self.assertIsInstance(group, TrustGroup)
                 self.assertEqual(group.name, 'Test Service Group')
@@ -197,7 +197,7 @@ class TrustGroupServiceTest(BaseTestCase):
             name='Member Test Group',
             description='For member testing',
             group_type='community',
-            created_by=self.admin_user
+            created_by=f'org_{self.admin_user.organization.name.lower().replace(" ", "_")}'
         )
         
         if hasattr(self.group_service, 'add_member'):
@@ -218,7 +218,7 @@ class TrustGroupServiceTest(BaseTestCase):
             name='Members List Test Group',
             description='For member listing testing',
             group_type='community',
-            created_by=self.admin_user
+            created_by=f'org_{self.admin_user.organization.name.lower().replace(" ", "_")}'
         )
         
         if hasattr(self.group_service, 'get_group_members'):
@@ -259,14 +259,14 @@ class TrustServiceIntegrationTest(BaseTestCase):
             level='trusted',
             numerical_value=80,
             description='Level for integration testing',
-            created_by=self.admin_user
+            created_by=f'user_{self.admin_user.username}'
         )
         
         self.test_group = TrustGroup.objects.create(
             name='Integration Test Group',
             description='For integration testing',
             group_type='community',
-            created_by=self.admin_user
+            created_by=f'org_{self.admin_user.organization.name.lower().replace(" ", "_")}'
         )
     
     def test_service_compatibility(self):
@@ -324,7 +324,7 @@ class TrustLogServiceTest(BaseTestCase):
                 level='trusted',
                 numerical_value=60,
                 description='For log testing',
-                created_by=self.admin_user
+                created_by=f'user_{self.admin_user.username}'
             ),
             created_by=self.admin_user,
             last_modified_by=self.admin_user
@@ -473,7 +473,7 @@ class ServicePerformanceTest(BaseTestCase):
                 level='trusted',
                 numerical_value=50 + i * 10,
                 description=f'Bulk test level {i}',
-                created_by=self.admin_user
+                created_by=f'user_{self.admin_user.username}'
             )
             trust_levels.append(level)
         
