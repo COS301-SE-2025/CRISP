@@ -44,43 +44,92 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r crisp/requirements.txt
-        pip install pytest pytest-cov coverage
+        pip install pytest pytest-cov coverage pytest-django
         pip install flake8 bandit safety
 
-    - name: Fix All Import Issues
+    - name: Fix legacy import paths in test files
       run: |
-        # Comprehensive fix for all import statements
+        echo "Updating import statements in test files..."
         find core/tests/ -name "*.py" -exec sed -i 's/from crisp_anonymization/from core.patterns.strategy/g' {} \;
         find core/tests/ -name "*.py" -exec sed -i 's/import crisp_anonymization/import core.patterns.strategy/g' {} \;
         find core/tests/ -name "*.py" -exec sed -i 's/crisp_anonymization\./core.patterns.strategy./g' {} \;
+        echo "Import path updates completed"
         
-    - name: Verify Imports Before Testing
+    - name: Verify core module imports
       env:
         PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/core
       run: |
-        echo "Verifying core imports..."
-        python3 -c "from core.patterns.strategy import AnonymizationLevel, AnonymizationContext; print('Core imports working')"
-        echo "Verifying Django settings access..."
-        cd crisp && python3 -c "import crisp_threat_intel.settings; print('Django settings accessible')"
+        echo "Verifying core module imports..."
+        python3 -c "
+        try:
+            from core.patterns.strategy import AnonymizationLevel, AnonymizationContext
+            from core.patterns.strategy import IPAddressAnonymizationStrategy, DomainAnonymizationStrategy
+            print('Core strategy imports successful')
+        except ImportError as e:
+            print('Core import verification failed:', e)
+            exit(1)
+        "
 
-    - name: Run Core Tests - Isolated
+    - name: Verify Django configuration
+      env:
+        DJANGO_SETTINGS_MODULE: crisp_threat_intel.settings
+        SECRET_KEY: test-secret-key-for-ci-cd-pipeline
+        DB_NAME: crisp_test
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DEBUG: False
+        EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
+        OTX_API_KEY: test-key
+        OTX_ENABLED: False
+        PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/core
+      run: |
+        echo "Verifying Django configuration..."
+        cd crisp
+        python3 -c "
+        import os
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crisp_threat_intel.settings')
+        import django
+        django.setup()
+        print('Django configuration verified')
+        "
+
+    - name: Run database migrations
+      env:
+        DJANGO_SETTINGS_MODULE: crisp_threat_intel.settings
+        SECRET_KEY: test-secret-key-for-ci-cd-pipeline
+        DB_NAME: crisp_test
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DEBUG: False
+        EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
+        OTX_API_KEY: test-key
+        OTX_ENABLED: False
+        PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/core
+      run: |
+        echo "Executing database migrations..."
+        cd crisp
+        python manage.py migrate --noinput
+        echo "Database migrations completed successfully"
+
+    - name: Run core module tests
       env:
         PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/core
         DJANGO_SETTINGS_MODULE: ""
       run: |
+        echo "Running core module tests..."
         cd core
         python -m pytest tests/ -v --tb=short \
           --ignore=tests/test_django_observer_integration.py \
           --ignore=tests/test_gmail_integration.py \
           --ignore=tests/test_gmail_config.py \
-          --ignore=tests/test_complete_integration.py \
-          || echo "Core tests completed with warnings"
+          --ignore=tests/test_complete_integration.py
+        echo "Core module tests completed successfully"
         
-    - name: Install Django test dependencies
-      run: |
-        pip install pytest-django
-        
-    - name: Run Django Tests
+    - name: Run Django application tests
       env:
         DJANGO_SETTINGS_MODULE: crisp_threat_intel.settings
         SECRET_KEY: test-secret-key-for-ci-cd-pipeline
@@ -95,11 +144,12 @@ jobs:
         OTX_ENABLED: False
         PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/core
       run: |
+        echo "Running Django application tests..."
         cd crisp
-        python manage.py migrate --noinput
-        python manage.py test --verbosity=2 || echo "Django tests completed with warnings"
+        python manage.py test --verbosity=2 --failfast
+        echo "Django application tests completed successfully"
 
-    - name: Run Integration Tests
+    - name: Run integration tests
       env:
         DJANGO_SETTINGS_MODULE: crisp_threat_intel.settings
         SECRET_KEY: test-secret-key-for-ci-cd-pipeline
@@ -114,10 +164,13 @@ jobs:
         OTX_ENABLED: False
         PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/core
       run: |
+        echo "Running integration tests..."
         cd core
-        python -m pytest tests/test_django_observer_integration.py -v --tb=short || echo "Integration tests completed with warnings"
+        python -m pytest tests/test_django_observer_integration.py -v --tb=short
+        echo "Integration tests completed successfully"
 
-    - name: Generate Coverage Report
+    - name: Generate test coverage report
+      if: success()
       env:
         DJANGO_SETTINGS_MODULE: crisp_threat_intel.settings
         SECRET_KEY: test-secret-key-for-ci-cd-pipeline
@@ -132,22 +185,28 @@ jobs:
         OTX_ENABLED: False
         PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/core
       run: |
+        echo "Generating test coverage report..."
         cd crisp
-        coverage run --source='.' manage.py test || echo "Coverage collection completed with warnings"
-        coverage report --show-missing --skip-covered || echo "Coverage report generated with warnings"
-        coverage html || echo "HTML coverage report generated with warnings"
+        coverage run --source='.' manage.py test
+        coverage report --show-missing --skip-covered
+        coverage html
+        echo "Test coverage report generated"
 
-    - name: Run Code Quality Checks
+    - name: Run code quality checks
       run: |
-        flake8 core/ --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=core/tests/ || echo "Core linting completed with warnings"
-        flake8 crisp/ --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=crisp/crisp_threat_intel/migrations/ || echo "Django linting completed with warnings"
+        echo "Running code quality checks..."
+        flake8 core/ --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=core/tests/
+        flake8 crisp/ --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=crisp/crisp_threat_intel/migrations/
+        echo "Code quality checks completed"
 
-    - name: Run Security Checks
+    - name: Run security scans
       run: |
-        bandit -r core/ crisp/ -f json -o bandit-report.json --exclude=crisp/crisp_threat_intel/migrations/,core/tests/,crisp/crisp_threat_intel/tests/ || echo "Security check completed with warnings"
-        safety check --file=crisp/requirements.txt || echo "Safety check completed with warnings"
+        echo "Running security vulnerability scans..."
+        bandit -r core/ crisp/ -f json -o bandit-report.json --exclude=crisp/crisp_threat_intel/migrations/,core/tests/,crisp/crisp_threat_intel/tests/ --severity-level high
+        safety check --file=crisp/requirements.txt
+        echo "Security scans completed"
 
-    - name: Upload Coverage Report
+    - name: Upload test coverage report
       uses: actions/upload-artifact@v4
       if: always()
       with:
@@ -155,38 +214,57 @@ jobs:
         path: crisp/htmlcov/
         if-no-files-found: ignore
 
-    - name: Upload Security Report
+    - name: Upload security scan report
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: bandit-report
+        name: security-report
         path: bandit-report.json
         if-no-files-found: ignore
 
   status-report:
-    name: CI/CD Status Report
+    name: Pipeline Status Report
     runs-on: ubuntu-latest
     needs: [test]
     if: always()
     
     steps:
-    - name: Report Status
+    - name: Report pipeline status
       run: |
-        echo "Test Results Summary:"
-        echo "  Core Tests: ${{ needs.test.result }}"
-        echo "  Django Tests: ${{ needs.test.result }}"
-        echo "  Integration Tests: ${{ needs.test.result }}"
-        echo "  Code Quality: ${{ needs.test.result }}"
-        echo "  Security Checks: ${{ needs.test.result }}"
+        echo "================================================"
+        echo "CI/CD PIPELINE RESULTS"
+        echo "================================================"
+        echo "Status: ${{ needs.test.result }}"
         echo ""
         if [ "${{ needs.test.result }}" == "success" ]; then
-          echo "All tests passed successfully!"
-          echo "CI/CD pipeline completed without critical failures!"
+          echo "SUCCESS: All tests and quality checks passed"
+          echo ""
+          echo "Test Results:"
+          echo "- Core module tests: PASSED"
+          echo "- Django application tests: PASSED"  
+          echo "- Integration tests: PASSED"
+          echo "- Code quality checks: PASSED"
+          echo "- Security scans: PASSED"
+          echo ""
+          echo "DEPLOYMENT STATUS: APPROVED"
+          echo "Application is ready for deployment"
         else
-          echo "Some tests had issues but pipeline completed."
-          echo "Check the test job logs for details."
+          echo "FAILURE: Pipeline failed - deployment blocked"
+          echo ""
+          echo "DEPLOYMENT STATUS: REJECTED"
+          echo "Critical issues found - do not deploy"
+          echo ""
+          echo "Troubleshooting steps:"
+          echo "1. Review failed job logs above"
+          echo "2. Fix identified issues in code"
+          echo "3. Run tests locally to verify fixes"
+          echo "4. Push changes to re-trigger pipeline"
+          echo ""
+          echo "Common failure causes:"
+          echo "- Test failures indicating business logic bugs"
+          echo "- Import or dependency configuration issues"
+          echo "- Database migration or model problems"
+          echo "- Code quality violations or syntax errors"
+          echo "- High-severity security vulnerabilities"
         fi
-        echo ""
-        echo "Artifacts generated:"
-        echo "  - Coverage report"
-        echo "  - Security scan report"
+        echo "================================================"
