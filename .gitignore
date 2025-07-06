@@ -1,6 +1,3 @@
-# CRISP - Cyber Risk Information Sharing Platform
-# Git ignore file
-
 # Python
 __pycache__/
 *.py[cod]
@@ -24,26 +21,20 @@ wheels/
 *.egg
 MANIFEST
 
-# Virtual Environment
+# Virtual environments
 venv/
 env/
 ENV/
-.venv
-env.bak/
-venv.bak/
+.venv/
+.env
 
 # Django
 *.log
 local_settings.py
 db.sqlite3
-db.sqlite3-journal
 media/
 staticfiles/
-
-# Environment variables
-.env
-.env.*
-!.env.example
+static/
 
 # IDE
 .vscode/
@@ -63,35 +54,55 @@ Thumbs.db
 
 # Testing
 .coverage
-htmlcov/
 .pytest_cache/
+htmlcov/
 .tox/
+.cache
+nosetests.xml
 coverage.xml
 *.cover
 .hypothesis/
-
-# Documentation
-docs/_build/
-
-# Logs and temporary files
-*.log
-*.tmp
-.cache/
-
-# Security
-*.key
-*.pem
-secrets/
 
 # Celery
 celerybeat-schedule
 celerybeat.pid
 
-# Node.js (if frontend tools used)
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Redis
+dump.rdb
 
-/backup
-/.venv
+# Jupyter
+.ipynb_checkpoints
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Secret keys and sensitive data
+*.key
+*.pem
+*.p12
+secrets.json
+local_config.py
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# CRISP specific
+crisp_threat_intel.log
+*.pid
