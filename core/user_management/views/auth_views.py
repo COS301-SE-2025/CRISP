@@ -29,8 +29,6 @@ class AuthenticationViewSet(viewsets.ViewSet):
     def login(self, request):
         """Handle user login"""
         try:
-            from core.user_management.services.authentication_service import AuthenticationService
-            
             username = request.data.get('username')
             password = request.data.get('password')
             totp_code = request.data.get('totp_code')
@@ -38,12 +36,11 @@ class AuthenticationViewSet(viewsets.ViewSet):
             
             if not username or not password:
                 return Response(
-                    {'error': 'Username and password required'}, 
+                    {'success': False, 'message': 'Username and password are required'}, 
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            auth_service = AuthenticationService()
-            result = auth_service.authenticate_user(
+            result = self.auth_service.authenticate_user(
                 username=username,
                 password=password,
                 request=request,
@@ -52,16 +49,22 @@ class AuthenticationViewSet(viewsets.ViewSet):
             )
             
             if result.get('success'):
-                return Response(result, status=status.HTTP_200_OK)
+                return Response({'success': True, 'data': result}, status=status.HTTP_200_OK)
             else:
-                return Response(
-                    {'error': result.get('error')}, 
-                    status=status.HTTP_401_UNAUTHORIZED
-                )
+                # Handle different failure types
+                if result.get('requires_2fa'):
+                    return Response(result, status=status.HTTP_200_OK)
+                elif result.get('requires_device_trust'):
+                    return Response(result, status=status.HTTP_200_OK)
+                else:
+                    return Response(
+                        {'success': False, 'message': result.get('message', 'Authentication failed')}, 
+                        status=status.HTTP_401_UNAUTHORIZED
+                    )
                 
         except Exception as e:
             return Response(
-                {'error': 'Internal server error'}, 
+                {'success': False, 'message': 'Internal server error'}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     

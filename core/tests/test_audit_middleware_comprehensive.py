@@ -1,7 +1,7 @@
 """
 Comprehensive tests for audit middleware to improve coverage.
 """
-from django.test import TestCase, RequestFactory
+from django.test import TestCase, RequestFactory, override_settings
 from django.http import HttpResponse
 from django.utils import timezone
 from unittest.mock import patch, Mock, MagicMock
@@ -522,13 +522,15 @@ class AuditMiddlewareIntegrationTest(TestCase):
             organization=self.org
         )
     
-    @patch('core.services.audit_service.AuditService')
-    def test_complete_request_lifecycle_sensitive_endpoint(self, mock_audit_service_class):
+    @override_settings(ENABLE_AUDIT_LOGGING=True)
+    def test_complete_request_lifecycle_sensitive_endpoint(self):
         """Test complete request lifecycle for sensitive endpoint."""
         mock_audit_service = Mock()
-        mock_audit_service_class.return_value = mock_audit_service
         
-        request = self.factory.post('/api/auth/login', {'username': 'test', 'password': 'test'})
+        # Replace the middleware's audit service with our mock
+        self.middleware.audit_service = mock_audit_service
+        
+        request = self.factory.post('/api/v1/auth/login/', {'username': 'test', 'password': 'test'})
         request.user = self.user
         request.META['REMOTE_ADDR'] = '192.168.1.1'
         
@@ -550,7 +552,7 @@ class AuditMiddlewareIntegrationTest(TestCase):
         mock_audit_service = Mock()
         mock_audit_service_class.return_value = mock_audit_service
         
-        request = self.factory.post('/api/auth/login')
+        request = self.factory.post('/api/v1/auth/login/')
         request.user = self.user
         request.META['REMOTE_ADDR'] = '192.168.1.1'
         

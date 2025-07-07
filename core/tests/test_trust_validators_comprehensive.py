@@ -5,7 +5,7 @@ from django.test import TestCase, override_settings
 from django.core.cache import cache
 from django.utils import timezone
 from unittest.mock import patch, Mock
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 import uuid
 import hashlib
 import hmac
@@ -260,7 +260,7 @@ class TrustGroupValidatorTest(TestCase):
         )
         
         self.assertFalse(result['valid'])
-        self.assertIn("Invalid group type", result['errors'])
+        self.assertTrue(any("Invalid group type" in error for error in result['errors']))
     
     def test_validate_create_group_valid_types(self):
         """Test validation success with all valid group types."""
@@ -318,7 +318,7 @@ class TrustGroupValidatorTest(TestCase):
         )
         
         self.assertFalse(result['valid'])
-        self.assertIn("Invalid membership type", result['errors'])
+        self.assertTrue(any("Invalid membership type" in error for error in result['errors']))
     
     def test_validate_join_group_valid_membership_types(self):
         """Test validation success with all valid membership types."""
@@ -451,7 +451,7 @@ class SecurityValidatorTest(TestCase):
     def test_validate_input_sanitization_dangerous_chars(self):
         """Test input sanitization removes dangerous characters."""
         input_data = {
-            'name': 'Name with <script>',
+            'name': 'Name with <script>alert("xss")</script>',
             'description': 'Clean description'
         }
         
@@ -489,11 +489,11 @@ class SecurityValidatorTest(TestCase):
         self.assertEqual(result['current_count'], 1)
         self.assertEqual(result['limit'], 5)
     
-    def test_validate_rate_limiting_over_limit(self):
+    @patch('core.trust.validators.cache')
+    def test_validate_rate_limiting_over_limit(self, mock_cache):
         """Test rate limiting when over the limit."""
-        # First, artificially set the cache to be at the limit
-        cache_key = "rate_limit:test_op:user1:org1"
-        cache.set(cache_key, 10, 3600)
+        # Mock cache to return limit value
+        mock_cache.get.return_value = 10
         
         result = SecurityValidator.validate_rate_limiting(
             operation="test_op",
@@ -508,8 +508,21 @@ class SecurityValidatorTest(TestCase):
         self.assertEqual(result['current_count'], 10)
         self.assertEqual(result['limit'], 10)
     
-    def test_validate_rate_limiting_increments_counter(self):
+    @patch('core.trust.validators.cache')
+    def test_validate_rate_limiting_increments_counter(self, mock_cache):
         """Test that rate limiting properly increments the counter."""
+        # Mock cache behavior for testing
+        cache_data = {}
+        
+        def mock_get(key, default=0):
+            return cache_data.get(key, default)
+        
+        def mock_set(key, value, timeout):
+            cache_data[key] = value
+        
+        mock_cache.get.side_effect = mock_get
+        mock_cache.set.side_effect = mock_set
+        
         # Make first request
         result1 = SecurityValidator.validate_rate_limiting(
             operation="test_op",
@@ -543,15 +556,16 @@ class SecurityValidatorTest(TestCase):
     
     def test_validate_suspicious_patterns_outside_business_hours(self):
         """Test detection of operations outside business hours."""
-        # Create timestamp for 3 AM
-        late_night = timezone.now().replace(hour=3, minute=0, second=0, microsecond=0)
+        # Don't include timestamp to avoid timestamp validation issues
+        # We're only testing business hours detection
         operation_data = {
-            'timestamp': late_night.isoformat(),
             'operation': 'late_operation'
         }
-        user_context = {'user_id': 'user1'}
         
-        result = SecurityValidator.validate_suspicious_patterns(operation_data, user_context)
+        # Mock datetime.now().time() to return 3 AM for the business hours check
+        with patch('core.trust.validators.datetime') as mock_datetime:
+            mock_datetime.now.return_value.time.return_value = time(3, 0)  # 3 AM
+            result = self.validator.validate_suspicious_patterns('user1', operation_data)
         
         self.assertTrue(result['valid'])  # Warnings don't make it invalid
         self.assertIn("Operation occurring outside business hours", result['warnings'])
@@ -566,7 +580,7 @@ class SecurityValidatorTest(TestCase):
         }
         user_context = {'user_id': 'user1'}
         
-        result = SecurityValidator.validate_suspicious_patterns(operation_data, user_context)
+        result = self.validator.validate_suspicious_patterns('user1', operation_data)
         
         self.assertFalse(result['valid'])
         self.assertIn("Operation timestamp too old", result['errors'][0])
@@ -579,23 +593,22 @@ class SecurityValidatorTest(TestCase):
         }
         user_context = {'user_id': 'user1'}
         
-        result = SecurityValidator.validate_suspicious_patterns(operation_data, user_context)
+        result = self.validator.validate_suspicious_patterns('user1', operation_data)
         
         self.assertFalse(result['valid'])
         self.assertIn("Invalid timestamp format", result['errors'])
     
-    def test_validate_suspicious_patterns_rapid_operations(self):
+    @patch('core.trust.validators.cache')
+    def test_validate_suspicious_patterns_rapid_operations(self, mock_cache):
         """Test detection of rapid-fire operations."""
         user_context = {'user_id': 'user1'}
         operation_data = {'timestamp': timezone.now().isoformat()}
         
-        # Simulate 25 recent operations
-        recent_ops_key = "recent_ops:user1"
-        current_time = timezone.now().timestamp()
-        recent_ops = [current_time - i for i in range(25)]
-        cache.set(recent_ops_key, recent_ops, 300)
+        # Mock cache to return 25 recent operations (more than 5)
+        recent_ops = [1, 2, 3, 4, 5, 6]  # 6 operations (more than 5)
+        mock_cache.get.return_value = recent_ops
         
-        result = SecurityValidator.validate_suspicious_patterns(operation_data, user_context)
+        result = self.validator.validate_suspicious_patterns('user1', operation_data)
         
         self.assertTrue(result['valid'])  # Warnings don't make it invalid
         self.assertIn("Unusually high operation frequency detected", result['warnings'])

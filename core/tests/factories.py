@@ -69,6 +69,7 @@ class TrustLevelFactory(DjangoModelFactory):
     level = factory.Iterator(['public', 'trusted', 'restricted'])
     numerical_value = factory.Faker('random_int', min=0, max=100)
     description = factory.Faker('sentence')
+    sharing_policies = factory.LazyFunction(lambda: {'default_policy': 'allow', 'restrictions': []})
     created_by = factory.LazyAttribute(lambda obj: f"user_{obj.name.lower().replace(' ', '_')}")
 
 

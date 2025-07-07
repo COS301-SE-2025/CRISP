@@ -158,7 +158,6 @@ class AuthenticationService:
             
         except Exception as e:
             logger.error(f"Authentication error for {username}: {str(e)}")
-            self._log_failed_authentication(user, username, ip_address, user_agent, f'System error: {str(e)}')
             auth_result['message'] = 'Authentication system error'
             return auth_result
     
@@ -558,9 +557,9 @@ class AuthenticationService:
     
     def _get_client_info(self, request) -> Tuple[str, str]:
         """Extract client IP and user agent from request"""
-        if not request:
+        if request is None:
             return '127.0.0.1', 'Unknown'
-        
+            
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         if x_forwarded_for:
             ip = x_forwarded_for.split(',')[0]
@@ -572,7 +571,7 @@ class AuthenticationService:
     
     def _create_device_fingerprint(self, request) -> str:
         """Create device fingerprint for trusted device tracking"""
-        if not request:
+        if request is None:
             return 'unknown_device'
         
         fingerprint_data = {
@@ -703,28 +702,3 @@ class AuthenticationService:
         except UserSession.DoesNotExist:
             return False
 
-    def authenticate_user(self, username, password, request=None, **kwargs):
-        """Authenticate user with optional 2FA"""
-        try:
-            from django.contrib.auth import authenticate
-            user = authenticate(username=username, password=password)
-            
-            if not user:
-                return {'success': False, 'error': 'Invalid credentials'}
-            
-            # Check if 2FA is required
-            requires_2fa = getattr(user, 'requires_2fa', False)
-            
-            result = {
-                'success': True,
-                'user': user,
-                'requires_2fa': requires_2fa
-            }
-            
-            if requires_2fa and not kwargs.get('totp_code'):
-                result['requires_2fa'] = True
-                
-            return result
-            
-        except Exception as e:
-            return {'success': False, 'error': str(e)}

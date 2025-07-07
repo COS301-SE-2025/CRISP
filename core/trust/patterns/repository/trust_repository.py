@@ -415,8 +415,8 @@ class TrustGroupRepository:
             # Check if user is an admin member of the group
             membership = TrustGroupMembership.objects.filter(
                 trust_group_id=group_id,
-                organization__customuser__id=user_id,
-                membership_type='admin',
+                organization__users__id=user_id,
+                membership_type='administrator',
                 is_active=True
             ).first()
             

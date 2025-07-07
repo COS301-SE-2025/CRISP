@@ -31,15 +31,21 @@ class TrustGroupService:
         """Create a new trust group"""
         try:
             # Use first() instead of get() to handle multiple results gracefully
+            # Prefer non-system defaults over system defaults
             if default_trust_level_name:
                 default_trust_level = TrustLevel.objects.filter(
                     level=default_trust_level_name
-                ).first()
+                ).order_by('is_system_default', 'created_at').first()
             else:
+                default_trust_level = None
+            
+            # Fall back to public level if specified level not found    
+            if not default_trust_level:
                 default_trust_level = TrustLevel.objects.filter(
                     level='public'
-                ).first()
+                ).order_by('is_system_default', 'created_at').first()
             
+            # Create default if no public level exists
             if not default_trust_level:
                 # Create a default trust level if none exists
                 default_trust_level = TrustLevel.objects.create(

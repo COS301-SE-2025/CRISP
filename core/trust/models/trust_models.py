@@ -437,8 +437,7 @@ class TrustRelationship(models.Model):
     def is_effective(self):
         """Check if relationship is effective (active and approved)"""
         # Check if status is active and relationship is approved
-        is_approved = (self.source_approval_status == 'approved' and 
-                      self.target_approval_status == 'approved')
+        is_approved = (self.approved_by_source and self.approved_by_target)
         
         # Check if effective date has passed (or is None, meaning immediate effect)
         effective_date_passed = (self.effective_date is None or 

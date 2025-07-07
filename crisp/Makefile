@@ -63,7 +63,6 @@ test-verbose: clean-coverage
 test-coverage: clean-coverage
 	@echo "🧪 Running comprehensive test suite..."
 	$(COVERAGE) run --source=$(SOURCE) manage.py test $(TEST_PATH) --settings=test_settings -v 2
-	$(COVERAGE) combine
 	@echo "📊 Generating coverage reports..."
 	$(COVERAGE) report --show-missing --fail-under=96
 	$(COVERAGE) html

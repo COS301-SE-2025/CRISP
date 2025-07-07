@@ -176,17 +176,17 @@ class SecurityValidator:
             }
         
         # Increment counter
-        cache.set(cache_key, current_count + 1, window_seconds)
+        new_count = current_count + 1
+        cache.set(cache_key, new_count, window_seconds)
         
         return {
             'valid': True,
             'errors': [],
-            'current_count': current_count + 1,
+            'current_count': new_count,
             'limit': limit
         }
     
-    @staticmethod
-    def validate_suspicious_patterns(user_id, operation_data):
+    def validate_suspicious_patterns(self, user_id, operation_data):
         """Detect suspicious patterns"""
         result = {'valid': True, 'errors': [], 'warnings': []}
         
@@ -196,11 +196,11 @@ class SecurityValidator:
         business_end = time(17, 0)
         
         if not (business_start <= now <= business_end):
-            result['warnings'].append('Operation outside business hours')
+            result['warnings'].append('Operation occurring outside business hours')
             # Only make invalid for certain high-risk operations, otherwise just warn
             if operation_data.get('high_risk', False):
                 result['valid'] = False
-                result['errors'].append('Operation outside business hours')
+                result['errors'].append('Operation occurring outside business hours')
         
         # Check for rapid operations
         recent_ops_key = f"recent_ops_{user_id}"

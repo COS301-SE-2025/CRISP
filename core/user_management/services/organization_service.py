@@ -54,8 +54,8 @@ class OrganizationService:
                 raise ValidationError("creating_user and org_data are required")
                 
             # Check permissions
-            if hasattr(self.access_control, 'require_permission'):
-                self.access_control.require_permission(creating_user, 'can_create_organizations')
+            if not self.access_control.has_permission(creating_user, 'can_create_organizations'):
+                raise PermissionDenied("No permission to create organizations")
             
             # Handle pattern 2: separate primary_user_data
             if primary_user_data:

@@ -31,6 +31,9 @@ class CustomUserManager(BaseUserManager):
             user.set_password(password)  # This properly hashes the password
         
         user.save(using=self._db)
+        
+        # Force reload to ensure password is properly set
+        user.refresh_from_db()
         return user
     
     def create_superuser(self, username, email, password=None, organization=None, **extra_fields):

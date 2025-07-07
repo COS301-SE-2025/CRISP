@@ -26,13 +26,13 @@ class CustomUserModelTest(TestCase):
             password='testpass123',
             organization=self.organization
         )
-        # Ensure password is properly set
-        user.set_password('testpass123')
-        user.save()
+        
+        # Refresh from database to ensure password is properly set
+        user.refresh_from_db()
         
         self.assertEqual(user.username, 'testuser')
         self.assertEqual(user.email, 'test@example.com')
-        self.assertTrue(user.check_password('testpass123'))  # This should now work
+        self.assertTrue(user.check_password('testpass123'))
         self.assertEqual(user.organization, self.organization)
 
     def test_create_superuser(self):

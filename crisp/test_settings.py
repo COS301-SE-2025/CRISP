@@ -36,7 +36,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
 ]
 
-ROOT_URLCONF = 'core.trust.urls'  # Point to the app's own urls if they exist for testing
+ROOT_URLCONF = 'core.urls'  # Use core urls which include both trust and user management
 
 TEMPLATES = [
     {
@@ -113,9 +113,10 @@ LOGGING = {
 # Disable audit logging in tests
 ENABLE_AUDIT_LOGGING = False
 
-# Speed up password hashing in tests
+# Speed up password hashing in tests while keeping security
 PASSWORD_HASHERS = [
-    'django.contrib.auth.hashers.MD5PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.MD5PasswordHasher',  # Keep as fallback for existing tests
 ]
 
 # Disable caching

@@ -111,7 +111,7 @@ class UserService:
         if updating_user.id == target_user.id:
             # Self-update: limited fields
             updatable_fields = {'first_name', 'last_name', 'email', 'two_factor_enabled'}
-        elif updating_user.role == 'BlueVisionAdmin':
+        elif updating_user.role in ['BlueVisionAdmin', 'admin']:
             # Admin: all fields except sensitive ones
             updatable_fields = {
                 'first_name', 'last_name', 'email', 'role', 'is_publisher',
@@ -137,12 +137,12 @@ class UserService:
             updating_level = self.access_control.get_role_hierarchy_level(updating_user.role)
             new_role_level = self.access_control.get_role_hierarchy_level(new_role)
             
-            if new_role_level >= updating_level and updating_user.role != 'BlueVisionAdmin':
+            if new_role_level >= updating_level and updating_user.role not in ['BlueVisionAdmin', 'admin']:
                 raise PermissionDenied("Cannot assign role equal or higher than your own")
         
         # Validate organization changes
         if 'organization' in update_data:
-            if updating_user.role != 'BlueVisionAdmin':
+            if updating_user.role not in ['BlueVisionAdmin', 'admin']:
                 raise PermissionDenied("Only BlueVision admins can change user organizations")
             
             try:
@@ -170,6 +170,8 @@ class UserService:
         
         if updated_fields:
             target_user.save(update_fields=updated_fields + ['updated_at'])
+            # Refresh from database to ensure changes are reflected
+            target_user.refresh_from_db()
             
             # Log user update
             AuthenticationLog.log_authentication_event(

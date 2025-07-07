@@ -100,7 +100,7 @@ class URLConfigurationTest(TestCase):
                 # Test that URL resolves to correct view
                 resolved = resolve(url)
                 self.assertEqual(resolved.func.cls, UserViewSet)
-                self.assertEqual(resolved.kwargs['pk'], str(user_id))
+                self.assertEqual(str(resolved.kwargs['pk']), str(user_id))
             except NoReverseMatch:
                 # URL pattern might not be configured yet
                 pass
@@ -145,7 +145,7 @@ class URLConfigurationTest(TestCase):
                 # Test that URL resolves to correct view
                 resolved = resolve(url)
                 self.assertEqual(resolved.func.cls, OrganizationViewSet)
-                self.assertEqual(resolved.kwargs['pk'], str(org_id))
+                self.assertEqual(str(resolved.kwargs['pk']), str(org_id))
             except NoReverseMatch:
                 # URL pattern might not be configured yet
                 pass
@@ -193,7 +193,7 @@ class URLConfigurationTest(TestCase):
                 # Test that URL resolves to correct view
                 resolved = resolve(url)
                 self.assertEqual(resolved.func.cls, AdminViewSet)
-                self.assertEqual(resolved.kwargs['pk'], str(user_id))
+                self.assertEqual(str(resolved.kwargs['pk']), str(user_id))
             except NoReverseMatch:
                 # URL pattern might not be configured yet
                 pass
@@ -354,7 +354,7 @@ class URLSecurityTest(TestCase):
             try:
                 url = reverse(url_name, kwargs={'pk': valid_uuid})
                 resolved = resolve(url)
-                self.assertEqual(resolved.kwargs['pk'], str(valid_uuid))
+                self.assertEqual(str(resolved.kwargs['pk']), str(valid_uuid))
             except NoReverseMatch:
                 pass
     

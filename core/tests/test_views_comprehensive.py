@@ -201,10 +201,13 @@ class AuthenticationViewSetTest(APITestCase):
         
         response = self.client.post('/api/v1/auth/login/', data, format='json')
         
+        # Check that authenticate_user was called with correct parameters
+        # Use ANY for request since it's a DRF Request wrapper
+        from unittest.mock import ANY
         mock_service_instance.authenticate_user.assert_called_with(
             username='testuser',
             password='TestPass123!',
-            request=response.wsgi_request,
+            request=ANY,
             remember_device=True,
             totp_code=None
         )
@@ -233,10 +236,13 @@ class AuthenticationViewSetTest(APITestCase):
         
         response = self.client.post('/api/v1/auth/login/', data, format='json')
         
+        # Check that authenticate_user was called with correct parameters
+        # Use ANY for request since it's a DRF Request wrapper
+        from unittest.mock import ANY
         mock_service_instance.authenticate_user.assert_called_with(
             username='testuser',
             password='TestPass123!',
-            request=response.wsgi_request,
+            request=ANY,
             remember_device=False,
             totp_code='123456'
         )

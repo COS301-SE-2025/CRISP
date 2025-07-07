@@ -48,7 +48,9 @@ class AccessControlService:
                 'create_trust_relationships',
                 'can_publish_threat_intelligence',
                 'can_view_threat_intelligence',
-                'can_manage_organization_users'
+                'can_manage_organization_users',
+                'can_create_organization_users',
+                'can_manage_trust_relationships'
             },
             'admin': {
                 'manage_users',
@@ -62,7 +64,10 @@ class AccessControlService:
                 'can_manage_organization_users',
                 'can_publish_threat_intelligence',
                 'can_view_threat_intelligence',
-                'can_manage_trust_relationships'
+                'can_manage_trust_relationships',
+                'can_view_system_analytics',
+                'can_manage_all_users',
+                'can_create_organizations'
             },
             'BlueVisionAdmin': {
                 'manage_users',
@@ -77,7 +82,9 @@ class AccessControlService:
                 'can_publish_threat_intelligence',
                 'can_view_threat_intelligence',
                 'can_manage_trust_relationships',
-                'can_create_organizations'
+                'can_create_organizations',
+                'can_view_system_analytics',
+                'can_manage_all_users'
             }
         }
 

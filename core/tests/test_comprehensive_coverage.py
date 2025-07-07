@@ -309,11 +309,11 @@ class ModelManagerCoverageTest(BaseTestCase):
             password='testpass123'
         )
         
+        # Refresh from database to ensure password is properly set
+        user.refresh_from_db()
+        
         self.assertEqual(user.username, 'testuser')
         self.assertEqual(user.email, 'test@example.com')
-        # Ensure password is properly set and can be checked
-        user.set_password('testpass123')  # Explicitly set password
-        user.save()
         self.assertTrue(user.check_password('testpass123'))
         self.assertFalse(user.is_staff)
         self.assertFalse(user.is_superuser)
@@ -379,10 +379,10 @@ class ModelPropertyCoverageTest(BaseTestCase):
         # is_effective should be True when relationship is active and properly approved
         self.assertTrue(active_relationship.is_effective)
         
-        # Test inactive relationship
+        # Test inactive relationship using different organizations to avoid unique constraint
         inactive_relationship = TrustRelationship.objects.create(
-            source_organization=self.org1,
-            target_organization=self.org2,
+            source_organization=self.org2,
+            target_organization=self.test_org,
             trust_level=self.trust_level,
             status='inactive',
             is_active=False
