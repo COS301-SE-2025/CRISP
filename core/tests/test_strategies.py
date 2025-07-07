@@ -8,17 +8,24 @@ import os
 import ipaddress
 import re
 
-# Add the current directory to Python path to import our package
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Add the project root directory to the Python path to import our package
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, project_root)
+sys.path.insert(0, os.path.join(project_root, 'core'))
 
-from crisp_anonymization import (
-    AnonymizationLevel,
-    DataType,
-    IPAddressAnonymizationStrategy,
-    DomainAnonymizationStrategy,
-    EmailAnonymizationStrategy,
-    URLAnonymizationStrategy
-)
+# Import from core.patterns.strategy
+try:
+    from core.patterns.strategy.enums import AnonymizationLevel, DataType
+    from core.patterns.strategy.strategies import (
+        IPAddressAnonymizationStrategy,
+        DomainAnonymizationStrategy,
+        EmailAnonymizationStrategy,
+        URLAnonymizationStrategy
+    )
+except ImportError:
+    print("Error: Could not import CRISP Anonymization System")
+    print("Make sure you're running this script from the project directory")
+    sys.exit(1)
 
 
 class TestIPAddressStrategy(unittest.TestCase):

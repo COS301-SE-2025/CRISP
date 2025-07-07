@@ -8,12 +8,21 @@ import os
 import json
 import argparse
 
-# Add the parent directory to the Python path to import our package
-sys.path.insert(0, os.path.abspath('.'))
+# Add the project root directory to the Python path to import our package
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, project_root)
+sys.path.insert(0, os.path.join(project_root, 'core'))
 
-# Import from crisp_anonymization
-from crisp_anonymization.enums import AnonymizationLevel
-from crisp_anonymization.context import AnonymizationContext
+# Import from core.patterns.strategy
+try:
+    from core.patterns.strategy.enums import AnonymizationLevel
+    from core.patterns.strategy.context import AnonymizationContext
+except ImportError:
+    print("Error: Could not import CRISP Anonymization System")
+    print("Make sure you're running this script from the project directory")
+    print(f"Current working directory: {os.getcwd()}")
+    print(f"Project root: {project_root}")
+    sys.exit(1)
 
 def load_stix_from_file(file_path):
     """Load STIX object or bundle from a JSON file"""
@@ -45,8 +54,8 @@ def get_level_from_trust(trust_level):
     
     return trust_map.get(trust_level.lower(), AnonymizationLevel.MEDIUM)
 
-def test_stix_anonymization(stix_data, level, output_file=None):
-    """Test STIX object anonymization with specified level"""
+def anonymize_stix_data(stix_data, level, output_file=None):
+    """Anonymize STIX object with specified level"""
     print("\n=== STIX Anonymization Test ===\n")
     
     # Create the anonymization context
@@ -170,8 +179,8 @@ def main():
     # Get anonymization level from trust level
     level = get_level_from_trust(args.trust)
     
-    # Run the test
-    test_stix_anonymization(stix_data, level, args.output)
+    # Run the anonymization
+    anonymize_stix_data(stix_data, level, args.output)
 
 if __name__ == "__main__":
     main()

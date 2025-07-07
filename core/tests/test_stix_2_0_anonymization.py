@@ -9,15 +9,20 @@ import os
 from typing import Dict, Any, List
 import argparse
 
-# Add the parent directory to the Python path to import our package
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Add the project root directory to the Python path to import our package
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, project_root)
+sys.path.insert(0, os.path.join(project_root, 'core'))
 
+# Import from core.patterns.strategy
 try:
-    from crisp_anonymization.enums import AnonymizationLevel, DataType
-    from crisp_anonymization.context import AnonymizationContext
+    from core.patterns.strategy.enums import AnonymizationLevel, DataType
+    from core.patterns.strategy.context import AnonymizationContext
 except ImportError:
     print("Error: Could not import CRISP Anonymization System")
     print("Make sure you're running this script from the project directory")
+    print(f"Current working directory: {os.getcwd()}")
+    print(f"Project root: {project_root}")
     sys.exit(1)
 
 
@@ -168,9 +173,12 @@ def analyze_stix_version(data: Dict[str, Any]) -> None:
 
 def main():
     """Main function"""
+    # Default file path relative to the test script location
+    default_file = os.path.join(os.path.dirname(__file__), 'data', 'test_complex_stix_2_0.json')
+    
     parser = argparse.ArgumentParser(description='Test STIX 2.0 Anonymization')
-    parser.add_argument('--file', '-f', default='test_complex_stix_2_0.json',
-                      help='Path to STIX 2.0 JSON file (default: test_complex_stix_2_0.json)')
+    parser.add_argument('--file', '-f', default=default_file,
+                      help='Path to STIX 2.0 JSON file (default: core/tests/data/test_complex_stix_2_0.json)')
     parser.add_argument('--output', '-o', help='Output file path')
     parser.add_argument('--level', '-l', choices=['low', 'medium', 'high', 'full'],
                        default='medium', help='Anonymization level (default: medium)')
@@ -227,7 +235,10 @@ def main():
         # Save to output file
         output_path = args.output
         if not output_path:
-            output_path = args.file.replace('.json', f'_anonymized_{level.value}.json')
+            # Create output file in data directory
+            base_name = os.path.basename(args.file)
+            output_name = base_name.replace('.json', f'_anonymized_{level.value}.json')
+            output_path = os.path.join(os.path.dirname(__file__), 'data', output_name)
         
         save_stix_data(output_path, anonymized)
         
