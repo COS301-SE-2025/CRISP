@@ -18,6 +18,7 @@ from crisp_threat_intel.utils import (
 from crisp_threat_intel.factories.stix_factory import STIXObjectFactory
 from core.patterns.strategy.context import AnonymizationContext
 from core.patterns.strategy.enums import AnonymizationLevel
+from core.patterns.strategy.strategies import AnonymizationStrategyFactory
 
 
 class FullWorkflowTest(TestCase):

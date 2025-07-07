@@ -415,3 +415,143 @@ class URLAnonymizationStrategy(AnonymizationStrategy):
         # Basic URL validation - require http/https protocol
         url_regex = r'^https?://[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*(/[^\s]*)?$'
         return bool(re.match(url_regex, data.strip()))
+
+
+class NoAnonymizationStrategy(AnonymizationStrategy):
+    """Strategy that performs no anonymization - returns data unchanged"""
+    
+    def anonymize(self, data, level: AnonymizationLevel):
+        """Return data unchanged"""
+        return data
+    
+    def can_handle(self, data_type: DataType) -> bool:
+        """Can handle any data type since it doesn't change anything"""
+        return True
+
+
+class AnonymizationStrategyFactory:
+    """Factory class for creating anonymization strategies"""
+    
+    @staticmethod
+    def get_strategy(strategy_type: str) -> AnonymizationStrategy:
+        """
+        Get an anonymization strategy by type
+        
+        Args:
+            strategy_type: The type of strategy to get ('domain', 'ip', 'email', 'url')
+            
+        Returns:
+            An instance of the appropriate strategy
+            
+        Raises:
+            ValueError: If the strategy type is not supported
+        """
+        strategy_map = {
+            'none': NoAnonymizationStrategy,
+            'domain': DomainAnonymizationStrategy,
+            'ip': IPAddressAnonymizationStrategy,
+            'email': EmailAnonymizationStrategy,
+            'url': URLAnonymizationStrategy
+        }
+        
+        if strategy_type.lower() not in strategy_map:
+            raise ValueError(f"Unsupported strategy type: {strategy_type}")
+        
+        return strategy_map[strategy_type.lower()]()
+    
+    @staticmethod
+    def create_composite_strategy(stix_data: dict, trust_level: float = 0.5) -> 'CompositeAnonymizationStrategy':
+        """
+        Create a composite strategy that can handle different types of data in STIX objects
+        
+        Args:
+            stix_data: The STIX data to analyze
+            trust_level: The trust level (0.0-1.0)
+            
+        Returns:
+            A composite strategy instance
+        """
+        return CompositeAnonymizationStrategy()
+
+
+class CompositeAnonymizationStrategy:
+    """Composite strategy that can handle multiple data types"""
+    
+    def __init__(self):
+        self.strategies = {
+            'domain': DomainAnonymizationStrategy(),
+            'ip': IPAddressAnonymizationStrategy(),
+            'email': EmailAnonymizationStrategy(),
+            'url': URLAnonymizationStrategy()
+        }
+    
+    def anonymize(self, stix_data: dict, trust_level: float) -> dict:
+        """
+        Anonymize STIX data based on trust level
+        
+        Args:
+            stix_data: The STIX object to anonymize
+            trust_level: Trust level (0.0-1.0, higher = less anonymization)
+            
+        Returns:
+            Anonymized STIX object
+        """
+        # Convert trust level to anonymization level
+        if trust_level >= 0.8:
+            level = AnonymizationLevel.NONE
+        elif trust_level >= 0.6:
+            level = AnonymizationLevel.LOW
+        elif trust_level >= 0.4:
+            level = AnonymizationLevel.MEDIUM
+        elif trust_level >= 0.2:
+            level = AnonymizationLevel.HIGH
+        else:
+            level = AnonymizationLevel.FULL
+        
+        # Create a copy to avoid modifying the original
+        anonymized = stix_data.copy()
+        
+        # Anonymize patterns if present
+        if 'pattern' in anonymized:
+            anonymized['pattern'] = self._anonymize_pattern(anonymized['pattern'], level)
+        
+        # Anonymize other fields as needed
+        for field in ['description', 'name']:
+            if field in anonymized:
+                anonymized[field] = self._anonymize_text_field(anonymized[field], level)
+        
+        return anonymized
+    
+    def _anonymize_pattern(self, pattern: str, level: AnonymizationLevel) -> str:
+        """Anonymize STIX patterns"""
+        if level == AnonymizationLevel.NONE:
+            return pattern
+        
+        # Simple pattern anonymization - replace domain and IP values
+        import re
+        
+        # Replace domain values
+        domain_pattern = r"domain-name:value\s*=\s*'([^']+)'"
+        domains = re.findall(domain_pattern, pattern)
+        for domain in domains:
+            anonymized_domain = self.strategies['domain'].anonymize(domain, level)
+            pattern = pattern.replace(f"'{domain}'", f"'{anonymized_domain}'")
+        
+        # Replace IP values
+        ip_pattern = r"ipv4-addr:value\s*=\s*'([^']+)'"
+        ips = re.findall(ip_pattern, pattern)
+        for ip in ips:
+            anonymized_ip = self.strategies['ip'].anonymize(ip, level)
+            pattern = pattern.replace(f"'{ip}'", f"'{anonymized_ip}'")
+        
+        return pattern
+    
+    def _anonymize_text_field(self, text: str, level: AnonymizationLevel) -> str:
+        """Anonymize text fields"""
+        if level == AnonymizationLevel.NONE:
+            return text
+        elif level == AnonymizationLevel.FULL:
+            return "[REDACTED]"
+        else:
+            # Partial anonymization - replace sensitive parts
+            return re.sub(r'\b\d+\.\d+\.\d+\.\d+\b', '[IP-REDACTED]', text)

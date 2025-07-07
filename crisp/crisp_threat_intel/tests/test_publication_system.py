@@ -17,6 +17,7 @@ from crisp_threat_intel.models import (
 from crisp_threat_intel.management.commands.publish_feeds import Command as PublishCommand
 from core.patterns.strategy.context import AnonymizationContext
 from core.patterns.strategy.enums import AnonymizationLevel
+from core.patterns.strategy.strategies import AnonymizationStrategyFactory
 from crisp_threat_intel.utils import publish_feed
 
 

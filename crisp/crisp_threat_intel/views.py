@@ -11,6 +11,7 @@ from django.http import HttpResponse
 from .models import STIXObject, Collection, Organization
 from core.patterns.strategy.context import AnonymizationContext
 from core.patterns.strategy.enums import AnonymizationLevel
+from core.patterns.strategy.strategies import AnonymizationStrategyFactory
 import json
 import copy
 
