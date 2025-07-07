@@ -16,29 +16,7 @@ from crisp_threat_intel.models import (
 )
 from crisp_threat_intel.taxii.views import TAXIIBaseView
 
-import sys
-import os
-
-# Add core patterns strategy to path
-core_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'core', 'patterns', 'strategy')
-sys.path.append(core_path)
-
-try:
-    from core.patterns.strategy.enums import AnonymizationLevel
-    from core.patterns.strategy.exceptions import AnonymizationError
-except ImportError:
-    # Fallback for development
-    from enum import Enum
-    
-    class AnonymizationLevel(Enum):
-        NONE = "none"
-        LOW = "low"
-        MEDIUM = "medium"
-        HIGH = "high"
-        FULL = "full"
-    
-    class AnonymizationError(Exception):
-        pass
+from core.patterns.strategy.enums import AnonymizationLevel
 
 
 class TAXIIAnonymizationTestCase(TestCase):

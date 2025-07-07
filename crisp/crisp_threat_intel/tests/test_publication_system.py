@@ -384,8 +384,14 @@ class AnonymizationTest(TestCase):
     
     def test_domain_anonymization_strategy(self):
         """Test domain anonymization strategy"""
-        strategy = AnonymizationStrategyFactory.get_strategy('domain')
-        result = strategy.anonymize(self.sample_indicator, 0.5)
+        # Test individual domain strategy with string input
+        domain_strategy = AnonymizationStrategyFactory.get_strategy('domain')
+        domain_result = domain_strategy.anonymize('example.com', AnonymizationLevel.MEDIUM)
+        self.assertEqual(domain_result, '*.com')
+        
+        # Test composite strategy with STIX objects
+        composite_strategy = AnonymizationStrategyFactory.create_composite_strategy({}, 0.5)
+        result = composite_strategy.anonymize(self.sample_indicator, 0.5)
         
         # Should anonymize email and IP in description
         self.assertNotEqual(result['description'], self.sample_indicator['description'])
@@ -404,12 +410,13 @@ class AnonymizationTest(TestCase):
     
     def test_anonymization_preserves_structure(self):
         """Test that anonymization preserves STIX structure"""
-        strategy = AnonymizationStrategyFactory.get_strategy('domain')
-        result = strategy.anonymize(self.sample_indicator, 0.5)
+        composite_strategy = AnonymizationStrategyFactory.create_composite_strategy({}, 0.5)
+        result = composite_strategy.anonymize(self.sample_indicator, 0.5)
         
         # Core STIX fields should be preserved
         self.assertEqual(result['type'], self.sample_indicator['type'])
         self.assertEqual(result['id'], self.sample_indicator['id'])
+        # Pattern should be the same since no domain-name pattern in sample
         self.assertEqual(result['pattern'], self.sample_indicator['pattern'])
         self.assertEqual(result['labels'], self.sample_indicator['labels'])
 

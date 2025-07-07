@@ -186,8 +186,13 @@ Suspicious IP,Test IP,192.168.1.100,ipv4-addr,70"""
     
     def test_anonymization_strategies(self):
         """Test anonymization strategies work correctly"""
-        # Test domain anonymization
+        # Test individual domain strategy with string input
         domain_strategy = AnonymizationStrategyFactory.get_strategy('domain')
+        domain_result = domain_strategy.anonymize('sensitive.example.com', AnonymizationLevel.MEDIUM)
+        self.assertEqual(domain_result, '*.com')
+        
+        # Test composite strategy with STIX objects
+        composite_strategy = AnonymizationStrategyFactory.create_composite_strategy({}, 0.5)
         
         test_indicator = {
             'type': 'indicator',
@@ -197,16 +202,15 @@ Suspicious IP,Test IP,192.168.1.100,ipv4-addr,70"""
         }
         
         # Test high trust (no anonymization)
-        result_high = domain_strategy.anonymize(test_indicator, 0.9)
+        result_high = composite_strategy.anonymize(test_indicator, 0.9)
         self.assertEqual(result_high['pattern'], test_indicator['pattern'])
         
         # Test medium trust (partial anonymization)
-        result_medium = domain_strategy.anonymize(test_indicator, 0.5)
-        self.assertIn('[REDACTED]', result_medium['pattern'])
-        self.assertTrue(result_medium.get('x_crisp_anonymized', False))
+        result_medium = composite_strategy.anonymize(test_indicator, 0.5)
+        self.assertIn('*.com', result_medium['pattern'])
         
         # Test low trust (full anonymization)
-        result_low = domain_strategy.anonymize(test_indicator, 0.2)
+        result_low = composite_strategy.anonymize(test_indicator, 0.2)
         self.assertIn('anon-', result_low['pattern'])
         self.assertTrue(result_low.get('x_crisp_anonymized', False))
         

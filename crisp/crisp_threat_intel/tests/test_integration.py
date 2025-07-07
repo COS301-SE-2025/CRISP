@@ -4,19 +4,14 @@ Quick integration test for CRISP Strategy Pattern Integration
 Tests core functionality without requiring full Django setup.
 """
 
-import sys
-import os
-
-# Add paths
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'core', 'patterns', 'strategy'))
+from core.patterns.strategy.context import AnonymizationContext
+from core.patterns.strategy.enums import AnonymizationLevel, DataType
 
 def test_basic_integration():
     """Test basic anonymization functionality"""
     print("🧪 Testing Basic Integration...")
     
     try:
-        from core.patterns.strategy.context import AnonymizationContext
-        from core.patterns.strategy.enums import AnonymizationLevel, DataType
         
         context = AnonymizationContext()
         

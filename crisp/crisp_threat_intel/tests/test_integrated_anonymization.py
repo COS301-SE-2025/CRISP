@@ -18,45 +18,8 @@ from crisp_threat_intel.utils import (
     get_trust_level, get_anonymization_level
 )
 
-import sys
-import os
-
-# Add core patterns strategy to path
-core_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'core', 'patterns', 'strategy')
-sys.path.append(core_path)
-
-try:
-    from core.patterns.strategy.enums import AnonymizationLevel
-    from core.patterns.strategy.context import AnonymizationContext
-    from core.patterns.strategy.exceptions import AnonymizationError
-except ImportError:
-    # Fallback for development
-    from enum import Enum
-    
-    class AnonymizationLevel(Enum):
-        NONE = "none"
-        LOW = "low"
-        MEDIUM = "medium"
-        HIGH = "high"
-        FULL = "full"
-    
-    class AnonymizationContext:
-        def execute_anonymization(self, data, data_type, level):
-            return f"[ANON:{level}]{data}"
-        
-        def anonymize_stix_object(self, stix_data, level):
-            """Fallback STIX object anonymization"""
-            import copy
-            import json
-            result = copy.deepcopy(stix_data)
-            result['x_crisp_anonymized'] = True
-            result['x_crisp_anonymization_level'] = level.value if hasattr(level, 'value') else str(level)
-            if 'pattern' in result:
-                result['pattern'] = f"[ANON:{level}]{result['pattern']}"
-            return json.dumps(result)
-    
-    class AnonymizationError(Exception):
-        pass
+from core.patterns.strategy.enums import AnonymizationLevel
+from core.patterns.strategy.context import AnonymizationContext
 
 
 class IntegratedAnonymizationTestCase(TestCase):
