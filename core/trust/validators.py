@@ -132,11 +132,16 @@ class SecurityValidator:
         
         for key, value in input_data.items():
             if isinstance(value, str):
+                has_dangerous_content = False
                 # Check for dangerous patterns
                 for pattern in dangerous_patterns:
                     if re.search(pattern, value, re.IGNORECASE):
-                        result['valid'] = False
+                        has_dangerous_content = True
                         result['errors'].append(f'Dangerous content detected in {key}')
+                
+                # If dangerous content is found, mark as invalid
+                if has_dangerous_content:
+                    result['valid'] = False
                 
                 # Sanitize by removing dangerous characters
                 sanitized = re.sub(r'[<>"\']', '', value)
@@ -500,7 +505,11 @@ def validate_trust_operation(operation_type, data, user_context):
         
         # Add specific validation based on operation_type
         if operation_type == 'create_relationship':
-            required_fields = ['source_organization', 'target_organization']
+            # Accept both forms of field names
+            source_field = 'source_organization' if 'source_organization' in data else 'source_org'
+            target_field = 'target_organization' if 'target_organization' in data else 'target_org'
+            
+            required_fields = [source_field, target_field]
             missing_fields = [field for field in required_fields if field not in data]
             if missing_fields:
                 return {'valid': False, 'errors': [f'Missing required fields: {missing_fields}']}

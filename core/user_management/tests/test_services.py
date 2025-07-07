@@ -5,6 +5,7 @@ from ..services.user_service import UserService
 from ..services.organization_service import OrganizationService
 from ..services.access_control_service import AccessControlService
 from ..factories.user_factory import UserFactory, OrganizationFactory
+from unittest.mock import patch
 
 
 User = get_user_model()
@@ -73,24 +74,90 @@ class OrganizationServiceTest(TestCase):
             'domain': 'neworg.com',
             'contact_email': 'contact@neworg.com',
             'organization_type': 'private',
-            'primary_user': {
-                'username': 'admin@neworg.com',
-                'email': 'admin@neworg.com',
-                'password': 'adminpass123',
-                'first_name': 'Admin',
-                'last_name': 'User'
-            }
+        }
+        
+        primary_user_data = {
+            'username': 'admin@neworg.com',
+            'email': 'admin@neworg.com',
+            'password': 'adminpass123',
+            'first_name': 'Admin',
+            'last_name': 'User'
         }
         
         organization, primary_user = self.org_service.create_organization(
             creating_user=self.admin_user,
-            org_data=org_data
+            org_data=org_data,
+            primary_user_data=primary_user_data
         )
         
         self.assertEqual(organization.name, 'New Organization')
         self.assertEqual(primary_user.username, 'admin@neworg.com')
         self.assertEqual(primary_user.role, 'publisher')
         self.assertEqual(primary_user.organization, organization)
+    
+    def test_create_organization_success(self):
+        """Test successful organization creation."""
+        with patch.object(self.org_service, 'access_control') as mock_access_control:
+            mock_access_control.has_permission.return_value = True
+            
+            org_data = {
+                'name': 'New University',
+                'domain': 'new.edu',
+                'organization_type': 'university',
+                'is_publisher': False
+            }
+            
+            primary_user_data = {
+                'username': 'admin@new.edu',
+                'email': 'admin@new.edu',
+                'password': 'AdminPass123!',
+                'first_name': 'Admin',
+                'last_name': 'User'
+            }
+            
+            result = self.org_service.create_organization(
+                creating_user=self.admin_user,
+                org_data=org_data,
+                primary_user_data=primary_user_data
+            )
+            
+            # Expect tuple return (organization, primary_user)
+            if isinstance(result, tuple):
+                organization, primary_user = result
+                self.assertEqual(organization.name, 'New University')
+                self.assertEqual(organization.domain, 'new.edu')
+                self.assertEqual(organization.organization_type, 'university')
+            else:
+                # If single object returned
+                self.assertEqual(result.name, 'New University')
+                self.assertEqual(result.domain, 'new.edu')
+                self.assertEqual(result.organization_type, 'university')
+
+    def test_create_organization_permission_denied(self):
+        """Test organization creation without permission."""
+        with patch.object(self.org_service, 'access_control') as mock_access_control:
+            mock_access_control.has_permission.return_value = False
+            
+            org_data = {
+                'name': 'New University',
+                'domain': 'new.edu',
+                'organization_type': 'university'
+            }
+            
+            primary_user_data = {
+                'username': 'admin@new.edu',
+                'email': 'admin@new.edu',
+                'password': 'AdminPass123!',
+                'first_name': 'Admin',
+                'last_name': 'User'
+            }
+            
+            with self.assertRaises(PermissionDenied):
+                self.org_service.create_organization(
+                    creating_user=self.admin_user,
+                    org_data=org_data,
+                    primary_user_data=primary_user_data
+                )
 
 
 class AccessControlServiceTest(TestCase):

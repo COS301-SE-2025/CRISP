@@ -391,6 +391,17 @@ try:
         first_name = factory.Faker('first_name')
         last_name = factory.Faker('last_name')
         organization = factory.SubFactory(OrganizationFactory)  # Add this line
+        
+        # Provide default values for JSONFields that are marked as required
+        trusted_devices = factory.LazyFunction(list)
+        preferences = factory.LazyFunction(dict) 
+        metadata = factory.LazyFunction(dict)
+        
+        # Other defaults
+        role = 'viewer'
+        is_active = True
+        is_verified = False
+        is_publisher = False
     
         @factory.post_generation
         def password(obj, create, extracted, **kwargs):
@@ -437,7 +448,10 @@ except ImportError:
                 'last_name': 'User',
                 'role': 'viewer',
                 'is_active': True,
-                'is_verified': False
+                'is_verified': False,
+                'trusted_devices': [],
+                'preferences': {},
+                'metadata': {}
             }
             defaults.update(kwargs)
             

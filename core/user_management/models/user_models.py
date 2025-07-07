@@ -209,18 +209,21 @@ class CustomUser(AbstractUser):
     # Trusted devices
     trusted_devices = models.JSONField(
         default=list,
+        blank=True,
         help_text="List of trusted device fingerprints"
     )
     
     # User preferences
     preferences = models.JSONField(
         default=dict,
+        blank=True,
         help_text="User preferences and settings"
     )
     
     # Metadata
     metadata = models.JSONField(
         default=dict,
+        blank=True,
         help_text="Additional user metadata"
     )
     

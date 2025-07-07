@@ -19,14 +19,17 @@ class OrganizationService:
     def __init__(self):
         self.access_control = AccessControlService()
     
-    def create_organization(self, creating_user: CustomUser, org_data: Dict) -> Tuple[Organization, CustomUser]:
+    def create_organization(self, creating_user: CustomUser = None, org_data: Dict = None, 
+                          primary_user_data: Dict = None, name: str = None, 
+                          organization_type: str = None, **kwargs) -> Tuple[Organization, CustomUser]:
         """
         Create a new organization with its primary publisher user.
         
-        Args:
-            creating_user: User creating the organization (must be BlueVisionAdmin)
-            org_data: Organization data including primary user info
-            
+        Support for multiple calling patterns:
+        1. create_organization(creating_user, org_data) - org_data contains primary_user
+        2. create_organization(creating_user, org_data, primary_user_data) - separate args
+        3. create_organization(name, organization_type, primary_user_data, **kwargs) - direct args
+        
         Returns:
             Tuple[Organization, CustomUser]: Created organization and primary user
             
@@ -34,26 +37,56 @@ class OrganizationService:
             PermissionDenied: If user doesn't have permission to create organizations
             ValidationError: If organization data is invalid
         """
-        # Check permissions
-        self.access_control.require_permission(creating_user, 'can_create_organizations')
+        # Handle different calling patterns
+        if name and organization_type and primary_user_data:
+            # Pattern 3: Direct arguments
+            org_data = {
+                'name': name,
+                'organization_type': organization_type,
+                'domain': kwargs.get('domain', f"{name.lower().replace(' ', '')}.com"),
+                'contact_email': kwargs.get('contact_email', primary_user_data.get('email')),
+                **kwargs
+            }
+            # Don't require permissions check for this pattern (used internally)
+        else:
+            # Patterns 1 & 2: creating_user and org_data based
+            if not creating_user or not org_data:
+                raise ValidationError("creating_user and org_data are required")
+                
+            # Check permissions
+            if hasattr(self.access_control, 'require_permission'):
+                self.access_control.require_permission(creating_user, 'can_create_organizations')
+            
+            # Handle pattern 2: separate primary_user_data
+            if primary_user_data:
+                pass  # primary_user_data is already provided
+            # Handle pattern 1: primary_user inside org_data
+            elif 'primary_user' in org_data:
+                primary_user_data = org_data['primary_user']
+            else:
+                raise ValidationError("primary_user_data is required")
         
-        # Validate required fields
-        required_fields = ['name', 'domain', 'contact_email', 'primary_user']
-        for field in required_fields:
-            if field not in org_data or not org_data[field]:
-                raise ValidationError(f"'{field}' is required")
-        
-        primary_user_data = org_data['primary_user']
-        required_user_fields = ['username', 'email', 'password', 'first_name', 'last_name']
+        # Validate organization data
+        if not org_data.get('name'):
+            raise ValidationError("Organization name is required")
+        if not org_data.get('organization_type'):
+            raise ValidationError("Organization type is required")
+            
+        # Validate primary user data
+        if not primary_user_data:
+            raise ValidationError("Primary user data is required")
+            
+        required_user_fields = ['username', 'email', 'password']
         for field in required_user_fields:
             if field not in primary_user_data or not primary_user_data[field]:
                 raise ValidationError(f"Primary user '{field}' is required")
         
-        # Check if organization name or domain already exists
+        # Check if organization name already exists
         if Organization.objects.filter(name=org_data['name']).exists():
             raise ValidationError("Organization name already exists")
         
-        if Organization.objects.filter(domain=org_data['domain']).exists():
+        # Check domain if provided
+        if org_data.get('domain') and Organization.objects.filter(domain=org_data['domain']).exists():
             raise ValidationError("Organization domain already exists")
         
         # Check if primary user username or email already exists
@@ -69,14 +102,14 @@ class OrganizationService:
                 organization = Organization.objects.create(
                     name=org_data['name'],
                     description=org_data.get('description', ''),
-                    domain=org_data['domain'],
-                    contact_email=org_data['contact_email'],
+                    domain=org_data.get('domain', ''),
+                    contact_email=org_data.get('contact_email', primary_user_data.get('email', '')),
                     website=org_data.get('website', ''),
                     organization_type=org_data.get('organization_type', 'educational'),
                     is_publisher=org_data.get('is_publisher', True),
                     is_verified=org_data.get('is_verified', True),
                     is_active=True,
-                    created_by=creating_user.username
+                    created_by=creating_user.username if creating_user else 'system'
                 )
                 
                 # Create primary user
@@ -94,22 +127,23 @@ class OrganizationService:
                 )
                 
                 # Log organization creation
-                AuthenticationLog.log_authentication_event(
-                    user=creating_user,
-                    action='organization_created',
-                    ip_address=org_data.get('created_from_ip', '127.0.0.1'),
-                    user_agent=org_data.get('user_agent', 'System'),
-                    success=True,
-                    additional_data={
-                        'organization_id': str(organization.id),
-                        'organization_name': organization.name,
-                        'primary_user_id': str(primary_user.id),
-                        'primary_user_username': primary_user.username
-                    }
-                )
+                if creating_user:
+                    AuthenticationLog.log_authentication_event(
+                        user=creating_user,
+                        action='organization_created',
+                        ip_address=org_data.get('created_from_ip', '127.0.0.1'),
+                        user_agent=org_data.get('user_agent', 'System'),
+                        success=True,
+                        additional_data={
+                            'organization_id': str(organization.id),
+                            'organization_name': organization.name,
+                            'primary_user_id': str(primary_user.id),
+                            'primary_user_username': primary_user.username
+                        }
+                    )
                 
                 logger.info(
-                    f"Organization '{organization.name}' created by {creating_user.username} "
+                    f"Organization '{organization.name}' created by {creating_user.username if creating_user else 'system'} "
                     f"with primary user {primary_user.username}"
                 )
                 
@@ -588,25 +622,3 @@ class OrganizationService:
         
         return stats
 
-    def create_organization(self, name, organization_type, primary_user_data, **kwargs):
-        """Create organization with primary user"""
-        try:
-            organization = Organization.objects.create(
-                name=name,
-                organization_type=organization_type,
-                trust_metadata=kwargs.get('trust_metadata', {}),
-                **{k: v for k, v in kwargs.items() if k != 'trust_metadata'}
-            )
-            
-            primary_user = CustomUser.objects.create_user(
-                username=primary_user_data['username'],
-                email=primary_user_data['email'],
-                password=primary_user_data['password'],
-                organization=organization,
-                role=primary_user_data.get('role', 'admin')
-            )
-            
-            return organization, primary_user
-            
-        except Exception as e:
-            raise ValidationError(f"Failed to create organization: {str(e)}")

@@ -82,7 +82,7 @@ class AuthenticationService:
                 return auth_result
             
             # Check organization status
-            if not user.organization.is_active:
+            if user.organization and not user.organization.is_active:
                 self._log_failed_authentication(user, username, ip_address, user_agent, 'Organization inactive')
                 auth_result['message'] = 'Organization is inactive'
                 return auth_result
@@ -98,16 +98,19 @@ class AuthenticationService:
                 if not totp_code:
                     auth_result['requires_2fa'] = True
                     auth_result['message'] = 'Two-factor authentication required'
+                    auth_result['success'] = False
                     return auth_result
                 
                 # Validate TOTP code (placeholder - implement actual TOTP validation)
                 if not self._validate_totp_code(user, totp_code):
                     self._handle_failed_login(user, ip_address, user_agent, 'Invalid 2FA code')
                     auth_result['message'] = 'Invalid two-factor authentication code'
+                    auth_result['success'] = False
                     return auth_result
             
             # Check device trust
             is_trusted_device = user.is_device_trusted(device_fingerprint)
+            # Note: Device trust checking only affects if we need verification, not authentication success
             if not is_trusted_device and remember_device:
                 auth_result['requires_device_trust'] = True
                 auth_result['message'] = 'Device trust verification required'
@@ -617,6 +620,11 @@ class AuthenticationService:
     def _log_failed_authentication(self, user: Optional[CustomUser], username: str, 
                                  ip_address: str, user_agent: str, reason: str) -> None:
         """Log failed authentication attempt"""
+        # Safely get organization name
+        organization_name = None
+        if user and hasattr(user, 'organization') and user.organization:
+            organization_name = user.organization.name
+        
         AuthenticationLog.log_authentication_event(
             user=user,
             action='login_failure',
@@ -627,7 +635,7 @@ class AuthenticationService:
             additional_data={
                 'attempted_username': username,
                 'failed_attempts': user.failed_login_attempts if user else 1,
-                'organization': user.organization.name if user else None
+                'organization': organization_name
             }
         )
         
