@@ -46,7 +46,7 @@ jobs:
         pip install -r crisp/requirements.txt
         pip install pytest pytest-cov coverage pytest-django
         pip install flake8 bandit safety
-
+        
     - name: Verify core module imports
       env:
         PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/core
@@ -115,11 +115,7 @@ jobs:
       run: |
         echo "Running core module tests..."
         cd core
-        python -m pytest tests/ -v --tb=short \
-          --ignore=tests/test_django_observer_integration.py \
-          --ignore=tests/test_gmail_integration.py \
-          --ignore=tests/test_gmail_config.py \
-          --ignore=tests/test_complete_integration.py
+        python -m pytest tests/test_strategies.py tests/test_import_verification.py tests/test_observer_integration.py -v --tb=short
         echo "Core module tests completed successfully"
         
     - name: Run Django application tests

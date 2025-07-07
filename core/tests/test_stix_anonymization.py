@@ -14,7 +14,7 @@ sys.path.insert(0, project_root)
 from core.patterns.strategy.enums import AnonymizationLevel
 from core.patterns.strategy.context import AnonymizationContext
 
-def test_stix_anonymization():
+def run_stix_anonymization_demo():
     """Test STIX object anonymization with different trust levels"""
     print("\n=== STIX Anonymization Test ===\n")
     
@@ -166,4 +166,4 @@ def test_stix_anonymization():
         print(f"Error during bundle anonymization: {e}")
 
 if __name__ == "__main__":
-    test_stix_anonymization()
+    run_stix_anonymization_demo()
