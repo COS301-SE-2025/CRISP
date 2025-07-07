@@ -7,8 +7,10 @@ import sys
 import os
 
 # Add project paths
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'core'))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'crisp'))
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+sys.path.insert(0, project_root)
+sys.path.insert(0, os.path.join(project_root, 'core'))
+sys.path.insert(0, os.path.join(project_root, 'crisp'))
 
 def test_core_imports():
     """Test core observer pattern imports."""
@@ -35,9 +37,9 @@ def test_core_imports():
         
     except Exception as e:
         print(f"❌ Core import failed: {e}")
-        return False
+        assert False, f"Core import failed: {e}"
     
-    return True
+    assert True
 
 
 def test_core_observer_implementations():
@@ -67,9 +69,9 @@ def test_core_observer_implementations():
             
     except Exception as e:
         print(f"❌ Core observer implementations import failed: {e}")
-        return False
+        assert False, f"Core observer implementations import failed: {e}"
     
-    return True
+    assert True
 
 
 def test_django_integration_imports():
@@ -78,7 +80,7 @@ def test_django_integration_imports():
     
     try:
         # This should work even without Django installed due to fallback imports
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'crisp', 'crisp_threat_intel'))
+        sys.path.insert(0, os.path.join(project_root, 'crisp', 'crisp_threat_intel'))
         
         # Try to import without Django
         from crisp.crisp_threat_intel.observers import feed_observers
@@ -102,9 +104,9 @@ def test_django_integration_imports():
         
     except Exception as e:
         print(f"❌ Django integration import failed: {e}")
-        return False
+        assert False, f"Django integration import failed: {e}"
     
-    return True
+    assert True
 
 
 def test_file_structure():
@@ -125,7 +127,9 @@ def test_file_structure():
     missing_files = []
     
     for file_path in required_files:
-        full_path = os.path.join(os.path.dirname(__file__), file_path)
+        # Go up to the project root from tests directory
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        full_path = os.path.join(project_root, file_path)
         if os.path.exists(full_path):
             print(f"✅ {file_path}")
         else:
@@ -134,10 +138,10 @@ def test_file_structure():
     
     if missing_files:
         print(f"\n❌ Missing files: {len(missing_files)}")
-        return False
+        assert False, f"Missing files: {missing_files}"
     else:
         print(f"\n✅ All required files present")
-        return True
+        assert True
 
 
 def main():

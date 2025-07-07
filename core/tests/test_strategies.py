@@ -8,12 +8,12 @@ import os
 import ipaddress
 import re
 
-# Add the current directory to Python path to import our package
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Add the project root to Python path to import our package
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, project_root)
 
-from crisp_anonymization import (
-    AnonymizationLevel,
-    DataType,
+from core.patterns.strategy.enums import AnonymizationLevel, DataType
+from core.patterns.strategy.strategies import (
     IPAddressAnonymizationStrategy,
     DomainAnonymizationStrategy,
     EmailAnonymizationStrategy,
