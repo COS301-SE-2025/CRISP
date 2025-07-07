@@ -9,12 +9,13 @@ import os
 from typing import Dict, Any, List
 import argparse
 
-# Add the parent directory to the Python path to import our package
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Add the project root to the Python path
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, project_root)
 
 try:
-    from crisp_anonymization.enums import AnonymizationLevel, DataType
-    from crisp_anonymization.context import AnonymizationContext
+    from core.patterns.strategy.enums import AnonymizationLevel, DataType
+    from core.patterns.strategy.context import AnonymizationContext
 except ImportError:
     print("Error: Could not import CRISP Anonymization System")
     print("Make sure you're running this script from the project directory")

@@ -47,14 +47,6 @@ jobs:
         pip install pytest pytest-cov coverage pytest-django
         pip install flake8 bandit safety
 
-    - name: Fix legacy import paths in test files
-      run: |
-        echo "Updating import statements in test files..."
-        find core/tests/ -name "*.py" -exec sed -i 's/from crisp_anonymization/from core.patterns.strategy/g' {} \;
-        find core/tests/ -name "*.py" -exec sed -i 's/import crisp_anonymization/import core.patterns.strategy/g' {} \;
-        find core/tests/ -name "*.py" -exec sed -i 's/crisp_anonymization\./core.patterns.strategy./g' {} \;
-        echo "Import path updates completed"
-        
     - name: Verify core module imports
       env:
         PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/core
@@ -62,8 +54,9 @@ jobs:
         echo "Verifying core module imports..."
         python3 -c "
         try:
-            from core.patterns.strategy import AnonymizationLevel, AnonymizationContext
-            from core.patterns.strategy import IPAddressAnonymizationStrategy, DomainAnonymizationStrategy
+            from core.patterns.strategy.enums import AnonymizationLevel
+            from core.patterns.strategy.context import AnonymizationContext
+            from core.patterns.strategy.strategies import IPAddressAnonymizationStrategy, DomainAnonymizationStrategy
             print('Core strategy imports successful')
         except ImportError as e:
             print('Core import verification failed:', e)

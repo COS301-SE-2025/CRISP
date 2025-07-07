@@ -6,12 +6,13 @@ import sys
 import os
 import json
 
-# Add the parent directory to the Python path to import our package
-sys.path.insert(0, os.path.abspath('.'))
+# Add the project root to the Python path
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, project_root)
 
-# Import from crisp_anonymization
-from crisp_anonymization.enums import AnonymizationLevel
-from crisp_anonymization.context import AnonymizationContext
+# Import from core patterns
+from core.patterns.strategy.enums import AnonymizationLevel
+from core.patterns.strategy.context import AnonymizationContext
 
 def test_stix_anonymization():
     """Test STIX object anonymization with different trust levels"""
