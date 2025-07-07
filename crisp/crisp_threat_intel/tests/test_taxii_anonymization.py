@@ -123,8 +123,8 @@ class TAXIIBaseViewTests(TAXIIAnonymizationTestCase):
     def test_get_trust_level_with_explicit_relationship(self):
         """Test trust level with explicit trust relationship."""
         TrustRelationship.objects.create(
-            source_org=self.org1,
-            target_org=self.org2,
+            source_organization=self.org1,
+            target_organization=self.org2,
             trust_level=0.9
         )
         
@@ -144,8 +144,8 @@ class TAXIIBaseViewTests(TAXIIAnonymizationTestCase):
         """Test anonymization for different organization."""
         # Create trust relationship for predictable results
         TrustRelationship.objects.create(
-            source_org=self.org1,
-            target_org=self.org2,
+            source_organization=self.org1,
+            target_organization=self.org2,
             trust_level=0.5  # Medium trust -> MEDIUM anonymization
         )
         
@@ -242,8 +242,8 @@ class TAXIICollectionObjectsTests(TAXIIAnonymizationTestCase):
         """Test getting objects from different organization with anonymization."""
         # Create trust relationship
         TrustRelationship.objects.create(
-            source_org=self.org1,
-            target_org=self.org2,
+            source_organization=self.org1,
+            target_organization=self.org2,
             trust_level=0.4  # Low-medium trust -> HIGH anonymization
         )
         
@@ -352,8 +352,8 @@ class TAXIIObjectTests(TAXIIAnonymizationTestCase):
         """Test getting specific object from different organization."""
         # Create trust relationship
         TrustRelationship.objects.create(
-            source_org=self.org1,
-            target_org=self.org2,
+            source_organization=self.org1,
+            target_organization=self.org2,
             trust_level=0.6  # Medium trust -> MEDIUM anonymization
         )
         
@@ -431,8 +431,8 @@ class TAXIISecurityTests(TAXIIAnonymizationTestCase):
         """Test that organizations can't access raw data from other orgs."""
         # Create high-value trust relationship
         TrustRelationship.objects.create(
-            source_org=self.org1,
-            target_org=self.org2,
+            source_organization=self.org1,
+            target_organization=self.org2,
             trust_level=0.2  # Very low trust -> FULL anonymization
         )
         
@@ -549,8 +549,8 @@ class TAXIIIntegrationValidationTests(TAXIIAnonymizationTestCase):
         """Test that anonymization metadata is consistent across responses."""
         # Set up predictable trust relationship
         TrustRelationship.objects.create(
-            source_org=self.org1,
-            target_org=self.org2,
+            source_organization=self.org1,
+            target_organization=self.org2,
             trust_level=0.5
         )
         

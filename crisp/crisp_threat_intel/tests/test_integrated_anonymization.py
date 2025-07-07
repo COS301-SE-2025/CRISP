@@ -102,8 +102,8 @@ class TrustRelationshipTests(IntegratedAnonymizationTestCase):
     def test_create_trust_relationship(self):
         """Test creating trust relationships between organizations."""
         trust_rel = TrustRelationship.objects.create(
-            source_org=self.source_org,
-            target_org=self.target_org,
+            source_organization=self.source_org,
+            target_organization=self.target_org,
             trust_level=0.8,
             created_by=self.user
         )
@@ -116,24 +116,24 @@ class TrustRelationshipTests(IntegratedAnonymizationTestCase):
         """Test that trust levels map correctly to anonymization levels."""
         # High trust
         high_trust = TrustRelationship.objects.create(
-            source_org=self.source_org,
-            target_org=self.target_org,
+            source_organization=self.source_org,
+            target_organization=self.target_org,
             trust_level=0.9
         )
         self.assertEqual(high_trust.get_anonymization_level().value, AnonymizationLevel.NONE.value)
         
         # Medium trust
         medium_trust = TrustRelationship.objects.create(
-            source_org=self.source_org,
-            target_org=self.commercial_org,
+            source_organization=self.source_org,
+            target_organization=self.commercial_org,
             trust_level=0.6
         )
         self.assertEqual(medium_trust.get_anonymization_level().value, AnonymizationLevel.MEDIUM.value)
         
         # Low trust
         low_trust = TrustRelationship.objects.create(
-            source_org=self.commercial_org,
-            target_org=self.target_org,
+            source_organization=self.commercial_org,
+            target_organization=self.target_org,
             trust_level=0.2
         )
         self.assertEqual(low_trust.get_anonymization_level().value, AnonymizationLevel.FULL.value)
@@ -141,8 +141,8 @@ class TrustRelationshipTests(IntegratedAnonymizationTestCase):
     def test_anonymization_override(self):
         """Test that anonymization override works correctly."""
         trust_rel = TrustRelationship.objects.create(
-            source_org=self.source_org,
-            target_org=self.target_org,
+            source_organization=self.source_org,
+            target_organization=self.target_org,
             trust_level=0.9,  # Would normally be NONE
             anonymization_override=AnonymizationLevel.HIGH.value
         )
@@ -192,8 +192,8 @@ class STIXObjectAnonymizationTests(IntegratedAnonymizationTestCase):
         """Test anonymization is applied for different organizations."""
         # Create trust relationship
         TrustRelationship.objects.create(
-            source_org=self.source_org,
-            target_org=self.target_org,
+            source_organization=self.source_org,
+            target_organization=self.target_org,
             trust_level=0.5  # Medium trust -> MEDIUM anonymization
         )
         
@@ -229,8 +229,8 @@ class STIXObjectAnonymizationTests(IntegratedAnonymizationTestCase):
         
         # With explicit relationship
         TrustRelationship.objects.create(
-            source_org=self.source_org,
-            target_org=self.target_org,
+            source_organization=self.source_org,
+            target_organization=self.target_org,
             trust_level=0.8
         )
         
@@ -267,8 +267,8 @@ class CollectionBundleGenerationTests(IntegratedAnonymizationTestCase):
         """Test bundle generation with anonymization for different organization."""
         # Create trust relationship
         TrustRelationship.objects.create(
-            source_org=self.source_org,
-            target_org=self.target_org,
+            source_organization=self.source_org,
+            target_organization=self.target_org,
             trust_level=0.4  # Low-medium trust -> HIGH anonymization
         )
         
@@ -397,8 +397,8 @@ class UtilityFunctionTests(IntegratedAnonymizationTestCase):
     def test_get_trust_level_with_relationship(self):
         """Test trust level with explicit relationship."""
         TrustRelationship.objects.create(
-            source_org=self.source_org,
-            target_org=self.target_org,
+            source_organization=self.source_org,
+            target_organization=self.target_org,
             trust_level=0.7
         )
         
@@ -419,8 +419,8 @@ class UtilityFunctionTests(IntegratedAnonymizationTestCase):
         """Test anonymization level mapping from trust levels."""
         # Test different trust levels
         TrustRelationship.objects.create(
-            source_org=self.source_org,
-            target_org=self.target_org,
+            source_organization=self.source_org,
+            target_organization=self.target_org,
             trust_level=0.95
         )
         level = get_anonymization_level(self.source_org, self.target_org)
@@ -428,8 +428,8 @@ class UtilityFunctionTests(IntegratedAnonymizationTestCase):
         
         # Update trust level
         TrustRelationship.objects.filter(
-            source_org=self.source_org,
-            target_org=self.target_org
+            source_organization=self.source_org,
+            target_organization=self.target_org
         ).update(trust_level=0.6)
         level = get_anonymization_level(self.source_org, self.target_org)
         self.assertEqual(level.value, AnonymizationLevel.MEDIUM.value)

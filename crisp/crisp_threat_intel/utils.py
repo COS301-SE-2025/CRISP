@@ -401,8 +401,8 @@ def get_trust_level(source_org: Organization, target_org: Organization) -> float
     try:
         from .models import TrustRelationship
         relationship = TrustRelationship.objects.get(
-            source_org=source_org,
-            target_org=target_org
+            source_organization=source_org,
+            target_organization=target_org
         )
         return relationship.trust_level
     except (ImportError, TrustRelationship.DoesNotExist):
