@@ -7,7 +7,7 @@ if __name__ == '__main__':
     # Add the parent directory to Python path so core can be imported
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'test_settings')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crisp.TrustManagement.settings')
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:

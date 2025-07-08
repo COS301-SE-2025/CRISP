@@ -18,20 +18,56 @@ CRISP is built as an integrated platform with two main components:
 
 ### **CRISP Platform** (`crisp/`)
 - **Django Project** (`crisp/TrustManagement/`) - Main application settings and configuration
-- **Documentation** (`crisp/docs_project/`) - System documentation and requirements
 - **Tools & Scripts** (`crisp/tools/`, `crisp/scripts/`) - Development and deployment utilities
+- **Configuration** (`crisp/config/`) - Testing and development configuration
+- **Requirements** (`crisp/requirements/`) - Python package dependencies
 
 ## 🚀 Quick Start
 
-### One-Command Setup (Recommended)
+### Docker Setup (Recommended)
+
+**One-command setup with Docker:**
+```bash
+git clone <repository-url>
+cd Capstone
+docker-compose up --build -d
+```
+
+Access the platform at:
+- **Web Interface**: http://localhost:8000
+- **Admin Interface**: http://localhost:8000/admin/ 
+- **API**: http://localhost:8000/api/v1/
+
+**Test Users (auto-created):**
+- Admin: `admin_test_user` / `AdminTestPass123!`
+- User: `regular_test_user` / `RegularTestPass123!`
+
+**Docker Commands:**
+```bash
+docker-compose up -d          # Start services
+docker-compose down           # Stop services  
+docker-compose logs -f web    # View logs
+docker-compose down -v        # Reset everything
+```
+
+### Manual Setup
 
 ```bash
 # Clone the repository
 git clone <repository-url>
 cd Capstone
 
-# Run automatic setup
-./setup_dev.sh
+# Set up virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r crisp/requirements/development.txt
+
+# Set up database and run migrations
+cd crisp
+python manage.py migrate
+python manage.py createsuperuser
 ```
 
 ### Manual Setup
@@ -66,26 +102,20 @@ export DB_PASSWORD=crisp_password
 #### 3. Run the System
 ```bash
 # Start CRISP platform
-./start_crisp.sh
-
-# Or manually:
 cd crisp
-python manage.py migrate
-python manage.py createsuperuser
 python manage.py runserver
 ```
 
 ### Quick Commands
 
 ```bash
-# Setup development environment
-./setup_dev.sh
-
 # Run comprehensive tests
-./run_tests.sh
+cd crisp
+python manage.py test
 
 # Start the platform
-./start_crisp.sh
+cd crisp
+python manage.py runserver
 
 # The API will be available at:
 # http://localhost:8000/api/v1/
@@ -305,7 +335,8 @@ flake8 .
 
 ```bash
 # Reset database (development only)
-python crisp/reset_database.py
+cd crisp
+python reset_database.py
 
 # Create new migrations
 python manage.py makemigrations
@@ -316,12 +347,11 @@ python manage.py migrate
 
 ## 📚 Documentation
 
-Comprehensive documentation is available in `crisp/docs_project/`:
+Documentation is available in the codebase:
 
-- **System Requirements**: `SRS_FUNCTIONAL_REQUIREMENTS.md`
-- **User Stories**: `TRUST_MANAGEMENT_USER_STORIES.md`
-- **Domain Model**: `TRUST_MANAGEMENT_DOMAIN_MODEL.md`
-- **Testing Guide**: `README_TESTING.md`
+- **API Documentation**: Available through Django REST framework at `/api/v1/`
+- **Model Documentation**: See model files in `core/trust/models/` and `core/user_management/models/`
+- **Testing Examples**: Review test files in `core/tests/` for usage examples
 
 ## 🚀 Deployment
 
@@ -379,7 +409,8 @@ psql -l | grep crisp_trust_db
 **Migration Issues**
 ```bash
 # Reset migrations (development only)
-python crisp/reset_database.py
+cd crisp
+python reset_database.py
 ```
 
 **Permission Issues**
@@ -394,8 +425,8 @@ python manage.py shell
 ## 📞 Support
 
 For support and questions:
-- Check the documentation in `crisp/docs_project/`
-- Review test files for usage examples
+- Review test files in `core/tests/` for usage examples
+- Check model definitions in `core/trust/models/` and `core/user_management/models/`
 - Check logs in `crisp/logs/` for debugging information
 
 ---

@@ -13,6 +13,10 @@ DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
+# For development in Docker/WSL, allow all hosts when DEBUG is True
+if DEBUG:
+    ALLOWED_HOSTS.append('*')
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -44,7 +48,6 @@ MIDDLEWARE = [
     
     # CRISP custom middleware
     'core.middleware.audit_middleware.AuditMiddleware',
-    'core.signals.AuditSignalMiddleware',
 ]
 
 ROOT_URLCONF = 'crisp.TrustManagement.urls'
