@@ -6,24 +6,24 @@ CRISP (Cyber Risk Information Sharing Platform) is a comprehensive threat intell
 
 ## Key Features
 
-### 🔄 **Threat Intelligence Consumption**
+### **Threat Intelligence Consumption**
 - **TAXII 2.1 Compliance**: Consumes standardized threat intelligence from external sources (AlienVault OTX, etc.)
 - **STIX Processing**: Handles STIX 1.x (XML) and STIX 2.x (JSON) formats
 - **Batch Processing**: Efficient handling of large volumes of threat data
 - **Deduplication**: Automatic prevention of duplicate indicators and TTPs
 
-### 🏭 **Threat Feed Creation & Sharing**
+### **Threat Feed Creation & Sharing**
 - **STIX/TAXII Export**: Publish threat feeds in industry-standard formats
 - **Observer Pattern**: Real-time notifications when feeds are updated
 - **Collection Management**: Organize threat intelligence into collections
 
-### 🔒 **Trust-Based Anonymization**
+### **Trust-Based Anonymization**
 - **Multi-Level Anonymization**: HIGH, MEDIUM, LOW, and NONE levels
 - **Trust Relationships**: Define trust levels between organizations
 - **Strategy Pattern**: Flexible anonymization algorithms for different data types
 - **Contextual Sharing**: Share appropriate level of detail based on trust relationships
 
-### 🏢 **Organization Management**
+### **Organization Management**
 - **Institution Support**: Educational institutions, government agencies, private organizations
 - **Trust Networks**: Group-based trust management for collaborative sharing
 - **Role-Based Access**: Different access levels for different organization types
