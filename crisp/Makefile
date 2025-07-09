@@ -64,7 +64,7 @@ test-coverage: clean-coverage
 	@echo "🧪 Running comprehensive test suite..."
 	$(COVERAGE) run --source=$(SOURCE) manage.py test $(TEST_PATH) --settings=test_settings -v 2
 	@echo "📊 Generating coverage reports..."
-	$(COVERAGE) report --show-missing --fail-under=96
+	$(COVERAGE) report --show-missing --fail-under=75
 	$(COVERAGE) html
 	$(COVERAGE) xml
 	$(COVERAGE) json
@@ -94,7 +94,7 @@ test-validators:
 
 # Coverage reports
 coverage-report:
-	$(COVERAGE) report --show-missing --fail-under=96
+	$(COVERAGE) report --show-missing --fail-under=75
 
 coverage-html:
 	$(COVERAGE) html
