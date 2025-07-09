@@ -469,7 +469,6 @@ class CRISPTestOrchestrator(DiscoverRunner):
         success_rate = (self.passed_tests / self.total_tests * 100) if self.total_tests > 0 else 0
         print(f"Success Rate: {success_rate:.1f}% ({self.passed_tests}/{self.total_tests})")
         print(f"Total Duration: {duration:.2f} seconds")
-        print(f"Test Coverage: 91% (code coverage from previous analysis)")
         
         if success_rate == 100:
             print("STATUS: ALL SYSTEMS OPERATIONAL - READY FOR PRODUCTION")
