@@ -1,0 +1,85 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: crisp_trust_db
+      POSTGRES_USER: crisp_user
+      POSTGRES_PASSWORD: crisp_password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crisp_user -d crisp_trust_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # Redis Cache (optional)
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # CRISP Web Application
+  web:
+    build: 
+      context: .
+      dockerfile: crisp/Dockerfile
+    restart: unless-stopped
+    environment:
+      - DEBUG=False
+      - DB_HOST=db
+      - DB_NAME=crisp_trust_db
+      - DB_USER=crisp_user
+      - DB_PASSWORD=crisp_password
+      - DB_PORT=5432
+      - REDIS_URL=redis://redis:6379/1
+      - DJANGO_SETTINGS_MODULE=TrustManagement.settings
+      - PYTHONPATH=/app:/app/crisp:/app/core
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./crisp/logs:/app/crisp/logs
+      - ./crisp/media:/app/crisp/media
+      - static_files:/app/crisp/staticfiles
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    command: >
+      bash -c "
+        cd crisp &&
+        python manage.py collectstatic --noinput &&
+        python manage.py migrate &&
+        python TrustManagement/prepare_test_environment.py &&
+        python manage.py runserver 0.0.0.0:8000 --noreload
+      "
+
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_files:
+
+networks:
+  default:
+    driver: bridge
