@@ -22,3 +22,4 @@ cryptography==41.0.5
 drf-yasg==1.21.7
 gunicorn==21.2.0
 python-dotenv==1.0.0
+whitenoise==6.7.0
