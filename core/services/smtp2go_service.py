@@ -1,0 +1,506 @@
+"""
+SMTP2Go Email Notification Service
+File: core/services/smtp2go_service.py
+
+Service for sending email notifications via SMTP2Go API.
+"""
+
+import requests
+import logging
+from typing import Dict, Any, List, Optional
+from django.conf import settings
+from django.utils import timezone
+from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
+
+class SMTP2GoService:
+    """
+    Service for sending emails via SMTP2Go API.
+    """
+    
+    def __init__(self, api_key: str = None):
+        """
+        Initialize SMTP2Go service.
+        
+        Args:
+            api_key: SMTP2Go API key (defaults to settings.SMTP2GO_API_KEY)
+        """
+        self.api_key = api_key or getattr(settings, 'SMTP2GO_API_KEY', 'api-CE7DDEAC33DA4775B069E9C39789DED6')
+        self.base_url = "https://api.smtp2go.com/v3/"
+        self.headers = {
+            'Content-Type': 'application/json',
+            'X-Smtp2go-Api-Key': self.api_key
+        }
+        
+        # Default sender information
+        self.default_sender = {
+            'name': getattr(settings, 'CRISP_SENDER_NAME', 'CRISP Threat Intelligence'),
+            'email': getattr(settings, 'CRISP_SENDER_EMAIL', 'noreply@crisp-platform.com')
+        }
+    
+    def send_email(self, to_emails: List[str], subject: str, html_content: str, 
+                   text_content: str = None, sender_name: str = None, 
+                   sender_email: str = None) -> Dict[str, Any]:
+        """
+        Send an email via SMTP2Go.
+        
+        Args:
+            to_emails: List of recipient email addresses
+            subject: Email subject
+            html_content: HTML content of the email
+            text_content: Plain text content (optional)
+            sender_name: Sender name (optional, uses default)
+            sender_email: Sender email (optional, uses default)
+            
+        Returns:
+            Dictionary with send result
+        """
+        payload = {
+            "to": to_emails,
+            "sender": f"{sender_name or self.default_sender['name']} <{sender_email or self.default_sender['email']}>",
+            "subject": subject,
+            "html_body": html_content
+        }
+        
+        if text_content:
+            payload["text_body"] = text_content
+        
+        try:
+            response = requests.post(
+                f"{self.base_url}email/send",
+                json=payload,
+                headers=self.headers,
+                timeout=30
+            )
+            
+            result = response.json()
+            
+            if response.status_code == 200 and result.get('data', {}).get('succeeded') > 0:
+                logger.info(f"Email sent successfully to {len(to_emails)} recipients")
+                return {
+                    'success': True,
+                    'message': 'Email sent successfully',
+                    'smtp2go_response': result
+                }
+            else:
+                logger.error(f"Failed to send email: {result}")
+                return {
+                    'success': False,
+                    'message': result.get('data', {}).get('error', 'Unknown error'),
+                    'smtp2go_response': result
+                }
+                
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Network error sending email: {str(e)}")
+            return {
+                'success': False,
+                'message': f'Network error: {str(e)}',
+                'smtp2go_response': None
+            }
+        except Exception as e:
+            logger.error(f"Unexpected error sending email: {str(e)}")
+            return {
+                'success': False,
+                'message': f'Unexpected error: {str(e)}',
+                'smtp2go_response': None
+            }
+    
+    def send_threat_alert_email(self, recipient_emails: List[str], alert_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Send a threat alert email.
+        
+        Args:
+            recipient_emails: List of recipient email addresses
+            alert_data: Alert data containing threat information
+            
+        Returns:
+            Dictionary with send result
+        """
+        alert_type = alert_data.get('alert_type', 'Unknown Alert')
+        priority = alert_data.get('priority', 'medium')
+        feed_name = alert_data.get('data', {}).get('feed_name', 'Unknown Feed')
+        
+        # Create subject based on priority
+        priority_prefix = {
+            'critical': '🚨 CRITICAL',
+            'high': '⚠️ HIGH',
+            'medium': '📊 MEDIUM',
+            'low': '📝 LOW',
+            'info': 'ℹ️ INFO'
+        }.get(priority, '📊')
+        
+        subject = f"{priority_prefix} CRISP Threat Alert: {alert_type}"
+        
+        # Generate HTML content
+        html_content = self._generate_threat_alert_html(alert_data)
+        
+        # Generate text content
+        text_content = self._generate_threat_alert_text(alert_data)
+        
+        return self.send_email(
+            to_emails=recipient_emails,
+            subject=subject,
+            html_content=html_content,
+            text_content=text_content
+        )
+    
+    def send_feed_notification_email(self, recipient_emails: List[str], notification_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Send a feed notification email.
+        
+        Args:
+            recipient_emails: List of recipient email addresses
+            notification_data: Notification data
+            
+        Returns:
+            Dictionary with send result
+        """
+        notification_type = notification_data.get('notification_type', 'Feed Update')
+        feed_name = notification_data.get('feed_name', 'Unknown Feed')
+        
+        subject = f"CRISP Feed Notification: {notification_type} - {feed_name}"
+        
+        # Generate HTML content
+        html_content = self._generate_feed_notification_html(notification_data)
+        
+        # Generate text content
+        text_content = self._generate_feed_notification_text(notification_data)
+        
+        return self.send_email(
+            to_emails=recipient_emails,
+            subject=subject,
+            html_content=html_content,
+            text_content=text_content
+        )
+    
+    def _generate_threat_alert_html(self, alert_data: Dict[str, Any]) -> str:
+        """Generate HTML content for threat alert email."""
+        alert_type = alert_data.get('alert_type', 'Unknown Alert')
+        priority = alert_data.get('priority', 'medium')
+        generated_at = alert_data.get('generated_at', timezone.now())
+        data = alert_data.get('data', {})
+        
+        # Priority color mapping
+        priority_colors = {
+            'critical': '#dc3545',  # Red
+            'high': '#fd7e14',      # Orange
+            'medium': '#ffc107',    # Yellow
+            'low': '#28a745',       # Green
+            'info': '#17a2b8'       # Blue
+        }
+        
+        priority_color = priority_colors.get(priority, '#6c757d')
+        
+        html_template = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>CRISP Threat Alert</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f8f9fa; }}
+                .container {{ max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                .header {{ background-color: {priority_color}; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }}
+                .content {{ padding: 20px; }}
+                .alert-details {{ background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }}
+                .detail-row {{ margin: 10px 0; }}
+                .label {{ font-weight: bold; color: #495057; }}
+                .value {{ color: #212529; }}
+                .footer {{ background-color: #e9ecef; padding: 15px; border-radius: 0 0 8px 8px; text-align: center; font-size: 12px; color: #6c757d; }}
+                .priority-badge {{ display: inline-block; padding: 4px 8px; border-radius: 4px; color: white; background-color: {priority_color}; font-weight: bold; text-transform: uppercase; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🛡️ CRISP Threat Alert</h1>
+                    <p>Cyber Risk Information Sharing Platform</p>
+                </div>
+                
+                <div class="content">
+                    <div class="alert-details">
+                        <div class="detail-row">
+                            <span class="label">Alert Type:</span>
+                            <span class="value">{alert_type}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Priority:</span>
+                            <span class="priority-badge">{priority}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Generated:</span>
+                            <span class="value">{generated_at.strftime('%Y-%m-%d %H:%M:%S UTC')}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Alert ID:</span>
+                            <span class="value">{alert_data.get('alert_id', 'N/A')}</span>
+                        </div>
+                    </div>
+                    
+                    <h3>Alert Details:</h3>
+                    <div class="alert-details">
+        """
+        
+        # Add specific alert details based on type
+        if alert_type == 'high_severity_indicator':
+            html_template += f"""
+                        <div class="detail-row">
+                            <span class="label">Feed:</span>
+                            <span class="value">{data.get('feed_name', 'N/A')}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Indicator Type:</span>
+                            <span class="value">{data.get('indicator_type', 'N/A')}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Indicator Value:</span>
+                            <span class="value" style="font-family: monospace; background-color: #e9ecef; padding: 2px 4px;">{data.get('indicator_value', 'N/A')}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Severity:</span>
+                            <span class="value">{data.get('severity', 'N/A')}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Confidence:</span>
+                            <span class="value">{data.get('confidence', 'N/A')}</span>
+                        </div>
+            """
+        elif alert_type == 'critical_ttp':
+            html_template += f"""
+                        <div class="detail-row">
+                            <span class="label">Feed:</span>
+                            <span class="value">{data.get('feed_name', 'N/A')}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">TTP Name:</span>
+                            <span class="value">{data.get('ttp_name', 'N/A')}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Tactic:</span>
+                            <span class="value">{data.get('tactic', 'N/A')}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Technique:</span>
+                            <span class="value">{data.get('technique', 'N/A')}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">MITRE Technique:</span>
+                            <span class="value">{data.get('mitre_technique', 'N/A')}</span>
+                        </div>
+            """
+        elif alert_type == 'bulk_indicator_activity':
+            html_template += f"""
+                        <div class="detail-row">
+                            <span class="label">Feed ID:</span>
+                            <span class="value">{data.get('feed_id', 'N/A')}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Indicator Count:</span>
+                            <span class="value">{data.get('indicator_count', 'N/A')}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Time Window:</span>
+                            <span class="value">{data.get('time_window_minutes', 'N/A')} minutes</span>
+                        </div>
+            """
+        
+        html_template += """
+                    </div>
+                    
+                    <p><strong>Action Required:</strong></p>
+                    <ul>
+                        <li>Review the threat details in your CRISP dashboard</li>
+                        <li>Assess impact on your organization's infrastructure</li>
+                        <li>Implement appropriate security measures</li>
+                        <li>Share relevant information with your security team</li>
+                    </ul>
+                </div>
+                
+                <div class="footer">
+                    <p>This is an automated message from CRISP (Cyber Risk Information Sharing Platform)</p>
+                    <p>If you no longer wish to receive these alerts, please contact your system administrator</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        return html_template
+    
+    def _generate_threat_alert_text(self, alert_data: Dict[str, Any]) -> str:
+        """Generate plain text content for threat alert email."""
+        alert_type = alert_data.get('alert_type', 'Unknown Alert')
+        priority = alert_data.get('priority', 'medium')
+        generated_at = alert_data.get('generated_at', timezone.now())
+        data = alert_data.get('data', {})
+        
+        text_content = f"""
+CRISP THREAT ALERT
+==================
+
+Alert Type: {alert_type}
+Priority: {priority.upper()}
+Generated: {generated_at.strftime('%Y-%m-%d %H:%M:%S UTC')}
+Alert ID: {alert_data.get('alert_id', 'N/A')}
+
+ALERT DETAILS:
+"""
+        
+        # Add specific details based on alert type
+        if alert_type == 'high_severity_indicator':
+            text_content += f"""
+Feed: {data.get('feed_name', 'N/A')}
+Indicator Type: {data.get('indicator_type', 'N/A')}
+Indicator Value: {data.get('indicator_value', 'N/A')}
+Severity: {data.get('severity', 'N/A')}
+Confidence: {data.get('confidence', 'N/A')}
+"""
+        elif alert_type == 'critical_ttp':
+            text_content += f"""
+Feed: {data.get('feed_name', 'N/A')}
+TTP Name: {data.get('ttp_name', 'N/A')}
+Tactic: {data.get('tactic', 'N/A')}
+Technique: {data.get('technique', 'N/A')}
+MITRE Technique: {data.get('mitre_technique', 'N/A')}
+"""
+        elif alert_type == 'bulk_indicator_activity':
+            text_content += f"""
+Feed ID: {data.get('feed_id', 'N/A')}
+Indicator Count: {data.get('indicator_count', 'N/A')}
+Time Window: {data.get('time_window_minutes', 'N/A')} minutes
+"""
+        
+        text_content += """
+
+ACTION REQUIRED:
+- Review the threat details in your CRISP dashboard
+- Assess impact on your organization's infrastructure
+- Implement appropriate security measures
+- Share relevant information with your security team
+
+---
+This is an automated message from CRISP (Cyber Risk Information Sharing Platform)
+If you no longer wish to receive these alerts, please contact your system administrator
+"""
+        
+        return text_content
+    
+    def _generate_feed_notification_html(self, notification_data: Dict[str, Any]) -> str:
+        """Generate HTML content for feed notification email."""
+        notification_type = notification_data.get('notification_type', 'Feed Update')
+        feed_name = notification_data.get('feed_name', 'Unknown Feed')
+        timestamp = notification_data.get('timestamp', timezone.now())
+        
+        html_template = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>CRISP Feed Notification</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f8f9fa; }}
+                .container {{ max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                .header {{ background-color: #17a2b8; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }}
+                .content {{ padding: 20px; }}
+                .notification-details {{ background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }}
+                .detail-row {{ margin: 10px 0; }}
+                .label {{ font-weight: bold; color: #495057; }}
+                .value {{ color: #212529; }}
+                .footer {{ background-color: #e9ecef; padding: 15px; border-radius: 0 0 8px 8px; text-align: center; font-size: 12px; color: #6c757d; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>📊 CRISP Feed Notification</h1>
+                    <p>Cyber Risk Information Sharing Platform</p>
+                </div>
+                
+                <div class="content">
+                    <div class="notification-details">
+                        <div class="detail-row">
+                            <span class="label">Notification Type:</span>
+                            <span class="value">{notification_type}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Feed Name:</span>
+                            <span class="value">{feed_name}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Timestamp:</span>
+                            <span class="value">{timestamp.strftime('%Y-%m-%d %H:%M:%S UTC')}</span>
+                        </div>
+                    </div>
+                    
+                    <p>A threat intelligence feed you're subscribed to has been updated. Please log into your CRISP dashboard to review the latest threat information.</p>
+                </div>
+                
+                <div class="footer">
+                    <p>This is an automated message from CRISP (Cyber Risk Information Sharing Platform)</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        return html_template
+    
+    def _generate_feed_notification_text(self, notification_data: Dict[str, Any]) -> str:
+        """Generate plain text content for feed notification email."""
+        notification_type = notification_data.get('notification_type', 'Feed Update')
+        feed_name = notification_data.get('feed_name', 'Unknown Feed')
+        timestamp = notification_data.get('timestamp', timezone.now())
+        
+        text_content = f"""
+CRISP FEED NOTIFICATION
+======================
+
+Notification Type: {notification_type}
+Feed Name: {feed_name}
+Timestamp: {timestamp.strftime('%Y-%m-%d %H:%M:%S UTC')}
+
+A threat intelligence feed you're subscribed to has been updated. 
+Please log into your CRISP dashboard to review the latest threat information.
+
+---
+This is an automated message from CRISP (Cyber Risk Information Sharing Platform)
+"""
+        
+        return text_content
+    
+    def test_connection(self) -> Dict[str, Any]:
+        """
+        Test the SMTP2Go connection.
+        
+        Returns:
+            Dictionary with connection test result
+        """
+        try:
+            response = requests.get(
+                f"{self.base_url}stats",
+                headers=self.headers,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                return {
+                    'success': True,
+                    'message': 'SMTP2Go connection successful',
+                    'status': 'online'
+                }
+            else:
+                return {
+                    'success': False,
+                    'message': f'SMTP2Go connection failed: HTTP {response.status_code}',
+                    'status': 'error'
+                }
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'SMTP2Go connection error: {str(e)}',
+                'status': 'error'
+            }
