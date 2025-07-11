@@ -1,7 +1,7 @@
 // api.js - API Service for CRISP
 
-// Base API URL - update this to match your Django backend URL
-const API_URL = 'http://localhost:8001/api/';
+// Base API URL - updated to match UserTrust Django backend URL
+const API_URL = 'http://localhost:8000/api/v1/';
 
 // Helper function to handle API responses
 const handleResponse = async (response) => {
@@ -43,7 +43,7 @@ export const loginUser = async (username, password) => {
 
 // Register user API function
 export const registerUser = async (username, password, fullName, organization, role) => {
-  const response = await fetch(`${API_URL}auth/register/`, {
+  const response = await fetch(`${API_URL}users/create/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -100,7 +100,7 @@ export const refreshToken = async () => {
     return Promise.reject('No refresh token available');
   }
   
-  const response = await fetch(`${API_URL}auth/token/refresh/`, {
+  const response = await fetch(`${API_URL}auth/refresh/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refresh: auth.refresh })

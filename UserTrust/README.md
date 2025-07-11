@@ -52,26 +52,6 @@ docker-compose down -v        # Reset everything
 
 ### Manual Setup
 
-```bash
-# Clone the repository
-git clone <repository-url>
-cd Capstone
-
-# Set up virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r crisp/requirements/development.txt
-
-# Set up database and run migrations
-cd crisp
-python manage.py migrate
-python manage.py createsuperuser
-```
-
-### Manual Setup
-
 #### Prerequisites
 - **Python 3.10+**
 - **PostgreSQL 13+**
@@ -79,9 +59,18 @@ python manage.py createsuperuser
 
 #### 1. Environment Setup
 ```bash
+# Clone the repository
+git clone <repository-url>
+cd CRISP/UserTrust
+
 # Create virtual environment
-python -m venv venv
+python3 -m venv venv
+
+# Activate virtual environment
 source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Upgrade pip
+pip install --upgrade pip
 
 # Install dependencies
 pip install -r crisp/requirements/development.txt
@@ -99,23 +88,58 @@ export DB_USER=crisp_user
 export DB_PASSWORD=crisp_password
 ```
 
-#### 3. Run the System
+#### 3. Run Django Setup
 ```bash
-# Start CRISP platform
+# Navigate to Django project directory
 cd crisp
-python manage.py runserver
+
+# **IMPORTANT: Make sure virtual environment is activated**
+# You should see (venv) in your terminal prompt
+
+# Run migrations
+python3 manage.py migrate
+
+# Create superuser (optional)
+python3 manage.py createsuperuser
+
+# Start the development server
+python3 manage.py runserver
 ```
+
+#### 4. Verify Setup
+```bash
+# Check Django installation
+python3 -c "import django; print(django.get_version())"
+
+# Check system configuration
+python3 manage.py check
+
+# Run tests
+python3 manage.py test
+```
+
+
+ Method 1: Simple command (from the crisp directory)
+  cd /mnt/c/Users/Client/Documents/GitHub/CRISP/UserTrust/crisp
+  python3 manage.py runserver 0.0.0.0:8000
+
+  Method 2: Using the startup script (from UserTrust directory)
+  cd /mnt/c/Users/Client/Documents/GitHub/CRISP/UserTrust
+  ./run_server.sh
 
 ### Quick Commands
 
 ```bash
+# **IMPORTANT: Always activate virtual environment first**
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
 # Run comprehensive tests
 cd crisp
-python manage.py test
+python3 manage.py test
 
 # Start the platform
 cd crisp
-python manage.py runserver
+python3 manage.py runserver
 
 # The API will be available at:
 # http://localhost:8000/api/v1/
@@ -123,6 +147,29 @@ python manage.py runserver
 ```
 
 ## 🔧 Configuration
+
+### Frontend UI Setup
+
+The React frontend is located in `/UI/crisp-react/` and is configured to connect to the UserTrust Django backend.
+
+```bash
+# Navigate to UI directory
+cd UI/crisp-react
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# The UI will be available at:
+# http://localhost:5173
+```
+
+**Frontend Configuration:**
+- API Base URL: `http://localhost:8000/api/v1/`
+- The UI is configured to use the UserTrust Django server endpoints
+- CORS is configured to allow requests from `localhost:5173`
 
 ### Environment Variables
 
@@ -157,10 +204,13 @@ REDIS_URL=redis://localhost:6379/1
 ### Run All Tests
 
 ```bash
+# **IMPORTANT: Make sure virtual environment is activated**
+source venv/bin/activate
+
 cd crisp
 
 # Run comprehensive test suite
-python manage.py test
+python3 manage.py test
 
 # Run with coverage
 coverage run --source='.' manage.py test
@@ -172,23 +222,23 @@ coverage html  # Generates HTML coverage report
 
 ```bash
 # Test user management
-python manage.py test core.user_management
+python3 manage.py test core.user_management
 
 # Test trust management
-python manage.py test core.trust
+python3 manage.py test core.trust
 
 # Test integration
-python manage.py test core.tests.test_integration
+python3 manage.py test core.tests.test_integration
 ```
 
 ### API Testing
 
 ```bash
 # Test API endpoints
-python crisp/tools/test_runners/run_tests.py
+python3 crisp/tools/test_runners/run_tests.py
 
 # Test with different scenarios
-python crisp/legacy_tests/test_api_endpoints.py
+python3 crisp/legacy_tests/test_api_endpoints.py
 ```
 
 ## 🌐 API Documentation
@@ -334,15 +384,18 @@ flake8 .
 ### Database Management
 
 ```bash
+# **IMPORTANT: Make sure virtual environment is activated**
+source venv/bin/activate
+
 # Reset database (development only)
 cd crisp
-python reset_database.py
+python3 reset_database.py
 
 # Create new migrations
-python manage.py makemigrations
+python3 manage.py makemigrations
 
 # Apply migrations
-python manage.py migrate
+python3 manage.py migrate
 ```
 
 ## 📚 Documentation
@@ -367,12 +420,12 @@ Documentation is available in the codebase:
 2. **Database Setup**
    ```bash
    # Create production database
-   python manage.py migrate --settings=crisp.TrustManagement.settings
+   python3 manage.py migrate --settings=crisp.TrustManagement.settings
    ```
 
 3. **Static Files**
    ```bash
-   python manage.py collectstatic
+   python3 manage.py collectstatic
    ```
 
 4. **WSGI/ASGI Deployment**
@@ -397,6 +450,27 @@ This project is part of the University of Pretoria Capstone project for Cyber Ri
 
 ### Common Issues
 
+**Virtual Environment Issues**
+```bash
+# If you get "ModuleNotFoundError: No module named 'django'"
+# 1. Make sure virtual environment is activated
+source venv/bin/activate  # You should see (venv) in your prompt
+
+# 2. Install dependencies again
+pip install -r crisp/requirements/development.txt
+
+# 3. Verify Django is installed
+python3 -c "import django; print(django.get_version())"
+
+# 4. If still issues, recreate virtual environment
+deactivate
+rm -rf venv
+python3 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r crisp/requirements/development.txt
+```
+
 **Database Connection Issues**
 ```bash
 # Check PostgreSQL service
@@ -410,13 +484,13 @@ psql -l | grep crisp_trust_db
 ```bash
 # Reset migrations (development only)
 cd crisp
-python reset_database.py
+python3 reset_database.py
 ```
 
 **Permission Issues**
 ```bash
 # Check user roles
-python manage.py shell
+python3 manage.py shell
 >>> from core.user_management.models import CustomUser
 >>> user = CustomUser.objects.get(username='your_username')
 >>> print(user.role, user.organization)
