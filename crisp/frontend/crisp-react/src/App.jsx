@@ -8,11 +8,90 @@ import * as api from './api.js';
 function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthWrapper passes
   // State to manage the active page
   const [activePage, setActivePage] = useState('dashboard');
+  const [isLoading, setIsLoading] = useState(false);
   
-  // Function to switch between pages
+  // Notification state shared across components
+  const [notifications, setNotifications] = useState([
+    {
+      id: 1,
+      type: 'critical',
+      title: 'New malware detected in network traffic',
+      message: 'Suspicious activity detected from IP 192.168.144.32',
+      timestamp: new Date(Date.now() - 30 * 60000), // 30 minutes ago
+      read: false,
+      userId: user?.id || 1
+    },
+    {
+      id: 2,
+      type: 'warning',
+      title: 'Unusual login pattern detected',
+      message: 'Multiple failed login attempts from unknown location',
+      timestamp: new Date(Date.now() - 2 * 60 * 60000), // 2 hours ago
+      read: false,
+      userId: user?.id || 1
+    },
+    {
+      id: 3,
+      type: 'info',
+      title: 'System maintenance completed successfully',
+      message: 'All systems are now fully operational',
+      timestamp: new Date(Date.now() - 6 * 60 * 60000), // 6 hours ago
+      read: true,
+      userId: user?.id || 1
+    },
+    {
+      id: 4,
+      type: 'update',
+      title: '3 new threat intelligence feeds added',
+      message: 'CIRCL MISP, AlienVault OTX, and ThreatConnect feeds are now active',
+      timestamp: new Date(Date.now() - 12 * 60 * 60000), // 12 hours ago
+      read: false,
+      userId: user?.id || 1
+    },
+    {
+      id: 5,
+      type: 'alert',
+      title: 'Trust level updated for 2 institutions',
+      message: 'University of Cape Town and Stellenbosch University trust levels modified',
+      timestamp: new Date(Date.now() - 24 * 60 * 60000), // 24 hours ago
+      read: true,
+      userId: user?.id || 1
+    }
+  ]);
+
+  // Function to mark notification as read
+  const markNotificationAsRead = (notificationId) => {
+    setNotifications(prev => 
+      prev.map(notif => 
+        notif.id === notificationId 
+          ? { ...notif, read: true }
+          : notif
+      )
+    );
+  };
+
+  // Function to get user-specific notifications
+  const getUserNotifications = () => {
+    return notifications.filter(notif => 
+      notif.userId === user?.id || notif.userId === 1
+    );
+  };
+
+  // Function to get unread count
+  const getUnreadCount = () => {
+    return getUserNotifications().filter(notif => !notif.read).length;
+  };
+  
+  // Function to switch between pages with loading state
   const showPage = (pageId) => {
     console.log('Switching to page:', pageId);
-    setActivePage(pageId);
+    setIsLoading(true);
+    
+    // Add a small delay for smooth transition
+    setTimeout(() => {
+      setActivePage(pageId);
+      setIsLoading(false);
+    }, 150);
   };
 
   // Add resize listener to handle chart resizing when zooming
@@ -36,9 +115,16 @@ function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthW
       {/* Include CSS styles */}
       <CSSStyles />
       
-      
       {/* Header */}
-      <Header user={user} onLogout={onLogout} isAdmin={isAdmin} /> {/* Pass user and isAdmin to header */}
+      <Header 
+        user={user} 
+        onLogout={onLogout} 
+        isAdmin={isAdmin}
+        notifications={getUserNotifications()}
+        unreadCount={getUnreadCount()}
+        onNotificationRead={markNotificationAsRead}
+        showPage={showPage}
+      /> {/* Pass notification data and showPage to header */}
       
       {/* Main Navigation */}
       <MainNav activePage={activePage} showPage={showPage} isAdmin={isAdmin} />
@@ -46,6 +132,13 @@ function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthW
       {/* Main Content */}
       <main className="main-content">
         <div className="container">
+          {isLoading && (
+            <div className="loading-overlay">
+              <div className="loading-spinner"></div>
+              <p>Loading...</p>
+            </div>
+          )}
+          
           {/* Dashboard */}
           <Dashboard active={activePage === 'dashboard'} />
 
@@ -65,127 +158,227 @@ function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthW
           <Reports active={activePage === 'reports'} />
 
           {/* User Profile */}
-          <UserProfile active={activePage === 'profile'} user={user} />
+          <UserProfile 
+            active={activePage === 'profile'} 
+            user={user} 
+            notifications={getUserNotifications()}
+            onNotificationRead={markNotificationAsRead}
+          />
 
           {/* Trust Management */}
           <TrustManagement active={activePage === 'trust-management'} />
 
           {/* User Management (Admin only) */}
-          {isAdmin && <UserManagement active={activePage === 'user-management'} />}
+          {isAdmin && <UserManagement active={activePage === 'user-management'} isAdmin={isAdmin} currentUser={user} />}
 
           {/* Alerts System */}
-          <AlertsSystem active={activePage === 'alerts'} />
+          <AlertsSystem 
+            active={activePage === 'alerts'} 
+            notifications={notifications}
+            onNotificationRead={markNotificationAsRead}
+          />
+
+          {/* Notifications */}
+          <Notifications 
+            active={activePage === 'notifications'} 
+            notifications={getUserNotifications()}
+            onNotificationRead={markNotificationAsRead}
+          />
+
+          {/* Account Settings */}
+          <AccountSettings 
+            active={activePage === 'account-settings'} 
+            user={user}
+          />
+
+          {/* Admin Settings (Admin only) */}
+          {isAdmin && <AdminSettings active={activePage === 'admin-settings'} />}
+
+          {/* Register User (Admin only) */}
+          {isAdmin && <RegisterUser active={activePage === 'register-user'} />}
         </div>
       </main>
     </div>
   );
 }
 
-// Header Component with Logout Button and Register User button for admins
-function Header({ user, onLogout, isAdmin }) {
+// Header Component with notifications and user management
+function Header({ user, onLogout, isAdmin, notifications, unreadCount, onNotificationRead, showPage }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  
-  // Close dropdowns when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (!event.target.closest('.notifications') && !event.target.closest('.user-profile')) {
-        setShowNotifications(false);
-        setShowUserMenu(false);
-      }
-    };
-    
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
   
   // Get first initial for avatar
   const userInitial = user && user.username ? user.username.charAt(0).toUpperCase() : 'A';
   const userName = user && user.username ? user.username.split('@')[0] : 'User';
   const userRole = user && user.role ? user.role : (isAdmin ? 'Administrator' : 'User');
 
+  const handleNotificationClick = () => {
+    setShowNotifications(!showNotifications);
+    setShowUserMenu(false); // Close user menu when opening notifications
+  };
+
+  const handleUserMenuClick = () => {
+    setShowUserMenu(!showUserMenu);
+    setShowNotifications(false); // Close notifications when opening user menu
+  };
+
+  const handleNotificationItemClick = (notification) => {
+    if (!notification.read) {
+      onNotificationRead(notification.id);
+    }
+  };
+
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'critical': return 'fas fa-exclamation-triangle';
+      case 'warning': return 'fas fa-exclamation-circle';
+      case 'info': return 'fas fa-info-circle';
+      case 'update': return 'fas fa-sync-alt';
+      case 'alert': return 'fas fa-bell';
+      default: return 'fas fa-bell';
+    }
+  };
+
+  const formatTime = (timestamp) => {
+    const now = new Date();
+    const diff = now - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
+  };
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.notifications-container') && !event.target.closest('.user-profile-container')) {
+        setShowNotifications(false);
+        setShowUserMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
     <header>
       <div className="container header-container">
-        <a href="#" className="logo">
+        <div className="logo">
           <img src={logoImage} alt="CRISP Logo" className="logo-image" />
-        </a>
+          <span className="logo-text">CRISP</span>
+        </div>
         <div className="nav-actions">
           <div className="search-bar">
             <span className="search-icon"><i className="fas fa-search"></i></span>
             <input type="text" placeholder="Search platform..." />
           </div>
           
-          {/* Notifications dropdown */}
-          <div className="notifications" onClick={() => setShowNotifications(!showNotifications)}>
-            <i className="fas fa-bell"></i>
-            <span className="notification-count">3</span>
+          {/* Notifications Dropdown */}
+          <div className="notifications-container">
+            <div className="notifications" onClick={handleNotificationClick}>
+              <i className="fas fa-bell"></i>
+              {unreadCount > 0 && <span className="notification-count">{unreadCount}</span>}
+            </div>
+            
             {showNotifications && (
               <div className="notifications-dropdown">
-                <div className="dropdown-header">Notifications</div>
-                <div className="notification-item">
-                  <div className="notification-content">
-                    <strong>New threat detected</strong>
-                    <p>High-risk malware activity identified</p>
-                    <span className="notification-time">2 mins ago</span>
-                  </div>
+                <div className="dropdown-header">
+                  <h3>Notifications</h3>
+                  <span className="close-btn" onClick={() => setShowNotifications(false)}>
+                    <i className="fas fa-times"></i>
+                  </span>
                 </div>
-                <div className="notification-item">
-                  <div className="notification-content">
-                    <strong>Trust relationship updated</strong>
-                    <p>University of Cape Town trust level changed</p>
-                    <span className="notification-time">1 hour ago</span>
-                  </div>
-                </div>
-                <div className="notification-item">
-                  <div className="notification-content">
-                    <strong>System maintenance</strong>
-                    <p>Scheduled maintenance completed successfully</p>
-                    <span className="notification-time">3 hours ago</span>
-                  </div>
+                <div className="notifications-list">
+                  {notifications.length > 0 ? (
+                    notifications.slice(0, 5).map(notification => (
+                      <div 
+                        key={notification.id}
+                        className={`notification-item ${notification.read ? 'read' : 'unread'}`}
+                        onClick={() => handleNotificationItemClick(notification)}
+                      >
+                        <div className="notification-icon">
+                          <i className={getNotificationIcon(notification.type)}></i>
+                        </div>
+                        <div className="notification-content">
+                          <div className="notification-title">{notification.title}</div>
+                          <div className="notification-message">{notification.message}</div>
+                          <div className="notification-time">{formatTime(notification.timestamp)}</div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="no-notifications">No notifications</div>
+                  )}
                 </div>
                 <div className="dropdown-footer">
-                  <a href="#">View all notifications</a>
+                  <button 
+                    className="btn btn-sm btn-outline"
+                    onClick={() => {setShowNotifications(false); showPage('notifications');}}
+                  >
+                    View All
+                  </button>
                 </div>
               </div>
             )}
           </div>
           
-          {/* User profile dropdown */}
-          <div className="user-profile" onClick={() => setShowUserMenu(!showUserMenu)}>
-            <div className="avatar">{userInitial}</div>
-            <div className="user-info">
-              <div className="user-name">{userName}</div>
-              <div className="user-role">{userRole}</div>
+          {/* User Profile Menu */}
+          <div className="user-profile-container">
+            <div className="user-profile" onClick={handleUserMenuClick}>
+              <div className="avatar">{userInitial}</div>
+              <div className="user-info">
+                <div className="user-name">{userName}</div>
+                <div className="user-role">{userRole}</div>
+              </div>
+              <i className="fas fa-chevron-down"></i>
             </div>
-            <i className="fas fa-chevron-down"></i>
+            
             {showUserMenu && (
-              <div className="user-dropdown">
-                <div className="dropdown-header">{userName}</div>
-                <div className="dropdown-item">
-                  <i className="fas fa-user"></i>
-                  <span>Profile Settings</span>
+              <div className="user-menu-dropdown">
+                <div className="dropdown-header">
+                  <div className="user-avatar-large">{userInitial}</div>
+                  <div>
+                    <div className="user-name-large">{userName}</div>
+                    <div className="user-email">{user?.username || 'user@example.com'}</div>
+                  </div>
                 </div>
-                <div className="dropdown-item">
-                  <i className="fas fa-cog"></i>
-                  <span>Account Settings</span>
+                <div className="menu-divider"></div>
+                <div className="menu-items">
+                  <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('profile');}}>
+                    <i className="fas fa-user"></i>
+                    <span>My Profile</span>
+                  </button>
+                  <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('account-settings');}}>
+                    <i className="fas fa-cog"></i>
+                    <span>Account Settings</span>
+                  </button>
+                  {isAdmin && (
+                    <>
+                      <div className="menu-divider"></div>
+                      <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('user-management');}}>
+                        <i className="fas fa-users"></i>
+                        <span>User Management</span>
+                      </button>
+                      <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('admin-settings');}}>
+                        <i className="fas fa-shield-alt"></i>
+                        <span>Admin Settings</span>
+                      </button>
+                      <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('register-user');}}>
+                        <i className="fas fa-user-plus"></i>
+                        <span>Register New User</span>
+                      </button>
+                    </>
+                  )}
                 </div>
-                {isAdmin && (
-                  <>
-                    <div className="dropdown-divider"></div>
-                    <div className="dropdown-item" onClick={() => window.location.href = '/register'}>
-                      <i className="fas fa-user-plus"></i>
-                      <span>Register User</span>
-                    </div>
-                  </>
-                )}
-                <div className="dropdown-divider"></div>
-                <div className="dropdown-item logout-item" onClick={onLogout}>
+                <div className="menu-divider"></div>
+                <button className="menu-item logout-item" onClick={() => {setShowUserMenu(false); onLogout()}}>
                   <i className="fas fa-sign-out-alt"></i>
                   <span>Logout</span>
-                </div>
+                </button>
               </div>
             )}
           </div>
@@ -197,92 +390,38 @@ function Header({ user, onLogout, isAdmin }) {
 
 // Main Navigation Component
 function MainNav({ activePage, showPage, isAdmin }) {
+  const navItems = [
+    { id: 'dashboard', icon: 'fas fa-chart-line', label: 'Dashboard' },
+    { id: 'threat-feeds', icon: 'fas fa-rss', label: 'Threat Feeds' },
+    { id: 'ioc-management', icon: 'fas fa-search', label: 'IoC Management' },
+    { id: 'ttp-analysis', icon: 'fas fa-sitemap', label: 'TTP Analysis' },
+    { id: 'institutions', icon: 'fas fa-building', label: 'Institutions' },
+    { id: 'trust-management', icon: 'fas fa-handshake', label: 'Trust Management' },
+    { id: 'alerts', icon: 'fas fa-bell', label: 'Alerts' },
+    { id: 'notifications', icon: 'fas fa-bell', label: 'Notifications' },
+    { id: 'reports', icon: 'fas fa-file-alt', label: 'Reports' },
+    { id: 'profile', icon: 'fas fa-user', label: 'Profile' }
+  ];
+
+  if (isAdmin) {
+    navItems.splice(-1, 0, { id: 'user-management', icon: 'fas fa-users', label: 'User Management' });
+  }
+
   return (
     <nav className="main-nav">
       <div className="container nav-container">
         <ul className="nav-links">
-          <li>
-            <a 
-              onClick={() => showPage('dashboard')} 
-              className={activePage === 'dashboard' ? 'active' : ''}
-            >
-              <i className="fas fa-chart-line"></i> Dashboard
-            </a>
-          </li>
-          <li>
-            <a 
-              onClick={() => showPage('threat-feeds')} 
-              className={activePage === 'threat-feeds' ? 'active' : ''}
-            >
-              <i className="fas fa-rss"></i> Threat Feeds
-            </a>
-          </li>
-          <li>
-            <a 
-              onClick={() => showPage('ioc-management')} 
-              className={activePage === 'ioc-management' ? 'active' : ''}
-            >
-              <i className="fas fa-search"></i> IoC Management
-            </a>
-          </li>
-          <li>
-            <a 
-              onClick={() => showPage('ttp-analysis')} 
-              className={activePage === 'ttp-analysis' ? 'active' : ''}
-            >
-              <i className="fas fa-sitemap"></i> TTP Analysis
-            </a>
-          </li>
-          <li>
-            <a 
-              onClick={() => showPage('institutions')} 
-              className={activePage === 'institutions' ? 'active' : ''}
-            >
-              <i className="fas fa-building"></i> Institutions
-            </a>
-          </li>
-          <li>
-            <a 
-              onClick={() => showPage('trust-management')} 
-              className={activePage === 'trust-management' ? 'active' : ''}
-            >
-              <i className="fas fa-handshake"></i> Trust Management
-            </a>
-          </li>
-          <li>
-            <a 
-              onClick={() => showPage('alerts')} 
-              className={activePage === 'alerts' ? 'active' : ''}
-            >
-              <i className="fas fa-bell"></i> Alerts
-            </a>
-          </li>
-          {isAdmin && (
-            <li>
+          {navItems.map((item) => (
+            <li key={item.id}>
               <a 
-                onClick={() => showPage('user-management')} 
-                className={activePage === 'user-management' ? 'active' : ''}
+                onClick={() => showPage(item.id)} 
+                className={activePage === item.id ? 'active' : ''}
+                title={item.label}
               >
-                <i className="fas fa-users"></i> User Management
+                <i className={item.icon}></i> {item.label}
               </a>
             </li>
-          )}
-          <li>
-            <a 
-              onClick={() => showPage('reports')} 
-              className={activePage === 'reports' ? 'active' : ''}
-            >
-              <i className="fas fa-file-alt"></i> Reports
-            </a>
-          </li>
-          <li>
-            <a 
-              onClick={() => showPage('profile')} 
-              className={activePage === 'profile' ? 'active' : ''}
-            >
-              <i className="fas fa-user"></i> Profile
-            </a>
-          </li>
+          ))}
         </ul>
         <div className="nav-right">
           <div className="status-indicator">
@@ -454,15 +593,19 @@ function Dashboard({ active }) {
       <div className="page-header">
         <div>
           <h1 className="page-title">Threat Intelligence Dashboard</h1>
-          <p className="page-subtitle">Overview of threat intelligence and platform activity</p>
+          <p className="page-subtitle">Real-time overview of threat intelligence and platform activity</p>
         </div>
         <div className="action-buttons">
-          <button className="btn btn-outline"><i className="fas fa-download"></i> Export Data</button>
-          <button className="btn btn-primary"><i className="fas fa-plus"></i> Add New Feed</button>
+          <button className="btn btn-outline" onClick={() => alert('Export functionality coming soon!')}>
+            <i className="fas fa-download"></i> Export Data
+          </button>
+          <button className="btn btn-primary" onClick={() => alert('Add Feed functionality coming soon!')}>
+            <i className="fas fa-plus"></i> Add New Feed
+          </button>
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - Always visible and prominent */}
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-title">
@@ -1769,28 +1912,304 @@ function Reports({ active }) {
   );
 }
 
-// User Profile Component - Simplified for now
-function UserProfile({ active, user }) {
+// User Profile Component - Enhanced with notifications
+function UserProfile({ active, user, notifications, onNotificationRead }) {
+  const [activeTab, setActiveTab] = useState('profile');
+  const [editing, setEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    username: user?.username || '',
+    fullName: user?.full_name || '',
+    email: user?.email || user?.username || '',
+    organization: user?.organization || '',
+    role: user?.role || 'User',
+    phone: user?.phone || '',
+    department: user?.department || ''
+  });
+
   if (!active) return null;
+
+  const handleSave = () => {
+    // Save profile changes
+    alert('Profile updated successfully!');
+    setEditing(false);
+  };
+
+  const handleNotificationClick = (notification) => {
+    if (!notification.read) {
+      onNotificationRead(notification.id);
+    }
+  };
+
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'critical': return 'fas fa-exclamation-triangle';
+      case 'warning': return 'fas fa-exclamation-circle';
+      case 'info': return 'fas fa-info-circle';
+      case 'update': return 'fas fa-sync-alt';
+      case 'alert': return 'fas fa-bell';
+      default: return 'fas fa-bell';
+    }
+  };
+
+  const formatTime = (timestamp) => {
+    return timestamp.toLocaleString();
+  };
 
   return (
     <section id="profile" className="page-section active">
       <div className="page-header">
         <div>
           <h1 className="page-title">User Profile</h1>
-          <p className="page-subtitle">Manage your account settings and preferences</p>
+          <p className="page-subtitle">Manage your account settings and view your notifications</p>
+        </div>
+        <div className="action-buttons">
+          {!editing ? (
+            <button className="btn btn-primary" onClick={() => setEditing(true)}>
+              <i className="fas fa-edit"></i> Edit Profile
+            </button>
+          ) : (
+            <>
+              <button className="btn btn-outline" onClick={() => setEditing(false)}>
+                <i className="fas fa-times"></i> Cancel
+              </button>
+              <button className="btn btn-primary" onClick={handleSave}>
+                <i className="fas fa-save"></i> Save Changes
+              </button>
+            </>
+          )}
         </div>
       </div>
-      
-      <div className="card">
-        <div className="card-header">
-          <h2 className="card-title"><i className="fas fa-user card-icon"></i> Profile Information</h2>
-        </div>
-        <div className="card-content">
-          <p>User profile functionality will be loaded here.</p>
-          <p>Current user: {user?.username || 'Not logged in'}</p>
-        </div>
+
+      {/* Profile Tabs */}
+      <div className="profile-tabs">
+        <button 
+          className={`tab-button ${activeTab === 'profile' ? 'active' : ''}`}
+          onClick={() => setActiveTab('profile')}
+        >
+          <i className="fas fa-user"></i> Profile Information
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'notifications' ? 'active' : ''}`}
+          onClick={() => setActiveTab('notifications')}
+        >
+          <i className="fas fa-bell"></i> My Notifications ({notifications?.filter(n => !n.read).length || 0})
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'security' ? 'active' : ''}`}
+          onClick={() => setActiveTab('security')}
+        >
+          <i className="fas fa-shield-alt"></i> Security Settings
+        </button>
       </div>
+
+      {/* Profile Information Tab */}
+      {activeTab === 'profile' && (
+        <div className="profile-content">
+          <div className="profile-grid">
+            <div className="profile-main">
+              <div className="card">
+                <div className="card-header">
+                  <h2 className="card-title">
+                    <i className="fas fa-user card-icon"></i> Personal Information
+                  </h2>
+                </div>
+                <div className="card-content">
+                  <div className="profile-form">
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Username</label>
+                        <input 
+                          type="text" 
+                          value={formData.username} 
+                          disabled={!editing}
+                          onChange={(e) => setFormData({...formData, username: e.target.value})}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Full Name</label>
+                        <input 
+                          type="text" 
+                          value={formData.fullName} 
+                          disabled={!editing}
+                          onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                        />
+                      </div>
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Email</label>
+                        <input 
+                          type="email" 
+                          value={formData.email} 
+                          disabled={!editing}
+                          onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Phone</label>
+                        <input 
+                          type="tel" 
+                          value={formData.phone} 
+                          disabled={!editing}
+                          placeholder="Enter phone number"
+                          onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                        />
+                      </div>
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Organization</label>
+                        <input 
+                          type="text" 
+                          value={formData.organization} 
+                          disabled={!editing}
+                          placeholder="Enter organization"
+                          onChange={(e) => setFormData({...formData, organization: e.target.value})}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Department</label>
+                        <input 
+                          type="text" 
+                          value={formData.department} 
+                          disabled={!editing}
+                          placeholder="Enter department"
+                          onChange={(e) => setFormData({...formData, department: e.target.value})}
+                        />
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label>Role</label>
+                      <input 
+                        type="text" 
+                        value={formData.role} 
+                        disabled
+                      />
+                      <small className="form-hint">Role is managed by administrators</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="profile-sidebar">
+              <div className="card">
+                <div className="card-header">
+                  <h2 className="card-title">
+                    <i className="fas fa-chart-bar card-icon"></i> Account Summary
+                  </h2>
+                </div>
+                <div className="card-content">
+                  <div className="account-stats">
+                    <div className="stat-item">
+                      <div className="stat-label">Account Status</div>
+                      <div className="stat-value">
+                        <span className="badge badge-active">Active</span>
+                      </div>
+                    </div>
+                    <div className="stat-item">
+                      <div className="stat-label">Last Login</div>
+                      <div className="stat-value">Just now</div>
+                    </div>
+                    <div className="stat-item">
+                      <div className="stat-label">Notifications</div>
+                      <div className="stat-value">{notifications?.filter(n => !n.read).length || 0} unread</div>
+                    </div>
+                    <div className="stat-item">
+                      <div className="stat-label">Member Since</div>
+                      <div className="stat-value">January 2025</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notifications Tab */}
+      {activeTab === 'notifications' && (
+        <div className="profile-content">
+          <div className="card">
+            <div className="card-header">
+              <h2 className="card-title">
+                <i className="fas fa-bell card-icon"></i> My Notifications
+              </h2>
+              <div className="card-actions">
+                <button className="btn btn-outline btn-sm">Mark All Read</button>
+              </div>
+            </div>
+            <div className="card-content">
+              {notifications && notifications.length > 0 ? (
+                <div className="notifications-list-profile">
+                  {notifications.map(notification => (
+                    <div 
+                      key={notification.id}
+                      className={`notification-item-profile ${notification.read ? 'read' : 'unread'}`}
+                      onClick={() => handleNotificationClick(notification)}
+                    >
+                      <div className="notification-icon-profile">
+                        <i className={getNotificationIcon(notification.type)}></i>
+                      </div>
+                      <div className="notification-content-profile">
+                        <div className="notification-header">
+                          <div className="notification-title">{notification.title}</div>
+                          <div className="notification-time">{formatTime(notification.timestamp)}</div>
+                        </div>
+                        <div className="notification-message">{notification.message}</div>
+                        {!notification.read && <div className="unread-indicator"></div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="no-notifications-profile">
+                  <i className="fas fa-bell-slash"></i>
+                  <p>No notifications yet</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Security Settings Tab */}
+      {activeTab === 'security' && (
+        <div className="profile-content">
+          <div className="card">
+            <div className="card-header">
+              <h2 className="card-title">
+                <i className="fas fa-shield-alt card-icon"></i> Security Settings
+              </h2>
+            </div>
+            <div className="card-content">
+              <div className="security-section">
+                <h3>Password</h3>
+                <button className="btn btn-outline">
+                  <i className="fas fa-key"></i> Change Password
+                </button>
+              </div>
+              <div className="security-section">
+                <h3>Two-Factor Authentication</h3>
+                <p className="text-muted">Add an extra layer of security to your account</p>
+                <button className="btn btn-primary">
+                  <i className="fas fa-mobile-alt"></i> Setup 2FA
+                </button>
+              </div>
+              <div className="security-section">
+                <h3>Active Sessions</h3>
+                <p className="text-muted">Manage your active login sessions</p>
+                <div className="session-item">
+                  <div className="session-info">
+                    <div className="session-device">Current Session</div>
+                    <div className="session-details">Windows • Chrome • Just now</div>
+                  </div>
+                  <span className="badge badge-active">Active</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -2331,27 +2750,342 @@ function TrustManagementDetailed({ active }) {
   );
 }
 
-// User Management Component - Simplified for now
-function UserManagement({ active }) {
+// User Management Component - Enhanced for admins only
+function UserManagement({ active, isAdmin, currentUser }) {
+  const [users, setUsers] = useState([
+    {
+      id: 1,
+      username: 'admin@crisp.za',
+      fullName: 'System Administrator',
+      organization: 'CRISP',
+      role: 'Administrator',
+      status: 'Active',
+      lastLogin: '2025-07-12 14:30',
+      created: '2025-01-15'
+    },
+    {
+      id: 2,
+      username: 'analyst@uct.ac.za',
+      fullName: 'Security Analyst',
+      organization: 'University of Cape Town',
+      role: 'Analyst',
+      status: 'Active',
+      lastLogin: '2025-07-12 09:15',
+      created: '2025-02-20'
+    },
+    {
+      id: 3,
+      username: 'researcher@sun.ac.za',
+      fullName: 'Threat Researcher',
+      organization: 'Stellenbosch University',
+      role: 'User',
+      status: 'Active',
+      lastLogin: '2025-07-11 16:45',
+      created: '2025-03-10'
+    },
+    {
+      id: 4,
+      username: 'operator@wits.ac.za',
+      fullName: 'SOC Operator',
+      organization: 'University of the Witwatersrand',
+      role: 'User',
+      status: 'Inactive',
+      lastLogin: '2025-07-05 11:20',
+      created: '2025-04-01'
+    }
+  ]);
+  
+  const [filteredUsers, setFilteredUsers] = useState(users);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRole, setSelectedRole] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [showNewUserModal, setShowNewUserModal] = useState(false);
+  
   if (!active) return null;
+  
+  // Access control - only admins can access user management
+  if (!isAdmin) {
+    return (
+      <section id="user-management" className="page-section active">
+        <div className="access-denied">
+          <div className="access-denied-content">
+            <i className="fas fa-shield-alt"></i>
+            <h2>Access Denied</h2>
+            <p>You don't have permission to access this page.</p>
+            <p>Only administrators can manage users.</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Filter users based on search and filters
+  useEffect(() => {
+    let filtered = users.filter(user => {
+      const matchesSearch = user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           user.organization.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesRole = selectedRole === 'all' || user.role === selectedRole;
+      const matchesStatus = selectedStatus === 'all' || user.status === selectedStatus;
+      
+      return matchesSearch && matchesRole && matchesStatus;
+    });
+    
+    setFilteredUsers(filtered);
+  }, [searchTerm, selectedRole, selectedStatus, users]);
+
+  const handleUserAction = (action, userId) => {
+    switch (action) {
+      case 'edit':
+        alert(`Edit user ${userId} - Feature coming soon!`);
+        break;
+      case 'delete':
+        if (confirm('Are you sure you want to delete this user?')) {
+          setUsers(prev => prev.filter(user => user.id !== userId));
+          alert('User deleted successfully!');
+        }
+        break;
+      case 'activate':
+        setUsers(prev => prev.map(user => 
+          user.id === userId ? { ...user, status: 'Active' } : user
+        ));
+        break;
+      case 'deactivate':
+        setUsers(prev => prev.map(user => 
+          user.id === userId ? { ...user, status: 'Inactive' } : user
+        ));
+        break;
+      default:
+        break;
+    }
+  };
 
   return (
     <section id="user-management" className="page-section active">
       <div className="page-header">
         <div>
           <h1 className="page-title">User Management</h1>
-          <p className="page-subtitle">Manage system users and permissions</p>
+          <p className="page-subtitle">Manage system users, roles, and permissions</p>
+        </div>
+        <div className="action-buttons">
+          <button className="btn btn-outline">
+            <i className="fas fa-download"></i> Export Users
+          </button>
+          <button 
+            className="btn btn-primary"
+            onClick={() => setShowNewUserModal(true)}
+          >
+            <i className="fas fa-user-plus"></i> Add New User
+          </button>
         </div>
       </div>
-      
+
+      {/* User Statistics */}
+      <div className="user-stats-grid">
+        <div className="stat-card">
+          <div className="stat-icon">
+            <i className="fas fa-users"></i>
+          </div>
+          <div className="stat-content">
+            <div className="stat-value">{users.length}</div>
+            <div className="stat-label">Total Users</div>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon">
+            <i className="fas fa-user-check"></i>
+          </div>
+          <div className="stat-content">
+            <div className="stat-value">{users.filter(u => u.status === 'Active').length}</div>
+            <div className="stat-label">Active Users</div>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon">
+            <i className="fas fa-shield-alt"></i>
+          </div>
+          <div className="stat-content">
+            <div className="stat-value">{users.filter(u => u.role === 'Administrator').length}</div>
+            <div className="stat-label">Administrators</div>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon">
+            <i className="fas fa-building"></i>
+          </div>
+          <div className="stat-content">
+            <div className="stat-value">{new Set(users.map(u => u.organization)).size}</div>
+            <div className="stat-label">Organizations</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters and Search */}
+      <div className="card">
+        <div className="card-content">
+          <div className="user-filters">
+            <div className="filter-group">
+              <input
+                type="text"
+                placeholder="Search users..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="search-input"
+              />
+            </div>
+            <div className="filter-group">
+              <select 
+                value={selectedRole} 
+                onChange={(e) => setSelectedRole(e.target.value)}
+                className="filter-select"
+              >
+                <option value="all">All Roles</option>
+                <option value="Administrator">Administrator</option>
+                <option value="Analyst">Analyst</option>
+                <option value="User">User</option>
+              </select>
+            </div>
+            <div className="filter-group">
+              <select 
+                value={selectedStatus} 
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="filter-select"
+              >
+                <option value="all">All Status</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+            <button className="btn btn-outline" onClick={() => {
+              setSearchTerm('');
+              setSelectedRole('all');
+              setSelectedStatus('all');
+            }}>
+              <i className="fas fa-times"></i> Clear Filters
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Users Table */}
       <div className="card">
         <div className="card-header">
-          <h2 className="card-title"><i className="fas fa-users card-icon"></i> System Users</h2>
+          <h2 className="card-title">
+            <i className="fas fa-users card-icon"></i> 
+            System Users ({filteredUsers.length})
+          </h2>
         </div>
         <div className="card-content">
-          <p>User management functionality will be loaded here.</p>
+          {filteredUsers.length > 0 ? (
+            <div className="table-responsive">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Organization</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Last Login</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.map(user => (
+                    <tr key={user.id}>
+                      <td>
+                        <div className="user-cell">
+                          <div className="user-avatar">{user.fullName.charAt(0)}</div>
+                          <div className="user-details">
+                            <div className="user-name">{user.fullName}</div>
+                            <div className="user-email">{user.username}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>{user.organization}</td>
+                      <td>
+                        <span className={`role-badge role-${user.role.toLowerCase()}`}>
+                          {user.role}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`badge ${user.status === 'Active' ? 'badge-active' : 'badge-inactive'}`}>
+                          {user.status}
+                        </span>
+                      </td>
+                      <td>{user.lastLogin}</td>
+                      <td>
+                        <div className="action-buttons-table">
+                          <button 
+                            className="btn-icon" 
+                            title="Edit User"
+                            onClick={() => handleUserAction('edit', user.id)}
+                          >
+                            <i className="fas fa-edit"></i>
+                          </button>
+                          {user.status === 'Active' ? (
+                            <button 
+                              className="btn-icon btn-warning" 
+                              title="Deactivate User"
+                              onClick={() => handleUserAction('deactivate', user.id)}
+                            >
+                              <i className="fas fa-user-slash"></i>
+                            </button>
+                          ) : (
+                            <button 
+                              className="btn-icon btn-success" 
+                              title="Activate User"
+                              onClick={() => handleUserAction('activate', user.id)}
+                            >
+                              <i className="fas fa-user-check"></i>
+                            </button>
+                          )}
+                          <button 
+                            className="btn-icon btn-danger" 
+                            title="Delete User"
+                            onClick={() => handleUserAction('delete', user.id)}
+                          >
+                            <i className="fas fa-trash"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="no-users">
+              <i className="fas fa-users"></i>
+              <p>No users found matching your criteria</p>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* New User Modal Placeholder */}
+      {showNewUserModal && (
+        <div className="modal-overlay" onClick={() => setShowNewUserModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add New User</h3>
+              <button className="close-btn" onClick={() => setShowNewUserModal(false)}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="modal-body">
+              <p>New user registration form coming soon!</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={() => setShowNewUserModal(false)}>
+                Cancel
+              </button>
+              <button className="btn btn-primary">
+                Create User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -2547,6 +3281,658 @@ function AlertsSystem({ active }) {
         </div>
         <div className="card-content">
           <p>Alerts system functionality will be loaded here.</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Notifications Component - Comprehensive notification management
+function Notifications({ active, notifications, onNotificationRead }) {
+  const [selectedNotifications, setSelectedNotifications] = useState([]);
+  const [filterType, setFilterType] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
+
+  // Filter notifications based on type
+  const filteredNotifications = notifications.filter(notification => {
+    if (filterType === 'all') return true;
+    if (filterType === 'unread') return !notification.read;
+    if (filterType === 'read') return notification.read;
+    return notification.type === filterType;
+  });
+
+  // Sort notifications
+  const sortedNotifications = [...filteredNotifications].sort((a, b) => {
+    if (sortBy === 'newest') return new Date(b.timestamp) - new Date(a.timestamp);
+    if (sortBy === 'oldest') return new Date(a.timestamp) - new Date(b.timestamp);
+    if (sortBy === 'priority') {
+      const priorityOrder = { critical: 4, alert: 3, warning: 2, info: 1, update: 1 };
+      return priorityOrder[b.type] - priorityOrder[a.type];
+    }
+    return 0;
+  });
+
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'critical': return 'fas fa-exclamation-triangle text-red';
+      case 'alert': return 'fas fa-bell text-orange';
+      case 'warning': return 'fas fa-exclamation-circle text-yellow';
+      case 'info': return 'fas fa-info-circle text-blue';
+      case 'update': return 'fas fa-sync-alt text-green';
+      default: return 'fas fa-bell';
+    }
+  };
+
+  const formatTime = (timestamp) => {
+    const now = new Date();
+    const diff = now - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
+  };
+
+  if (!active) return null;
+
+  return (
+    <section id="notifications" className="page-section active">
+      <div className="page-header">
+        <h1><i className="fas fa-bell"></i> Notifications</h1>
+        <p>Manage your security alerts and system notifications</p>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <h2>All Notifications ({notifications.length})</h2>
+          <div className="filter-controls">
+            <select value={filterType} onChange={(e) => setFilterType(e.target.value)}>
+              <option value="all">All</option>
+              <option value="unread">Unread Only</option>
+              <option value="critical">Critical</option>
+              <option value="warning">Warnings</option>
+              <option value="info">Info</option>
+            </select>
+          </div>
+        </div>
+        <div className="card-content">
+          <div className="notifications-list">
+            {sortedNotifications.length > 0 ? (
+              sortedNotifications.map(notification => (
+                <div 
+                  key={notification.id}
+                  className={`notification-item ${notification.read ? 'read' : 'unread'}`}
+                >
+                  <div className="notification-icon">
+                    <i className={getNotificationIcon(notification.type)}></i>
+                  </div>
+                  <div className="notification-content">
+                    <div className="notification-title">{notification.title}</div>
+                    <div className="notification-message">{notification.message}</div>
+                    <div className="notification-time">{formatTime(notification.timestamp)}</div>
+                    {!notification.read && (
+                      <button 
+                        className="btn btn-xs btn-outline"
+                        onClick={() => onNotificationRead(notification.id)}
+                      >
+                        Mark as Read
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="no-notifications">
+                <i className="fas fa-bell-slash"></i>
+                <p>No notifications found</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Account Settings Component
+function AccountSettings({ active, user }) {
+  const [formData, setFormData] = useState({
+    username: user?.username || '',
+    email: user?.email || user?.username || '',
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
+    department: user?.department || '',
+    phone: user?.phone || '',
+    timezone: user?.timezone || 'UTC',
+    language: user?.language || 'en',
+    notifications: {
+      email: true,
+      push: true,
+      security: true,
+      updates: false
+    }
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // In a real app, this would call an API to update the user
+    alert('Account settings updated successfully!');
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      setFormData(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: type === 'checkbox' ? checked : value
+        }
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      }));
+    }
+  };
+
+  if (!active) return null;
+
+  return (
+    <section id="account-settings" className="page-section active">
+      <div className="page-header">
+        <h1><i className="fas fa-cog"></i> Account Settings</h1>
+        <p>Manage your account preferences and security settings</p>
+      </div>
+
+      <div className="settings-container">
+        <div className="settings-nav">
+          <div className="nav-item active">
+            <i className="fas fa-user"></i>
+            Profile Information
+          </div>
+          <div className="nav-item">
+            <i className="fas fa-bell"></i>
+            Notification Preferences
+          </div>
+          <div className="nav-item">
+            <i className="fas fa-shield-alt"></i>
+            Security Settings
+          </div>
+        </div>
+
+        <div className="settings-content">
+          <form onSubmit={handleSubmit}>
+            <div className="card">
+              <div className="card-header">
+                <h3>Profile Information</h3>
+              </div>
+              <div className="card-content">
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>Username</label>
+                    <input
+                      type="text"
+                      name="username"
+                      value={formData.username}
+                      onChange={handleInputChange}
+                      disabled
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Email</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>First Name</label>
+                    <input
+                      type="text"
+                      name="firstName"
+                      value={formData.firstName}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Last Name</label>
+                    <input
+                      type="text"
+                      name="lastName"
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Department</label>
+                    <input
+                      type="text"
+                      name="department"
+                      value={formData.department}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Phone</label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="card">
+              <div className="card-header">
+                <h3>Notification Preferences</h3>
+              </div>
+              <div className="card-content">
+                <div className="checkbox-group">
+                  <label className="checkbox-item">
+                    <input
+                      type="checkbox"
+                      name="notifications.email"
+                      checked={formData.notifications.email}
+                      onChange={handleInputChange}
+                    />
+                    Email notifications
+                  </label>
+                  <label className="checkbox-item">
+                    <input
+                      type="checkbox"
+                      name="notifications.push"
+                      checked={formData.notifications.push}
+                      onChange={handleInputChange}
+                    />
+                    Push notifications
+                  </label>
+                  <label className="checkbox-item">
+                    <input
+                      type="checkbox"
+                      name="notifications.security"
+                      checked={formData.notifications.security}
+                      onChange={handleInputChange}
+                    />
+                    Security alerts
+                  </label>
+                  <label className="checkbox-item">
+                    <input
+                      type="checkbox"
+                      name="notifications.updates"
+                      checked={formData.notifications.updates}
+                      onChange={handleInputChange}
+                    />
+                    Product updates
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="form-actions">
+              <button type="submit" className="btn btn-primary">
+                Save Changes
+              </button>
+              <button type="button" className="btn btn-outline">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Admin Settings Component
+function AdminSettings({ active }) {
+  const [settings, setSettings] = useState({
+    systemMaintenance: false,
+    allowRegistrations: true,
+    sessionTimeout: 30,
+    maxFailedLogins: 5,
+    passwordPolicy: {
+      minLength: 8,
+      requireUppercase: true,
+      requireNumbers: true,
+      requireSymbols: true
+    },
+    emailSettings: {
+      smtpServer: 'smtp.company.com',
+      smtpPort: 587,
+      useSSL: true,
+      fromAddress: 'noreply@crisp.com'
+    }
+  });
+
+  const handleSettingChange = (path, value) => {
+    setSettings(prev => {
+      const newSettings = { ...prev };
+      const keys = path.split('.');
+      let current = newSettings;
+      
+      for (let i = 0; i < keys.length - 1; i++) {
+        current = current[keys[i]];
+      }
+      
+      current[keys[keys.length - 1]] = value;
+      return newSettings;
+    });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    alert('Admin settings updated successfully!');
+  };
+
+  if (!active) return null;
+
+  return (
+    <section id="admin-settings" className="page-section active">
+      <div className="page-header">
+        <h1><i className="fas fa-shield-alt"></i> Admin Settings</h1>
+        <p>Configure system-wide settings and security policies</p>
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        <div className="card">
+          <div className="card-header">
+            <h3>System Configuration</h3>
+          </div>
+          <div className="card-content">
+            <div className="form-group">
+              <label className="checkbox-item">
+                <input
+                  type="checkbox"
+                  checked={settings.systemMaintenance}
+                  onChange={(e) => handleSettingChange('systemMaintenance', e.target.checked)}
+                />
+                System Maintenance Mode
+              </label>
+            </div>
+            <div className="form-group">
+              <label className="checkbox-item">
+                <input
+                  type="checkbox"
+                  checked={settings.allowRegistrations}
+                  onChange={(e) => handleSettingChange('allowRegistrations', e.target.checked)}
+                />
+                Allow User Registrations
+              </label>
+            </div>
+            <div className="form-group">
+              <label>Session Timeout (minutes)</label>
+              <input
+                type="number"
+                value={settings.sessionTimeout}
+                onChange={(e) => handleSettingChange('sessionTimeout', parseInt(e.target.value))}
+                min="5"
+                max="120"
+              />
+            </div>
+            <div className="form-group">
+              <label>Max Failed Login Attempts</label>
+              <input
+                type="number"
+                value={settings.maxFailedLogins}
+                onChange={(e) => handleSettingChange('maxFailedLogins', parseInt(e.target.value))}
+                min="3"
+                max="10"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-header">
+            <h3>Password Policy</h3>
+          </div>
+          <div className="card-content">
+            <div className="form-group">
+              <label>Minimum Password Length</label>
+              <input
+                type="number"
+                value={settings.passwordPolicy.minLength}
+                onChange={(e) => handleSettingChange('passwordPolicy.minLength', parseInt(e.target.value))}
+                min="6"
+                max="32"
+              />
+            </div>
+            <div className="checkbox-group">
+              <label className="checkbox-item">
+                <input
+                  type="checkbox"
+                  checked={settings.passwordPolicy.requireUppercase}
+                  onChange={(e) => handleSettingChange('passwordPolicy.requireUppercase', e.target.checked)}
+                />
+                Require uppercase letters
+              </label>
+              <label className="checkbox-item">
+                <input
+                  type="checkbox"
+                  checked={settings.passwordPolicy.requireNumbers}
+                  onChange={(e) => handleSettingChange('passwordPolicy.requireNumbers', e.target.checked)}
+                />
+                Require numbers
+              </label>
+              <label className="checkbox-item">
+                <input
+                  type="checkbox"
+                  checked={settings.passwordPolicy.requireSymbols}
+                  onChange={(e) => handleSettingChange('passwordPolicy.requireSymbols', e.target.checked)}
+                />
+                Require special characters
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div className="form-actions">
+          <button type="submit" className="btn btn-primary">
+            Save Settings
+          </button>
+          <button type="button" className="btn btn-outline">
+            Reset to Defaults
+          </button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
+// Register User Component (Admin only)
+function RegisterUser({ active }) {
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    firstName: '',
+    lastName: '',
+    department: '',
+    role: 'user',
+    password: '',
+    confirmPassword: '',
+    sendWelcomeEmail: true
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (formData.password !== formData.confirmPassword) {
+      alert('Passwords do not match!');
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      // In a real app, this would call an API to register the user
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      alert(`User ${formData.username} registered successfully!`);
+      
+      // Reset form
+      setFormData({
+        username: '',
+        email: '',
+        firstName: '',
+        lastName: '',
+        department: '',
+        role: 'user',
+        password: '',
+        confirmPassword: '',
+        sendWelcomeEmail: true
+      });
+    } catch (error) {
+      alert('Failed to register user. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!active) return null;
+
+  return (
+    <section id="register-user" className="page-section active">
+      <div className="page-header">
+        <h1><i className="fas fa-user-plus"></i> Register New User</h1>
+        <p>Add a new user to the CRISP system</p>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <h3>User Information</h3>
+        </div>
+        <div className="card-content">
+          <form onSubmit={handleSubmit}>
+            <div className="form-grid">
+              <div className="form-group">
+                <label>Username *</label>
+                <input
+                  type="text"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Email *</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>First Name</label>
+                <input
+                  type="text"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div className="form-group">
+                <label>Last Name</label>
+                <input
+                  type="text"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div className="form-group">
+                <label>Department</label>
+                <input
+                  type="text"
+                  name="department"
+                  value={formData.department}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div className="form-group">
+                <label>Role *</label>
+                <select
+                  name="role"
+                  value={formData.role}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="user">User</option>
+                  <option value="admin">Administrator</option>
+                  <option value="analyst">Security Analyst</option>
+                  <option value="viewer">Read-Only Viewer</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Password *</label>
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  required
+                  minLength="8"
+                />
+              </div>
+              <div className="form-group">
+                <label>Confirm Password *</label>
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  required
+                  minLength="8"
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="checkbox-item">
+                <input
+                  type="checkbox"
+                  name="sendWelcomeEmail"
+                  checked={formData.sendWelcomeEmail}
+                  onChange={handleInputChange}
+                />
+                Send welcome email to user
+              </label>
+            </div>
+
+            <div className="form-actions">
+              <button 
+                type="submit" 
+                className="btn btn-primary"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Registering...' : 'Register User'}
+              </button>
+              <button type="button" className="btn btn-outline">
+                Cancel
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </section>
