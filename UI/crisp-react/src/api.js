@@ -10,9 +10,16 @@ const handleResponse = async (response) => {
   if (!response.ok) {
     // If response has a detail message, use it, otherwise use a generic error
     const error = (data && data.detail) || 
+                  (data && data.message) ||
                   (data && data.non_field_errors && data.non_field_errors[0]) || 
                   response.statusText || 
                   'Something went wrong';
+    return Promise.reject(error);
+  }
+  
+  // Check for UserTrust success field
+  if (data.success === false) {
+    const error = data.message || 'Authentication failed';
     return Promise.reject(error);
   }
   
@@ -29,11 +36,11 @@ export const loginUser = async (username, password) => {
   
   const data = await handleResponse(response);
   
-  // Save auth data to localStorage
-  if (data.token) {
+  // Save auth data to localStorage - UserTrust format
+  if (data.success && data.tokens) {
     localStorage.setItem('auth', JSON.stringify({
-      token: data.token,
-      refresh: data.refresh,
+      token: data.tokens.access,
+      refresh: data.tokens.refresh,
       user: data.user
     }));
   }
@@ -43,26 +50,28 @@ export const loginUser = async (username, password) => {
 
 // Register user API function
 export const registerUser = async (username, password, fullName, organization, role) => {
-  const response = await fetch(`${API_URL}users/create/`, {
+  const [firstName, lastName] = fullName.split(' ', 2);
+  
+  const response = await fetch(`${API_URL}auth/register/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       username,
       password,
-      confirm_password: password,
-      full_name: fullName,
-      organization,
-      role
+      email: `${username}@crisp.local`,
+      first_name: firstName || '',
+      last_name: lastName || '',
+      role: role || 'viewer'
     })
   });
   
   const data = await handleResponse(response);
   
-  // Save auth data to localStorage if token is returned
-  if (data.token) {
+  // Save auth data to localStorage if tokens are returned
+  if (data.success && data.tokens) {
     localStorage.setItem('auth', JSON.stringify({
-      token: data.token,
-      refresh: data.refresh,
+      token: data.tokens.access,
+      refresh: data.tokens.refresh,
       user: data.user
     }));
   }
@@ -103,14 +112,14 @@ export const refreshToken = async () => {
   const response = await fetch(`${API_URL}auth/refresh/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh: auth.refresh })
+    body: JSON.stringify({ refresh_token: auth.refresh })
   });
   
   const data = await handleResponse(response);
   
-  if (data.access) {
+  if (data.success && data.tokens && data.tokens.access) {
     // Update stored token
-    auth.token = data.access;
+    auth.token = data.tokens.access;
     localStorage.setItem('auth', JSON.stringify(auth));
   }
   

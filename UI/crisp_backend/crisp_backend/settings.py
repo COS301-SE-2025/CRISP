@@ -63,8 +63,12 @@ WSGI_APPLICATION = 'crisp_backend.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'crisp_ui_db',
+        'USER': 'crisp_user',
+        'PASSWORD': 'crisp_password',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 

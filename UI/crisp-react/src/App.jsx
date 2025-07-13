@@ -75,9 +75,10 @@ function Header({ user, onLogout, isAdmin }) {
 
   return (
     <header>
-      <div className="container header-container">
+      <div className="header-container">
         <a href="#" className="logo">
-                <img src={logoImage} alt="CRISP Logo" className="logo-image" />      </a>
+          <img src={logoImage} alt="CRISP Logo" className="logo-image" />
+        </a>
         <div className="nav-actions">
           <div className="search-bar">
             <span className="search-icon"><i className="fas fa-search"></i></span>
@@ -116,7 +117,7 @@ function Header({ user, onLogout, isAdmin }) {
 function MainNav({ activePage, showPage }) {
   return (
     <nav className="main-nav">
-      <div className="container nav-container">
+      <div className="nav-container">
         <ul className="nav-links">
           <li>
             <a 

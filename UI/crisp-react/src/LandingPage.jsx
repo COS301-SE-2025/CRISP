@@ -1,10 +1,262 @@
-import React from 'react';
-import Header from './components/Header';
-import Hero from './components/Hero';
-import Features from './components/Features';
-import Stats from './components/Stats';
-import CTA from './components/CTA';
-import Footer from './components/Footer';
+import React, { useState } from 'react';
+
+function Header() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  return (
+    <header className="header">
+      <div className="header-container">
+        <a href="#" className="logo">
+          <span className="logo-icon">🛡️</span>
+          CRISP
+        </a>
+        <nav className={`nav ${isMenuOpen ? 'nav-open' : ''}`}>
+          <ul className="nav-links">
+            <li><a href="#features">Features</a></li>
+            <li><a href="#benefits">Benefits</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
+        </nav>
+        <div className="header-actions">
+          <a href="#" className="btn btn-outline">Request Demo</a>
+          <a href="#" className="btn btn-primary">Get Started</a>
+        </div>
+        <button 
+          className="mobile-menu-toggle"
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+        >
+          ☰
+        </button>
+      </div>
+    </header>
+  );
+}
+
+function Hero() {
+  return (
+    <section className="hero">
+      <div className="hero-container">
+        <div className="hero-content">
+          <h1 className="hero-title">
+            Advanced <span className="highlight">Cyber Defense</span> for Educational Institutions
+          </h1>
+          <p className="hero-description">
+            CRISP provides comprehensive threat intelligence sharing capabilities 
+            designed specifically for educational institutions to enhance their cybersecurity posture.
+          </p>
+          <div className="hero-actions">
+            <a href="#" className="btn btn-primary btn-large">Get Started Free</a>
+            <a href="#" className="btn btn-outline btn-large">Watch Demo</a>
+          </div>
+        </div>
+        <div className="dashboard-preview">
+          <div className="dashboard-header">
+            <div className="dashboard-logo">
+              <span>🛡️</span>
+              CRISP Dashboard
+            </div>
+            <div className="dashboard-status">
+              <span className="status-dot"></span>
+              Live
+            </div>
+          </div>
+          <div className="dashboard-stats">
+            <div className="stat-card">
+              <div className="stat-icon threat-icon">⚡</div>
+              <div>
+                <div className="stat-number">247</div>
+                <div className="stat-label">Active Threats</div>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon institution-icon">🏫</div>
+              <div>
+                <div className="stat-number">89</div>
+                <div className="stat-label">Institutions</div>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon sharing-icon">🔄</div>
+              <div>
+                <div className="stat-number">1.2K</div>
+                <div className="stat-label">Intel Shared</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Stats() {
+  return (
+    <section className="stats">
+      <div className="container">
+        <div className="stats-grid">
+          <div className="stat-item">
+            <div className="stat-icon">📊</div>
+            <div className="stat-number">99.9%</div>
+            <div className="stat-label">System Uptime</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-icon">🗃️</div>
+            <div className="stat-number">500K+</div>
+            <div className="stat-label">Threat Indicators Shared</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-icon">🎓</div>
+            <div className="stat-number">50+</div>
+            <div className="stat-label">Educational Institutions</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-icon">👁️</div>
+            <div className="stat-number">24/7</div>
+            <div className="stat-label">Real-time Monitoring</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Features() {
+  return (
+    <section className="features">
+      <div className="container">
+        <div className="section-header">
+          <h2>Powerful Features for Cyber Defense</h2>
+          <p>CRISP provides comprehensive threat intelligence sharing capabilities designed specifically for educational institutions</p>
+        </div>
+        <div className="features-grid">
+          <div className="feature-card">
+            <div className="feature-icon">🛡️</div>
+            <h3 className="feature-title">STIX/TAXII Compliance</h3>
+            <p className="feature-description">
+              Full compatibility with industry-standard threat intelligence formats and sharing protocols.
+            </p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">🏛️</div>
+            <h3 className="feature-title">Advanced Anonymization</h3>
+            <p className="feature-description">
+              Protect sensitive institutional data while preserving analytical value of threat intelligence.
+            </p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">📡</div>
+            <h3 className="feature-title">Real-time Threat Feeds</h3>
+            <p className="feature-description">
+              Automated consumption and distribution of threat intelligence from multiple sources.
+            </p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">🔔</div>
+            <h3 className="feature-title">Intelligent Alerting</h3>
+            <p className="feature-description">
+              Customizable alerts for high-priority threats targeting educational institutions.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CTA() {
+  return (
+    <section className="cta">
+      <div className="container">
+        <div className="cta-content">
+          <h2>Ready to Strengthen Your Cyber Defense?</h2>
+          <p>Join the growing community of educational institutions protecting themselves with CRISP's advanced threat intelligence sharing platform.</p>
+          <div className="cta-actions">
+            <a href="#" className="btn btn-primary btn-large">Start Free Trial</a>
+            <a href="#" className="btn btn-outline btn-large">Contact Sales</a>
+          </div>
+          <div className="cta-features">
+            <div className="cta-feature">
+              <span>✓</span>
+              30-day free trial
+            </div>
+            <div className="cta-feature">
+              <span>✓</span>
+              No credit card required
+            </div>
+            <div className="cta-feature">
+              <span>✓</span>
+              24/7 support included
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="footer">
+      <div className="container">
+        <div className="footer-content">
+          <div>
+            <div className="footer-logo">
+              <span className="logo-icon">🛡️</span>
+              CRISP
+            </div>
+            <p className="footer-description">
+              Advanced cybersecurity threat intelligence sharing platform designed specifically for educational institutions.
+            </p>
+            <div className="footer-social">
+              <a href="#">📘</a>
+              <a href="#">🐦</a>
+              <a href="#">💼</a>
+              <a href="#">📧</a>
+            </div>
+          </div>
+          <div className="footer-section">
+            <h4>Product</h4>
+            <ul>
+              <li><a href="#">Features</a></li>
+              <li><a href="#">Pricing</a></li>
+              <li><a href="#">Security</a></li>
+              <li><a href="#">Integrations</a></li>
+            </ul>
+          </div>
+          <div className="footer-section">
+            <h4>Resources</h4>
+            <ul>
+              <li><a href="#">Documentation</a></li>
+              <li><a href="#">API Reference</a></li>
+              <li><a href="#">Support</a></li>
+              <li><a href="#">Status</a></li>
+            </ul>
+          </div>
+          <div className="footer-section">
+            <h4>Company</h4>
+            <ul>
+              <li><a href="#">About</a></li>
+              <li><a href="#">Blog</a></li>
+              <li><a href="#">Careers</a></li>
+              <li><a href="#">Contact</a></li>
+            </ul>
+          </div>
+        </div>
+        <div className="footer-bottom">
+          <div className="footer-legal">
+            <p>&copy; 2025 CRISP. All rights reserved.</p>
+            <div className="footer-links">
+              <a href="#">Privacy Policy</a>
+              <a href="#">Terms of Service</a>
+              <a href="#">Cookie Policy</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
 
 function LandingPage() {
   return (
@@ -17,6 +269,13 @@ function LandingPage() {
             box-sizing: border-box;
           }
 
+          html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+          }
+
           body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
               'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
@@ -26,12 +285,19 @@ function LandingPage() {
             background-color: #0a0b0d;
             color: #ffffff;
             line-height: 1.6;
+            overflow-x: hidden;
+          }
+
+          .landing-page {
+            width: 100%;
+            min-height: 100vh;
           }
 
           .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 0 20px;
+            padding: 0 24px;
+            width: 100%;
           }
 
           /* Header Styles */
@@ -44,13 +310,17 @@ function LandingPage() {
             left: 0;
             right: 0;
             z-index: 1000;
+            width: 100%;
           }
 
           .header-container {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1rem 20px;
+            padding: 1rem 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
           }
 
           .logo {
@@ -148,12 +418,13 @@ function LandingPage() {
           /* Hero Section */
           .hero {
             min-height: 100vh;
-            padding: 80px 0;
+            padding: 140px 0 80px;
             background: linear-gradient(135deg, #0a0b0d 0%, #1a1b1e 100%);
             position: relative;
             overflow: hidden;
             display: flex;
             align-items: center;
+            width: 100%;
           }
 
           .hero::before {
@@ -178,7 +449,7 @@ function LandingPage() {
             width: 100%;
             max-width: 1200px;
             margin: 0 auto;
-            padding: 0 20px;
+            padding: 0 24px;
           }
 
           .hero-title {
@@ -303,13 +574,11 @@ function LandingPage() {
             display: flex;
             align-items: center;
             min-height: 60vh;
+            width: 100%;
           }
 
           .stats .container {
             width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
           }
 
           .stats-grid {
@@ -359,13 +628,11 @@ function LandingPage() {
             display: flex;
             align-items: center;
             min-height: 80vh;
+            width: 100%;
           }
 
           .features .container {
             width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
           }
 
           .section-header {
@@ -441,13 +708,11 @@ function LandingPage() {
             display: flex;
             align-items: center;
             min-height: 60vh;
+            width: 100%;
           }
 
           .cta .container {
             width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
           }
 
           .cta-content h2 {
@@ -503,7 +768,7 @@ function LandingPage() {
             color: rgba(255, 255, 255, 0.9);
           }
 
-          .cta-feature i {
+          .cta-feature span {
             color: #ffffff;
           }
 
@@ -512,6 +777,7 @@ function LandingPage() {
             background: #0a0b0d;
             padding: 60px 0 20px;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
           }
 
           .footer-content {
@@ -646,7 +912,7 @@ function LandingPage() {
             
             .hero {
               min-height: 100vh;
-              padding: 100px 0 60px;
+              padding: 120px 0 60px;
             }
             
             .hero-container {

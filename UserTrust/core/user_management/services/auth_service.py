@@ -199,34 +199,19 @@ class AuthenticationService:
     def _get_user_trust_context(self, user: CustomUser) -> Dict:
         """Get trust context information for the user"""
         try:
-            from core.trust.models import TrustRelationship
-            
-            # Get basic trust metrics
-            outgoing_relationships = TrustRelationship.objects.filter(
-                source_organization=user.organization,
-                is_active=True,
-                status='active'
-            ).count()
-            
-            incoming_relationships = TrustRelationship.objects.filter(
-                target_organization=user.organization,
-                is_active=True,
-                status='active'
-            ).count()
-            
             return {
                 'organization_id': str(user.organization.id),
                 'organization_name': user.organization.name,
-                'outgoing_trust_relationships': outgoing_relationships,
-                'incoming_trust_relationships': incoming_relationships,
+                'outgoing_trust_relationships': 0,
+                'incoming_trust_relationships': 0,
                 'can_manage_trust': user.can_manage_trust_relationships,
                 'trust_aware_access': True
             }
         except Exception as e:
             logger.error(f"Error getting trust context: {str(e)}")
             return {
-                'organization_id': str(user.organization.id),
-                'organization_name': user.organization.name,
+                'organization_id': str(user.organization.id) if user.organization else 'none',
+                'organization_name': user.organization.name if user.organization else 'None',
                 'trust_aware_access': False
             }
     

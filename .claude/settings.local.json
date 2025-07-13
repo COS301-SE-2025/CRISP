@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sudo systemctl status:*)",
+      "Bash(sudo:*)",
+      "Bash(PGPASSWORD=crisp_password createdb -h localhost -U crisp_user crisp_ui_db)",
+      "Bash(npm install)",
+      "Bash(npm run dev:*)",
+      "Bash(grep:*)"
+    ],
+    "deny": []
+  }
+}
