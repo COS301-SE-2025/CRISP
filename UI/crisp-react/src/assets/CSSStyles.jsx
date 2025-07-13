@@ -37,7 +37,7 @@ function CSSStyles() {
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 0 24px;
+            padding: 0 20px;
         }
         
         /* Header */
@@ -46,22 +46,14 @@ function CSSStyles() {
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             position: sticky;
             top: 0;
-            z-index: 1001;
-            width: 100%;
-            border-bottom: 1px solid var(--medium-gray);
-            min-height: 70px;
-            display: flex;
-            align-items: center;
+            z-index: 100;
         }
         
         .header-container {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 16px 24px;
-            width: 100%;
-            max-width: 1400px;
-            margin: 0 auto;
+            padding: 15px 0;
         }
         
         .logo {
@@ -87,15 +79,6 @@ function CSSStyles() {
         .logo-text {
             font-weight: 700;
             font-size: 22px;
-        }
-        
-        .logo-image {
-            height: 45px;
-            width: auto;
-            margin-right: 12px;
-            display: block;
-            object-fit: contain;
-            max-width: 200px;
         }
         
         .nav-actions {
@@ -212,17 +195,11 @@ function CSSStyles() {
         nav.main-nav {
             background-color: var(--primary-blue);
             padding: 0;
-            position: relative;
-            z-index: 1000;
         }
         
         .nav-container {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 24px;
         }
         
         .nav-links {
@@ -288,9 +265,7 @@ function CSSStyles() {
         
         /* Main Content */
         .main-content {
-            padding: 24px 0;
-            min-height: calc(100vh - 110px);
-            margin-top: 0;
+            padding: 30px 0;
         }
         
         /* Page Section */
@@ -306,31 +281,25 @@ function CSSStyles() {
         .page-header {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
+            align-items: center;
             margin-bottom: 24px;
-            padding: 8px 0;
         }
         
         .page-title {
-            font-size: 28px;
-            font-weight: 700;
+            font-size: 24px;
+            font-weight: 600;
             color: var(--dark-blue);
-            margin-bottom: 4px;
-            line-height: 1.2;
         }
         
         .page-subtitle {
             color: var(--text-muted);
-            margin-top: 6px;
-            font-size: 16px;
-            line-height: 1.4;
+            margin-top: 4px;
+            font-size: 15px;
         }
         
         .action-buttons {
             display: flex;
             gap: 12px;
-            align-items: center;
-            flex-shrink: 0;
         }
         
         .btn {
@@ -1079,46 +1048,10 @@ function CSSStyles() {
             }
         }
         
-        @media (max-width: 768px) {
-            .container {
-                padding: 0 20px;
-            }
-            
-            .header-container {
-                padding: 12px 20px;
-            }
-            
-            .nav-container {
-                padding: 0 20px;
-            }
-            
-            .page-title {
-                font-size: 24px;
-            }
-            
-            .page-subtitle {
-                font-size: 15px;
-            }
-            
-            .main-content {
-                padding: 20px 0;
-            }
-            
-            .logo-image {
-                height: 38px;
-                margin-right: 8px;
-            }
-        }
-        
         @media (max-width: 576px) {
             .header-container {
                 flex-direction: column;
                 gap: 15px;
-                padding: 16px 16px;
-            }
-            
-            .nav-container {
-                padding: 0 16px;
             }
             
             .nav-actions {
@@ -1133,12 +1066,7 @@ function CSSStyles() {
             .page-header {
                 flex-direction: column;
                 align-items: flex-start;
-                gap: 20px;
-                margin-bottom: 24px;
-            }
-            
-            .container {
-                padding: 0 16px;
+                gap: 15px;
             }
         }
 
@@ -1159,6 +1087,12 @@ function CSSStyles() {
         
         .register-button:hover {
             background-color: var(--light-blue);
+        }
+
+        .logo-image {
+        height: 30px;
+        width: auto;
+        max-width: 100%;
         }
       `}
     </style>

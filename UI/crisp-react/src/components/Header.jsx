@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import logoImage from '../assets/BlueV2.png';
 
 function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -17,7 +18,7 @@ function Header() {
     <header className="header">
       <div className="container header-container">
         <a href="#" className="logo">
-          <div className="logo-icon"><i className="fas fa-shield-alt"></i></div>
+          <img src={logoImage} alt="CRISP Logo" className="logo-image" />
           <div className="logo-text">CRISP</div>
         </a>
         
