@@ -138,7 +138,7 @@ class AuditMiddleware(MiddlewareMixin):
         # Calculate response time
         response_time = None
         if hasattr(request, '_audit_start_time'):
-            response_time = (timezone.now() - request._audit_start_time).total_seconds()
+            response_time = time.time() - request._audit_start_time
         
         # Determine if this was a successful request
         success = 200 <= response.status_code < 400
@@ -177,7 +177,7 @@ class AuditMiddleware(MiddlewareMixin):
         # Calculate response time
         response_time = None
         if hasattr(request, '_audit_start_time'):
-            response_time = (timezone.now() - request._audit_start_time).total_seconds()
+            response_time = time.time() - request._audit_start_time
         
         additional_data = {
             'method': request.method,
