@@ -178,24 +178,20 @@ function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthW
             onNotificationRead={markNotificationAsRead}
           />
 
-          {/* Notifications */}
-          <Notifications 
-            active={activePage === 'notifications'} 
-            notifications={getUserNotifications()}
-            onNotificationRead={markNotificationAsRead}
-          />
-
           {/* Account Settings */}
-          <AccountSettings 
-            active={activePage === 'account-settings'} 
-            user={user}
-          />
+          <AccountSettings active={activePage === 'account-settings'} user={user} />
 
-          {/* Admin Settings (Admin only) */}
+          {/* Admin Settings */}
           {isAdmin && <AdminSettings active={activePage === 'admin-settings'} />}
 
-          {/* Register User (Admin only) */}
-          {isAdmin && <RegisterUser active={activePage === 'register-user'} />}
+          {/* Export Data */}
+          <ExportData active={activePage === 'export-data'} />
+
+          {/* Add Feed */}
+          <AddFeed active={activePage === 'add-feed'} />
+
+          {/* Edit User */}
+          <EditUser active={activePage === 'edit-user'} />
         </div>
       </main>
     </div>
@@ -279,10 +275,10 @@ function Header({ user, onLogout, isAdmin, notifications, unreadCount, onNotific
           
           {/* Notifications Dropdown */}
           <div className="notifications-container">
-            <div className="notifications" onClick={handleNotificationClick}>
+            <button className="notifications" onClick={handleNotificationClick} type="button">
               <i className="fas fa-bell"></i>
               {unreadCount > 0 && <span className="notification-count">{unreadCount}</span>}
-            </div>
+            </button>
             
             {showNotifications && (
               <div className="notifications-dropdown">
@@ -317,9 +313,10 @@ function Header({ user, onLogout, isAdmin, notifications, unreadCount, onNotific
                 <div className="dropdown-footer">
                   <button 
                     className="btn btn-sm btn-outline"
-                    onClick={() => {setShowNotifications(false); showPage('notifications');}}
+                    onClick={handleViewAllNotifications}
+                    type="button"
                   >
-                    View All
+                    View All Notifications
                   </button>
                 </div>
               </div>
@@ -328,14 +325,14 @@ function Header({ user, onLogout, isAdmin, notifications, unreadCount, onNotific
           
           {/* User Profile Menu */}
           <div className="user-profile-container">
-            <div className="user-profile" onClick={handleUserMenuClick}>
+            <button className="user-profile" onClick={handleUserMenuClick} type="button">
               <div className="avatar">{userInitial}</div>
               <div className="user-info">
                 <div className="user-name">{userName}</div>
                 <div className="user-role">{userRole}</div>
               </div>
               <i className="fas fa-chevron-down"></i>
-            </div>
+            </button>
             
             {showUserMenu && (
               <div className="user-menu-dropdown">
@@ -367,7 +364,7 @@ function Header({ user, onLogout, isAdmin, notifications, unreadCount, onNotific
                         <i className="fas fa-shield-alt"></i>
                         <span>Admin Settings</span>
                       </button>
-                      <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('register-user');}}>
+                      <button className="menu-item" onClick={() => {setShowUserMenu(false); window.location.href = '/register-user';}}>
                         <i className="fas fa-user-plus"></i>
                         <span>Register New User</span>
                       </button>
@@ -398,7 +395,6 @@ function MainNav({ activePage, showPage, isAdmin }) {
     { id: 'institutions', icon: 'fas fa-building', label: 'Institutions' },
     { id: 'trust-management', icon: 'fas fa-handshake', label: 'Trust Management' },
     { id: 'alerts', icon: 'fas fa-bell', label: 'Alerts' },
-    { id: 'notifications', icon: 'fas fa-bell', label: 'Notifications' },
     { id: 'reports', icon: 'fas fa-file-alt', label: 'Reports' },
     { id: 'profile', icon: 'fas fa-user', label: 'Profile' }
   ];
@@ -407,6 +403,16 @@ function MainNav({ activePage, showPage, isAdmin }) {
     navItems.splice(-1, 0, { id: 'user-management', icon: 'fas fa-users', label: 'User Management' });
   }
 
+  const handleNavClick = (itemId) => {
+    console.log('MainNav item clicked:', itemId);
+    if (itemId === 'alerts') {
+      console.log('Switching to alerts page');
+    } else if (itemId === 'profile') {
+      console.log('Switching to profile page');
+    }
+    showPage(itemId);
+  };
+
   return (
     <nav className="main-nav">
       <div className="container nav-container">
@@ -414,7 +420,11 @@ function MainNav({ activePage, showPage, isAdmin }) {
           {navItems.map((item) => (
             <li key={item.id}>
               <a 
-                onClick={() => showPage(item.id)} 
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNavClick(item.id);
+                }} 
                 className={activePage === item.id ? 'active' : ''}
                 title={item.label}
               >
@@ -596,10 +606,10 @@ function Dashboard({ active }) {
           <p className="page-subtitle">Real-time overview of threat intelligence and platform activity</p>
         </div>
         <div className="action-buttons">
-          <button className="btn btn-outline" onClick={() => alert('Export functionality coming soon!')}>
+          <button className="btn btn-outline" onClick={() => showPage('export-data')}>
             <i className="fas fa-download"></i> Export Data
           </button>
-          <button className="btn btn-primary" onClick={() => alert('Add Feed functionality coming soon!')}>
+          <button className="btn btn-primary" onClick={() => showPage('add-feed')}>
             <i className="fas fa-plus"></i> Add New Feed
           </button>
         </div>
@@ -2837,7 +2847,7 @@ function UserManagement({ active, isAdmin, currentUser }) {
   const handleUserAction = (action, userId) => {
     switch (action) {
       case 'edit':
-        alert(`Edit user ${userId} - Feature coming soon!`);
+        showPage('edit-user', userId);
         break;
       case 'delete':
         if (confirm('Are you sure you want to delete this user?')) {
@@ -3073,7 +3083,8 @@ function UserManagement({ active, isAdmin, currentUser }) {
               </button>
             </div>
             <div className="modal-body">
-              <p>New user registration form coming soon!</p>
+              <p>Click below to navigate to the user registration page:</p>
+              <button className="btn btn-primary" onClick={() => {setShowNewUserModal(false); window.location.href = '/register-user';}}>Go to Registration</button>
             </div>
             <div className="modal-footer">
               <button className="btn btn-outline" onClick={() => setShowNewUserModal(false)}>
@@ -3281,658 +3292,6 @@ function AlertsSystem({ active }) {
         </div>
         <div className="card-content">
           <p>Alerts system functionality will be loaded here.</p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// Notifications Component - Comprehensive notification management
-function Notifications({ active, notifications, onNotificationRead }) {
-  const [selectedNotifications, setSelectedNotifications] = useState([]);
-  const [filterType, setFilterType] = useState('all');
-  const [sortBy, setSortBy] = useState('newest');
-
-  // Filter notifications based on type
-  const filteredNotifications = notifications.filter(notification => {
-    if (filterType === 'all') return true;
-    if (filterType === 'unread') return !notification.read;
-    if (filterType === 'read') return notification.read;
-    return notification.type === filterType;
-  });
-
-  // Sort notifications
-  const sortedNotifications = [...filteredNotifications].sort((a, b) => {
-    if (sortBy === 'newest') return new Date(b.timestamp) - new Date(a.timestamp);
-    if (sortBy === 'oldest') return new Date(a.timestamp) - new Date(b.timestamp);
-    if (sortBy === 'priority') {
-      const priorityOrder = { critical: 4, alert: 3, warning: 2, info: 1, update: 1 };
-      return priorityOrder[b.type] - priorityOrder[a.type];
-    }
-    return 0;
-  });
-
-  const getNotificationIcon = (type) => {
-    switch (type) {
-      case 'critical': return 'fas fa-exclamation-triangle text-red';
-      case 'alert': return 'fas fa-bell text-orange';
-      case 'warning': return 'fas fa-exclamation-circle text-yellow';
-      case 'info': return 'fas fa-info-circle text-blue';
-      case 'update': return 'fas fa-sync-alt text-green';
-      default: return 'fas fa-bell';
-    }
-  };
-
-  const formatTime = (timestamp) => {
-    const now = new Date();
-    const diff = now - timestamp;
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    return `${days}d ago`;
-  };
-
-  if (!active) return null;
-
-  return (
-    <section id="notifications" className="page-section active">
-      <div className="page-header">
-        <h1><i className="fas fa-bell"></i> Notifications</h1>
-        <p>Manage your security alerts and system notifications</p>
-      </div>
-
-      <div className="card">
-        <div className="card-header">
-          <h2>All Notifications ({notifications.length})</h2>
-          <div className="filter-controls">
-            <select value={filterType} onChange={(e) => setFilterType(e.target.value)}>
-              <option value="all">All</option>
-              <option value="unread">Unread Only</option>
-              <option value="critical">Critical</option>
-              <option value="warning">Warnings</option>
-              <option value="info">Info</option>
-            </select>
-          </div>
-        </div>
-        <div className="card-content">
-          <div className="notifications-list">
-            {sortedNotifications.length > 0 ? (
-              sortedNotifications.map(notification => (
-                <div 
-                  key={notification.id}
-                  className={`notification-item ${notification.read ? 'read' : 'unread'}`}
-                >
-                  <div className="notification-icon">
-                    <i className={getNotificationIcon(notification.type)}></i>
-                  </div>
-                  <div className="notification-content">
-                    <div className="notification-title">{notification.title}</div>
-                    <div className="notification-message">{notification.message}</div>
-                    <div className="notification-time">{formatTime(notification.timestamp)}</div>
-                    {!notification.read && (
-                      <button 
-                        className="btn btn-xs btn-outline"
-                        onClick={() => onNotificationRead(notification.id)}
-                      >
-                        Mark as Read
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="no-notifications">
-                <i className="fas fa-bell-slash"></i>
-                <p>No notifications found</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// Account Settings Component
-function AccountSettings({ active, user }) {
-  const [formData, setFormData] = useState({
-    username: user?.username || '',
-    email: user?.email || user?.username || '',
-    firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
-    department: user?.department || '',
-    phone: user?.phone || '',
-    timezone: user?.timezone || 'UTC',
-    language: user?.language || 'en',
-    notifications: {
-      email: true,
-      push: true,
-      security: true,
-      updates: false
-    }
-  });
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // In a real app, this would call an API to update the user
-    alert('Account settings updated successfully!');
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    if (name.includes('.')) {
-      const [parent, child] = name.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent],
-          [child]: type === 'checkbox' ? checked : value
-        }
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: type === 'checkbox' ? checked : value
-      }));
-    }
-  };
-
-  if (!active) return null;
-
-  return (
-    <section id="account-settings" className="page-section active">
-      <div className="page-header">
-        <h1><i className="fas fa-cog"></i> Account Settings</h1>
-        <p>Manage your account preferences and security settings</p>
-      </div>
-
-      <div className="settings-container">
-        <div className="settings-nav">
-          <div className="nav-item active">
-            <i className="fas fa-user"></i>
-            Profile Information
-          </div>
-          <div className="nav-item">
-            <i className="fas fa-bell"></i>
-            Notification Preferences
-          </div>
-          <div className="nav-item">
-            <i className="fas fa-shield-alt"></i>
-            Security Settings
-          </div>
-        </div>
-
-        <div className="settings-content">
-          <form onSubmit={handleSubmit}>
-            <div className="card">
-              <div className="card-header">
-                <h3>Profile Information</h3>
-              </div>
-              <div className="card-content">
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>Username</label>
-                    <input
-                      type="text"
-                      name="username"
-                      value={formData.username}
-                      onChange={handleInputChange}
-                      disabled
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Email</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>First Name</label>
-                    <input
-                      type="text"
-                      name="firstName"
-                      value={formData.firstName}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Last Name</label>
-                    <input
-                      type="text"
-                      name="lastName"
-                      value={formData.lastName}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Department</label>
-                    <input
-                      type="text"
-                      name="department"
-                      value={formData.department}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Phone</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="card-header">
-                <h3>Notification Preferences</h3>
-              </div>
-              <div className="card-content">
-                <div className="checkbox-group">
-                  <label className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      name="notifications.email"
-                      checked={formData.notifications.email}
-                      onChange={handleInputChange}
-                    />
-                    Email notifications
-                  </label>
-                  <label className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      name="notifications.push"
-                      checked={formData.notifications.push}
-                      onChange={handleInputChange}
-                    />
-                    Push notifications
-                  </label>
-                  <label className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      name="notifications.security"
-                      checked={formData.notifications.security}
-                      onChange={handleInputChange}
-                    />
-                    Security alerts
-                  </label>
-                  <label className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      name="notifications.updates"
-                      checked={formData.notifications.updates}
-                      onChange={handleInputChange}
-                    />
-                    Product updates
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div className="form-actions">
-              <button type="submit" className="btn btn-primary">
-                Save Changes
-              </button>
-              <button type="button" className="btn btn-outline">
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// Admin Settings Component
-function AdminSettings({ active }) {
-  const [settings, setSettings] = useState({
-    systemMaintenance: false,
-    allowRegistrations: true,
-    sessionTimeout: 30,
-    maxFailedLogins: 5,
-    passwordPolicy: {
-      minLength: 8,
-      requireUppercase: true,
-      requireNumbers: true,
-      requireSymbols: true
-    },
-    emailSettings: {
-      smtpServer: 'smtp.company.com',
-      smtpPort: 587,
-      useSSL: true,
-      fromAddress: 'noreply@crisp.com'
-    }
-  });
-
-  const handleSettingChange = (path, value) => {
-    setSettings(prev => {
-      const newSettings = { ...prev };
-      const keys = path.split('.');
-      let current = newSettings;
-      
-      for (let i = 0; i < keys.length - 1; i++) {
-        current = current[keys[i]];
-      }
-      
-      current[keys[keys.length - 1]] = value;
-      return newSettings;
-    });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    alert('Admin settings updated successfully!');
-  };
-
-  if (!active) return null;
-
-  return (
-    <section id="admin-settings" className="page-section active">
-      <div className="page-header">
-        <h1><i className="fas fa-shield-alt"></i> Admin Settings</h1>
-        <p>Configure system-wide settings and security policies</p>
-      </div>
-
-      <form onSubmit={handleSubmit}>
-        <div className="card">
-          <div className="card-header">
-            <h3>System Configuration</h3>
-          </div>
-          <div className="card-content">
-            <div className="form-group">
-              <label className="checkbox-item">
-                <input
-                  type="checkbox"
-                  checked={settings.systemMaintenance}
-                  onChange={(e) => handleSettingChange('systemMaintenance', e.target.checked)}
-                />
-                System Maintenance Mode
-              </label>
-            </div>
-            <div className="form-group">
-              <label className="checkbox-item">
-                <input
-                  type="checkbox"
-                  checked={settings.allowRegistrations}
-                  onChange={(e) => handleSettingChange('allowRegistrations', e.target.checked)}
-                />
-                Allow User Registrations
-              </label>
-            </div>
-            <div className="form-group">
-              <label>Session Timeout (minutes)</label>
-              <input
-                type="number"
-                value={settings.sessionTimeout}
-                onChange={(e) => handleSettingChange('sessionTimeout', parseInt(e.target.value))}
-                min="5"
-                max="120"
-              />
-            </div>
-            <div className="form-group">
-              <label>Max Failed Login Attempts</label>
-              <input
-                type="number"
-                value={settings.maxFailedLogins}
-                onChange={(e) => handleSettingChange('maxFailedLogins', parseInt(e.target.value))}
-                min="3"
-                max="10"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-header">
-            <h3>Password Policy</h3>
-          </div>
-          <div className="card-content">
-            <div className="form-group">
-              <label>Minimum Password Length</label>
-              <input
-                type="number"
-                value={settings.passwordPolicy.minLength}
-                onChange={(e) => handleSettingChange('passwordPolicy.minLength', parseInt(e.target.value))}
-                min="6"
-                max="32"
-              />
-            </div>
-            <div className="checkbox-group">
-              <label className="checkbox-item">
-                <input
-                  type="checkbox"
-                  checked={settings.passwordPolicy.requireUppercase}
-                  onChange={(e) => handleSettingChange('passwordPolicy.requireUppercase', e.target.checked)}
-                />
-                Require uppercase letters
-              </label>
-              <label className="checkbox-item">
-                <input
-                  type="checkbox"
-                  checked={settings.passwordPolicy.requireNumbers}
-                  onChange={(e) => handleSettingChange('passwordPolicy.requireNumbers', e.target.checked)}
-                />
-                Require numbers
-              </label>
-              <label className="checkbox-item">
-                <input
-                  type="checkbox"
-                  checked={settings.passwordPolicy.requireSymbols}
-                  onChange={(e) => handleSettingChange('passwordPolicy.requireSymbols', e.target.checked)}
-                />
-                Require special characters
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <div className="form-actions">
-          <button type="submit" className="btn btn-primary">
-            Save Settings
-          </button>
-          <button type="button" className="btn btn-outline">
-            Reset to Defaults
-          </button>
-        </div>
-      </form>
-    </section>
-  );
-}
-
-// Register User Component (Admin only)
-function RegisterUser({ active }) {
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    firstName: '',
-    lastName: '',
-    department: '',
-    role: 'user',
-    password: '',
-    confirmPassword: '',
-    sendWelcomeEmail: true
-  });
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match!');
-      return;
-    }
-
-    setIsSubmitting(true);
-    
-    try {
-      // In a real app, this would call an API to register the user
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      alert(`User ${formData.username} registered successfully!`);
-      
-      // Reset form
-      setFormData({
-        username: '',
-        email: '',
-        firstName: '',
-        lastName: '',
-        department: '',
-        role: 'user',
-        password: '',
-        confirmPassword: '',
-        sendWelcomeEmail: true
-      });
-    } catch (error) {
-      alert('Failed to register user. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  if (!active) return null;
-
-  return (
-    <section id="register-user" className="page-section active">
-      <div className="page-header">
-        <h1><i className="fas fa-user-plus"></i> Register New User</h1>
-        <p>Add a new user to the CRISP system</p>
-      </div>
-
-      <div className="card">
-        <div className="card-header">
-          <h3>User Information</h3>
-        </div>
-        <div className="card-content">
-          <form onSubmit={handleSubmit}>
-            <div className="form-grid">
-              <div className="form-group">
-                <label>Username *</label>
-                <input
-                  type="text"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Email *</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>First Name</label>
-                <input
-                  type="text"
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div className="form-group">
-                <label>Last Name</label>
-                <input
-                  type="text"
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div className="form-group">
-                <label>Department</label>
-                <input
-                  type="text"
-                  name="department"
-                  value={formData.department}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div className="form-group">
-                <label>Role *</label>
-                <select
-                  name="role"
-                  value={formData.role}
-                  onChange={handleInputChange}
-                  required
-                >
-                  <option value="user">User</option>
-                  <option value="admin">Administrator</option>
-                  <option value="analyst">Security Analyst</option>
-                  <option value="viewer">Read-Only Viewer</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Password *</label>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  required
-                  minLength="8"
-                />
-              </div>
-              <div className="form-group">
-                <label>Confirm Password *</label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  required
-                  minLength="8"
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="checkbox-item">
-                <input
-                  type="checkbox"
-                  name="sendWelcomeEmail"
-                  checked={formData.sendWelcomeEmail}
-                  onChange={handleInputChange}
-                />
-                Send welcome email to user
-              </label>
-            </div>
-
-            <div className="form-actions">
-              <button 
-                type="submit" 
-                className="btn btn-primary"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Registering...' : 'Register User'}
-              </button>
-              <button type="button" className="btn btn-outline">
-                Cancel
-              </button>
-            </div>
-          </form>
         </div>
       </div>
     </section>
@@ -4438,6 +3797,445 @@ function NewUserModal({ onClose, onSave, organizations }) {
         </form>
       </div>
     </div>
+  );
+}
+
+// Account Settings Component
+function AccountSettings({ active, user }) {
+  const [formData, setFormData] = useState({
+    username: user?.username || '',
+    fullName: user?.full_name || '',
+    email: user?.email || user?.username || '',
+    organization: user?.organization || '',
+    role: user?.role || '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState('');
+
+  if (!active) return null;
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleProfileUpdate = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setMessage('');
+
+    try {
+      const profileData = {
+        full_name: formData.fullName,
+        organization: formData.organization,
+        role: formData.role
+      };
+      
+      await api.updateUserProfile(profileData);
+      setMessage('Profile updated successfully!');
+    } catch (error) {
+      setMessage(`Error updating profile: ${error}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    if (formData.newPassword !== formData.confirmPassword) {
+      setMessage('New passwords do not match!');
+      return;
+    }
+
+    setIsLoading(true);
+    setMessage('');
+
+    try {
+      await api.changePassword(formData.currentPassword, formData.newPassword);
+      setMessage('Password changed successfully!');
+      setFormData(prev => ({
+        ...prev,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      }));
+    } catch (error) {
+      setMessage(`Error changing password: ${error}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <section className="page-section active">
+      <div className="page-header">
+        <h1><i className="fas fa-cog"></i> Account Settings</h1>
+        <p>Manage your account preferences and security settings</p>
+      </div>
+
+      <div className="settings-container">
+        {message && (
+          <div className={`alert ${message.includes('Error') ? 'alert-error' : 'alert-success'}`}>
+            {message}
+          </div>
+        )}
+
+        <div className="settings-grid">
+          <div className="settings-card">
+            <h3><i className="fas fa-user"></i> Profile Information</h3>
+            <form onSubmit={handleProfileUpdate}>
+              <div className="form-group">
+                <label htmlFor="username">Username</label>
+                <input
+                  type="text"
+                  id="username"
+                  name="username"
+                  value={formData.username}
+                  disabled
+                  className="form-control"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="fullName">Full Name</label>
+                <input
+                  type="text"
+                  id="fullName"
+                  name="fullName"
+                  value={formData.fullName}
+                  onChange={handleInputChange}
+                  className="form-control"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="email">Email</label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="form-control"
+                  required
+                />
+              </div>
+              <button type="submit" className="btn btn-primary" disabled={isLoading}>
+                {isLoading ? 'Updating...' : 'Update Profile'}
+              </button>
+            </form>
+          </div>
+
+          <div className="settings-card">
+            <h3><i className="fas fa-lock"></i> Change Password</h3>
+            <form onSubmit={handlePasswordChange}>
+              <div className="form-group">
+                <label htmlFor="currentPassword">Current Password</label>
+                <input
+                  type="password"
+                  id="currentPassword"
+                  name="currentPassword"
+                  value={formData.currentPassword}
+                  onChange={handleInputChange}
+                  className="form-control"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="newPassword">New Password</label>
+                <input
+                  type="password"
+                  id="newPassword"
+                  name="newPassword"
+                  value={formData.newPassword}
+                  onChange={handleInputChange}
+                  className="form-control"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="confirmPassword">Confirm New Password</label>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  className="form-control"
+                  required
+                />
+              </div>
+              <button type="submit" className="btn btn-primary" disabled={isLoading}>
+                {isLoading ? 'Changing...' : 'Change Password'}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Admin Settings Component
+function AdminSettings({ active }) {
+  const [systemHealth, setSystemHealth] = useState(null);
+  const [emailStats, setEmailStats] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState('');
+
+  if (!active) return null;
+
+  useEffect(() => {
+    if (active) {
+      fetchSystemData();
+    }
+  }, [active]);
+
+  const fetchSystemData = async () => {
+    setIsLoading(true);
+    try {
+      const [healthData, statsData] = await Promise.all([
+        api.getSystemHealth().catch(() => null),
+        api.getEmailStatistics().catch(() => null)
+      ]);
+      
+      setSystemHealth(healthData);
+      setEmailStats(statsData);
+    } catch (error) {
+      console.error('Error fetching system data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <section className="page-section active">
+      <div className="page-header">
+        <h1><i className="fas fa-shield-alt"></i> Admin Settings</h1>
+        <p>System administration and configuration</p>
+      </div>
+
+      <div className="admin-settings-container">
+        {message && (
+          <div className={`alert ${message.includes('Error') ? 'alert-error' : 'alert-success'}`}>
+            {message}
+          </div>
+        )}
+
+        <div className="admin-grid">
+          <div className="admin-card">
+            <h3><i className="fas fa-heartbeat"></i> System Health</h3>
+            {systemHealth ? (
+              <div className="health-info">
+                <div className="health-status">
+                  <span className={`status-indicator ${systemHealth.status === 'healthy' ? 'healthy' : 'warning'}`}>
+                    {systemHealth.status || 'Unknown'}
+                  </span>
+                </div>
+                <p>{systemHealth.message || 'System status available'}</p>
+              </div>
+            ) : (
+              <p>Loading system health...</p>
+            )}
+          </div>
+
+          <div className="admin-card">
+            <h3><i className="fas fa-envelope"></i> Email System</h3>
+            {emailStats ? (
+              <div className="email-stats">
+                <div className="stat-item">
+                  <span className="stat-label">Total Sent:</span>
+                  <span className="stat-value">{emailStats.total_sent || 0}</span>
+                </div>
+                <div className="stat-item">
+                  <span className="stat-label">Failed:</span>
+                  <span className="stat-value error">{emailStats.failed_emails || 0}</span>
+                </div>
+              </div>
+            ) : (
+              <p>Loading email statistics...</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Export Data Component
+function ExportData({ active }) {
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportFormat, setExportFormat] = useState('json');
+
+  if (!active) return null;
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      // Simulate export functionality
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      alert(`Data exported successfully as ${exportFormat.toUpperCase()}!`);
+    } catch (error) {
+      alert('Export failed: ' + error.message);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  return (
+    <section className="page-section active">
+      <div className="page-header">
+        <h1><i className="fas fa-download"></i> Export Data</h1>
+        <p>Download your platform data in various formats</p>
+      </div>
+
+      <div className="export-container">
+        <div className="export-options">
+          <div className="form-group">
+            <label htmlFor="format">Export Format</label>
+            <select 
+              id="format" 
+              value={exportFormat} 
+              onChange={(e) => setExportFormat(e.target.value)}
+              className="form-control"
+            >
+              <option value="json">JSON</option>
+              <option value="csv">CSV</option>
+              <option value="xml">XML</option>
+              <option value="pdf">PDF Report</option>
+            </select>
+          </div>
+          
+          <button 
+            onClick={handleExport} 
+            disabled={isExporting}
+            className="btn btn-primary"
+          >
+            {isExporting ? 'Exporting...' : 'Export Data'}
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Add Feed Component
+function AddFeed({ active }) {
+  const [feedData, setFeedData] = useState({
+    name: '',
+    url: '',
+    type: 'misp',
+    description: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  if (!active) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    try {
+      // Simulate feed creation
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      alert('Threat feed added successfully!');
+      setFeedData({ name: '', url: '', type: 'misp', description: '' });
+    } catch (error) {
+      alert('Failed to add feed: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <section className="page-section active">
+      <div className="page-header">
+        <h1><i className="fas fa-plus"></i> Add New Feed</h1>
+        <p>Configure a new threat intelligence feed</p>
+      </div>
+
+      <div className="add-feed-container">
+        <form onSubmit={handleSubmit} className="feed-form">
+          <div className="form-group">
+            <label htmlFor="name">Feed Name</label>
+            <input
+              type="text"
+              id="name"
+              value={feedData.name}
+              onChange={(e) => setFeedData(prev => ({...prev, name: e.target.value}))}
+              className="form-control"
+              required
+            />
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="url">Feed URL</label>
+            <input
+              type="url"
+              id="url"
+              value={feedData.url}
+              onChange={(e) => setFeedData(prev => ({...prev, url: e.target.value}))}
+              className="form-control"
+              required
+            />
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="type">Feed Type</label>
+            <select
+              id="type"
+              value={feedData.type}
+              onChange={(e) => setFeedData(prev => ({...prev, type: e.target.value}))}
+              className="form-control"
+            >
+              <option value="misp">MISP</option>
+              <option value="stix">STIX/TAXII</option>
+              <option value="csv">CSV</option>
+              <option value="json">JSON</option>
+            </select>
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="description">Description</label>
+            <textarea
+              id="description"
+              value={feedData.description}
+              onChange={(e) => setFeedData(prev => ({...prev, description: e.target.value}))}
+              className="form-control"
+              rows="3"
+            />
+          </div>
+          
+          <button type="submit" disabled={isSubmitting} className="btn btn-primary">
+            {isSubmitting ? 'Adding Feed...' : 'Add Feed'}
+          </button>
+        </form>
+      </div>
+    </section>
+  );
+}
+
+// Edit User Component
+function EditUser({ active }) {
+  if (!active) return null;
+
+  return (
+    <section className="page-section active">
+      <div className="page-header">
+        <h1><i className="fas fa-user-edit"></i> Edit User</h1>
+        <p>Modify user account details and permissions</p>
+      </div>
+
+      <div className="edit-user-container">
+        <p>User editing functionality will be implemented here.</p>
+        <p>This will allow administrators to modify user accounts, roles, and permissions.</p>
+      </div>
+    </section>
   );
 }
 

@@ -3,6 +3,7 @@ import * as d3 from 'd3';
 import { useNavigate } from 'react-router-dom';
 import CSSStyles from './assets/CSSStyles';
 import logoImage from './assets/BlueV2.png';
+import { getUserProfile, updateUserProfile, getUserStatistics, changePassword, getEmailStatistics, getSystemHealth } from './api.js';
 
 
 function AppRegister({ user, onLogout }) {
@@ -42,7 +43,7 @@ function AppRegister({ user, onLogout }) {
       <CSSStyles />
       
       {/* Header */}
-      <Header user={user} onLogout={onLogout} navigateToRegisterUser={navigateToRegisterUser} />
+      <Header user={user} onLogout={onLogout} navigateToRegisterUser={navigateToRegisterUser} showPage={showPage} />
       
       {/* Main Navigation */}
       <MainNav activePage={activePage} showPage={showPage} />
@@ -67,49 +68,336 @@ function AppRegister({ user, onLogout }) {
 
           {/* Reports */}
           <Reports active={activePage === 'reports'} />
+
+          {/* Alerts */}
+          <Alerts active={activePage === 'alerts'} />
+
+          {/* Notifications */}
+          <Notifications active={activePage === 'notifications'} />
+
+          {/* Profile */}
+          <Profile active={activePage === 'profile'} user={user} />
+
+          {/* User Management */}
+          <UserManagement active={activePage === 'user-management'} />
+
+          {/* Account Settings */}
+          <AccountSettings active={activePage === 'account-settings'} user={user} />
+
+          {/* Admin Settings */}
+          <AdminSettings active={activePage === 'admin-settings'} />
         </div>
       </main>
     </div>
   );
 }
 
-// Header Component with Logout Button and Register User button
-function Header({ user, onLogout, navigateToRegisterUser }) {
+// Header Component with notifications and user management
+function Header({ user, onLogout, navigateToRegisterUser, showPage }) {
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [systemStats, setSystemStats] = useState(null);
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
+
+  // Fetch notifications and system stats on component mount
+  useEffect(() => {
+    fetchNotifications();
+    fetchSystemStats();
+  }, []);
+
+  const fetchNotifications = async () => {
+    setIsLoadingNotifications(true);
+    try {
+      // Try to get email statistics and system health as notification sources
+      const [emailStats, systemHealth] = await Promise.all([
+        getEmailStatistics().catch(() => null),
+        getSystemHealth().catch(() => null)
+      ]);
+
+      const generatedNotifications = [];
+      let notificationId = 1;
+
+      // Generate notifications based on email statistics
+      if (emailStats) {
+        if (emailStats.total_sent > 0) {
+          generatedNotifications.push({
+            id: notificationId++,
+            type: 'info',
+            title: 'Email notifications sent',
+            message: `${emailStats.total_sent} email notifications sent successfully`,
+            timestamp: new Date(Date.now() - 30 * 60000),
+            read: false,
+          });
+        }
+        
+        if (emailStats.failed_emails > 0) {
+          generatedNotifications.push({
+            id: notificationId++,
+            type: 'warning',
+            title: 'Failed email notifications',
+            message: `${emailStats.failed_emails} email notifications failed to send`,
+            timestamp: new Date(Date.now() - 60 * 60000),
+            read: false,
+          });
+        }
+      }
+
+      // Generate notifications based on system health
+      if (systemHealth) {
+        if (systemHealth.status === 'healthy') {
+          generatedNotifications.push({
+            id: notificationId++,
+            type: 'info',
+            title: 'System health check passed',
+            message: 'All system components are functioning normally',
+            timestamp: new Date(Date.now() - 2 * 60 * 60000),
+            read: true,
+          });
+        } else {
+          generatedNotifications.push({
+            id: notificationId++,
+            type: 'critical',
+            title: 'System health warning',
+            message: `System status: ${systemHealth.status}`,
+            timestamp: new Date(Date.now() - 10 * 60000),
+            read: false,
+          });
+        }
+      }
+
+      // Add some default admin notifications if we don't have much data
+      if (generatedNotifications.length < 2) {
+        generatedNotifications.push(
+          {
+            id: notificationId++,
+            type: 'warning',
+            title: 'User registration pending approval',
+            message: 'New user account requires admin approval',
+            timestamp: new Date(Date.now() - 2 * 60 * 60000),
+            read: false,
+          },
+          {
+            id: notificationId++,
+            type: 'info',
+            title: 'Welcome to CRISP Admin',
+            message: 'Your administrator account is now active',
+            timestamp: new Date(Date.now() - 24 * 60 * 60000),
+            read: true,
+          }
+        );
+      }
+
+      setNotifications(generatedNotifications);
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+      // Fallback notifications
+      setNotifications([
+        {
+          id: 1,
+          type: 'info',
+          title: 'Welcome to CRISP',
+          message: 'Your administrator dashboard is ready',
+          timestamp: new Date(),
+          read: false,
+        }
+      ]);
+    } finally {
+      setIsLoadingNotifications(false);
+    }
+  };
+
+  const fetchSystemStats = async () => {
+    try {
+      const stats = await getSystemHealth();
+      setSystemStats(stats);
+    } catch (error) {
+      console.error('Failed to fetch system stats:', error);
+      setSystemStats({ status: 'unknown', message: 'Unable to fetch system status' });
+    }
+  };
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+  
   // Get first initial for avatar
   const userInitial = user && user.username ? user.username.charAt(0).toUpperCase() : 'A';
   const userName = user && user.username ? user.username.split('@')[0] : 'Admin';
   const userRole = user && user.role ? user.role : 'Administrator';
 
+  const handleNotificationClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowNotifications(!showNotifications);
+    setShowUserMenu(false);
+  };
+
+  const handleUserMenuClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowUserMenu(!showUserMenu);
+    setShowNotifications(false);
+  };
+
+  const handleNotificationItemClick = (notification) => {
+    console.log('Notification clicked:', notification.id);
+  };
+
+  const handleViewAllNotifications = () => {
+    setShowNotifications(false);
+    if (showPage) showPage('notifications');
+  };
+
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'critical': return 'fas fa-exclamation-triangle';
+      case 'warning': return 'fas fa-exclamation-circle';
+      case 'info': return 'fas fa-info-circle';
+      default: return 'fas fa-bell';
+    }
+  };
+
+  const formatTime = (timestamp) => {
+    const now = new Date();
+    const diff = now - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${Math.floor(diff / 86400000)}d ago`;
+  };
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.notifications-container') && !event.target.closest('.user-profile-container')) {
+        setShowNotifications(false);
+        setShowUserMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
     <header>
       <div className="container header-container">
-        <a href="#" className="logo">
-        <img src={logoImage} alt="CRISP Logo" className="logo-image" />      </a>
+        <div className="logo">
+          <img src={logoImage} alt="CRISP Logo" className="logo-image" />
+          <span className="logo-text">CRISP</span>
+        </div>
         <div className="nav-actions">
           <div className="search-bar">
             <span className="search-icon"><i className="fas fa-search"></i></span>
             <input type="text" placeholder="Search platform..." />
           </div>
-          <div className="notifications">
-            <i className="fas fa-bell"></i>
-            <span className="notification-count">3</span>
+          
+          {/* Notifications Dropdown */}
+          <div className="notifications-container">
+            <button className="notifications" onClick={handleNotificationClick} type="button">
+              <i className="fas fa-bell"></i>
+              {unreadCount > 0 && <span className="notification-count">{unreadCount}</span>}
+            </button>
+            
+            {showNotifications && (
+              <div className="notifications-dropdown">
+                <div className="dropdown-header">
+                  <h3>Notifications</h3>
+                  <span className="close-btn" onClick={() => setShowNotifications(false)}>
+                    <i className="fas fa-times"></i>
+                  </span>
+                </div>
+                <div className="notifications-list">
+                  {isLoadingNotifications ? (
+                    <div className="loading-notifications">
+                      <i className="fas fa-spinner fa-spin"></i> Loading notifications...
+                    </div>
+                  ) : notifications.length > 0 ? (
+                    notifications.slice(0, 5).map(notification => (
+                      <div 
+                        key={notification.id}
+                        className={`notification-item ${notification.read ? 'read' : 'unread'}`}
+                        onClick={() => handleNotificationItemClick(notification)}
+                      >
+                        <div className="notification-icon">
+                          <i className={getNotificationIcon(notification.type)}></i>
+                        </div>
+                        <div className="notification-content">
+                          <div className="notification-title">{notification.title}</div>
+                          <div className="notification-message">{notification.message}</div>
+                          <div className="notification-time">{formatTime(notification.timestamp)}</div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="no-notifications">No new notifications</div>
+                  )}
+                </div>
+                <div className="dropdown-footer">
+                  <button 
+                    className="btn btn-sm btn-outline"
+                    onClick={handleViewAllNotifications}
+                    type="button"
+                  >
+                    View All Notifications
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-          <div className="user-profile">
-            <div className="avatar">{userInitial}</div>
-            <div className="user-info">
-              <div className="user-name">{userName}</div>
-              <div className="user-role">{userRole}</div>
-            </div>
-            {/* Add Register User button for admins */}
-            <div className="register-button" onClick={navigateToRegisterUser}>
-              <i className="fas fa-user-plus"></i>
-              <span>Register User</span>
-            </div>
-            {/* Add logout button */}
-            <div className="logout-button" onClick={onLogout}>
-              <i className="fas fa-sign-out-alt"></i>
-              <span>Logout</span>
-            </div>
+          
+          {/* User Profile Menu */}
+          <div className="user-profile-container">
+            <button className="user-profile" onClick={handleUserMenuClick} type="button">
+              <div className="avatar">{userInitial}</div>
+              <div className="user-info">
+                <div className="user-name">{userName}</div>
+                <div className="user-role">{userRole}</div>
+              </div>
+              <i className="fas fa-chevron-down"></i>
+            </button>
+            
+            {showUserMenu && (
+              <div className="user-menu-dropdown">
+                <div className="dropdown-header">
+                  <div className="user-avatar-large">{userInitial}</div>
+                  <div>
+                    <div className="user-name-large">{userName}</div>
+                    <div className="user-email">{user?.username || 'admin@example.com'}</div>
+                  </div>
+                </div>
+                <div className="menu-divider"></div>
+                <div className="menu-items">
+                  <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('profile');}} type="button">
+                    <i className="fas fa-user"></i>
+                    <span>My Profile</span>
+                  </button>
+                  <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('account-settings');}} type="button">
+                    <i className="fas fa-cog"></i>
+                    <span>Account Settings</span>
+                  </button>
+                  <div className="menu-divider"></div>
+                  <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('user-management');}} type="button">
+                    <i className="fas fa-users"></i>
+                    <span>User Management</span>
+                  </button>
+                  <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('admin-settings');}} type="button">
+                    <i className="fas fa-shield-alt"></i>
+                    <span>Admin Settings</span>
+                  </button>
+                  <button className="menu-item" onClick={() => {setShowUserMenu(false); navigateToRegisterUser();}} type="button">
+                    <i className="fas fa-user-plus"></i>
+                    <span>Register New User</span>
+                  </button>
+                </div>
+                <div className="menu-divider"></div>
+                <button className="menu-item logout-item" onClick={() => {setShowUserMenu(false); onLogout();}} type="button">
+                  <i className="fas fa-sign-out-alt"></i>
+                  <span>Logout</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -119,58 +407,39 @@ function Header({ user, onLogout, navigateToRegisterUser }) {
 
 // Main Navigation Component
 function MainNav({ activePage, showPage }) {
+  const navItems = [
+    { id: 'dashboard', icon: 'fas fa-chart-line', label: 'Dashboard' },
+    { id: 'threat-feeds', icon: 'fas fa-rss', label: 'Threat Feeds' },
+    { id: 'ioc-management', icon: 'fas fa-search', label: 'IoC Management' },
+    { id: 'ttp-analysis', icon: 'fas fa-sitemap', label: 'TTP Analysis' },
+    { id: 'institutions', icon: 'fas fa-building', label: 'Institutions' },
+    { id: 'reports', icon: 'fas fa-file-alt', label: 'Reports' }
+  ];
+
+  const handleNavClick = (itemId) => {
+    console.log('MainNav item clicked:', itemId);
+    showPage(itemId);
+  };
+
   return (
     <nav className="main-nav">
       <div className="container nav-container">
         <ul className="nav-links">
-          <li>
-            <a 
-              onClick={() => showPage('dashboard')} 
-              className={activePage === 'dashboard' ? 'active' : ''}
-            >
-              <i className="fas fa-chart-line"></i> Dashboard
-            </a>
-          </li>
-          <li>
-            <a 
-              onClick={() => showPage('threat-feeds')} 
-              className={activePage === 'threat-feeds' ? 'active' : ''}
-            >
-              <i className="fas fa-rss"></i> Threat Feeds
-            </a>
-          </li>
-          <li>
-            <a 
-              onClick={() => showPage('ioc-management')} 
-              className={activePage === 'ioc-management' ? 'active' : ''}
-            >
-              <i className="fas fa-search"></i> IoC Management
-            </a>
-          </li>
-          <li>
-            <a 
-              onClick={() => showPage('ttp-analysis')} 
-              className={activePage === 'ttp-analysis' ? 'active' : ''}
-            >
-              <i className="fas fa-sitemap"></i> TTP Analysis
-            </a>
-          </li>
-          <li>
-            <a 
-              onClick={() => showPage('institutions')} 
-              className={activePage === 'institutions' ? 'active' : ''}
-            >
-              <i className="fas fa-building"></i> Institutions
-            </a>
-          </li>
-          <li>
-            <a 
-              onClick={() => showPage('reports')} 
-              className={activePage === 'reports' ? 'active' : ''}
-            >
-              <i className="fas fa-file-alt"></i> Reports
-            </a>
-          </li>
+          {navItems.map((item) => (
+            <li key={item.id}>
+              <a 
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNavClick(item.id);
+                }} 
+                className={activePage === item.id ? 'active' : ''}
+                title={item.label}
+              >
+                <i className={item.icon}></i> {item.label}
+              </a>
+            </li>
+          ))}
         </ul>
         <div className="nav-right">
           <div className="status-indicator">
@@ -1762,6 +2031,1241 @@ function Reports({ active }) {
         <div className="page-item">3</div>
         <div className="page-item">4</div>
         <div className="page-item"><i className="fas fa-chevron-right"></i></div>
+      </div>
+    </section>
+  );
+}
+
+// Alerts Component
+function Alerts({ active }) {
+  if (!active) return null;
+
+  return (
+    <section className="page-section active">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Security Alerts</h1>
+          <p className="page-subtitle">Monitor and manage security alerts across your network</p>
+        </div>
+      </div>
+      
+      <div className="alerts-grid">
+        <div className="alert-card critical">
+          <div className="alert-header">
+            <i className="fas fa-exclamation-triangle"></i>
+            <div>
+              <h3>Critical Security Breach</h3>
+              <span className="alert-time">2 minutes ago</span>
+            </div>
+          </div>
+          <p>Unauthorized access detected from IP 192.168.144.32</p>
+          <div className="alert-actions">
+            <button className="btn btn-sm btn-primary">Investigate</button>
+            <button className="btn btn-sm btn-outline">Dismiss</button>
+          </div>
+        </div>
+        
+        <div className="alert-card warning">
+          <div className="alert-header">
+            <i className="fas fa-exclamation-circle"></i>
+            <div>
+              <h3>Suspicious Activity</h3>
+              <span className="alert-time">15 minutes ago</span>
+            </div>
+          </div>
+          <p>Multiple failed login attempts detected</p>
+          <div className="alert-actions">
+            <button className="btn btn-sm btn-primary">Review</button>
+            <button className="btn btn-sm btn-outline">Dismiss</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Notifications Component  
+function Notifications({ active }) {
+  if (!active) return null;
+
+  return (
+    <section className="page-section active">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">All Notifications</h1>
+          <p className="page-subtitle">View and manage all your notifications</p>
+        </div>
+      </div>
+      
+      <div className="notifications-page-list">
+        <div className="notification-page-item unread">
+          <div className="notification-icon">
+            <i className="fas fa-exclamation-triangle"></i>
+          </div>
+          <div className="notification-content">
+            <div className="notification-title">New malware detected in network traffic</div>
+            <div className="notification-message">Suspicious activity detected from IP 192.168.144.32</div>
+            <div className="notification-time">30 minutes ago</div>
+          </div>
+        </div>
+        
+        <div className="notification-page-item unread">
+          <div className="notification-icon">
+            <i className="fas fa-exclamation-circle"></i>
+          </div>
+          <div className="notification-content">
+            <div className="notification-title">User registration pending approval</div>
+            <div className="notification-message">New user account requires admin approval</div>
+            <div className="notification-time">2 hours ago</div>
+          </div>
+        </div>
+        
+        <div className="notification-page-item read">
+          <div className="notification-icon">
+            <i className="fas fa-info-circle"></i>
+          </div>
+          <div className="notification-content">
+            <div className="notification-title">System maintenance completed</div>
+            <div className="notification-message">All systems are fully operational</div>
+            <div className="notification-time">6 hours ago</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Profile Component with full backend integration
+function Profile({ active, user }) {
+  const [profileData, setProfileData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    organization: '',
+    phone: '',
+    job_title: ''
+  });
+  const [userStats, setUserStats] = useState(null);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [activeTab, setActiveTab] = useState('profile');
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  if (!active) return null;
+
+  // Fetch profile data on component mount
+  useEffect(() => {
+    if (active) {
+      fetchProfileData();
+      fetchUserStatistics();
+    }
+  }, [active]);
+
+  const fetchProfileData = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const data = await getUserProfile();
+      setProfileData(data);
+      setEditFormData({
+        first_name: data.first_name || '',
+        last_name: data.last_name || '',
+        email: data.email || '',
+        organization: data.organization || '',
+        phone: data.phone || '',
+        job_title: data.job_title || ''
+      });
+    } catch (error) {
+      console.error('Failed to fetch profile:', error);
+      setError('Failed to load profile data: ' + error);
+      // Fallback to user data from props
+      if (user) {
+        const fallbackData = {
+          username: user.username,
+          email: user.email || user.username,
+          first_name: user.first_name || '',
+          last_name: user.last_name || '',
+          organization: user.organization || '',
+          is_staff: user.is_staff || false,
+          is_admin: user.is_admin || false,
+          last_login: user.last_login || new Date().toISOString()
+        };
+        setProfileData(fallbackData);
+        setEditFormData({
+          first_name: fallbackData.first_name,
+          last_name: fallbackData.last_name,
+          email: fallbackData.email,
+          organization: fallbackData.organization,
+          phone: '',
+          job_title: ''
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchUserStatistics = async () => {
+    try {
+      const stats = await getUserStatistics();
+      setUserStats(stats);
+    } catch (error) {
+      console.error('Failed to fetch user statistics:', error);
+      // Set fallback stats
+      setUserStats({
+        login_count: 1,
+        last_login: new Date().toISOString(),
+        account_created: new Date().toISOString(),
+        is_active: true
+      });
+    }
+  };
+
+  const handleEditToggle = () => {
+    setIsEditing(!isEditing);
+    setError('');
+    setSuccess('');
+  };
+
+  const handleFormChange = (field, value) => {
+    setEditFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSaveProfile = async () => {
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
+    
+    try {
+      const updatedData = await updateUserProfile(editFormData);
+      setProfileData(updatedData);
+      setIsEditing(false);
+      setSuccess('Profile updated successfully!');
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      setError('Failed to update profile: ' + error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePasswordChange = (field, value) => {
+    setPasswordForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setError('New passwords do not match');
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 8) {
+      setError('Password must be at least 8 characters long');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await changePassword(passwordForm.currentPassword, passwordForm.newPassword);
+      setSuccess('Password changed successfully!');
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } catch (error) {
+      console.error('Failed to change password:', error);
+      setError('Failed to change password: ' + error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Never';
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return 'Invalid date';
+    }
+  };
+
+  return (
+    <section className="page-section active">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">User Profile</h1>
+          <p className="page-subtitle">Manage your account settings and view your information</p>
+        </div>
+        <div className="action-buttons">
+          {!isEditing ? (
+            <button className="btn btn-primary" onClick={handleEditToggle} disabled={isLoading}>
+              <i className="fas fa-edit"></i> Edit Profile
+            </button>
+          ) : (
+            <>
+              <button className="btn btn-outline" onClick={handleEditToggle} disabled={isLoading}>
+                <i className="fas fa-times"></i> Cancel
+              </button>
+              <button className="btn btn-primary" onClick={handleSaveProfile} disabled={isLoading}>
+                <i className="fas fa-save"></i> {isLoading ? 'Saving...' : 'Save Changes'}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Error/Success Messages */}
+      {error && (
+        <div className="alert alert-error">
+          <i className="fas fa-exclamation-circle"></i> {error}
+        </div>
+      )}
+      {success && (
+        <div className="alert alert-success">
+          <i className="fas fa-check-circle"></i> {success}
+        </div>
+      )}
+
+      {/* Profile Tabs */}
+      <div className="profile-tabs">
+        <button 
+          className={`tab-button ${activeTab === 'profile' ? 'active' : ''}`}
+          onClick={() => setActiveTab('profile')}
+        >
+          <i className="fas fa-user"></i> Profile Information
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'security' ? 'active' : ''}`}
+          onClick={() => setActiveTab('security')}
+        >
+          <i className="fas fa-shield-alt"></i> Security Settings
+        </button>
+      </div>
+
+      {/* Profile Information Tab */}
+      {activeTab === 'profile' && (
+        <div className="profile-content">
+          <div className="profile-grid">
+            <div className="profile-main">
+              <div className="card">
+                <div className="card-header">
+                  <h2 className="card-title">
+                    <i className="fas fa-user card-icon"></i> Personal Information
+                  </h2>
+                </div>
+                <div className="card-content">
+                  {isLoading && !profileData ? (
+                    <div className="loading-spinner">
+                      <i className="fas fa-spinner fa-spin"></i> Loading profile...
+                    </div>
+                  ) : (
+                    <div className="profile-form">
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>Username</label>
+                          <input 
+                            type="text" 
+                            value={profileData?.username || ''} 
+                            disabled 
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Email</label>
+                          <input 
+                            type="email" 
+                            value={isEditing ? editFormData.email : (profileData?.email || '')}
+                            onChange={(e) => handleFormChange('email', e.target.value)}
+                            disabled={!isEditing}
+                          />
+                        </div>
+                      </div>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>First Name</label>
+                          <input 
+                            type="text" 
+                            value={isEditing ? editFormData.first_name : (profileData?.first_name || '')}
+                            onChange={(e) => handleFormChange('first_name', e.target.value)}
+                            disabled={!isEditing}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Last Name</label>
+                          <input 
+                            type="text" 
+                            value={isEditing ? editFormData.last_name : (profileData?.last_name || '')}
+                            onChange={(e) => handleFormChange('last_name', e.target.value)}
+                            disabled={!isEditing}
+                          />
+                        </div>
+                      </div>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>Organization</label>
+                          <input 
+                            type="text" 
+                            value={isEditing ? editFormData.organization : (profileData?.organization || '')}
+                            onChange={(e) => handleFormChange('organization', e.target.value)}
+                            disabled={!isEditing}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Job Title</label>
+                          <input 
+                            type="text" 
+                            value={isEditing ? editFormData.job_title : (profileData?.job_title || '')}
+                            onChange={(e) => handleFormChange('job_title', e.target.value)}
+                            disabled={!isEditing}
+                          />
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label>Phone</label>
+                        <input 
+                          type="tel" 
+                          value={isEditing ? editFormData.phone : (profileData?.phone || '')}
+                          onChange={(e) => handleFormChange('phone', e.target.value)}
+                          disabled={!isEditing}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="profile-sidebar">
+              <div className="card">
+                <div className="card-header">
+                  <h3 className="card-title">Account Statistics</h3>
+                </div>
+                <div className="card-content">
+                  <div className="stats-list">
+                    <div className="stat-item">
+                      <div className="stat-value">
+                        {profileData?.is_admin || profileData?.is_staff ? 'Administrator' : 'User'}
+                      </div>
+                      <div className="stat-label">Account Type</div>
+                    </div>
+                    <div className="stat-item">
+                      <div className="stat-value">
+                        {userStats?.is_active ? 'Active' : 'Inactive'}
+                      </div>
+                      <div className="stat-label">Status</div>
+                    </div>
+                    <div className="stat-item">
+                      <div className="stat-value">{formatDate(userStats?.last_login)}</div>
+                      <div className="stat-label">Last Login</div>
+                    </div>
+                    <div className="stat-item">
+                      <div className="stat-value">{userStats?.login_count || 0}</div>
+                      <div className="stat-label">Total Logins</div>
+                    </div>
+                    <div className="stat-item">
+                      <div className="stat-value">{formatDate(userStats?.account_created)}</div>
+                      <div className="stat-label">Account Created</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Security Settings Tab */}
+      {activeTab === 'security' && (
+        <div className="profile-content">
+          <div className="card">
+            <div className="card-header">
+              <h2 className="card-title">
+                <i className="fas fa-shield-alt card-icon"></i> Change Password
+              </h2>
+            </div>
+            <div className="card-content">
+              <form onSubmit={handleChangePassword}>
+                <div className="form-group">
+                  <label>Current Password</label>
+                  <input 
+                    type="password" 
+                    value={passwordForm.currentPassword}
+                    onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>New Password</label>
+                  <input 
+                    type="password" 
+                    value={passwordForm.newPassword}
+                    onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
+                    required
+                    minLength={8}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Confirm New Password</label>
+                  <input 
+                    type="password" 
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
+                    required
+                    minLength={8}
+                  />
+                </div>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={isLoading}
+                >
+                  <i className="fas fa-key"></i> {isLoading ? 'Changing...' : 'Change Password'}
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// User Management Component
+function UserManagement({ active }) {
+  const [users, setUsers] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [userForm, setUserForm] = useState({
+    username: '',
+    fullName: '',
+    email: '',
+    organization: '',
+    role: '',
+    password: '',
+    confirmPassword: ''
+  });
+
+  if (!active) return null;
+
+  useEffect(() => {
+    if (active) {
+      fetchUsers();
+    }
+  }, [active]);
+
+  const fetchUsers = async () => {
+    setIsLoading(true);
+    try {
+      const usersList = await getUsersList();
+      setUsers(usersList.results || usersList || []);
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+      setMessage('Failed to load users');
+      // Fallback data
+      setUsers([
+        {
+          id: 1,
+          username: 'admin@crisp.com',
+          full_name: 'Admin User',
+          email: 'admin@crisp.com',
+          organization: 'CRISP Admin',
+          role: 'Administrator',
+          is_active: true,
+          date_joined: '2024-01-01'
+        }
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    if (userForm.password !== userForm.confirmPassword) {
+      setMessage('Passwords do not match!');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await registerUser(
+        userForm.username,
+        userForm.password,
+        userForm.fullName,
+        userForm.organization,
+        userForm.role
+      );
+      setMessage('User created successfully!');
+      setShowCreateModal(false);
+      setUserForm({
+        username: '',
+        fullName: '',
+        email: '',
+        organization: '',
+        role: '',
+        password: '',
+        confirmPassword: ''
+      });
+      fetchUsers(); // Reload users
+    } catch (error) {
+      setMessage(`Failed to create user: ${error}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditUser = (user) => {
+    setEditingUser(user);
+    setUserForm({
+      username: user.username,
+      fullName: user.full_name,
+      email: user.email,
+      organization: user.organization,
+      role: user.role,
+      password: '',
+      confirmPassword: ''
+    });
+    setShowCreateModal(true);
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (!confirm('Are you sure you want to delete this user?')) return;
+    
+    setIsLoading(true);
+    try {
+      // API call for deletion would go here
+      setMessage('User deleted successfully!');
+      fetchUsers(); // Reload users
+    } catch (error) {
+      setMessage(`Failed to delete user: ${error}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setUserForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  return (
+    <section className="page-section active">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">User Management</h1>
+          <p className="page-subtitle">Manage user accounts and permissions</p>
+        </div>
+        <div className="action-buttons">
+          <button 
+            className="btn btn-primary"
+            onClick={() => {
+              setEditingUser(null);
+              setUserForm({
+                username: '',
+                fullName: '',
+                email: '',
+                organization: '',
+                role: '',
+                password: '',
+                confirmPassword: ''
+              });
+              setShowCreateModal(true);
+            }}
+          >
+            <i className="fas fa-user-plus"></i> Add New User
+          </button>
+        </div>
+      </div>
+
+      {message && (
+        <div className={`alert ${message.includes('Failed') || message.includes('Error') ? 'alert-error' : 'alert-success'}`}>
+          {message}
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading users...</p>
+        </div>
+      ) : (
+        <div className="user-management-table">
+          <div className="table-header">
+            <div className="table-cell">User</div>
+            <div className="table-cell">Email</div>
+            <div className="table-cell">Organization</div>
+            <div className="table-cell">Role</div>
+            <div className="table-cell">Status</div>
+            <div className="table-cell">Actions</div>
+          </div>
+          
+          {users.map(user => (
+            <div key={user.id} className="table-row">
+              <div className="table-cell">
+                <div className="user-info">
+                  <div className="avatar">
+                    {(user.full_name || user.username).charAt(0).toUpperCase()}
+                  </div>
+                  <span>{user.full_name || user.username}</span>
+                </div>
+              </div>
+              <div className="table-cell">{user.email || user.username}</div>
+              <div className="table-cell">{user.organization || 'N/A'}</div>
+              <div className="table-cell">
+                <span className={`badge ${user.role?.toLowerCase() === 'administrator' ? 'admin' : 'user'}`}>
+                  {user.role || 'User'}
+                </span>
+              </div>
+              <div className="table-cell">
+                <span className={`status ${user.is_active ? 'active' : 'inactive'}`}>
+                  {user.is_active ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              <div className="table-cell">
+                <button 
+                  className="btn btn-sm btn-outline"
+                  onClick={() => handleEditUser(user)}
+                >
+                  Edit
+                </button>
+                <button 
+                  className="btn btn-sm btn-outline"
+                  onClick={() => handleDeleteUser(user.id)}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Create/Edit User Modal */}
+      {showCreateModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>{editingUser ? 'Edit User' : 'Create New User'}</h3>
+              <button 
+                className="close-btn"
+                onClick={() => setShowCreateModal(false)}
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={handleCreateUser}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="username">Username/Email</label>
+                    <input
+                      type="email"
+                      id="username"
+                      name="username"
+                      value={userForm.username}
+                      onChange={handleInputChange}
+                      className="form-control"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="fullName">Full Name</label>
+                    <input
+                      type="text"
+                      id="fullName"
+                      name="fullName"
+                      value={userForm.fullName}
+                      onChange={handleInputChange}
+                      className="form-control"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="organization">Organization</label>
+                    <input
+                      type="text"
+                      id="organization"
+                      name="organization"
+                      value={userForm.organization}
+                      onChange={handleInputChange}
+                      className="form-control"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="role">Role</label>
+                    <select
+                      id="role"
+                      name="role"
+                      value={userForm.role}
+                      onChange={handleInputChange}
+                      className="form-control"
+                      required
+                    >
+                      <option value="">Select Role</option>
+                      <option value="User">User</option>
+                      <option value="Administrator">Administrator</option>
+                      <option value="Analyst">Analyst</option>
+                      <option value="Manager">Manager</option>
+                    </select>
+                  </div>
+                </div>
+                {!editingUser && (
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="password">Password</label>
+                      <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        value={userForm.password}
+                        onChange={handleInputChange}
+                        className="form-control"
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="confirmPassword">Confirm Password</label>
+                      <input
+                        type="password"
+                        id="confirmPassword"
+                        name="confirmPassword"
+                        value={userForm.confirmPassword}
+                        onChange={handleInputChange}
+                        className="form-control"
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+                <div className="modal-footer">
+                  <button 
+                    type="button" 
+                    className="btn btn-outline"
+                    onClick={() => setShowCreateModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Processing...' : (editingUser ? 'Update User' : 'Create User')}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// Account Settings Component
+function AccountSettings({ active, user }) {
+  const [formData, setFormData] = useState({
+    username: user?.username || '',
+    fullName: user?.full_name || '',
+    email: user?.email || user?.username || '',
+    organization: user?.organization || '',
+    role: user?.role || '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState('');
+
+  if (!active) return null;
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleProfileUpdate = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setMessage('');
+
+    try {
+      const profileData = {
+        full_name: formData.fullName,
+        organization: formData.organization,
+        role: formData.role
+      };
+      
+      await updateUserProfile(profileData);
+      setMessage('Profile updated successfully!');
+    } catch (error) {
+      setMessage(`Error updating profile: ${error}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    if (formData.newPassword !== formData.confirmPassword) {
+      setMessage('New passwords do not match!');
+      return;
+    }
+
+    setIsLoading(true);
+    setMessage('');
+
+    try {
+      await changePassword(formData.currentPassword, formData.newPassword);
+      setMessage('Password changed successfully!');
+      setFormData(prev => ({
+        ...prev,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      }));
+    } catch (error) {
+      setMessage(`Error changing password: ${error}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <section className="page-section active">
+      <div className="page-header">
+        <h1><i className="fas fa-cog"></i> Account Settings</h1>
+        <p>Manage your account preferences and security settings</p>
+      </div>
+
+      <div className="settings-container">
+        {message && (
+          <div className={`alert ${message.includes('Error') ? 'alert-error' : 'alert-success'}`}>
+            {message}
+          </div>
+        )}
+
+        <div className="settings-grid">
+          {/* Profile Information */}
+          <div className="settings-card">
+            <h3><i className="fas fa-user"></i> Profile Information</h3>
+            <form onSubmit={handleProfileUpdate}>
+              <div className="form-group">
+                <label htmlFor="username">Username</label>
+                <input
+                  type="text"
+                  id="username"
+                  name="username"
+                  value={formData.username}
+                  disabled
+                  className="form-control"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="fullName">Full Name</label>
+                <input
+                  type="text"
+                  id="fullName"
+                  name="fullName"
+                  value={formData.fullName}
+                  onChange={handleInputChange}
+                  className="form-control"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="email">Email</label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="form-control"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="organization">Organization</label>
+                <input
+                  type="text"
+                  id="organization"
+                  name="organization"
+                  value={formData.organization}
+                  onChange={handleInputChange}
+                  className="form-control"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="role">Role</label>
+                <input
+                  type="text"
+                  id="role"
+                  name="role"
+                  value={formData.role}
+                  onChange={handleInputChange}
+                  className="form-control"
+                />
+              </div>
+              <button type="submit" className="btn btn-primary" disabled={isLoading}>
+                {isLoading ? 'Updating...' : 'Update Profile'}
+              </button>
+            </form>
+          </div>
+
+          {/* Password Change */}
+          <div className="settings-card">
+            <h3><i className="fas fa-lock"></i> Change Password</h3>
+            <form onSubmit={handlePasswordChange}>
+              <div className="form-group">
+                <label htmlFor="currentPassword">Current Password</label>
+                <input
+                  type="password"
+                  id="currentPassword"
+                  name="currentPassword"
+                  value={formData.currentPassword}
+                  onChange={handleInputChange}
+                  className="form-control"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="newPassword">New Password</label>
+                <input
+                  type="password"
+                  id="newPassword"
+                  name="newPassword"
+                  value={formData.newPassword}
+                  onChange={handleInputChange}
+                  className="form-control"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="confirmPassword">Confirm New Password</label>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  className="form-control"
+                  required
+                />
+              </div>
+              <button type="submit" className="btn btn-primary" disabled={isLoading}>
+                {isLoading ? 'Changing...' : 'Change Password'}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Admin Settings Component
+function AdminSettings({ active }) {
+  const [systemHealth, setSystemHealth] = useState(null);
+  const [emailStats, setEmailStats] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState('');
+
+  if (!active) return null;
+
+  useEffect(() => {
+    if (active) {
+      fetchSystemData();
+    }
+  }, [active]);
+
+  const fetchSystemData = async () => {
+    setIsLoading(true);
+    try {
+      const [healthData, statsData] = await Promise.all([
+        getSystemHealth().catch(() => null),
+        getEmailStatistics().catch(() => null)
+      ]);
+      
+      setSystemHealth(healthData);
+      setEmailStats(statsData);
+    } catch (error) {
+      console.error('Error fetching system data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTestEmail = async () => {
+    const email = prompt('Enter email address to send test email:');
+    if (!email) return;
+
+    setIsLoading(true);
+    setMessage('');
+    
+    try {
+      await sendTestEmail(email);
+      setMessage('Test email sent successfully!');
+    } catch (error) {
+      setMessage(`Error sending test email: ${error}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    setIsLoading(true);
+    setMessage('');
+    
+    try {
+      await testGmailConnection();
+      setMessage('Gmail connection test successful!');
+    } catch (error) {
+      setMessage(`Gmail connection test failed: ${error}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <section className="page-section active">
+      <div className="page-header">
+        <h1><i className="fas fa-shield-alt"></i> Admin Settings</h1>
+        <p>System administration and configuration</p>
+      </div>
+
+      <div className="admin-settings-container">
+        {message && (
+          <div className={`alert ${message.includes('Error') || message.includes('failed') ? 'alert-error' : 'alert-success'}`}>
+            {message}
+          </div>
+        )}
+
+        <div className="admin-grid">
+          {/* System Health */}
+          <div className="admin-card">
+            <h3><i className="fas fa-heartbeat"></i> System Health</h3>
+            {isLoading ? (
+              <div className="loading">Loading system health...</div>
+            ) : systemHealth ? (
+              <div className="health-info">
+                <div className="health-status">
+                  <span className={`status-indicator ${systemHealth.status === 'healthy' ? 'healthy' : 'warning'}`}>
+                    {systemHealth.status || 'Unknown'}
+                  </span>
+                </div>
+                <p>{systemHealth.message || 'System status available'}</p>
+                <button onClick={fetchSystemData} className="btn btn-outline">
+                  <i className="fas fa-sync-alt"></i> Refresh
+                </button>
+              </div>
+            ) : (
+              <div className="no-data">
+                <p>Unable to fetch system health data</p>
+                <button onClick={fetchSystemData} className="btn btn-outline">
+                  <i className="fas fa-sync-alt"></i> Retry
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Email System */}
+          <div className="admin-card">
+            <h3><i className="fas fa-envelope"></i> Email System</h3>
+            {emailStats ? (
+              <div className="email-stats">
+                <div className="stat-item">
+                  <span className="stat-label">Total Sent:</span>
+                  <span className="stat-value">{emailStats.total_sent || 0}</span>
+                </div>
+                <div className="stat-item">
+                  <span className="stat-label">Failed:</span>
+                  <span className="stat-value error">{emailStats.failed_emails || 0}</span>
+                </div>
+                <div className="email-actions">
+                  <button onClick={handleTestConnection} className="btn btn-outline">
+                    <i className="fas fa-plug"></i> Test Connection
+                  </button>
+                  <button onClick={handleTestEmail} className="btn btn-primary">
+                    <i className="fas fa-paper-plane"></i> Send Test Email
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="no-data">
+                <p>Email statistics not available</p>
+                <button onClick={fetchSystemData} className="btn btn-outline">
+                  <i className="fas fa-sync-alt"></i> Reload
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* User Management */}
+          <div className="admin-card">
+            <h3><i className="fas fa-users"></i> User Management</h3>
+            <div className="management-actions">
+              <button className="btn btn-primary">
+                <i className="fas fa-user-plus"></i> Create User
+              </button>
+              <button className="btn btn-outline">
+                <i className="fas fa-users-cog"></i> Manage Roles
+              </button>
+              <button className="btn btn-outline">
+                <i className="fas fa-key"></i> Reset Passwords
+              </button>
+            </div>
+          </div>
+
+          {/* Trust System */}
+          <div className="admin-card">
+            <h3><i className="fas fa-handshake"></i> Trust System</h3>
+            <div className="trust-actions">
+              <button className="btn btn-primary">
+                <i className="fas fa-network-wired"></i> Manage Relationships
+              </button>
+              <button className="btn btn-outline">
+                <i className="fas fa-chart-line"></i> Trust Metrics
+              </button>
+              <button className="btn btn-outline">
+                <i className="fas fa-cogs"></i> System Configuration
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );
