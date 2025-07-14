@@ -103,14 +103,28 @@ crisp/
 │   │   ├── run_orchestrated_tests.py # Test runner
 │   │   └── taxii_operations.py       # TAXII utilities
 │   └── admin.py                      # Django admin configuration
+├── crisp-react/                      # React frontend application
+│   ├── package.json                  # Node.js dependencies
+│   ├── vite.config.js                # Vite build configuration
+│   ├── index.html                    # HTML entry point
+│   ├── src/
+│   │   ├── App.jsx                   # Main React application component
+│   │   ├── main.jsx                  # React entry point
+│   │   └── style.css                 # Application styles
+│   └── public/                       # Static assets
 ```
 
 ## Prerequisites
 
+### Backend Requirements
 - **Python 3.9+**
 - **PostgreSQL 13+**
 - **Redis 6+** (for Celery)
 - **RabbitMQ** (for Celery message broker)
+
+### Frontend Requirements  
+- **Node.js 18+**
+- **npm 9+**
 
 ## Installation & Setup
 
@@ -242,6 +256,42 @@ npm run dev
 - **React UI (Main Interface)**: [http://127.0.0.1:5173/](http://127.0.0.1:5173/)
 - **Django API**: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
 - **Django Admin**: [http://127.0.0.1:8000/admin/](http://127.0.0.1:8000/admin/)
+
+## React Frontend Features
+
+### **Dashboard**
+- **Live Statistics**: Real-time display of threat feeds, IoCs, TTPs, and system status
+- **Interactive Charts**: D3.js-powered threat activity trends visualization
+- **System Monitoring**: Live backend connectivity status with color-coded indicators
+
+### **Threat Feeds Management**
+- **Live Feed Data**: Real-time display of all configured threat feeds
+- **Feed Consumption**: One-click buttons to consume threat intelligence from external sources
+- **Status Monitoring**: Live sync status, last update times, and feed health indicators
+- **Feed Classification**: Visual distinction between external and internal feeds
+
+### **IoC Management**
+- **Dynamic Table**: Live display of indicators of compromise from backend
+- **Real-time Data**: Indicators automatically populated from consumed threat feeds
+- **Filtering & Search**: Built-in filtering capabilities for different IoC types
+- **Export Controls**: Export and import functionality for IoC data
+
+### **TTP Analysis**
+- **MITRE ATT&CK Integration**: Live display of tactics, techniques, and procedures
+- **Attack Tree Visualization**: Interactive charts showing TTP relationships
+- **Real-time Updates**: TTPs automatically populated from threat intelligence feeds
+- **Threat Actor Mapping**: Association of TTPs with specific threat actors
+
+### **Institutions Network**
+- **Trust Visualization**: Interactive network map showing trust relationships
+- **Real-time Monitoring**: Live status of connected institutions
+- **Statistics Dashboard**: IoC exchange statistics and activity monitoring
+
+### **Real-time Features**
+- **Auto-refresh**: System status checks every 30 seconds
+- **Live Data**: All components connected to Django REST API endpoints
+- **Error Handling**: Graceful degradation when backend is unavailable
+- **Loading States**: User-friendly loading indicators throughout the interface
 
 ## Usage Guide
 
