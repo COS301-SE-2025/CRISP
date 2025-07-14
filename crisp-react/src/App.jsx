@@ -789,97 +789,6 @@ function ThreatFeeds({ active }) {
               ))}
             </ul>
           )}
-            <li className="feed-item">
-              <div className="feed-icon"><i className="fas fa-shield-alt"></i></div>
-              <div className="feed-details">
-                <div className="feed-name">SANReN CSIRT Feed</div>
-                <div className="feed-description">South African National Research Network Computer Security Incident Response Team feed focused on academic sector threats.</div>
-                <div className="feed-meta">
-                  <div className="feed-stats">
-                    <div className="stat-item"><i className="fas fa-search"></i> 862 IoCs</div>
-                    <div className="stat-item"><i className="fas fa-sync-alt"></i> Updated 1h ago</div>
-                    <div className="stat-item"><i className="fas fa-tasks"></i> 19 TTPs</div>
-                  </div>
-                  <div className="feed-badges">
-                    <span className="badge badge-active">Active</span>
-                    <span className="badge badge-connected">TAXII</span>
-                  </div>
-                </div>
-              </div>
-            </li>
-            <li className="feed-item">
-              <div className="feed-icon"><i className="fas fa-university"></i></div>
-              <div className="feed-details">
-                <div className="feed-name">SABRIC Intelligence Feed</div>
-                <div className="feed-description">South African Banking Risk Information Centre feed with financial sector threat intelligence.</div>
-                <div className="feed-meta">
-                  <div className="feed-stats">
-                    <div className="stat-item"><i className="fas fa-search"></i> 635 IoCs</div>
-                    <div className="stat-item"><i className="fas fa-sync-alt"></i> Updated 3h ago</div>
-                    <div className="stat-item"><i className="fas fa-tasks"></i> 14 TTPs</div>
-                  </div>
-                  <div className="feed-badges">
-                    <span className="badge badge-active">Active</span>
-                    <span className="badge badge-connected">STIX/TAXII</span>
-                  </div>
-                </div>
-              </div>
-            </li>
-            <li className="feed-item">
-              <div className="feed-icon"><i className="fas fa-lock"></i></div>
-              <div className="feed-details">
-                <div className="feed-name">Cyber Security Hub</div>
-                <div className="feed-description">National CSIRT of South Africa providing threat intelligence focused on critical infrastructure.</div>
-                <div className="feed-meta">
-                  <div className="feed-stats">
-                    <div className="stat-item"><i className="fas fa-search"></i> 978 IoCs</div>
-                    <div className="stat-item"><i className="fas fa-sync-alt"></i> Updated 2h ago</div>
-                    <div className="stat-item"><i className="fas fa-tasks"></i> 32 TTPs</div>
-                  </div>
-                  <div className="feed-badges">
-                    <span className="badge badge-active">Active</span>
-                    <span className="badge badge-connected">MISP</span>
-                  </div>
-                </div>
-              </div>
-            </li>
-            <li className="feed-item">
-              <div className="feed-icon"><i className="fas fa-server"></i></div>
-              <div className="feed-details">
-                <div className="feed-name">Internal Threat Feed</div>
-                <div className="feed-description">BlueVision ITM internal threat intelligence gathered from incident response activities.</div>
-                <div className="feed-meta">
-                  <div className="feed-stats">
-                    <div className="stat-item"><i className="fas fa-search"></i> 527 IoCs</div>
-                    <div className="stat-item"><i className="fas fa-sync-alt"></i> Updated 30m ago</div>
-                    <div className="stat-item"><i className="fas fa-tasks"></i> 23 TTPs</div>
-                  </div>
-                  <div className="feed-badges">
-                    <span className="badge badge-active">Active</span>
-                    <span className="badge badge-connected">Internal</span>
-                  </div>
-                </div>
-              </div>
-            </li>
-            <li className="feed-item">
-              <div className="feed-icon"><i className="fas fa-bug"></i></div>
-              <div className="feed-details">
-                <div className="feed-name">AlienVault OTX</div>
-                <div className="feed-description">Open Threat Exchange provides community-powered threat intelligence.</div>
-                <div className="feed-meta">
-                  <div className="feed-stats">
-                    <div className="stat-item"><i className="fas fa-search"></i> 1,892 IoCs</div>
-                    <div className="stat-item"><i className="fas fa-sync-alt"></i> Updated 45m ago</div>
-                    <div className="stat-item"><i className="fas fa-tasks"></i> 46 TTPs</div>
-                  </div>
-                  <div className="feed-badges">
-                    <span className="badge badge-active">Active</span>
-                    <span className="badge badge-connected">API</span>
-                  </div>
-                </div>
-              </div>
-            </li>
-          </ul>
         </div>
       </div>
 
@@ -896,6 +805,40 @@ function ThreatFeeds({ active }) {
 
 // IoC Management Component
 function IoCManagement({ active }) {
+  const [indicators, setIndicators] = useState([]);
+  const [loading, setLoading] = useState(false);
+  
+  // Fetch indicators from backend
+  useEffect(() => {
+    if (active) {
+      fetchIndicators();
+    }
+  }, [active]);
+  
+  const fetchIndicators = async () => {
+    setLoading(true);
+    // Since we don't have a direct indicators API, we'll fetch from feeds and get their status
+    const feedData = await api.get('/api/threat-feeds/');
+    if (feedData && feedData.length > 0) {
+      // Get indicators from the first feed as example
+      const feedStatus = await api.get(`/api/threat-feeds/${feedData[0].id}/status/`);
+      if (feedStatus) {
+        // Create mock indicators based on feed data
+        const mockIndicators = Array.from({length: Math.min(feedStatus.indicator_count, 10)}, (_, i) => ({
+          id: i + 1,
+          type: ['IP Address', 'Domain', 'URL', 'File Hash', 'Email'][i % 5],
+          value: `indicator-${i + 1}`,
+          severity: ['High', 'Medium', 'Low'][i % 3],
+          source: feedData[0].name || 'Unknown',
+          created: new Date().toISOString().split('T')[0],
+          status: 'Active'
+        }));
+        setIndicators(mockIndicators);
+      }
+    }
+    setLoading(false);
+  };
+  
   return (
     <section id="ioc-management" className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
@@ -984,110 +927,43 @@ function IoCManagement({ active }) {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td><input type="checkbox" /></td>
-                <td>IP Address</td>
-                <td>192.168.144.32</td>
-                <td><span className="badge badge-high">High</span></td>
-                <td>CIRCL MISP</td>
-                <td>2025-05-18</td>
-                <td><span className="badge badge-active">Active</span></td>
-                <td>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-edit"></i></button>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i></button>
-                </td>
-              </tr>
-              <tr>
-                <td><input type="checkbox" /></td>
-                <td>Domain</td>
-                <td>malicious-ransomware.net</td>
-                <td><span className="badge badge-high">High</span></td>
-                <td>Internal</td>
-                <td>2025-05-17</td>
-                <td><span className="badge badge-active">Active</span></td>
-                <td>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-edit"></i></button>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i></button>
-                </td>
-              </tr>
-              <tr>
-                <td><input type="checkbox" /></td>
-                <td>File Hash</td>
-                <td>a45f3d9e7b12c04e8572630a21ba8f61</td>
-                <td><span className="badge badge-medium">Medium</span></td>
-                <td>SANReN CSIRT</td>
-                <td>2025-05-16</td>
-                <td><span className="badge badge-active">Active</span></td>
-                <td>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-edit"></i></button>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i></button>
-                </td>
-              </tr>
-              <tr>
-                <td><input type="checkbox" /></td>
-                <td>URL</td>
-                <td>https://download.malicious-file.com/payload</td>
-                <td><span className="badge badge-medium">Medium</span></td>
-                <td>SABRIC</td>
-                <td>2025-05-15</td>
-                <td><span className="badge badge-active">Active</span></td>
-                <td>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-edit"></i></button>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i></button>
-                </td>
-              </tr>
-              <tr>
-                <td><input type="checkbox" /></td>
-                <td>Email</td>
-                <td>phishing@suspicious-mail.org</td>
-                <td><span className="badge badge-low">Low</span></td>
-                <td>Internal</td>
-                <td>2025-05-14</td>
-                <td><span className="badge badge-medium">Under Review</span></td>
-                <td>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-edit"></i></button>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i></button>
-                </td>
-              </tr>
-              <tr>
-                <td><input type="checkbox" /></td>
-                <td>IP Address</td>
-                <td>45.195.33.12</td>
-                <td><span className="badge badge-high">High</span></td>
-                <td>Cyber Security Hub</td>
-                <td>2025-05-13</td>
-                <td><span className="badge badge-active">Active</span></td>
-                <td>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-edit"></i></button>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i></button>
-                </td>
-              </tr>
-              <tr>
-                <td><input type="checkbox" /></td>
-                <td>File Hash</td>
-                <td>5a8f1c9b2e3d647a8c9f1b5d3e7a2c4d</td>
-                <td><span className="badge badge-high">High</span></td>
-                <td>AlienVault OTX</td>
-                <td>2025-05-12</td>
-                <td><span className="badge badge-active">Active</span></td>
-                <td>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-edit"></i></button>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i></button>
-                </td>
-              </tr>
-              <tr>
-                <td><input type="checkbox" /></td>
-                <td>Domain</td>
-                <td>fake-university-portal.com</td>
-                <td><span className="badge badge-high">High</span></td>
-                <td>Internal</td>
-                <td>2025-05-11</td>
-                <td><span className="badge badge-active">Active</span></td>
-                <td>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-edit"></i></button>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i></button>
-                </td>
-              </tr>
+              {loading ? (
+                <tr>
+                  <td colSpan="8" style={{textAlign: 'center', padding: '2rem'}}>
+                    <i className="fas fa-spinner fa-spin"></i> Loading indicators...
+                  </td>
+                </tr>
+              ) : indicators.length > 0 ? (
+                indicators.map((indicator) => (
+                  <tr key={indicator.id}>
+                    <td><input type="checkbox" /></td>
+                    <td>{indicator.type}</td>
+                    <td>{indicator.value}</td>
+                    <td>
+                      <span className={`badge badge-${indicator.severity.toLowerCase()}`}>
+                        {indicator.severity}
+                      </span>
+                    </td>
+                    <td>{indicator.source}</td>
+                    <td>{indicator.created}</td>
+                    <td>
+                      <span className={`badge badge-${indicator.status.toLowerCase()}`}>
+                        {indicator.status}
+                      </span>
+                    </td>
+                    <td>
+                      <button className="btn btn-outline btn-sm"><i className="fas fa-edit"></i></button>
+                      <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i></button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="8" style={{textAlign: 'center', padding: '2rem'}}>
+                    No indicators found
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
