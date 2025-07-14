@@ -1,6 +1,38 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 
+// API Configuration
+const API_BASE_URL = 'http://localhost:8000';
+
+// API Helper Functions
+const api = {
+  get: async (endpoint) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error(`API Error: ${endpoint}`, error);
+      return null;
+    }
+  },
+  
+  post: async (endpoint, data) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error(`API Error: ${endpoint}`, error);
+      return null;
+    }
+  }
+};
+
 function App() {
   // State to manage the active page
   const [activePage, setActivePage] = useState('dashboard');
@@ -143,8 +175,30 @@ function MainNav({ activePage, showPage }) {
 
 // Dashboard Component
 function Dashboard({ active }) {
+  // State for dashboard data
+  const [dashboardStats, setDashboardStats] = useState({
+    threat_feeds: 0,
+    indicators: 0,
+    ttps: 0,
+    status: 'loading'
+  });
+  
   // D3 Chart References
   const chartRef = useRef(null);
+  
+  // Fetch dashboard data from backend
+  useEffect(() => {
+    if (active) {
+      fetchDashboardData();
+    }
+  }, [active]);
+  
+  const fetchDashboardData = async () => {
+    const data = await api.get('/core/');
+    if (data) {
+      setDashboardStats(data);
+    }
+  };
   
   // Set up D3 charts when component mounts
   useEffect(() => {
