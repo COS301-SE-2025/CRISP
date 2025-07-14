@@ -178,16 +178,16 @@ python manage.py createsuperuser
 
 ## Running the Application
 
-### Start the Django Server
+### Backend (Django API Server)
 
+1. **Start the Django Server**:
 ```bash
 python manage.py runserver
 ```
 
-The application will be available at [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+The Django API will be available at [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
 
-### Start Background Worker (Celery)
-
+2. **Start Background Worker (Celery)**:
 ```bash
 # Ensure Redis is running
 redis-cli ping  # Should return PONG
@@ -195,6 +195,53 @@ redis-cli ping  # Should return PONG
 # Start Celery worker for asynchronous processing
 celery -A crisp_settings worker -l info
 ```
+
+### Frontend (React UI)
+
+1. **Navigate to the React app directory**:
+```bash
+cd crisp-react
+```
+
+2. **Install Node.js dependencies**:
+```bash
+npm install
+```
+
+3. **Start the React development server**:
+```bash
+npm run dev
+```
+
+The React UI will be available at [http://127.0.0.1:5173/](http://127.0.0.1:5173/) (Vite default port)
+
+### Full System Setup (Both Backend + Frontend)
+
+1. **Terminal 1 - Django Backend**:
+```bash
+# From project root
+python manage.py runserver
+```
+
+2. **Terminal 2 - Celery Worker**:
+```bash
+# From project root  
+celery -A crisp_settings worker -l info
+```
+
+3. **Terminal 3 - React Frontend**:
+```bash
+# From project root
+cd crisp-react
+npm install
+npm run dev
+```
+
+### Accessing the Application
+
+- **React UI (Main Interface)**: [http://127.0.0.1:5173/](http://127.0.0.1:5173/)
+- **Django API**: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+- **Django Admin**: [http://127.0.0.1:8000/admin/](http://127.0.0.1:8000/admin/)
 
 ## Usage Guide
 
