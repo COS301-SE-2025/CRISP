@@ -211,7 +211,6 @@ class AuthenticationService:
     def _get_user_trust_context(self, user: CustomUser) -> Dict:
         """Get trust context information for the user"""
         try:
-<<<<<<< HEAD:core/user_management/services/auth_service.py
             from core.trust.models import TrustRelationship
             
             # Default context for users without organization
@@ -238,29 +237,22 @@ class AuthenticationService:
                 status='active'
             ).count()
             
-=======
->>>>>>> b48639b639679500a67114d49cd227cb9c2eedf7:UserTrust/core/user_management/services/auth_service.py
             return {
                 'organization_id': str(user.organization.id),
                 'organization_name': user.organization.name,
-                'outgoing_trust_relationships': 0,
-                'incoming_trust_relationships': 0,
+                'outgoing_trust_relationships': outgoing_relationships,
+                'incoming_trust_relationships': incoming_relationships,
                 'can_manage_trust': user.can_manage_trust_relationships,
                 'trust_aware_access': True
             }
         except Exception as e:
             logger.error(f"Error getting trust context: {str(e)}")
             return {
-<<<<<<< HEAD:core/user_management/services/auth_service.py
                 'organization_id': str(user.organization.id) if user.organization else None,
                 'organization_name': user.organization.name if user.organization else None,
                 'outgoing_trust_relationships': 0,
                 'incoming_trust_relationships': 0,
                 'can_manage_trust': False,
-=======
-                'organization_id': str(user.organization.id) if user.organization else 'none',
-                'organization_name': user.organization.name if user.organization else 'None',
->>>>>>> b48639b639679500a67114d49cd227cb9c2eedf7:UserTrust/core/user_management/services/auth_service.py
                 'trust_aware_access': False
             }
     

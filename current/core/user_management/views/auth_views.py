@@ -3,7 +3,6 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth import logout
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
@@ -29,11 +28,7 @@ class AuthenticationViewSet(viewsets.ViewSet):
     """Authentication viewset for login/logout operations"""
     
     authentication_classes = [JWTAuthentication]
-<<<<<<< HEAD:core/user_management/views/auth_views.py
     permission_classes = [IsAuthenticated]  # Default permission
-=======
-    permission_classes = [IsAuthenticated]
->>>>>>> b48639b639679500a67114d49cd227cb9c2eedf7:UserTrust/core/user_management/views/auth_views.py
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -47,6 +42,8 @@ class AuthenticationViewSet(viewsets.ViewSet):
         try:
             username = request.data.get('username')
             password = request.data.get('password')
+            totp_code = request.data.get('totp_code')
+            remember_device = request.data.get('remember_device', False)
             
             if not username or not password:
                 return Response(
@@ -54,11 +51,14 @@ class AuthenticationViewSet(viewsets.ViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # Simple authentication
-            from ..models import CustomUser
-            from rest_framework_simplejwt.tokens import RefreshToken
+            result = self.auth_service.authenticate_user(
+                username=username,
+                password=password,
+                request=request,
+                totp_code=totp_code,
+                remember_device=remember_device
+            )
             
-<<<<<<< HEAD:core/user_management/views/auth_views.py
             if result.get('success'):
                 # User data is already formatted by the auth service
                 return Response({
@@ -80,153 +80,8 @@ class AuthenticationViewSet(viewsets.ViewSet):
                 
         except Exception as e:
             logger.error(f"Login exception: {str(e)}")
-=======
-            try:
-                user = CustomUser.objects.get(username=username)
-            except CustomUser.DoesNotExist:
-                return Response(
-                    {'success': False, 'message': 'Invalid credentials'}, 
-                    status=status.HTTP_401_UNAUTHORIZED
-                )
-            
-            if not user.check_password(password):
-                return Response(
-                    {'success': False, 'message': 'Invalid credentials'}, 
-                    status=status.HTTP_401_UNAUTHORIZED
-                )
-            
-            if not user.is_active:
-                return Response(
-                    {'success': False, 'message': 'Account is inactive'}, 
-                    status=status.HTTP_401_UNAUTHORIZED
-                )
-            
-            # Generate tokens
-            refresh = RefreshToken.for_user(user)
-            access_token = refresh.access_token
-            
-            user_data = {
-                'id': str(user.id),
-                'username': user.username,
-                'email': user.email,
-                'first_name': user.first_name,
-                'last_name': user.last_name,
-                'role': user.role,
-                'is_publisher': user.is_publisher,
-                'organization': {
-                    'id': str(user.organization.id),
-                    'name': user.organization.name,
-                    'domain': user.organization.domain
-                } if user.organization else None
-            }
-            
-            return Response({
-                'success': True,
-                'user': user_data,
-                'tokens': {
-                    'access': str(access_token),
-                    'refresh': str(refresh)
-                }
-            }, status=status.HTTP_200_OK)
-                
-        except Exception as e:
-            logger.error(f"Login error: {str(e)}", exc_info=True)
->>>>>>> b48639b639679500a67114d49cd227cb9c2eedf7:UserTrust/core/user_management/views/auth_views.py
             return Response(
-                {'success': False, 'message': f'Authentication system error: {str(e)}'}, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-    
-    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
-    def register(self, request):
-        """Handle user registration"""
-        try:
-            username = request.data.get('username')
-            password = request.data.get('password')
-            email = request.data.get('email', f'{username}@crisp.local')
-            first_name = request.data.get('first_name', '')
-            last_name = request.data.get('last_name', '')
-            role = request.data.get('role', 'viewer')
-            
-            if not username or not password:
-                return Response(
-                    {'success': False, 'message': 'Username and password are required'}, 
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Check if user already exists
-            from ..models import CustomUser, Organization
-            if CustomUser.objects.filter(username=username).exists():
-                return Response(
-                    {'success': False, 'message': 'Username already exists'}, 
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            if CustomUser.objects.filter(email=email).exists():
-                return Response(
-                    {'success': False, 'message': 'Email already exists'}, 
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Get or create default organization
-            org, created = Organization.objects.get_or_create(
-                name='CRISP Security',
-                defaults={
-                    'description': 'Main security organization for CRISP platform',
-                    'domain': 'crisp.local',
-                    'contact_email': 'admin@crisp.local',
-                    'organization_type': 'educational',
-                    'is_publisher': True,
-                    'is_verified': True
-                }
-            )
-            
-            # Create user
-            user = CustomUser.objects.create_user(
-                username=username,
-                email=email,
-                password=password,
-                first_name=first_name,
-                last_name=last_name,
-                organization=org,
-                role=role,
-                is_verified=True
-            )
-            
-            # Generate tokens
-            from rest_framework_simplejwt.tokens import RefreshToken
-            refresh = RefreshToken.for_user(user)
-            access_token = refresh.access_token
-            
-            user_data = {
-                'id': str(user.id),
-                'username': user.username,
-                'email': user.email,
-                'first_name': user.first_name,
-                'last_name': user.last_name,
-                'role': user.role,
-                'is_publisher': user.is_publisher,
-                'organization': {
-                    'id': str(user.organization.id),
-                    'name': user.organization.name,
-                    'domain': user.organization.domain
-                }
-            }
-            
-            return Response({
-                'success': True,
-                'user': user_data,
-                'tokens': {
-                    'access': str(access_token),
-                    'refresh': str(refresh)
-                },
-                'message': 'User registered successfully'
-            }, status=status.HTTP_201_CREATED)
-                
-        except Exception as e:
-            logger.error(f"Registration error: {str(e)}", exc_info=True)
-            return Response(
-                {'success': False, 'message': f'Registration error: {str(e)}'}, 
+                {'success': False, 'message': 'Internal server error'}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     

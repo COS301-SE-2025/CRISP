@@ -1,5 +1,4 @@
 import React from 'react';
-import logoImage from '../assets/BlueV2.png';
 
 function Footer() {
   return (
@@ -8,7 +7,7 @@ function Footer() {
         <div className="footer-content">
           <div className="footer-section">
             <div className="footer-logo">
-              <img src={logoImage} alt="CRISP Logo" className="logo-image" />
+              <div className="logo-icon"><i className="fas fa-shield-alt"></i></div>
               <div className="logo-text">CRISP</div>
             </div>
             <p className="footer-description">

@@ -86,12 +86,4 @@ logs/
 *.tmp
 *.temp
 
-<<<<<<< HEAD
 node_modules/
-=======
-# Node.js
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
->>>>>>> b48639b639679500a67114d49cd227cb9c2eedf7
