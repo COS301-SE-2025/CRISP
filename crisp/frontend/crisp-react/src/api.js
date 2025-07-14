@@ -280,3 +280,48 @@ export const getSecurityEvents = async () => {
   
   return await handleResponse(response);
 };
+
+// Change Password API function
+export const changePassword = async (currentPassword, newPassword) => {
+  const response = await fetch(`${API_URL}auth/change-password/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword
+    })
+  });
+  
+  return await handleResponse(response);
+};
+
+// Email Statistics API function
+export const getEmailStatistics = async () => {
+  const response = await fetch(`${API_URL}admin/email-statistics/`, {
+    method: 'GET',
+    headers: { ...authHeader() }
+  });
+  
+  return await handleResponse(response);
+};
+
+// Test Gmail Connection API function
+export const testGmailConnection = async () => {
+  const response = await fetch(`${API_URL}admin/test-gmail-connection/`, {
+    method: 'POST',
+    headers: { ...authHeader() }
+  });
+  
+  return await handleResponse(response);
+};
+
+// Send Test Email API function
+export const sendTestEmail = async (email) => {
+  const response = await fetch(`${API_URL}admin/send-test-email/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify({ email })
+  });
+  
+  return await handleResponse(response);
+};
