@@ -1038,7 +1038,40 @@ function IoCManagement({ active }) {
 
 // TTP Analysis Component
 function TTPAnalysis({ active }) {
+  const [ttpData, setTtpData] = useState([]);
+  const [loading, setLoading] = useState(false);
   const ttpChartRef = useRef(null);
+  
+  // Fetch TTP data from backend
+  useEffect(() => {
+    if (active) {
+      fetchTTPData();
+    }
+  }, [active]);
+  
+  const fetchTTPData = async () => {
+    setLoading(true);
+    // Get TTP data from feeds
+    const feedData = await api.get('/api/threat-feeds/');
+    if (feedData && feedData.length > 0) {
+      // Get TTP status from the first feed
+      const feedStatus = await api.get(`/api/threat-feeds/${feedData[0].id}/status/`);
+      if (feedStatus) {
+        // Create mock TTP data based on feed data
+        const mockTTPs = Array.from({length: Math.min(feedStatus.ttp_count, 10)}, (_, i) => ({
+          id: `T${1000 + i}`,
+          name: `TTP-${i + 1}`,
+          tactic: ['Initial Access', 'Execution', 'Persistence', 'Defense Evasion', 'Impact'][i % 5],
+          technique: `Technique ${i + 1}`,
+          source: feedData[0].name || 'Unknown',
+          severity: ['High', 'Medium', 'Low'][i % 3],
+          frequency: Math.floor(Math.random() * 50) + 1
+        }));
+        setTtpData(mockTTPs);
+      }
+    }
+    setLoading(false);
+  };
   
   useEffect(() => {
     if (active && ttpChartRef.current) {
@@ -1397,71 +1430,39 @@ function TTPAnalysis({ active }) {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>TTP-2025-0042</td>
-                <td>Phishing with Malicious Attachments</td>
-                <td>Initial Access</td>
-                <td>T1566.001</td>
-                <td>APT-EDU-01</td>
-                <td>2025-05-19</td>
-                <td><span className="badge badge-active">Active</span></td>
-                <td>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-eye"></i></button>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i></button>
-                </td>
-              </tr>
-              <tr>
-                <td>TTP-2025-0041</td>
-                <td>PowerShell Script Execution</td>
-                <td>Execution</td>
-                <td>T1059.001</td>
-                <td>APT-EDU-01, CyberCrim-12</td>
-                <td>2025-05-18</td>
-                <td><span className="badge badge-active">Active</span></td>
-                <td>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-eye"></i></button>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i></button>
-                </td>
-              </tr>
-              <tr>
-                <td>TTP-2025-0039</td>
-                <td>Data Encryption for Impact</td>
-                <td>Impact</td>
-                <td>T1486</td>
-                <td>RansomGroup-X</td>
-                <td>2025-05-17</td>
-                <td><span className="badge badge-active">Active</span></td>
-                <td>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-eye"></i></button>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i></button>
-                </td>
-              </tr>
-              <tr>
-                <td>TTP-2025-0038</td>
-                <td>Credential Dumping</td>
-                <td>Credential Access</td>
-                <td>T1003</td>
-                <td>APT-EDU-01, RansomGroup-X</td>
-                <td>2025-05-15</td>
-                <td><span className="badge badge-active">Active</span></td>
-                <td>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-eye"></i></button>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i></button>
-                </td>
-              </tr>
-              <tr>
-                <td>TTP-2025-0035</td>
-                <td>Network Service Discovery</td>
-                <td>Discovery</td>
-                <td>T1046</td>
-                <td>CyberCrim-12</td>
-                <td>2025-05-12</td>
-                <td><span className="badge badge-active">Active</span></td>
-                <td>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-eye"></i></button>
-                  <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i></button>
-                </td>
-              </tr>
+              {loading ? (
+                <tr>
+                  <td colSpan="8" style={{textAlign: 'center', padding: '2rem'}}>
+                    <i className="fas fa-spinner fa-spin"></i> Loading TTPs...
+                  </td>
+                </tr>
+              ) : ttpData.length > 0 ? (
+                ttpData.map((ttp) => (
+                  <tr key={ttp.id}>
+                    <td>{ttp.id}</td>
+                    <td>{ttp.name}</td>
+                    <td>{ttp.tactic}</td>
+                    <td>{ttp.id}</td>
+                    <td>{ttp.source}</td>
+                    <td>{new Date().toISOString().split('T')[0]}</td>
+                    <td>
+                      <span className={`badge badge-${ttp.severity.toLowerCase()}`}>
+                        {ttp.severity}
+                      </span>
+                    </td>
+                    <td>
+                      <button className="btn btn-outline btn-sm"><i className="fas fa-eye"></i></button>
+                      <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i></button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="8" style={{textAlign: 'center', padding: '2rem'}}>
+                    No TTPs found
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
