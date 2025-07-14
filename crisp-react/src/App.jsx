@@ -356,21 +356,25 @@ function Dashboard({ active }) {
             <div className="stat-icon"><i className="fas fa-search"></i></div>
             <span>Active IoCs</span>
           </div>
-          <div className="stat-value">1,286</div>
+          <div className="stat-value">
+            {dashboardStats.indicators || 0}
+          </div>
           <div className="stat-change increase">
             <span><i className="fas fa-arrow-up"></i></span>
-            <span>24% from last week</span>
+            <span>Live data</span>
           </div>
         </div>
         <div className="stat-card">
           <div className="stat-title">
-            <div className="stat-icon"><i className="fas fa-building"></i></div>
-            <span>Connected Institutions</span>
+            <div className="stat-icon"><i className="fas fa-sitemap"></i></div>
+            <span>TTPs</span>
           </div>
-          <div className="stat-value">42</div>
+          <div className="stat-value">
+            {dashboardStats.ttps || 0}
+          </div>
           <div className="stat-change increase">
             <span><i className="fas fa-arrow-up"></i></span>
-            <span>3 new this month</span>
+            <span>Live data</span>
           </div>
         </div>
         <div className="stat-card">
@@ -378,21 +382,25 @@ function Dashboard({ active }) {
             <div className="stat-icon"><i className="fas fa-rss"></i></div>
             <span>Threat Feeds</span>
           </div>
-          <div className="stat-value">18</div>
+          <div className="stat-value">
+            {dashboardStats.threat_feeds || 0}
+          </div>
           <div className="stat-change increase">
             <span><i className="fas fa-arrow-up"></i></span>
-            <span>2 new feeds</span>
+            <span>Live data</span>
           </div>
         </div>
         <div className="stat-card">
           <div className="stat-title">
-            <div className="stat-icon"><i className="fas fa-exclamation-triangle"></i></div>
-            <span>Critical Alerts</span>
+            <div className="stat-icon"><i className="fas fa-server"></i></div>
+            <span>Platform Status</span>
           </div>
-          <div className="stat-value">7</div>
-          <div className="stat-change decrease">
-            <span><i className="fas fa-arrow-down"></i></span>
-            <span>12% from yesterday</span>
+          <div className="stat-value">
+            {dashboardStats.status === 'active' ? 'Online' : 'Offline'}
+          </div>
+          <div className="stat-change">
+            <span><i className="fas fa-circle" style={{color: dashboardStats.status === 'active' ? '#28a745' : '#dc3545'}}></i></span>
+            <span>Live status</span>
           </div>
         </div>
       </div>
@@ -642,6 +650,34 @@ function Dashboard({ active }) {
 
 // Threat Feeds Component
 function ThreatFeeds({ active }) {
+  const [threatFeeds, setThreatFeeds] = useState([]);
+  const [loading, setLoading] = useState(false);
+  
+  // Fetch threat feeds from backend
+  useEffect(() => {
+    if (active) {
+      fetchThreatFeeds();
+    }
+  }, [active]);
+  
+  const fetchThreatFeeds = async () => {
+    setLoading(true);
+    const data = await api.get('/api/threat-feeds/');
+    if (data) {
+      setThreatFeeds(data);
+    }
+    setLoading(false);
+  };
+  
+  const handleConsumeFeed = async (feedId) => {
+    const result = await api.post(`/api/threat-feeds/${feedId}/consume/`);
+    if (result) {
+      console.log('Feed consumption started:', result);
+      // Refresh feeds after consumption
+      fetchThreatFeeds();
+    }
+  };
+  
   return (
     <section id="threat-feeds" className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
@@ -709,25 +745,50 @@ function ThreatFeeds({ active }) {
 
       <div className="card">
         <div className="card-content">
-          <ul className="feed-items">
-            <li className="feed-item">
-              <div className="feed-icon"><i className="fas fa-globe"></i></div>
-              <div className="feed-details">
-                <div className="feed-name">CIRCL MISP Feed</div>
-                <div className="feed-description">Computer Incident Response Center Luxembourg (CIRCL) MISP feed providing indicators related to various threats.</div>
-                <div className="feed-meta">
-                  <div className="feed-stats">
-                    <div className="stat-item"><i className="fas fa-search"></i> 1,245 IoCs</div>
-                    <div className="stat-item"><i className="fas fa-sync-alt"></i> Updated 25m ago</div>
-                    <div className="stat-item"><i className="fas fa-tasks"></i> 28 TTPs</div>
+          {loading ? (
+            <div style={{textAlign: 'center', padding: '2rem'}}>
+              <i className="fas fa-spinner fa-spin"></i> Loading feeds...
+            </div>
+          ) : (
+            <ul className="feed-items">
+              {threatFeeds.map((feed) => (
+                <li key={feed.id} className="feed-item">
+                  <div className="feed-icon">
+                    <i className={feed.is_external ? "fas fa-globe" : "fas fa-server"}></i>
                   </div>
-                  <div className="feed-badges">
-                    <span className="badge badge-active">Active</span>
-                    <span className="badge badge-connected">STIX/TAXII</span>
+                  <div className="feed-details">
+                    <div className="feed-name">{feed.name}</div>
+                    <div className="feed-description">{feed.description || 'No description available'}</div>
+                    <div className="feed-meta">
+                      <div className="feed-stats">
+                        <div className="stat-item">
+                          <i className="fas fa-link"></i> {feed.taxii_collection_id || 'N/A'}
+                        </div>
+                        <div className="stat-item">
+                          <i className="fas fa-sync-alt"></i> {feed.last_sync ? new Date(feed.last_sync).toLocaleString() : 'Never'}
+                        </div>
+                        <div className="stat-item">
+                          <i className="fas fa-globe"></i> {feed.is_external ? 'External' : 'Internal'}
+                        </div>
+                      </div>
+                      <div className="feed-badges">
+                        <span className={`badge ${feed.is_public ? 'badge-active' : 'badge-medium'}`}>
+                          {feed.is_public ? 'Public' : 'Private'}
+                        </span>
+                        <span className="badge badge-connected">STIX/TAXII</span>
+                        <button 
+                          className="btn btn-sm btn-primary"
+                          onClick={() => handleConsumeFeed(feed.id)}
+                        >
+                          <i className="fas fa-download"></i> Consume
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            </li>
+                </li>
+              ))}
+            </ul>
+          )}
             <li className="feed-item">
               <div className="feed-icon"><i className="fas fa-shield-alt"></i></div>
               <div className="feed-details">
