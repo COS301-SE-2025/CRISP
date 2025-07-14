@@ -282,13 +282,14 @@ export const getSecurityEvents = async () => {
 };
 
 // Change Password API function
-export const changePassword = async (currentPassword, newPassword) => {
-  const response = await fetch(`${API_URL}auth/change-password/`, {
+export const changePassword = async (currentPassword, newPassword, confirmPassword) => {
+  const response = await fetch(`${API_URL}auth/change_password/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify({
       current_password: currentPassword,
-      new_password: newPassword
+      new_password: newPassword,
+      new_password_confirm: confirmPassword
     })
   });
   

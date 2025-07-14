@@ -3,6 +3,7 @@ import { loginUser } from './api.js'; // Import the API function
 import BlueVLogo from './assets/BlueV.png';
 import CrispHelp from './crisp_help.jsx'; // Import the help component
 import Construction from './construction.jsx'; // Import construction component
+import ChangePassword from './components/ChangePassword.jsx'; // Import change password component
 
 // Login Component that works with the AuthWrapper in main.jsx
 function CrispLogin({ onLoginSuccess, switchView }) {
@@ -12,6 +13,7 @@ function CrispLogin({ onLoginSuccess, switchView }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false); // State for help modal
   const [showConstruction, setShowConstruction] = useState(false); // State for construction page
+  const [showChangePassword, setShowChangePassword] = useState(false); // State for change password modal
 
   // Initialize Feather icons when component mounts
   useEffect(() => {
@@ -65,6 +67,19 @@ function CrispLogin({ onLoginSuccess, switchView }) {
 
   const closeHelp = () => {
     setIsHelpOpen(false);
+  };
+
+  const openChangePassword = () => {
+    setShowChangePassword(true);
+  };
+
+  const closeChangePassword = () => {
+    setShowChangePassword(false);
+  };
+
+  const handlePasswordChanged = () => {
+    setError('');
+    alert('Password changed successfully! You can now log in with your new password.');
   };
 
   // Handle navigation from help component
@@ -200,6 +215,14 @@ function CrispLogin({ onLoginSuccess, switchView }) {
                     <i data-feather="help-circle"></i>
                     Need Help?
                   </button>
+                  <button 
+                    className="help-link" 
+                    onClick={openChangePassword}
+                    type="button"
+                  >
+                    <i data-feather="lock"></i>
+                    Change Password
+                  </button>
                 </div>
               </div>
             </div>
@@ -212,6 +235,13 @@ function CrispLogin({ onLoginSuccess, switchView }) {
         isOpen={isHelpOpen} 
         onClose={closeHelp} 
         onNavigate={handleNavigate}
+      />
+
+      {/* Change Password Modal */}
+      <ChangePassword 
+        isOpen={showChangePassword}
+        onClose={closeChangePassword}
+        onPasswordChanged={handlePasswordChanged}
       />
     </>
   );
@@ -521,6 +551,10 @@ function CSSStyles() {
             margin-top: 1rem;
             padding-top: 1rem;
             border-top: 1px solid var(--bg-medium);
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
         }
 
         .help-link {
