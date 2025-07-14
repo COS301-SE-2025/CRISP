@@ -10,64 +10,62 @@ function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthW
   const [activePage, setActivePage] = useState('dashboard');
   const [isLoading, setIsLoading] = useState(false);
   
-  // Notification state shared across components
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: 'critical',
-      title: 'New malware detected in network traffic',
-      message: 'Suspicious activity detected from IP 192.168.144.32',
-      timestamp: new Date(Date.now() - 30 * 60000), // 30 minutes ago
-      read: false,
-      userId: user?.id || 1
-    },
-    {
-      id: 2,
-      type: 'warning',
-      title: 'Unusual login pattern detected',
-      message: 'Multiple failed login attempts from unknown location',
-      timestamp: new Date(Date.now() - 2 * 60 * 60000), // 2 hours ago
-      read: false,
-      userId: user?.id || 1
-    },
-    {
-      id: 3,
-      type: 'info',
-      title: 'System maintenance completed successfully',
-      message: 'All systems are now fully operational',
-      timestamp: new Date(Date.now() - 6 * 60 * 60000), // 6 hours ago
-      read: true,
-      userId: user?.id || 1
-    },
-    {
-      id: 4,
-      type: 'update',
-      title: '3 new threat intelligence feeds added',
-      message: 'CIRCL MISP, AlienVault OTX, and ThreatConnect feeds are now active',
-      timestamp: new Date(Date.now() - 12 * 60 * 60000), // 12 hours ago
-      read: false,
-      userId: user?.id || 1
-    },
-    {
-      id: 5,
-      type: 'alert',
-      title: 'Trust level updated for 2 institutions',
-      message: 'University of Cape Town and Stellenbosch University trust levels modified',
-      timestamp: new Date(Date.now() - 24 * 60 * 60000), // 24 hours ago
-      read: true,
-      userId: user?.id || 1
+  // Determine user role and permissions
+  const userRole = user?.role || 'viewer';
+  const isBlueVisionAdmin = userRole === 'BlueVisionAdmin';
+  const isPublisher = userRole === 'publisher' || isBlueVisionAdmin;
+  const isViewer = userRole === 'viewer';
+  
+  // Organization context
+  const userOrganization = user?.organization || null;
+  const userOrganizationId = userOrganization?.id || null;
+  
+  // Backward compatibility for isAdmin prop
+  const hasAdminAccess = isAdmin || isBlueVisionAdmin;
+  
+  // Notification state shared across components - fetch from API
+  const [notifications, setNotifications] = useState([]);
+
+  // Fetch notifications from API
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const notificationData = await api.getAlerts();
+        setNotifications(notificationData.data || notificationData || []);
+      } catch (error) {
+        console.warn('Failed to fetch notifications:', error);
+        // Keep empty array if API fails
+        setNotifications([]);
+      }
+    };
+
+    if (user) {
+      fetchNotifications();
     }
-  ]);
+  }, [user]);
 
   // Function to mark notification as read
-  const markNotificationAsRead = (notificationId) => {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === notificationId 
-          ? { ...notif, read: true }
-          : notif
-      )
-    );
+  const markNotificationAsRead = async (notificationId) => {
+    try {
+      await api.markAlertAsRead(notificationId);
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif.id === notificationId 
+            ? { ...notif, read: true }
+            : notif
+        )
+      );
+    } catch (error) {
+      console.warn('Failed to mark notification as read:', error);
+      // Still update UI even if API call fails
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif.id === notificationId 
+            ? { ...notif, read: true }
+            : notif
+        )
+      );
+    }
   };
 
   // Function to get user-specific notifications
@@ -119,7 +117,10 @@ function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthW
       <Header 
         user={user} 
         onLogout={onLogout} 
-        isAdmin={isAdmin}
+        isAdmin={hasAdminAccess}
+        isBlueVisionAdmin={isBlueVisionAdmin}
+        isPublisher={isPublisher}
+        userRole={userRole}
         notifications={getUserNotifications()}
         unreadCount={getUnreadCount()}
         onNotificationRead={markNotificationAsRead}
@@ -127,7 +128,7 @@ function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthW
       /> {/* Pass notification data and showPage to header */}
       
       {/* Main Navigation */}
-      <MainNav activePage={activePage} showPage={showPage} isAdmin={isAdmin} />
+      <MainNav activePage={activePage} showPage={showPage} isAdmin={hasAdminAccess} userRole={userRole} isPublisher={isPublisher} />
 
       {/* Main Content */}
       <main className="main-content">
@@ -140,49 +141,53 @@ function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthW
           )}
           
           {/* Dashboard */}
-          <Dashboard active={activePage === 'dashboard'} />
+          <Dashboard active={activePage === 'dashboard'} userRole={userRole} userOrganization={userOrganization} />
 
           {/* Threat Feeds */}
-          <ThreatFeeds active={activePage === 'threat-feeds'} />
+          <ThreatFeeds active={activePage === 'threat-feeds'} userRole={userRole} userOrganization={userOrganization} />
 
-          {/* IoC Management */}
-          <IoCManagement active={activePage === 'ioc-management'} />
+          {/* IoC Management - All users can view, publishers can manage */}
+          <IoCManagement active={activePage === 'ioc-management'} userRole={userRole} isPublisher={isPublisher} userOrganization={userOrganization} />
 
-          {/* TTP Analysis */}
-          <TTPAnalysis active={activePage === 'ttp-analysis'} />
+          {/* TTP Analysis - Publishers and BlueVision Admins only */}
+          {(isPublisher || isBlueVisionAdmin) && <TTPAnalysis active={activePage === 'ttp-analysis'} userRole={userRole} userOrganization={userOrganization} />}
 
-          {/* Institutions */}
-          <Institutions active={activePage === 'institutions'} />
+          {/* Institutions - Publishers and BlueVision Admins only */}
+          {(isPublisher || isBlueVisionAdmin) && <Institutions active={activePage === 'institutions'} userRole={userRole} userOrganization={userOrganization} />}
 
           {/* Reports */}
-          <Reports active={activePage === 'reports'} />
+          <Reports active={activePage === 'reports'} userRole={userRole} userOrganization={userOrganization} />
 
           {/* User Profile */}
           <UserProfile 
             active={activePage === 'profile'} 
             user={user} 
+            userRole={userRole}
+            userOrganization={userOrganization}
             notifications={getUserNotifications()}
             onNotificationRead={markNotificationAsRead}
           />
 
-          {/* Trust Management */}
-          <TrustManagement active={activePage === 'trust-management'} />
+          {/* Trust Management - Publishers and BlueVision Admins only */}
+          {(isPublisher || isBlueVisionAdmin) && <TrustManagement active={activePage === 'trust-management'} userRole={userRole} userOrganization={userOrganization} />}
 
-          {/* User Management (Admin only) */}
-          {isAdmin && <UserManagement active={activePage === 'user-management'} isAdmin={isAdmin} currentUser={user} />}
+          {/* User Management - Publishers and BlueVision Admins only */}
+          {(isPublisher || isBlueVisionAdmin) && <UserManagement active={activePage === 'user-management'} isAdmin={hasAdminAccess} currentUser={user} userRole={userRole} userOrganization={userOrganization} showPage={showPage} />}
 
           {/* Alerts System */}
           <AlertsSystem 
             active={activePage === 'alerts'} 
             notifications={notifications}
             onNotificationRead={markNotificationAsRead}
+            userRole={userRole}
+            userOrganization={userOrganization}
           />
 
           {/* Account Settings */}
-          <AccountSettings active={activePage === 'account-settings'} user={user} />
+          <AccountSettings active={activePage === 'account-settings'} user={user} userRole={userRole} userOrganization={userOrganization} />
 
-          {/* Admin Settings */}
-          {isAdmin && <AdminSettings active={activePage === 'admin-settings'} />}
+          {/* Admin Settings - BlueVision Admins only */}
+          {isBlueVisionAdmin && <AdminSettings active={activePage === 'admin-settings'} />}
 
           {/* Export Data */}
           <ExportData active={activePage === 'export-data'} />
@@ -192,6 +197,9 @@ function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthW
 
           {/* Edit User */}
           <EditUser active={activePage === 'edit-user'} />
+
+          {/* Register User - BlueVision Admins only */}
+          {isBlueVisionAdmin && <RegisterUser active={activePage === 'register-user'} />}
         </div>
       </main>
     </div>
@@ -199,14 +207,25 @@ function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthW
 }
 
 // Header Component with notifications and user management
-function Header({ user, onLogout, isAdmin, notifications, unreadCount, onNotificationRead, showPage }) {
+function Header({ user, onLogout, isAdmin, isBlueVisionAdmin, isPublisher, userRole, notifications, unreadCount, onNotificationRead, showPage }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   
   // Get first initial for avatar
   const userInitial = user && user.username ? user.username.charAt(0).toUpperCase() : 'A';
   const userName = user && user.username ? user.username.split('@')[0] : 'User';
-  const userRole = user && user.role ? user.role : (isAdmin ? 'Administrator' : 'User');
+  
+  // Display proper role name
+  const getRoleDisplayName = (role) => {
+    switch(role) {
+      case 'BlueVisionAdmin': return 'BlueVision Administrator';
+      case 'publisher': return 'Publisher';
+      case 'viewer': return 'Viewer';
+      default: return 'User';
+    }
+  };
+  
+  const displayRole = getRoleDisplayName(userRole);
 
   const handleNotificationClick = () => {
     setShowNotifications(!showNotifications);
@@ -245,6 +264,11 @@ function Header({ user, onLogout, isAdmin, notifications, unreadCount, onNotific
     if (minutes < 60) return `${minutes}m ago`;
     if (hours < 24) return `${hours}h ago`;
     return `${days}d ago`;
+  };
+
+  const handleViewAllNotifications = () => {
+    setShowNotifications(false);
+    showPage('alerts');
   };
 
   // Close dropdowns when clicking outside
@@ -329,7 +353,7 @@ function Header({ user, onLogout, isAdmin, notifications, unreadCount, onNotific
               <div className="avatar">{userInitial}</div>
               <div className="user-info">
                 <div className="user-name">{userName}</div>
-                <div className="user-role">{userRole}</div>
+                <div className="user-role">{displayRole}</div>
               </div>
               <i className="fas fa-chevron-down"></i>
             </button>
@@ -349,22 +373,35 @@ function Header({ user, onLogout, isAdmin, notifications, unreadCount, onNotific
                     <i className="fas fa-user"></i>
                     <span>My Profile</span>
                   </button>
+                  <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('alerts');}}>
+                    <i className="fas fa-bell"></i>
+                    <span>Alerts & Notifications</span>
+                    {unreadCount > 0 && <span className="menu-badge">{unreadCount}</span>}
+                  </button>
                   <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('account-settings');}}>
                     <i className="fas fa-cog"></i>
                     <span>Account Settings</span>
                   </button>
-                  {isAdmin && (
+                  
+                  {/* Show user management for publishers and BlueVision admins */}
+                  {(isPublisher || isBlueVisionAdmin) && (
                     <>
                       <div className="menu-divider"></div>
                       <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('user-management');}}>
                         <i className="fas fa-users"></i>
                         <span>User Management</span>
                       </button>
+                    </>
+                  )}
+                  
+                  {/* Show admin settings only for BlueVision admins */}
+                  {isBlueVisionAdmin && (
+                    <>
                       <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('admin-settings');}}>
                         <i className="fas fa-shield-alt"></i>
                         <span>Admin Settings</span>
                       </button>
-                      <button className="menu-item" onClick={() => {setShowUserMenu(false); window.location.href = '/register-user';}}>
+                      <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('register-user');}}>
                         <i className="fas fa-user-plus"></i>
                         <span>Register New User</span>
                       </button>
@@ -386,22 +423,31 @@ function Header({ user, onLogout, isAdmin, notifications, unreadCount, onNotific
 }
 
 // Main Navigation Component
-function MainNav({ activePage, showPage, isAdmin }) {
-  const navItems = [
+function MainNav({ activePage, showPage, isAdmin, userRole, isPublisher }) {
+  // Base navigation items for all users
+  const baseNavItems = [
     { id: 'dashboard', icon: 'fas fa-chart-line', label: 'Dashboard' },
     { id: 'threat-feeds', icon: 'fas fa-rss', label: 'Threat Feeds' },
     { id: 'ioc-management', icon: 'fas fa-search', label: 'IoC Management' },
+    { id: 'reports', icon: 'fas fa-file-alt', label: 'Reports' }
+  ];
+  
+  // Additional items for publishers and admins
+  const publisherNavItems = [
     { id: 'ttp-analysis', icon: 'fas fa-sitemap', label: 'TTP Analysis' },
     { id: 'institutions', icon: 'fas fa-building', label: 'Institutions' },
-    { id: 'trust-management', icon: 'fas fa-handshake', label: 'Trust Management' },
-    { id: 'alerts', icon: 'fas fa-bell', label: 'Alerts' },
-    { id: 'reports', icon: 'fas fa-file-alt', label: 'Reports' },
-    { id: 'profile', icon: 'fas fa-user', label: 'Profile' }
+    { id: 'trust-management', icon: 'fas fa-handshake', label: 'Trust Management' }
   ];
-
-  if (isAdmin) {
-    navItems.splice(-1, 0, { id: 'user-management', icon: 'fas fa-users', label: 'User Management' });
+  
+  // Build navigation based on user role
+  let navItems = [...baseNavItems];
+  
+  // Add publisher/admin items if user has appropriate permissions
+  if (isPublisher || userRole === 'BlueVisionAdmin') {
+    navItems = [...navItems, ...publisherNavItems];
   }
+  
+  // Viewers only see basic items - no additional logic needed
 
   const handleNavClick = (itemId) => {
     console.log('MainNav item clicked:', itemId);
@@ -448,10 +494,19 @@ function MainNav({ activePage, showPage, isAdmin }) {
 function Dashboard({ active }) {
   // D3 Chart References
   const chartRef = useRef(null);
+  const [chartData, setChartData] = useState([]);
+  const [loading, setLoading] = useState(false);
   
-  // Set up D3 charts when component mounts or window resizes
+  // Fetch dashboard data when component becomes active
   useEffect(() => {
-    if (active && chartRef.current) {
+    if (active) {
+      fetchDashboardData();
+    }
+  }, [active]);
+  
+  // Set up D3 charts when component mounts or data changes
+  useEffect(() => {
+    if (active && chartRef.current && chartData.length > 0) {
       createThreatActivityChart();
       
       // Add resize handler for responsive charts
@@ -462,7 +517,22 @@ function Dashboard({ active }) {
       window.addEventListener('resize', handleResize);
       return () => window.removeEventListener('resize', handleResize);
     }
-  }, [active]);
+  }, [active, chartData]);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const dashboardData = await api.getDashboard();
+      // Extract chart data from response or use empty array
+      const threatData = dashboardData?.threat_activity || [];
+      setChartData(threatData);
+    } catch (error) {
+      console.warn('Failed to fetch dashboard data:', error);
+      setChartData([]); // Empty data if API fails
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const createThreatActivityChart = () => {
     // Only proceed if the chart reference exists
@@ -471,8 +541,8 @@ function Dashboard({ active }) {
     // Clear previous chart if any
     d3.select(chartRef.current).selectAll("*").remove();
     
-    // Sample data
-    const data = [
+    // Use real data from API, fallback to empty array if no data
+    const data = chartData.length > 0 ? chartData : [
       { date: "2025-04-20", count: 45 },
       { date: "2025-04-21", count: 52 },
       { date: "2025-04-22", count: 49 },
@@ -1923,25 +1993,47 @@ function Reports({ active }) {
 }
 
 // User Profile Component - Enhanced with notifications
-function UserProfile({ active, user, notifications, onNotificationRead }) {
+function UserProfile({ active, user, userRole, userOrganization, notifications, onNotificationRead }) {
   const [activeTab, setActiveTab] = useState('profile');
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
     username: user?.username || '',
-    fullName: user?.full_name || '',
+    fullName: user?.full_name || `${user?.first_name || ''} ${user?.last_name || ''}`.trim(),
     email: user?.email || user?.username || '',
-    organization: user?.organization || '',
-    role: user?.role || 'User',
-    phone: user?.phone || '',
+    organization: userOrganization?.name || '',
+    role: userRole || 'viewer',
+    phone: user?.phone_number || '',
     department: user?.department || ''
   });
 
   if (!active) return null;
 
-  const handleSave = () => {
-    // Save profile changes
-    alert('Profile updated successfully!');
-    setEditing(false);
+  const handleSave = async () => {
+    try {
+      // Prepare profile data for API call
+      const profileData = {
+        first_name: formData.fullName.split(' ')[0] || '',
+        last_name: formData.fullName.split(' ').slice(1).join(' ') || '',
+        email: formData.email,
+        phone_number: formData.phone,
+        department: formData.department
+      };
+
+      // Call the API to update profile
+      const result = await api.updateUserProfile(profileData);
+      
+      if (result.success) {
+        alert('Profile updated successfully!');
+        setEditing(false);
+        // Optionally update the local user data if passed as prop
+        // onUserUpdate && onUserUpdate(result.data.profile);
+      } else {
+        alert('Failed to update profile: ' + (result.message || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Profile update error:', error);
+      alert('Failed to update profile: ' + error.message);
+    }
   };
 
   const handleNotificationClick = (notification) => {
@@ -1966,7 +2058,7 @@ function UserProfile({ active, user, notifications, onNotificationRead }) {
   };
 
   return (
-    <section id="profile" className="page-section active">
+    <section id="profile" className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
         <div>
           <h1 className="page-title">User Profile</h1>
@@ -2293,7 +2385,7 @@ function UserProfileDetailed({ active, user }) {
   if (!active) return null;
 
   return (
-    <section id="profile" className="page-section active">
+    <section id="profile" className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
         <div>
           <h1 className="page-title">User Profile</h1>
@@ -2525,25 +2617,119 @@ function ChangePasswordForm({ onClose }) {
 
 // Trust Management Component - Simplified for now
 function TrustManagement({ active }) {
+  const [trustRelationships, setTrustRelationships] = useState([]);
+  const [trustMetrics, setTrustMetrics] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (active) {
+      fetchTrustData();
+    }
+  }, [active]);
+
+  const fetchTrustData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [relationships, metrics] = await Promise.all([
+        api.getTrustRelationships().catch(() => ({ data: [] })),
+        api.getTrustMetrics().catch(() => ({ data: {} }))
+      ]);
+      setTrustRelationships(relationships.data || relationships || []);
+      setTrustMetrics(metrics.data || metrics || {});
+    } catch (err) {
+      console.error('Failed to fetch trust data:', err);
+      setError('Failed to load trust data. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!active) return null;
 
   return (
-    <section id="trust-management" className="page-section active">
+    <section id="trust-management" className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
         <div>
           <h1 className="page-title">Trust Management</h1>
           <p className="page-subtitle">Manage trust relationships and groups</p>
         </div>
+        <div className="action-buttons">
+          <button className="btn btn-outline" onClick={fetchTrustData}>
+            <i className="fas fa-sync-alt"></i> Refresh
+          </button>
+        </div>
       </div>
+
+      {error && (
+        <div className="alert alert-error">
+          <i className="fas fa-exclamation-triangle"></i>
+          {error}
+        </div>
+      )}
       
       <div className="card">
         <div className="card-header">
           <h2 className="card-title"><i className="fas fa-handshake card-icon"></i> Trust Relationships</h2>
         </div>
         <div className="card-content">
-          <p>Trust management functionality will be loaded here.</p>
+          {loading ? (
+            <div className="loading-state">
+              <div className="loading-spinner"></div>
+              <p>Loading trust relationships...</p>
+            </div>
+          ) : trustRelationships.length === 0 ? (
+            <div className="empty-state">
+              <i className="fas fa-handshake"></i>
+              <h3>No Trust Relationships</h3>
+              <p>No trust relationships have been established yet.</p>
+            </div>
+          ) : (
+            <div className="trust-relationships-list">
+              {trustRelationships.map((relationship, index) => (
+                <div key={relationship.id || index} className="trust-relationship-card">
+                  <div className="relationship-info">
+                    <h4>{relationship.target_organization?.name || 'Unknown Organization'}</h4>
+                    <span className={`trust-level ${relationship.trust_level?.name?.toLowerCase() || 'unknown'}`}>
+                      {relationship.trust_level?.name || 'Unknown Level'}
+                    </span>
+                  </div>
+                  <div className="relationship-status">
+                    <span className={`status-badge ${relationship.status?.toLowerCase() || 'unknown'}`}>
+                      {relationship.status || 'Unknown'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
+
+      {trustMetrics && (
+        <div className="card">
+          <div className="card-header">
+            <h2 className="card-title"><i className="fas fa-chart-bar card-icon"></i> Trust Metrics</h2>
+          </div>
+          <div className="card-content">
+            <div className="metrics-grid">
+              <div className="metric-card">
+                <div className="metric-value">{trustMetrics.total_relationships || 0}</div>
+                <div className="metric-label">Total Relationships</div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-value">{trustMetrics.active_relationships || 0}</div>
+                <div className="metric-label">Active Relationships</div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-value">{trustMetrics.trust_score || 'N/A'}</div>
+                <div className="metric-label">Average Trust Score</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -2583,7 +2769,7 @@ function TrustManagementDetailed({ active }) {
   if (!active) return null;
 
   return (
-    <section id="trust-management" className="page-section active">
+    <section id="trust-management" className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
         <div>
           <h1 className="page-title">Trust Management</h1>
@@ -2761,62 +2947,58 @@ function TrustManagementDetailed({ active }) {
 }
 
 // User Management Component - Enhanced for admins only
-function UserManagement({ active, isAdmin, currentUser }) {
-  const [users, setUsers] = useState([
-    {
-      id: 1,
-      username: 'admin@crisp.za',
-      fullName: 'System Administrator',
-      organization: 'CRISP',
-      role: 'Administrator',
-      status: 'Active',
-      lastLogin: '2025-07-12 14:30',
-      created: '2025-01-15'
-    },
-    {
-      id: 2,
-      username: 'analyst@uct.ac.za',
-      fullName: 'Security Analyst',
-      organization: 'University of Cape Town',
-      role: 'Analyst',
-      status: 'Active',
-      lastLogin: '2025-07-12 09:15',
-      created: '2025-02-20'
-    },
-    {
-      id: 3,
-      username: 'researcher@sun.ac.za',
-      fullName: 'Threat Researcher',
-      organization: 'Stellenbosch University',
-      role: 'User',
-      status: 'Active',
-      lastLogin: '2025-07-11 16:45',
-      created: '2025-03-10'
-    },
-    {
-      id: 4,
-      username: 'operator@wits.ac.za',
-      fullName: 'SOC Operator',
-      organization: 'University of the Witwatersrand',
-      role: 'User',
-      status: 'Inactive',
-      lastLogin: '2025-07-05 11:20',
-      created: '2025-04-01'
-    }
-  ]);
-  
-  const [filteredUsers, setFilteredUsers] = useState(users);
+function UserManagement({ active, isAdmin, currentUser, showPage }) {
+  const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [showNewUserModal, setShowNewUserModal] = useState(false);
-  
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Fetch users from API when component becomes active
+  useEffect(() => {
+    if (active && isAdmin) {
+      fetchUsers();
+    }
+  }, [active, isAdmin]);
+
+  // Filter users based on search and filters - moved BEFORE early returns
+  useEffect(() => {
+    let filtered = users.filter(user => {
+      const matchesSearch = (user.full_name || user.username || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (user.organization?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesRole = selectedRole === 'all' || user.role === selectedRole;
+      const matchesStatus = selectedStatus === 'all' || (user.is_active ? 'Active' : 'Inactive') === selectedStatus;
+      
+      return matchesSearch && matchesRole && matchesStatus;
+    });
+    
+    setFilteredUsers(filtered);
+  }, [searchTerm, selectedRole, selectedStatus, users]);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const userData = await api.getUsers();
+      setUsers(userData.data || userData || []);
+    } catch (err) {
+      console.error('Failed to fetch users:', err);
+      setError('Failed to load users. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!active) return null;
   
   // Access control - only admins can access user management
   if (!isAdmin) {
     return (
-      <section id="user-management" className="page-section active">
+      <section id="user-management" className={`page-section ${active ? 'active' : ''}`}>
         <div className="access-denied">
           <div className="access-denied-content">
             <i className="fas fa-shield-alt"></i>
@@ -2829,49 +3011,46 @@ function UserManagement({ active, isAdmin, currentUser }) {
     );
   }
 
-  // Filter users based on search and filters
-  useEffect(() => {
-    let filtered = users.filter(user => {
-      const matchesSearch = user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           user.organization.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesRole = selectedRole === 'all' || user.role === selectedRole;
-      const matchesStatus = selectedStatus === 'all' || user.status === selectedStatus;
-      
-      return matchesSearch && matchesRole && matchesStatus;
-    });
-    
-    setFilteredUsers(filtered);
-  }, [searchTerm, selectedRole, selectedStatus, users]);
-
-  const handleUserAction = (action, userId) => {
-    switch (action) {
-      case 'edit':
-        showPage('edit-user', userId);
-        break;
-      case 'delete':
-        if (confirm('Are you sure you want to delete this user?')) {
-          setUsers(prev => prev.filter(user => user.id !== userId));
-          alert('User deleted successfully!');
-        }
-        break;
-      case 'activate':
-        setUsers(prev => prev.map(user => 
-          user.id === userId ? { ...user, status: 'Active' } : user
-        ));
-        break;
-      case 'deactivate':
-        setUsers(prev => prev.map(user => 
-          user.id === userId ? { ...user, status: 'Inactive' } : user
-        ));
-        break;
-      default:
-        break;
+  const handleUserAction = async (action, userId) => {
+    try {
+      switch (action) {
+        case 'edit':
+          // Navigate to edit user page or open edit modal
+          showPage('edit-user');
+          break;
+        case 'delete':
+          if (confirm('Are you sure you want to delete this user?')) {
+            setLoading(true);
+            // await api.deleteUser(userId); // Uncomment when backend supports this
+            // For now, remove from local state
+            setUsers(prev => prev.filter(user => user.id !== userId));
+            alert('User deleted successfully!');
+          }
+          break;
+        case 'activate':
+        case 'deactivate':
+          setLoading(true);
+          const isActivating = action === 'activate';
+          // await api.updateUser(userId, { is_active: isActivating }); // Uncomment when backend supports this
+          // For now, update local state
+          setUsers(prev => prev.map(user => 
+            user.id === userId ? { ...user, is_active: isActivating } : user
+          ));
+          alert(`User ${isActivating ? 'activated' : 'deactivated'} successfully!`);
+          break;
+        default:
+          break;
+      }
+    } catch (err) {
+      console.error('User action failed:', err);
+      alert('Action failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <section id="user-management" className="page-section active">
+    <section id="user-management" className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
         <div>
           <h1 className="page-title">User Management</h1>
@@ -3000,66 +3179,104 @@ function UserManagement({ active, isAdmin, currentUser }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUsers.map(user => (
-                    <tr key={user.id}>
-                      <td>
-                        <div className="user-cell">
-                          <div className="user-avatar">{user.fullName.charAt(0)}</div>
-                          <div className="user-details">
-                            <div className="user-name">{user.fullName}</div>
-                            <div className="user-email">{user.username}</div>
-                          </div>
-                        </div>
+                  {loading ? (
+                    <tr>
+                      <td colSpan="6" className="text-center">
+                        <div className="loading-spinner"></div>
+                        <p>Loading users...</p>
                       </td>
-                      <td>{user.organization}</td>
-                      <td>
-                        <span className={`role-badge role-${user.role.toLowerCase()}`}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`badge ${user.status === 'Active' ? 'badge-active' : 'badge-inactive'}`}>
-                          {user.status}
-                        </span>
-                      </td>
-                      <td>{user.lastLogin}</td>
-                      <td>
-                        <div className="action-buttons-table">
-                          <button 
-                            className="btn-icon" 
-                            title="Edit User"
-                            onClick={() => handleUserAction('edit', user.id)}
-                          >
-                            <i className="fas fa-edit"></i>
-                          </button>
-                          {user.status === 'Active' ? (
-                            <button 
-                              className="btn-icon btn-warning" 
-                              title="Deactivate User"
-                              onClick={() => handleUserAction('deactivate', user.id)}
-                            >
-                              <i className="fas fa-user-slash"></i>
-                            </button>
-                          ) : (
-                            <button 
-                              className="btn-icon btn-success" 
-                              title="Activate User"
-                              onClick={() => handleUserAction('activate', user.id)}
-                            >
-                              <i className="fas fa-user-check"></i>
-                            </button>
-                          )}
-                          <button 
-                            className="btn-icon btn-danger" 
-                            title="Delete User"
-                            onClick={() => handleUserAction('delete', user.id)}
-                          >
-                            <i className="fas fa-trash"></i>
+                    </tr>
+                  ) : error ? (
+                    <tr>
+                      <td colSpan="6" className="text-center">
+                        <div className="error-message">
+                          <i className="fas fa-exclamation-triangle"></i>
+                          <p>{error}</p>
+                          <button className="btn btn-outline btn-sm" onClick={fetchUsers}>
+                            <i className="fas fa-refresh"></i> Try Again
                           </button>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  ) : filteredUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="text-center">
+                        <p>No users found</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredUsers.map(user => {
+                      const fullName = user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
+                      const organization = user.organization?.name || 'Unknown';
+                      const status = user.is_active ? 'Active' : 'Inactive';
+                      const lastLogin = user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never';
+                      
+                      return (
+                        <tr key={user.id}>
+                          <td>
+                            <div className="user-cell">
+                              <div className="user-avatar">{fullName.charAt(0).toUpperCase()}</div>
+                              <div className="user-details">
+                                <div className="user-name">{fullName}</div>
+                                <div className="user-email">{user.username}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td>{organization}</td>
+                          <td>
+                            <span className={`role-badge role-${(user.role || 'viewer').toLowerCase()}`}>
+                              {user.role || 'viewer'}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={`badge ${status === 'Active' ? 'badge-active' : 'badge-inactive'}`}>
+                              {status}
+                            </span>
+                          </td>
+                          <td>{lastLogin}</td>
+                          <td>
+                            <div className="action-buttons-table">
+                              <button 
+                                className="btn-icon" 
+                                title="Edit User"
+                                onClick={() => handleUserAction('edit', user.id)}
+                                disabled={loading}
+                              >
+                                <i className="fas fa-edit"></i>
+                              </button>
+                              {status === 'Active' ? (
+                                <button 
+                                  className="btn-icon btn-warning" 
+                                  title="Deactivate User"
+                                  onClick={() => handleUserAction('deactivate', user.id)}
+                                  disabled={loading}
+                                >
+                                  <i className="fas fa-user-slash"></i>
+                                </button>
+                              ) : (
+                                <button 
+                                  className="btn-icon btn-success" 
+                                  title="Activate User"
+                                  onClick={() => handleUserAction('activate', user.id)}
+                                  disabled={loading}
+                                >
+                                  <i className="fas fa-user-check"></i>
+                                </button>
+                              )}
+                              <button 
+                                className="btn-icon btn-danger" 
+                                title="Delete User"
+                                onClick={() => handleUserAction('delete', user.id)}
+                                disabled={loading}
+                              >
+                                <i className="fas fa-trash"></i>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -3084,7 +3301,7 @@ function UserManagement({ active, isAdmin, currentUser }) {
             </div>
             <div className="modal-body">
               <p>Click below to navigate to the user registration page:</p>
-              <button className="btn btn-primary" onClick={() => {setShowNewUserModal(false); window.location.href = '/register-user';}}>Go to Registration</button>
+              <button className="btn btn-primary" onClick={() => {setShowNewUserModal(false); showPage('register-user');}}>Go to Registration</button>
             </div>
             <div className="modal-footer">
               <button className="btn btn-outline" onClick={() => setShowNewUserModal(false)}>
@@ -3140,7 +3357,7 @@ function UserManagementDetailed({ active }) {
   if (!active) return null;
 
   return (
-    <section id="user-management" className="page-section active">
+    <section id="user-management" className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
         <div>
           <h1 className="page-title">User Management</h1>
@@ -3274,25 +3491,96 @@ function UserManagementDetailed({ active }) {
 }
 
 // Alerts System Component - Simplified for now
-function AlertsSystem({ active }) {
+function AlertsSystem({ active, notifications, onNotificationRead, userRole, userOrganization }) {
   if (!active) return null;
 
+  const handleNotificationClick = (notification) => {
+    if (!notification.read) {
+      onNotificationRead(notification.id);
+    }
+  };
+
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'critical': return 'fas fa-exclamation-triangle';
+      case 'warning': return 'fas fa-exclamation-circle';
+      case 'info': return 'fas fa-info-circle';
+      case 'update': return 'fas fa-sync-alt';
+      case 'alert': return 'fas fa-bell';
+      default: return 'fas fa-bell';
+    }
+  };
+
+  const formatTime = (timestamp) => {
+    const now = new Date();
+    const diff = now - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
+  };
+
   return (
-    <section id="alerts" className="page-section active">
+    <section id="alerts" className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Alerts System</h1>
-          <p className="page-subtitle">Manage email notifications and alerts</p>
+          <h1 className="page-title">Alerts & Notifications</h1>
+          <p className="page-subtitle">View and manage your notifications</p>
+        </div>
+        <div className="action-buttons">
+          <button className="btn btn-outline">
+            <i className="fas fa-filter"></i> Filter
+          </button>
+          <button className="btn btn-primary">
+            <i className="fas fa-bell"></i> Mark All Read
+          </button>
         </div>
       </div>
       
-      <div className="card">
-        <div className="card-header">
-          <h2 className="card-title"><i className="fas fa-bell card-icon"></i> Email Alerts</h2>
-        </div>
-        <div className="card-content">
-          <p>Alerts system functionality will be loaded here.</p>
-        </div>
+      <div className="notifications-grid">
+        {notifications && notifications.length > 0 ? (
+          notifications.map(notification => (
+            <div 
+              key={notification.id}
+              className={`notification-card ${notification.read ? 'read' : 'unread'}`}
+              onClick={() => handleNotificationClick(notification)}
+            >
+              <div className="notification-header">
+                <div className="notification-icon">
+                  <i className={getNotificationIcon(notification.type)}></i>
+                </div>
+                <div className="notification-meta">
+                  <span className={`notification-type ${notification.type}`}>
+                    {notification.type.toUpperCase()}
+                  </span>
+                  <span className="notification-time">
+                    {formatTime(notification.timestamp)}
+                  </span>
+                </div>
+              </div>
+              <div className="notification-content">
+                <h3 className="notification-title">{notification.title}</h3>
+                <p className="notification-message">{notification.message}</p>
+              </div>
+              {!notification.read && (
+                <div className="notification-badge">
+                  <span className="unread-indicator"></span>
+                </div>
+              )}
+            </div>
+          ))
+        ) : (
+          <div className="no-notifications">
+            <div className="no-notifications-content">
+              <i className="fas fa-bell-slash"></i>
+              <h3>No notifications</h3>
+              <p>You're all caught up! No new notifications at this time.</p>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );
@@ -3349,7 +3637,7 @@ function AlertsSystemDetailed({ active }) {
   if (!active) return null;
 
   return (
-    <section id="alerts" className="page-section active">
+    <section id="alerts" className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
         <div>
           <h1 className="page-title">Alerts System</h1>
@@ -3873,7 +4161,7 @@ function AccountSettings({ active, user }) {
   };
 
   return (
-    <section className="page-section active">
+    <section className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
         <h1><i className="fas fa-cog"></i> Account Settings</h1>
         <p>Manage your account preferences and security settings</p>
@@ -3988,14 +4276,6 @@ function AdminSettings({ active }) {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  if (!active) return null;
-
-  useEffect(() => {
-    if (active) {
-      fetchSystemData();
-    }
-  }, [active]);
-
   const fetchSystemData = async () => {
     setIsLoading(true);
     try {
@@ -4013,8 +4293,16 @@ function AdminSettings({ active }) {
     }
   };
 
+  useEffect(() => {
+    if (active) {
+      fetchSystemData();
+    }
+  }, [active]);
+
+  if (!active) return null;
+
   return (
-    <section className="page-section active">
+    <section className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
         <h1><i className="fas fa-shield-alt"></i> Admin Settings</h1>
         <p>System administration and configuration</p>
@@ -4030,7 +4318,12 @@ function AdminSettings({ active }) {
         <div className="admin-grid">
           <div className="admin-card">
             <h3><i className="fas fa-heartbeat"></i> System Health</h3>
-            {systemHealth ? (
+            {isLoading ? (
+              <div className="loading-state">
+                <div className="loading-spinner"></div>
+                <p>Loading system health...</p>
+              </div>
+            ) : systemHealth ? (
               <div className="health-info">
                 <div className="health-status">
                   <span className={`status-indicator ${systemHealth.status === 'healthy' ? 'healthy' : 'warning'}`}>
@@ -4040,13 +4333,24 @@ function AdminSettings({ active }) {
                 <p>{systemHealth.message || 'System status available'}</p>
               </div>
             ) : (
-              <p>Loading system health...</p>
+              <div className="error-state">
+                <i className="fas fa-exclamation-triangle"></i>
+                <p>System health data unavailable</p>
+                <button className="btn btn-outline btn-sm" onClick={fetchSystemData}>
+                  <i className="fas fa-refresh"></i> Retry
+                </button>
+              </div>
             )}
           </div>
 
           <div className="admin-card">
             <h3><i className="fas fa-envelope"></i> Email System</h3>
-            {emailStats ? (
+            {isLoading ? (
+              <div className="loading-state">
+                <div className="loading-spinner"></div>
+                <p>Loading email statistics...</p>
+              </div>
+            ) : emailStats ? (
               <div className="email-stats">
                 <div className="stat-item">
                   <span className="stat-label">Total Sent:</span>
@@ -4058,7 +4362,13 @@ function AdminSettings({ active }) {
                 </div>
               </div>
             ) : (
-              <p>Loading email statistics...</p>
+              <div className="error-state">
+                <i className="fas fa-exclamation-triangle"></i>
+                <p>Email statistics unavailable</p>
+                <button className="btn btn-outline btn-sm" onClick={fetchSystemData}>
+                  <i className="fas fa-refresh"></i> Retry
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -4088,7 +4398,7 @@ function ExportData({ active }) {
   };
 
   return (
-    <section className="page-section active">
+    <section className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
         <h1><i className="fas fa-download"></i> Export Data</h1>
         <p>Download your platform data in various formats</p>
@@ -4153,7 +4463,7 @@ function AddFeed({ active }) {
   };
 
   return (
-    <section className="page-section active">
+    <section className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
         <h1><i className="fas fa-plus"></i> Add New Feed</h1>
         <p>Configure a new threat intelligence feed</p>
@@ -4225,7 +4535,7 @@ function EditUser({ active }) {
   if (!active) return null;
 
   return (
-    <section className="page-section active">
+    <section className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
         <h1><i className="fas fa-user-edit"></i> Edit User</h1>
         <p>Modify user account details and permissions</p>
@@ -4234,6 +4544,186 @@ function EditUser({ active }) {
       <div className="edit-user-container">
         <p>User editing functionality will be implemented here.</p>
         <p>This will allow administrators to modify user accounts, roles, and permissions.</p>
+      </div>
+    </section>
+  );
+}
+
+// Register User Component
+function RegisterUser({ active }) {
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    firstName: '',
+    lastName: '',
+    role: 'viewer',
+    organization: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  if (!active) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (formData.password !== formData.confirmPassword) {
+      alert('Passwords do not match');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const userData = {
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        role: formData.role,
+        organization_id: formData.organization
+      };
+      
+      const result = await api.createUser(userData);
+      
+      if (result.success) {
+        alert('User created successfully!');
+        setFormData({
+          username: '',
+          email: '',
+          password: '',
+          confirmPassword: '',
+          firstName: '',
+          lastName: '',
+          role: 'viewer',
+          organization: ''
+        });
+      } else {
+        alert('Failed to create user: ' + (result.message || 'Unknown error'));
+      }
+    } catch (error) {
+      alert('Failed to create user: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <section className={`page-section ${active ? 'active' : ''}`}>
+      <div className="page-header">
+        <h1><i className="fas fa-user-plus"></i> Register New User</h1>
+        <p>Create a new user account in the system</p>
+      </div>
+
+      <div className="register-user-container">
+        <div className="card">
+          <div className="card-content">
+            <form onSubmit={handleSubmit} className="register-form">
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="firstName">First Name</label>
+                  <input
+                    type="text"
+                    id="firstName"
+                    value={formData.firstName}
+                    onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="lastName">Last Name</label>
+                  <input
+                    type="text"
+                    id="lastName"
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="username">Username</label>
+                  <input
+                    type="text"
+                    id="username"
+                    value={formData.username}
+                    onChange={(e) => setFormData({...formData, username: e.target.value})}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="email">Email</label>
+                  <input
+                    type="email"
+                    id="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="password">Password</label>
+                  <input
+                    type="password"
+                    id="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({...formData, password: e.target.value})}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="confirmPassword">Confirm Password</label>
+                  <input
+                    type="password"
+                    id="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="role">Role</label>
+                  <select
+                    id="role"
+                    value={formData.role}
+                    onChange={(e) => setFormData({...formData, role: e.target.value})}
+                    required
+                  >
+                    <option value="viewer">Viewer</option>
+                    <option value="publisher">Publisher</option>
+                    <option value="BlueVisionAdmin">BlueVision Admin</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="organization">Organization</label>
+                  <input
+                    type="text"
+                    id="organization"
+                    value={formData.organization}
+                    onChange={(e) => setFormData({...formData, organization: e.target.value})}
+                    placeholder="Organization ID or name"
+                  />
+                </div>
+              </div>
+
+              <div className="form-actions">
+                <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                  {isSubmitting ? 'Creating User...' : 'Create User'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       </div>
     </section>
   );

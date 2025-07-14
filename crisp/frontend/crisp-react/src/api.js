@@ -149,8 +149,26 @@ export const getAdminDashboard = async () => {
 };
 
 // User Management API functions
-export const getUsers = async () => {
-  const response = await fetch(`${API_URL}users/list/`, {
+export const getUsers = async (organizationId = null, filters = {}) => {
+  let url = `${API_URL}users/list/`;
+  const params = new URLSearchParams();
+  
+  if (organizationId) {
+    params.append('organization_id', organizationId);
+  }
+  
+  // Add additional filters
+  Object.keys(filters).forEach(key => {
+    if (filters[key] !== null && filters[key] !== undefined) {
+      params.append(key, filters[key]);
+    }
+  });
+  
+  if (params.toString()) {
+    url += `?${params.toString()}`;
+  }
+  
+  const response = await fetch(url, {
     method: 'GET',
     headers: { ...authHeader() }
   });
@@ -225,25 +243,6 @@ export const getOrganizationStatistics = async () => {
   return await handleResponse(response);
 };
 
-export const getTrustMetrics = async () => {
-  const response = await fetch(`${API_URL}organizations/trust-metrics/`, {
-    method: 'GET',
-    headers: { ...authHeader() }
-  });
-  
-  return await handleResponse(response);
-};
-
-export const createTrustRelationship = async (orgId, trustData) => {
-  const response = await fetch(`${API_URL}organizations/${orgId}/trust-relationship/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
-    body: JSON.stringify(trustData)
-  });
-  
-  return await handleResponse(response);
-};
-
 // Admin API functions
 export const getSystemHealth = async () => {
   const response = await fetch(`${API_URL}admin/system-health/`, {
@@ -298,7 +297,7 @@ export const changePassword = async (currentPassword, newPassword, confirmPasswo
 
 // Email Statistics API function
 export const getEmailStatistics = async () => {
-  const response = await fetch(`${API_URL}admin/email-statistics/`, {
+  const response = await fetch(`${API_URL}alerts/statistics/`, {
     method: 'GET',
     headers: { ...authHeader() }
   });
@@ -308,7 +307,7 @@ export const getEmailStatistics = async () => {
 
 // Test Gmail Connection API function
 export const testGmailConnection = async () => {
-  const response = await fetch(`${API_URL}admin/test-gmail-connection/`, {
+  const response = await fetch(`${API_URL}alerts/test-connection/`, {
     method: 'POST',
     headers: { ...authHeader() }
   });
@@ -318,10 +317,226 @@ export const testGmailConnection = async () => {
 
 // Send Test Email API function
 export const sendTestEmail = async (email) => {
-  const response = await fetch(`${API_URL}admin/send-test-email/`, {
+  const response = await fetch(`${API_URL}alerts/test-email/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify({ email })
+  });
+  
+  return await handleResponse(response);
+};
+
+// Alert System API functions
+export const sendThreatAlert = async (alertData) => {
+  const response = await fetch(`${API_URL}alerts/send-threat-alert/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify(alertData)
+  });
+  
+  return await handleResponse(response);
+};
+
+export const sendFeedNotification = async (notificationData) => {
+  const response = await fetch(`${API_URL}alerts/send-feed-notification/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify(notificationData)
+  });
+  
+  return await handleResponse(response);
+};
+
+export const getAlerts = async () => {
+  const response = await fetch(`${API_URL}alerts/list/`, {
+    method: 'GET',
+    headers: { ...authHeader() }
+  });
+  
+  return await handleResponse(response);
+};
+
+export const markAlertAsRead = async (alertId) => {
+  const response = await fetch(`${API_URL}alerts/${alertId}/mark-read/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader() }
+  });
+  
+  return await handleResponse(response);
+};
+
+export const getAlertSubscriptions = async () => {
+  const response = await fetch(`${API_URL}alerts/subscriptions/`, {
+    method: 'GET',
+    headers: { ...authHeader() }
+  });
+  
+  return await handleResponse(response);
+};
+
+export const updateAlertSubscriptions = async (subscriptionData) => {
+  const response = await fetch(`${API_URL}alerts/subscriptions/`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify(subscriptionData)
+  });
+  
+  return await handleResponse(response);
+};
+
+// Trust Management API functions
+export const getTrustRelationships = async () => {
+  const response = await fetch(`${API_URL}organizations/trust-relationships/`, {
+    method: 'GET',
+    headers: { ...authHeader() }
+  });
+  
+  return await handleResponse(response);
+};
+
+export const createTrustRelationship = async (orgId, trustData) => {
+  const response = await fetch(`${API_URL}organizations/${orgId}/trust-relationship/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify(trustData)
+  });
+  
+  return await handleResponse(response);
+};
+
+export const getTrustMetrics = async () => {
+  const response = await fetch(`${API_URL}organizations/trust-metrics/`, {
+    method: 'GET',
+    headers: { ...authHeader() }
+  });
+  
+  return await handleResponse(response);
+};
+
+export const updateTrustRelationship = async (relationshipId, updateData) => {
+  const response = await fetch(`${API_URL}organizations/trust-relationships/${relationshipId}/`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify(updateData)
+  });
+  
+  return await handleResponse(response);
+};
+
+export const deleteTrustRelationship = async (relationshipId) => {
+  const response = await fetch(`${API_URL}organizations/trust-relationships/${relationshipId}/`, {
+    method: 'DELETE',
+    headers: { ...authHeader() }
+  });
+  
+  return await handleResponse(response);
+};
+
+// Organization scope enforcement functions
+export const getCurrentUserOrganization = () => {
+  const auth = JSON.parse(localStorage.getItem('auth'));
+  return auth?.user?.organization || null;
+};
+
+export const getUserAccessibleOrganizations = async () => {
+  const response = await fetch(`${API_URL}users/accessible-organizations/`, {
+    method: 'GET',
+    headers: { ...authHeader() }
+  });
+  
+  return await handleResponse(response);
+};
+
+export const getOrganizationData = async (organizationId, dataType) => {
+  const response = await fetch(`${API_URL}organizations/${organizationId}/data/${dataType}/`, {
+    method: 'GET',
+    headers: { ...authHeader() }
+  });
+  
+  return await handleResponse(response);
+};
+
+// Threat Intelligence with organization scoping
+export const getThreatIntelligence = async (organizationId = null, filters = {}) => {
+  let url = `${API_URL}threat-intelligence/`;
+  const params = new URLSearchParams();
+  
+  if (organizationId) {
+    params.append('organization_id', organizationId);
+  }
+  
+  Object.keys(filters).forEach(key => {
+    if (filters[key] !== null && filters[key] !== undefined) {
+      params.append(key, filters[key]);
+    }
+  });
+  
+  if (params.toString()) {
+    url += `?${params.toString()}`;
+  }
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { ...authHeader() }
+  });
+  
+  return await handleResponse(response);
+};
+
+export const createThreatIntelligence = async (threatData) => {
+  const response = await fetch(`${API_URL}threat-intelligence/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify(threatData)
+  });
+  
+  return await handleResponse(response);
+};
+
+// User Session Management API functions
+export const getUserSessions = async () => {
+  const response = await fetch(`${API_URL}users/sessions/`, {
+    method: 'GET',
+    headers: { ...authHeader() }
+  });
+  
+  return await handleResponse(response);
+};
+
+export const revokeSession = async (sessionId) => {
+  const response = await fetch(`${API_URL}users/sessions/${sessionId}/revoke/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader() }
+  });
+  
+  return await handleResponse(response);
+};
+
+// Trust Groups API functions
+export const getTrustGroups = async () => {
+  const response = await fetch(`${API_URL}organizations/trust-groups/`, {
+    method: 'GET',
+    headers: { ...authHeader() }
+  });
+  
+  return await handleResponse(response);
+};
+
+export const createTrustGroup = async (groupData) => {
+  const response = await fetch(`${API_URL}organizations/trust-groups/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify(groupData)
+  });
+  
+  return await handleResponse(response);
+};
+
+// User List API function
+export const getUsersList = async () => {
+  const response = await fetch(`${API_URL}users/list/`, {
+    method: 'GET',
+    headers: { ...authHeader() }
   });
   
   return await handleResponse(response);

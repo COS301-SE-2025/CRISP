@@ -474,12 +474,171 @@ function CSSStyles() {
             color: var(--text-muted);
         }
 
+        .menu-badge {
+            background: var(--danger);
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: auto;
+        }
+
         .logout-item {
             color: var(--danger);
         }
 
         .logout-item:hover {
             background: rgba(229, 62, 62, 0.1);
+        }
+
+        /* Notifications Grid */
+        .notifications-grid {
+            display: grid;
+            gap: 16px;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            margin-top: 20px;
+        }
+
+        .notification-card {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid var(--primary-blue);
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .notification-card:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .notification-card.unread {
+            border-left-color: var(--danger);
+            background: #fefefe;
+        }
+
+        .notification-card.read {
+            opacity: 0.8;
+            border-left-color: var(--medium-gray);
+        }
+
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .notification-icon {
+            background: var(--light-blue);
+            color: var(--primary-blue);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .notification-meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+        }
+
+        .notification-type {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 12px;
+            text-transform: uppercase;
+        }
+
+        .notification-type.critical {
+            background: rgba(229, 62, 62, 0.1);
+            color: var(--danger);
+        }
+
+        .notification-type.warning {
+            background: rgba(246, 173, 85, 0.1);
+            color: var(--warning);
+        }
+
+        .notification-type.info {
+            background: rgba(66, 153, 225, 0.1);
+            color: var(--info);
+        }
+
+        .notification-type.update,
+        .notification-type.alert {
+            background: var(--light-blue);
+            color: var(--primary-blue);
+        }
+
+        .notification-time {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .notification-content h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-dark);
+        }
+
+        .notification-content p {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.4;
+            margin: 0;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+        }
+
+        .unread-indicator {
+            width: 8px;
+            height: 8px;
+            background: var(--danger);
+            border-radius: 50%;
+            display: block;
+        }
+
+        .no-notifications {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .no-notifications-content i {
+            font-size: 48px;
+            color: var(--medium-gray);
+            margin-bottom: 16px;
+        }
+
+        .no-notifications-content h3 {
+            font-size: 18px;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+
+        .no-notifications-content p {
+            color: var(--text-muted);
         }
 
         /* Alert styles */
