@@ -196,7 +196,7 @@ def user_deleted_handler(sender, instance, **kwargs):
     AuthenticationLog.log_authentication_event(
         user=None,  # User is being deleted
         action='user_deleted',
-        ip_address='127.0.0.1',  # Use valid IP instead of 'system'
+        ip_address='system',
         user_agent='System',
         success=True,
         additional_data={

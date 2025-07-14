@@ -372,7 +372,6 @@ try:
         """Factory for creating test Organization instances"""
         class Meta:
             model = Organization
-            django_get_or_create = ('name',)
         
         name = factory.Sequence(lambda n: f"Test Organization {n}")
         domain = factory.Sequence(lambda n: f"testorg{n}.com")
@@ -386,7 +385,6 @@ try:
         """Factory for creating test User instances"""
         class Meta:
             model = User
-            django_get_or_create = ('username',)
     
         username = factory.Sequence(lambda n: f"user{n}")
         email = factory.LazyAttribute(lambda obj: f"{obj.username}@example.com")

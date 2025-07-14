@@ -1,6 +1,13 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function Hero() {
+  const navigate = useNavigate();
+
+  const handleLogin = () => {
+    navigate('/login');
+  };
+
   return (
     <section className="hero">
       <div className="container hero-container">
@@ -13,10 +20,10 @@ function Hero() {
             protecting student data while strengthening cybersecurity defenses across the education sector.
           </p>
           <div className="hero-actions">
-            <a href="#demo" className="btn btn-primary btn-large">
-              <i className="fas fa-play"></i>
-              Watch Demo
-            </a>
+            <button onClick={handleLogin} className="btn btn-primary btn-large">
+              <i className="fas fa-sign-in-alt"></i>
+              Login to Dashboard
+            </button>
             <a href="#features" className="btn btn-outline btn-large">
               <i className="fas fa-info-circle"></i>
               Learn More
