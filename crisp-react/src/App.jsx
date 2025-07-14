@@ -109,6 +109,21 @@ function Header() {
 
 // Main Navigation Component
 function MainNav({ activePage, showPage }) {
+  const [systemStatus, setSystemStatus] = useState('loading');
+  
+  // Check system status periodically
+  useEffect(() => {
+    const checkStatus = async () => {
+      const status = await api.get('/core/');
+      setSystemStatus(status?.status || 'offline');
+    };
+    
+    checkStatus();
+    const statusInterval = setInterval(checkStatus, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(statusInterval);
+  }, []);
+  
   return (
     <nav className="main-nav">
       <div className="container nav-container">
@@ -164,8 +179,17 @@ function MainNav({ activePage, showPage }) {
         </ul>
         <div className="nav-right">
           <div className="status-indicator">
-            <span className="status-dot"></span>
-            <span>System Online</span>
+            <span 
+              className="status-dot" 
+              style={{
+                backgroundColor: systemStatus === 'active' ? '#28a745' : 
+                                systemStatus === 'loading' ? '#ffc107' : '#dc3545'
+              }}
+            ></span>
+            <span>
+              {systemStatus === 'active' ? 'System Online' : 
+               systemStatus === 'loading' ? 'Checking...' : 'System Offline'}
+            </span>
           </div>
         </div>
       </div>
