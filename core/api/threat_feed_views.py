@@ -210,6 +210,55 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
                 "status": "error", 
                 "error": str(e)
             }, status=500)
+    
+    @action(detail=True, methods=['get'])
+    def indicators(self, request, pk=None):
+        """Get indicators for a specific threat feed."""
+        try:
+            feed = get_object_or_404(ThreatFeed, pk=pk)
+        except Http404 as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Get indicators for this feed
+        indicators = Indicator.objects.filter(threat_feed_id=pk).order_by('-created_at')
+        
+        # Get pagination parameters
+        page = int(request.query_params.get('page', 1))
+        page_size = int(request.query_params.get('page_size', 20))
+        
+        # Calculate pagination
+        start = (page - 1) * page_size
+        end = start + page_size
+        total_count = indicators.count()
+        
+        indicators_page = indicators[start:end]
+        
+        # Format the response
+        results = []
+        for indicator in indicators_page:
+            results.append({
+                'id': indicator.id,
+                'type': indicator.type,
+                'value': indicator.value,
+                'stix_id': indicator.stix_id,
+                'description': indicator.description,
+                'confidence': indicator.confidence,
+                'first_seen': indicator.first_seen,
+                'last_seen': indicator.last_seen,
+                'created_at': indicator.created_at,
+                'is_anonymized': indicator.is_anonymized,
+                'source': feed.name
+            })
+        
+        return Response({
+            'count': total_count,
+            'next': f'/api/threat-feeds/{pk}/indicators/?page={page + 1}&page_size={page_size}' if end < total_count else None,
+            'previous': f'/api/threat-feeds/{pk}/indicators/?page={page - 1}&page_size={page_size}' if page > 1 else None,
+            'results': results
+        })
         
     def handle_exception(self, exc):
         # Let DRF handle known exceptions
