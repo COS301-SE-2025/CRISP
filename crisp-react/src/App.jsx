@@ -220,10 +220,24 @@ function Dashboard({ active }) {
   const fetchDashboardData = async () => {
     const feedsData = await api.get('/api/threat-feeds/');
     if (feedsData) {
+      let totalIndicators = 0;
+      let totalTTPs = 0;
+      
+      // Get indicator and TTP counts from each feed
+      if (feedsData.results) {
+        for (const feed of feedsData.results) {
+          const feedStatus = await api.get(`/api/threat-feeds/${feed.id}/status/`);
+          if (feedStatus) {
+            totalIndicators += feedStatus.indicators_count || 0;
+            totalTTPs += feedStatus.ttps_count || 0;
+          }
+        }
+      }
+      
       setDashboardStats({
         threat_feeds: feedsData.count || 0,
-        indicators: 0, // Will be populated when we get indicators endpoint
-        ttps: 0, // Will be populated when we get TTPs endpoint
+        indicators: totalIndicators,
+        ttps: totalTTPs,
         status: 'active'
       });
     }
@@ -766,10 +780,10 @@ function ThreatFeeds({ active }) {
       </div>
 
       <div className="tabs">
-        <div className="tab active">Active Feeds (16)</div>
-        <div className="tab">External (11)</div>
-        <div className="tab">Internal (5)</div>
-        <div className="tab">All Feeds (18)</div>
+        <div className="tab active">Active Feeds ({threatFeeds.filter(f => f.is_active).length})</div>
+        <div className="tab">External ({threatFeeds.filter(f => f.is_external).length})</div>
+        <div className="tab">Internal ({threatFeeds.filter(f => !f.is_external).length})</div>
+        <div className="tab">All Feeds ({threatFeeds.length})</div>
       </div>
 
       <div className="card">
@@ -846,24 +860,29 @@ function IoCManagement({ active }) {
   
   const fetchIndicators = async () => {
     setLoading(true);
-    // Since we don't have a direct indicators API, we'll fetch from feeds and get their status
+    // Get indicator counts from feeds
     const feedData = await api.get('/api/threat-feeds/');
-    if (feedData && feedData.length > 0) {
-      // Get indicators from the first feed as example
-      const feedStatus = await api.get(`/api/threat-feeds/${feedData[0].id}/status/`);
-      if (feedStatus) {
-        // Create mock indicators based on feed data
-        const mockIndicators = Array.from({length: Math.min(feedStatus.indicator_count, 10)}, (_, i) => ({
-          id: i + 1,
-          type: ['IP Address', 'Domain', 'URL', 'File Hash', 'Email'][i % 5],
-          value: `indicator-${i + 1}`,
-          severity: ['High', 'Medium', 'Low'][i % 3],
-          source: feedData[0].name || 'Unknown',
-          created: new Date().toISOString().split('T')[0],
-          status: 'Active'
-        }));
-        setIndicators(mockIndicators);
+    if (feedData && feedData.results) {
+      let allIndicators = [];
+      
+      for (const feed of feedData.results) {
+        const feedStatus = await api.get(`/api/threat-feeds/${feed.id}/status/`);
+        if (feedStatus && feedStatus.indicators_count > 0) {
+          // Create sample indicators based on real feed data
+          const sampleIndicators = Array.from({length: Math.min(feedStatus.indicators_count, 20)}, (_, i) => ({
+            id: `${feed.id}-${i + 1}`,
+            type: ['IP Address', 'Domain', 'URL', 'File Hash', 'Email'][i % 5],
+            value: `[${feedStatus.indicators_count} indicators from ${feed.name}]`,
+            severity: ['High', 'Medium', 'Low'][i % 3],
+            source: feed.name || 'Unknown',
+            created: new Date().toISOString().split('T')[0],
+            status: 'Active'
+          }));
+          allIndicators.push(...sampleIndicators);
+        }
       }
+      
+      setIndicators(allIndicators);
     }
     setLoading(false);
   };
