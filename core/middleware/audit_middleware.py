@@ -1,5 +1,6 @@
 import json
 import logging
+import datetime
 from django.utils import timezone
 from django.utils.deprecation import MiddlewareMixin
 from django.core.exceptions import ValidationError
@@ -138,7 +139,10 @@ class AuditMiddleware(MiddlewareMixin):
         # Calculate response time
         response_time = None
         if hasattr(request, '_audit_start_time'):
-            response_time = time.time() - request._audit_start_time
+            start_time = request._audit_start_time
+            if isinstance(start_time, datetime.datetime):
+                start_time = start_time.timestamp()
+            response_time = time.time() - start_time
         
         # Determine if this was a successful request
         success = 200 <= response.status_code < 400
@@ -177,7 +181,10 @@ class AuditMiddleware(MiddlewareMixin):
         # Calculate response time
         response_time = None
         if hasattr(request, '_audit_start_time'):
-            response_time = time.time() - request._audit_start_time
+            start_time = request._audit_start_time
+            if isinstance(start_time, datetime.datetime):
+                start_time = start_time.timestamp()
+            response_time = time.time() - start_time
         
         additional_data = {
             'method': request.method,

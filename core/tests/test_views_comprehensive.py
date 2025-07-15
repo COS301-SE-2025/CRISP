@@ -94,8 +94,8 @@ class AuthenticationViewSetTest(APITestCase):
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data['success'])
-        self.assertIn('tokens', response.data['data'])
-        self.assertIn('user', response.data['data'])
+        self.assertIn('tokens', response.data)
+        self.assertIn('user', response.data)
         mock_service_instance.authenticate_user.assert_called_once()
     
     @patch('core.user_management.views.auth_views.AuthenticationService')

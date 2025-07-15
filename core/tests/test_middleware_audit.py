@@ -422,7 +422,7 @@ class SecurityEventTest(BaseTestCase):
             AuthenticationLog.objects.create(
                 user=self.admin_user,
                 action=action,
-                ip_address='192.168.1.999',  # Suspicious IP
+                ip_address='192.168.1.100',  # Suspicious IP
                 success=False,
                 additional_data={'severity': 'high'}
             )

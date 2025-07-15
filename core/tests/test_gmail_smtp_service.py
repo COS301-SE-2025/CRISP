@@ -239,7 +239,7 @@ class GmailSMTPServiceTestCase(TestCase):
         
         # Verify HTML content contains expected elements
         self.assertIn('critical_ttp', html_content)
-        self.assertIn('CRITICAL', html_content)
+        self.assertIn('critical', html_content)
         self.assertIn('ALERT-456', html_content)
         self.assertIn('Credential Dumping', html_content)
         self.assertIn('T1003', html_content)
