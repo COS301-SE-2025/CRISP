@@ -84,9 +84,6 @@ WSGI_APPLICATION = 'crisp.TrustManagement.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    } if os.getenv('USE_SQLITE', 'False').lower() == 'true' else {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.getenv('DB_NAME', 'crisp_trust_db'),
         'USER': os.getenv('DB_USER', 'crisp_user'),
@@ -300,6 +297,16 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@crisp-trust.exampl
 # CRISP Email Settings for Gmail SMTP
 CRISP_SENDER_NAME = os.getenv('CRISP_SENDER_NAME', 'CRISP Threat Intelligence')
 CRISP_SENDER_EMAIL = os.getenv('CRISP_SENDER_EMAIL', EMAIL_HOST_USER)
+
+# SMTP2Go Service Configuration
+SMTP2GO_API_KEY = os.getenv('SMTP2GO_API_KEY', None)
+SMTP2GO_API_URL = os.getenv('SMTP2GO_API_URL', 'https://api.smtp2go.com/v3/email/send')
+EMAIL_FROM_ADDRESS = os.getenv('EMAIL_FROM_ADDRESS', 'noreply@crisp-system.org')
+EMAIL_FROM_NAME = os.getenv('EMAIL_FROM_NAME', 'CRISP Platform')
+DEFAULT_ADMIN_EMAIL = os.getenv('DEFAULT_ADMIN_EMAIL', 'admin@crisp-system.org')
+
+# Trust Management Secret Key
+TRUST_MANAGEMENT_SECRET_KEY = os.getenv('TRUST_MANAGEMENT_SECRET_KEY', SECRET_KEY)
 
 # CRISP Trust Management System Configuration
 CRISP_SETTINGS = {

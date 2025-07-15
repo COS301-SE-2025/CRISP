@@ -62,8 +62,11 @@ class AuthenticationViewSet(viewsets.ViewSet):
             if result.get('success'):
                 # User data is already formatted by the auth service
                 return Response({
-                    'access': str(result.get('tokens').get('access')),
-                    'refresh': str(result.get('tokens').get('refresh')),
+                    'success': True,
+                    'tokens': {
+                        'access': str(result.get('tokens').get('access')),
+                        'refresh': str(result.get('tokens').get('refresh'))
+                    },
                     'user': result.get('user')
                 }, status=status.HTTP_200_OK)
             else:

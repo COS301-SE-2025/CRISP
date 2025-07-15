@@ -7,6 +7,7 @@ from . import alerts_views
 
 urlpatterns = [
     # Alert endpoints
+    path('list/', alerts_views.get_alerts_list, name='alerts-list'),
     path('threat/', alerts_views.send_threat_alert, name='alerts-send-threat'),
     path('feed/', alerts_views.send_feed_notification, name='alerts-send-feed'),
     path('test-connection/', alerts_views.test_gmail_connection, name='alerts-test-connection'),

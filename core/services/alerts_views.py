@@ -16,6 +16,29 @@ from .gmail_smtp_service import GmailSMTPService
 logger = logging.getLogger(__name__)
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_alerts_list(request):
+    """
+    Get list of alerts/notifications for the user
+    """
+    try:
+        # For now, return empty list - this can be expanded to return actual alerts from database
+        alerts = []
+        
+        return Response({
+            'success': True,
+            'data': alerts
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error fetching alerts: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to fetch alerts'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def send_threat_alert(request):

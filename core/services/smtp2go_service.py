@@ -27,8 +27,8 @@ class SMTP2GoService:
         Args:
             api_key: SMTP2Go API key (defaults to settings.SMTP2GO_API_KEY)
         """
-        self.api_key = api_key or getattr(settings, 'SMTP2GO_API_KEY', 'api-CE7DDEAC33DA4775B069E9C39789DED6')
-        self.base_url = "https://api.smtp2go.com/v3/"
+        self.api_key = api_key or getattr(settings, 'SMTP2GO_API_KEY', None)
+        self.base_url = getattr(settings, 'SMTP2GO_API_URL', 'https://api.smtp2go.com/v3/email/send')
         self.headers = {
             'Content-Type': 'application/json',
             'X-Smtp2go-Api-Key': self.api_key
@@ -36,8 +36,8 @@ class SMTP2GoService:
         
         # Default sender information
         self.default_sender = {
-            'name': getattr(settings, 'CRISP_SENDER_NAME', 'CRISP Threat Intelligence'),
-            'email': getattr(settings, 'CRISP_SENDER_EMAIL', 'noreply@crisp-platform.com')
+            'name': getattr(settings, 'EMAIL_FROM_NAME', 'CRISP Platform'),
+            'email': getattr(settings, 'EMAIL_FROM_ADDRESS', 'noreply@crisp-system.org')
         }
     
     def send_email(self, to_emails: List[str], subject: str, html_content: str, 

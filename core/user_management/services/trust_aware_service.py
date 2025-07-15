@@ -39,7 +39,7 @@ class TrustAwareService:
                     'id': str(user.organization.id),
                     'name': user.organization.name,
                     'domain': user.organization.domain
-                },
+                } if user.organization else None,
                 'permissions': list(self.access_control.get_user_permissions(user)),
                 'is_publisher': user.is_publisher,
                 'is_verified': user.is_verified,
@@ -58,7 +58,7 @@ class TrustAwareService:
                 'id': str(org.id),
                 'name': org.name,
                 'domain': org.domain,
-                'is_own': org.id == user.organization.id,
+                'is_own': org.id == user.organization.id if user.organization else False,
                 'access_level': self._get_org_access_level(user, org)
             }
             for org in accessible_orgs
@@ -81,7 +81,7 @@ class TrustAwareService:
     
     def _get_org_access_level(self, user: CustomUser, organization: Organization) -> str:
         """Get the access level for a user to a specific organization"""
-        if organization.id == user.organization.id:
+        if user.organization and organization.id == user.organization.id:
             return 'full'
         
         if user.role == 'BlueVisionAdmin':
@@ -89,15 +89,16 @@ class TrustAwareService:
         
         # Check trust relationship
         try:
-            relationship = TrustRelationship.objects.filter(
-                source_organization=user.organization,
-                target_organization=organization,
-                is_active=True,
-                status='active'
-            ).select_related('trust_level').first()
-            
-            if relationship:
-                return relationship.get_effective_access_level()
+            if user.organization:
+                relationship = TrustRelationship.objects.filter(
+                    source_organization=user.organization,
+                    target_organization=organization,
+                    is_active=True,
+                    status='active'
+                ).select_related('trust_level').first()
+                
+                if relationship:
+                    return relationship.get_effective_access_level()
         except Exception as e:
             logger.error(f"Error getting org access level: {str(e)}")
         
@@ -106,6 +107,9 @@ class TrustAwareService:
     def _get_user_trust_relationships(self, user: CustomUser) -> List[Dict]:
         """Get trust relationships for user's organization"""
         relationships = []
+        
+        if not user.organization:
+            return relationships
         
         try:
             # Outgoing relationships (where user's org is source)
@@ -161,6 +165,9 @@ class TrustAwareService:
         """Get trust groups for user's organization"""
         groups = []
         
+        if not user.organization:
+            return groups
+        
         try:
             from core.trust.models import TrustGroupMembership
             
@@ -190,6 +197,9 @@ class TrustAwareService:
     def _get_pending_trust_actions(self, user: CustomUser) -> List[Dict]:
         """Get pending trust-related actions for the user"""
         pending = []
+        
+        if not user.organization:
+            return pending
         
         try:
             # Pending trust relationship approvals
@@ -551,36 +561,40 @@ class TrustAwareService:
         Returns:
             List[Organization]: Accessible organizations
         """
-        accessible = [user.organization]  # Always include own organization
+        accessible = []
+        if user.organization:
+            accessible.append(user.organization)  # Include own organization if exists
         
         try:
             # Get organizations through trust relationships
-            relationships = TrustRelationship.objects.filter(
-                source_organization=user.organization,
-                is_active=True,
-                status='active'
-            ).select_related('target_organization')
+            if user.organization:
+                relationships = TrustRelationship.objects.filter(
+                    source_organization=user.organization,
+                    is_active=True,
+                    status='active'
+                ).select_related('target_organization')
             
-            for rel in relationships:
-                if rel.target_organization not in accessible:
-                    accessible.append(rel.target_organization)
+                for rel in relationships:
+                    if rel.target_organization not in accessible:
+                        accessible.append(rel.target_organization)
             
             # Get organizations through trust groups
             from core.trust.models import TrustGroupMembership
-            memberships = TrustGroupMembership.objects.filter(
-                organization=user.organization,
-                is_active=True
-            ).select_related('trust_group')
-            
-            for membership in memberships:
-                other_memberships = TrustGroupMembership.objects.filter(
-                    trust_group=membership.trust_group,
+            if user.organization:
+                memberships = TrustGroupMembership.objects.filter(
+                    organization=user.organization,
                     is_active=True
-                ).exclude(organization=user.organization).select_related('organization')
-                
-                for other_membership in other_memberships:
-                    if other_membership.organization not in accessible:
-                        accessible.append(other_membership.organization)
+                ).select_related('trust_group')
+            
+                for membership in memberships:
+                    other_memberships = TrustGroupMembership.objects.filter(
+                        trust_group=membership.trust_group,
+                        is_active=True
+                    ).exclude(organization=user.organization).select_related('organization')
+                    
+                    for other_membership in other_memberships:
+                        if other_membership.organization not in accessible:
+                            accessible.append(other_membership.organization)
         
         except Exception as e:
             logger.error(f"Error getting accessible organizations: {str(e)}")
@@ -653,7 +667,7 @@ class TrustAwareService:
                     'id': str(user.organization.id),
                     'name': user.organization.name,
                     'domain': user.organization.domain
-                },
+                } if user.organization else None,
                 'trust_relationships': [],
                 'trust_groups': [],
                 'accessible_organizations': [],
@@ -661,34 +675,36 @@ class TrustAwareService:
             }
             
             # Get trust relationships
-            relationships = TrustRelationship.objects.filter(
-                source_organization=user.organization,
-                is_active=True
-            ).select_related('target_organization', 'trust_level')
+            if user.organization:
+                relationships = TrustRelationship.objects.filter(
+                    source_organization=user.organization,
+                    is_active=True
+                ).select_related('target_organization', 'trust_level')
             
-            for rel in relationships:
-                context['trust_relationships'].append({
-                    'id': str(rel.id),
-                    'target_organization': rel.target_organization.name,
-                    'trust_level': rel.trust_level.name,
-                    'status': rel.status,
-                    'access_level': rel.access_level
-                })
+                for rel in relationships:
+                    context['trust_relationships'].append({
+                        'id': str(rel.id),
+                        'target_organization': rel.target_organization.name,
+                        'trust_level': rel.trust_level.name,
+                        'status': rel.status,
+                        'access_level': rel.access_level
+                    })
             
             # Get trust groups
             from core.trust.models import TrustGroupMembership
-            memberships = TrustGroupMembership.objects.filter(
-                organization=user.organization,
-                is_active=True
-            ).select_related('trust_group')
+            if user.organization:
+                memberships = TrustGroupMembership.objects.filter(
+                    organization=user.organization,
+                    is_active=True
+                ).select_related('trust_group')
             
-            for membership in memberships:
-                context['trust_groups'].append({
-                    'id': str(membership.trust_group.id),
-                    'name': membership.trust_group.name,
-                    'membership_type': membership.membership_type,
-                    'member_count': membership.trust_group.member_count
-                })
+                for membership in memberships:
+                    context['trust_groups'].append({
+                        'id': str(membership.trust_group.id),
+                        'name': membership.trust_group.name,
+                        'membership_type': membership.membership_type,
+                        'member_count': membership.trust_group.member_count
+                    })
             
             # Get accessible organizations
             accessible = self.get_accessible_organizations(user)
@@ -710,7 +726,7 @@ class TrustAwareService:
                 'user_organization': {
                     'id': str(user.organization.id),
                     'name': user.organization.name
-                },
+                } if user.organization else None,
                 'trust_relationships': [],
                 'trust_groups': [],
                 'accessible_organizations': [],

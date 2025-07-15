@@ -238,8 +238,8 @@ class AuthenticationService:
             ).count()
             
             return {
-                'organization_id': str(user.organization.id),
-                'organization_name': user.organization.name,
+                'organization_id': str(user.organization.id) if user.organization else None,
+                'organization_name': user.organization.name if user.organization else None,
                 'outgoing_trust_relationships': outgoing_relationships,
                 'incoming_trust_relationships': incoming_relationships,
                 'can_manage_trust': user.can_manage_trust_relationships,
@@ -523,7 +523,7 @@ class AuthenticationService:
                 'user_id': str(user.id),
                 'username': user.username,
                 'role': user.role,
-                'organization': user.organization.name,
+                'organization': user.organization.name if user.organization else None,
                 'is_publisher': user.is_publisher,
                 'trust_context': trust_context,
                 'permissions': permissions,
@@ -635,7 +635,7 @@ class AuthenticationService:
             additional_data={
                 'session_id': session_id,
                 'trusted_device': is_trusted_device,
-                'organization': user.organization.name,
+                'organization': user.organization.name if user.organization else None,
                 'role': user.role
             }
         )

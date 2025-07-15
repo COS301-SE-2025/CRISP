@@ -97,8 +97,8 @@ function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthW
     const handleResize = () => {
       // This forces a redraw of charts when window size changes (including zoom)
       if (activePage === 'dashboard') {
-        const event = new Event('resize');
-        window.dispatchEvent(event);
+        // Force chart redraw by triggering a state change instead of dispatching resize event
+        setIsLoading(prev => prev); // Trigger re-render without causing infinite loop
       }
     };
 
@@ -2984,7 +2984,8 @@ function UserManagement({ active, isAdmin, currentUser, showPage }) {
       setLoading(true);
       setError(null);
       const userData = await api.getUsers();
-      setUsers(userData.data || userData || []);
+      const usersArray = userData.data || userData || [];
+      setUsers(Array.isArray(usersArray) ? usersArray : []);
     } catch (err) {
       console.error('Failed to fetch users:', err);
       setError('Failed to load users. Please try again.');
