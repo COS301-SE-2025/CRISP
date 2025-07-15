@@ -541,3 +541,35 @@ export const getUsersList = async () => {
   
   return await handleResponse(response);
 };
+
+// Get specific user details
+export const getUserDetails = async (userId) => {
+  const response = await fetch(`${API_URL}users/${userId}/`, {
+    method: 'GET',
+    headers: { ...authHeader() }
+  });
+  
+  return await handleResponse(response);
+};
+
+// Update specific user
+export const updateUser = async (userId, userData) => {
+  const response = await fetch(`${API_URL}users/${userId}/`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify(userData)
+  });
+  
+  return await handleResponse(response);
+};
+
+// Deactivate user (soft delete)
+export const deactivateUser = async (userId, reason = '') => {
+  const response = await fetch(`${API_URL}users/${userId}/deactivate/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify({ reason })
+  });
+  
+  return await handleResponse(response);
+};
