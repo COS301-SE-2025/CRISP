@@ -860,25 +860,33 @@ function IoCManagement({ active }) {
   
   const fetchIndicators = async () => {
     setLoading(true);
-    // Get indicator counts from feeds
+    // Get real indicator data from feeds
     const feedData = await api.get('/api/threat-feeds/');
     if (feedData && feedData.results) {
       let allIndicators = [];
       
       for (const feed of feedData.results) {
         const feedStatus = await api.get(`/api/threat-feeds/${feed.id}/status/`);
-        if (feedStatus && feedStatus.indicators_count > 0) {
-          // Create sample indicators based on real feed data
-          const sampleIndicators = Array.from({length: Math.min(feedStatus.indicators_count, 20)}, (_, i) => ({
-            id: `${feed.id}-${i + 1}`,
-            type: ['IP Address', 'Domain', 'URL', 'File Hash', 'Email'][i % 5],
-            value: `[${feedStatus.indicators_count} indicators from ${feed.name}]`,
-            severity: ['High', 'Medium', 'Low'][i % 3],
-            source: feed.name || 'Unknown',
-            created: new Date().toISOString().split('T')[0],
-            status: 'Active'
-          }));
-          allIndicators.push(...sampleIndicators);
+        if (feedStatus && feedStatus.indicator_count > 0) {
+          // Get real indicators from this feed
+          const indicatorsData = await api.get(`/api/threat-feeds/${feed.id}/indicators/?page_size=20`);
+          if (indicatorsData && indicatorsData.results) {
+            const realIndicators = indicatorsData.results.map(indicator => ({
+              id: indicator.id,
+              type: indicator.type === 'ip' ? 'IP Address' : 
+                    indicator.type === 'domain' ? 'Domain' :
+                    indicator.type === 'url' ? 'URL' :
+                    indicator.type === 'file_hash' ? 'File Hash' :
+                    indicator.type === 'email' ? 'Email' : indicator.type,
+              value: indicator.value,
+              severity: indicator.confidence >= 75 ? 'High' : 
+                       indicator.confidence >= 50 ? 'Medium' : 'Low',
+              source: indicator.source || 'Unknown',
+              created: new Date(indicator.created_at).toISOString().split('T')[0],
+              status: indicator.is_anonymized ? 'Anonymized' : 'Active'
+            }));
+            allIndicators.push(...realIndicators);
+          }
         }
       }
       

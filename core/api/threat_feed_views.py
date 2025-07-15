@@ -1,7 +1,7 @@
 import logging
 from datetime import timedelta
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -272,3 +272,63 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         return response
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def indicators_list(request):
+    """Get all indicators across all feeds for dashboard summary."""
+    try:
+        # Get pagination parameters
+        page = int(request.GET.get('page', 1))
+        page_size = int(request.GET.get('page_size', 20))
+        
+        # Get all indicators
+        indicators = Indicator.objects.all().order_by('-created_at')
+        
+        # Calculate pagination
+        start = (page - 1) * page_size
+        end = start + page_size
+        total_count = indicators.count()
+        
+        indicators_page = indicators[start:end]
+        
+        # Format the response
+        results = []
+        for indicator in indicators_page:
+            # Get the feed name
+            feed_name = 'Unknown'
+            if hasattr(indicator, 'threat_feed') and indicator.threat_feed:
+                feed_name = indicator.threat_feed.name
+            elif hasattr(indicator, 'threat_feed_id') and indicator.threat_feed_id:
+                try:
+                    feed = ThreatFeed.objects.get(id=indicator.threat_feed_id)
+                    feed_name = feed.name
+                except ThreatFeed.DoesNotExist:
+                    pass
+            
+            results.append({
+                'id': indicator.id,
+                'type': indicator.type,
+                'value': indicator.value,
+                'stix_id': indicator.stix_id,
+                'description': indicator.description,
+                'confidence': indicator.confidence,
+                'first_seen': indicator.first_seen,
+                'last_seen': indicator.last_seen,
+                'created_at': indicator.created_at,
+                'is_anonymized': indicator.is_anonymized,
+                'source': feed_name
+            })
+        
+        return Response({
+            'count': total_count,
+            'next': f'/api/indicators/?page={page + 1}&page_size={page_size}' if end < total_count else None,
+            'previous': f'/api/indicators/?page={page - 1}&page_size={page_size}' if page > 1 else None,
+            'results': results
+        })
+    except Exception as e:
+        logger.error(f"Error fetching indicators: {str(e)}")
+        return Response(
+            {"error": "Failed to fetch indicators", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
