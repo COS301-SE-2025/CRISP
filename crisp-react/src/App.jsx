@@ -114,8 +114,8 @@ function MainNav({ activePage, showPage }) {
   // Check system status periodically
   useEffect(() => {
     const checkStatus = async () => {
-      const status = await api.get('/core/');
-      setSystemStatus(status?.status || 'offline');
+      const status = await api.get('/api/threat-feeds/');
+      setSystemStatus(status ? 'active' : 'offline');
     };
     
     checkStatus();
@@ -218,9 +218,14 @@ function Dashboard({ active }) {
   }, [active]);
   
   const fetchDashboardData = async () => {
-    const data = await api.get('/core/');
-    if (data) {
-      setDashboardStats(data);
+    const feedsData = await api.get('/api/threat-feeds/');
+    if (feedsData) {
+      setDashboardStats({
+        threat_feeds: feedsData.count || 0,
+        indicators: 0, // Will be populated when we get indicators endpoint
+        ttps: 0, // Will be populated when we get TTPs endpoint
+        status: 'active'
+      });
     }
   };
   
@@ -687,8 +692,8 @@ function ThreatFeeds({ active }) {
   const fetchThreatFeeds = async () => {
     setLoading(true);
     const data = await api.get('/api/threat-feeds/');
-    if (data) {
-      setThreatFeeds(data);
+    if (data && data.results) {
+      setThreatFeeds(data.results);
     }
     setLoading(false);
   };
