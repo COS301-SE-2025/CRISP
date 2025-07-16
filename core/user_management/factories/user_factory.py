@@ -381,7 +381,7 @@ try:
         is_active = True
         is_publisher = False
     
-    class UserFactory(factory.django.DjangoModelFactory):  # Fix: change to factory.django.DjangoModelFactory
+    class TestUserFactory(factory.django.DjangoModelFactory):  # Rename to avoid conflict
         """Factory for creating test User instances"""
         class Meta:
             model = User
@@ -410,6 +410,26 @@ try:
             password = extracted or 'testpass123'
             obj.set_password(password)
             obj.save()
+    
+    # Create a UserFactory class that has all the methods
+    class UserFactoryComplete:
+        """Complete UserFactory with all required methods"""
+        
+        @staticmethod
+        def create(**kwargs):
+            return TestUserFactory.create(**kwargs)
+        
+        def __call__(self, **kwargs):
+            return self.create(**kwargs)
+        
+        # Reference the original UserFactory methods
+        create_user = staticmethod(UserFactory.create_user)
+        create_test_user = staticmethod(UserFactory.create_test_user)
+        create_user_with_auto_password = staticmethod(UserFactory.create_user_with_auto_password)
+        _create_test_admin = staticmethod(UserFactory._create_test_admin)
+    
+    # Override UserFactory with an instance of the complete version
+    UserFactory = UserFactoryComplete()
 
 except ImportError:
     # Fallback for when factory_boy is not available
@@ -433,7 +453,7 @@ except ImportError:
         def __call__(cls, **kwargs):
             return cls.create(**kwargs)
     
-    class UserFactory:
+    class FallbackUserFactory:
         """Simple factory for creating test User instances"""
         
         @staticmethod
@@ -463,6 +483,57 @@ except ImportError:
         def __call__(cls, **kwargs):
             return cls.create(**kwargs)
     
-    # Make the factories callable
-    OrganizationFactory = OrganizationFactory()
-    UserFactory = UserFactory()
+    # Store fallback factory instances without overriding class names
+    FallbackOrganizationFactoryInstance = OrganizationFactory()
+    FallbackUserFactoryInstance = FallbackUserFactory()
+    
+    # Create a TestUserFactory that can be used for testing
+    class TestUserFactory:
+        """Test factory wrapper for creating users in tests"""
+        
+        @staticmethod
+        def create(**kwargs):
+            if 'organization' not in kwargs:
+                kwargs['organization'] = FallbackOrganizationFactoryInstance.create()
+            
+            defaults = {
+                'username': 'testuser@example.com',
+                'email': 'testuser@example.com',
+                'first_name': 'Test',
+                'last_name': 'User',
+                'role': 'viewer',
+                'is_active': True,
+                'is_verified': False,
+                'trusted_devices': [],
+                'preferences': {},
+                'metadata': {}
+            }
+            defaults.update(kwargs)
+            
+            password = defaults.pop('password', 'testpass123')
+            user = User.objects.create_user(password=password, **defaults)
+            return user
+        
+        @classmethod
+        def __call__(cls, **kwargs):
+            return cls.create(**kwargs)
+    
+    # Create a UserFactory class that has all the methods
+    class UserFactoryFallback:
+        """Fallback UserFactory with all required methods"""
+        
+        @staticmethod
+        def create(**kwargs):
+            return TestUserFactory.create(**kwargs)
+        
+        def __call__(self, **kwargs):
+            return self.create(**kwargs)
+        
+        # Reference the original UserFactory methods
+        create_user = staticmethod(UserFactory.create_user)
+        create_test_user = staticmethod(UserFactory.create_test_user)
+        create_user_with_auto_password = staticmethod(UserFactory.create_user_with_auto_password)
+        _create_test_admin = staticmethod(UserFactory._create_test_admin)
+    
+    # Override UserFactory with an instance of the fallback
+    UserFactory = UserFactoryFallback()

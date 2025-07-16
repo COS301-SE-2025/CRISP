@@ -212,6 +212,39 @@ class TrustGroup(models.Model):
     def member_count(self):
         """Property version of get_member_count for compatibility"""
         return self.get_member_count()
+    
+    @property
+    def member_organizations(self):
+        """Get member organizations through membership relationship"""
+        # Return a custom manager-like object that supports add/remove/all operations
+        class MemberOrganizationsManager:
+            def __init__(self, trust_group):
+                self.trust_group = trust_group
+            
+            def add(self, organization):
+                """Add an organization to the group"""
+                TrustGroupMembership.objects.get_or_create(
+                    trust_group=self.trust_group,
+                    organization=organization,
+                    defaults={'membership_type': 'member', 'is_active': True}
+                )
+            
+            def remove(self, organization):
+                """Remove an organization from the group"""
+                TrustGroupMembership.objects.filter(
+                    trust_group=self.trust_group,
+                    organization=organization
+                ).delete()
+            
+            def all(self):
+                """Get all member organizations"""
+                from core.user_management.models import Organization
+                return Organization.objects.filter(
+                    trust_group_memberships__trust_group=self.trust_group,
+                    trust_group_memberships__is_active=True
+                )
+        
+        return MemberOrganizationsManager(self)
 
 
 class TrustRelationship(models.Model):
@@ -720,8 +753,11 @@ class TrustLog(models.Model):
         # Convert source organization if it's a string UUID
         if isinstance(source_organization, str):
             try:
+                import uuid
+                # Validate UUID format first
+                uuid.UUID(source_organization)
                 source_organization = Organization.objects.get(id=source_organization)
-            except Organization.DoesNotExist:
+            except (Organization.DoesNotExist, ValueError, TypeError):
                 source_organization = None
         elif isinstance(source_organization, Mock):
             source_organization = None
@@ -729,8 +765,11 @@ class TrustLog(models.Model):
         # Convert target organization if it's a string UUID
         if isinstance(target_organization, str):
             try:
+                import uuid
+                # Validate UUID format first
+                uuid.UUID(target_organization)
                 target_organization = Organization.objects.get(id=target_organization)
-            except Organization.DoesNotExist:
+            except (Organization.DoesNotExist, ValueError, TypeError):
                 target_organization = None
         elif isinstance(target_organization, Mock):
             target_organization = None
@@ -741,8 +780,11 @@ class TrustLog(models.Model):
                 user = None
             else:
                 try:
+                    import uuid
+                    # Validate UUID format first
+                    uuid.UUID(user)
                     user = CustomUser.objects.get(id=user)
-                except (CustomUser.DoesNotExist, ValueError):
+                except (CustomUser.DoesNotExist, ValueError, TypeError):
                     user = None
         elif isinstance(user, Mock):
             user = None

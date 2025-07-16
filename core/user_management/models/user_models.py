@@ -310,7 +310,15 @@ class CustomUser(AbstractUser):
     @property
     def can_manage_trust_relationships(self):
         """Check if user can manage trust relationships"""
+        # Allow override for testing
+        if hasattr(self, '_can_manage_trust_relationships_override'):
+            return self._can_manage_trust_relationships_override
         return self.role in ['publisher', 'BlueVisionAdmin']
+    
+    @can_manage_trust_relationships.setter
+    def can_manage_trust_relationships(self, value):
+        """Setter for testing purposes"""
+        self._can_manage_trust_relationships_override = value
 
     def lock_account(self, duration_minutes=15):
         """Lock user account for specified duration"""

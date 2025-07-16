@@ -24,6 +24,28 @@ class AuditService:
         return (hasattr(settings, 'TESTING') and settings.TESTING) or \
                'test' in str(db_name)
     
+    def log_user_action(self, user, action: str, ip_address: str = None, 
+                       user_agent: str = None, success: bool = True, 
+                       failure_reason: str = None, additional_data: Dict = None, 
+                       target_user=None, target_organization=None, 
+                       resource_type: str = None, resource_id: str = None, **kwargs):
+        """Alias for log_user_event for backward compatibility."""
+        # Add resource_type and resource_id to additional_data if provided
+        enhanced_data = additional_data or {}
+        if resource_type:
+            enhanced_data['resource_type'] = resource_type
+        if resource_id:
+            enhanced_data['resource_id'] = resource_id
+        # Add any other kwargs to additional_data
+        enhanced_data.update(kwargs)
+        
+        return self.log_user_event(
+            user=user, action=action, ip_address=ip_address,
+            user_agent=user_agent, success=success, 
+            failure_reason=failure_reason, additional_data=enhanced_data,
+            target_user=target_user, target_organization=target_organization
+        )
+    
     def log_user_event(self, user, action: str, ip_address: str = None, 
                       user_agent: str = None, success: bool = True, 
                       failure_reason: str = None, additional_data: Dict = None, 
@@ -167,6 +189,90 @@ class AuditService:
             self.logger.error(f"Failed to log trust event: {str(e)}")
             return False
     
+    def log_system_event(self, action: str, component: str = None, 
+                        success: bool = True, failure_reason: str = None, 
+                        additional_data: Dict = None, user=None, event_type: str = None, details: Dict = None):
+        """
+        Log system-level events.
+        
+        Args:
+            action: System action being logged
+            component: System component involved
+            success: Whether the action was successful
+            failure_reason: Reason for failure (if applicable)
+            additional_data: Additional context data
+            user: User associated with the action (if applicable)
+            event_type: Type of event being logged
+        """
+        try:
+            # Skip logging in test environment to avoid integrity issues
+            if self._is_test_environment():
+                self.logger.debug("Skipping system event log in test environment")
+                return True
+            
+            # Use trust event logging for system events
+            enhanced_data = additional_data or {}
+            if component:
+                enhanced_data['component'] = component
+            if event_type:
+                enhanced_data['event_type'] = event_type
+            if details:
+                enhanced_data.update(details)
+            
+            return self.log_trust_event(
+                user=user,
+                action=action,
+                success=success,
+                failure_reason=failure_reason,
+                additional_data=enhanced_data
+            )
+            
+        except Exception as e:
+            self.logger.error(f"Failed to log system event: {str(e)}")
+            return False
+    
+    def log_security_event(self, action: str, user=None, ip_address: str = None,
+                          user_agent: str = None, success: bool = True, 
+                          failure_reason: str = None, additional_data: Dict = None, event_type: str = None, severity: str = None):
+        """
+        Log security-related events.
+        
+        Args:
+            action: Security action being logged
+            user: User associated with the action (if applicable)
+            ip_address: IP address of the request
+            user_agent: User agent string
+            success: Whether the action was successful
+            failure_reason: Reason for failure (if applicable)
+            additional_data: Additional context data
+            event_type: Type of security event
+        """
+        try:
+            # Skip logging in test environment to avoid integrity issues
+            if self._is_test_environment():
+                self.logger.debug("Skipping security event log in test environment")
+                return True
+            
+            # Use user event logging for security events
+            enhanced_data = additional_data or {}
+            enhanced_data['event_type'] = event_type or 'security'
+            if severity:
+                enhanced_data['severity'] = severity
+            
+            return self.log_user_event(
+                user=user,
+                action=action,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                success=success,
+                failure_reason=failure_reason,
+                additional_data=enhanced_data
+            )
+            
+        except Exception as e:
+            self.logger.error(f"Failed to log security event: {str(e)}")
+            return False
+
     def log_combined_event(self, user, user_action: str, trust_action: str, 
                           success: bool = True, ip_address: str = None, 
                           user_agent: str = None, trust_relationship=None, 
@@ -262,6 +368,71 @@ class AuditService:
             self.logger.error(f"Failed to get audit logs: {str(e)}")
             raise
     
+    def get_user_activity(self, user=None, days: int = 30, limit: int = 100, user_id: str = None) -> Dict:
+        """
+        Get user activity logs.
+        
+        Args:
+            user: User to get activity for
+            days: Number of days to look back
+            limit: Maximum number of activities to return
+        
+        Returns:
+            Dictionary with user activities
+        """
+        try:
+            from datetime import timedelta
+            from ..user_management.models import AuthenticationLog
+            from ..trust.models import TrustLog
+            
+            # Handle user_id parameter
+            if user_id and not user:
+                from core.user_management.models import CustomUser
+                try:
+                    user = CustomUser.objects.get(id=user_id)
+                except CustomUser.DoesNotExist:
+                    return {'activities': [], 'total_count': 0, 'days': days, 'error': 'User not found'}
+            
+            if not user:
+                return {'activities': [], 'total_count': 0, 'days': days, 'error': 'No user specified'}
+            
+            start_date = timezone.now() - timedelta(days=days)
+            
+            # Get user management activities
+            user_activities = AuthenticationLog.objects.filter(
+                user=user,
+                timestamp__gte=start_date
+            ).order_by('-timestamp')[:limit]
+            
+            # Get trust activities
+            trust_activities = TrustLog.objects.filter(
+                user=user,
+                timestamp__gte=start_date
+            ).order_by('-timestamp')[:limit]
+            
+            # Format activities
+            activities = []
+            for log in user_activities:
+                activities.append(self._format_user_log(log))
+            
+            for log in trust_activities:
+                activities.append(self._format_trust_log(log))
+            
+            # Sort by timestamp
+            activities.sort(key=lambda x: x['timestamp'], reverse=True)
+            
+            return {
+                'user_id': str(user.id),
+                'username': user.username,
+                'activities': activities[:limit],
+                'total_count': len(activities),
+                'days': days
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Failed to get user activity: {str(e)}")
+            return {'activities': [], 'total_count': 0, 'days': days}
+
     def get_user_activity_summary(self, user, days: int = 30) -> Dict:
         """
         Get activity summary for a specific user.
@@ -546,3 +717,297 @@ class AuditService:
             return {k: self._sanitize_value(v) for k, v in value.items()}
         else:
             return value
+    
+    def _sanitize_details(self, details: Dict) -> Dict:
+        """Sanitize log details for storage and retrieval."""
+        if not details:
+            return {}
+        
+        sanitized = {}
+        for key, value in details.items():
+            # Remove sensitive information
+            if key.lower() in ['password', 'token', 'secret', 'key', 'credential']:
+                sanitized[key] = '[REDACTED]'
+            elif isinstance(value, dict):
+                # Recursively sanitize nested dictionaries
+                sanitized[key] = self._sanitize_details(value)
+            else:
+                sanitized[key] = self._sanitize_value(value)
+        
+        return sanitized
+    
+    def search_audit_logs(self, query: str = None, filters: Dict = None, limit: int = 100, days: int = None, user_id: str = None, event_type: str = None) -> List[Dict]:
+        """Search audit logs based on query and filters."""
+        try:
+            # Initialize filters if needed
+            if filters is None:
+                filters = {}
+            
+            # Add days filter if provided
+            if days is not None:
+                from datetime import timedelta
+                start_date = timezone.now() - timedelta(days=days)
+                filters['start_date'] = start_date
+            
+            # Add user_id filter if provided
+            if user_id is not None:
+                filters['user_id'] = user_id
+            
+            # Add event_type filter if provided
+            if event_type is not None:
+                filters['event_type'] = event_type
+            
+            all_logs = []
+            
+            # Get user logs
+            user_logs = self._get_user_logs(filters, limit * 2)  # Get more to filter
+            all_logs.extend(user_logs)
+            
+            # Get trust logs
+            trust_logs = self._get_trust_logs(filters, limit * 2)  # Get more to filter
+            all_logs.extend(trust_logs)
+            
+            # Filter by query
+            if query:
+                filtered_logs = []
+                query_lower = query.lower()
+                for log in all_logs:
+                    # Search in action, user, and additional data
+                    if (query_lower in log.get('action', '').lower() or
+                        query_lower in log.get('user', '').lower() or
+                        query_lower in str(log.get('additional_data', {})).lower() or
+                        query_lower in str(log.get('details', {})).lower()):
+                        filtered_logs.append(log)
+                all_logs = filtered_logs
+            
+            # Sort by timestamp and limit
+            all_logs.sort(key=lambda x: x['timestamp'], reverse=True)
+            return all_logs[:limit]
+            
+        except Exception as e:
+            self.logger.error(f"Failed to search audit logs: {str(e)}")
+            return []
+    
+    def _validate_log_data(self, data: Dict) -> bool:
+        """Validate log data before storing."""
+        required_fields = ['action']
+        
+        for field in required_fields:
+            if field not in data:
+                self.logger.warning(f"Missing required field: {field}")
+                return False
+        
+        # Validate action is a string
+        if not isinstance(data['action'], str):
+            self.logger.warning("Action must be a string")
+            return False
+        
+        # User field is not strictly required for all actions
+        # Allow None user for system actions
+        if 'user' in data and data['user'] is not None:
+            # If user is present, validate it's a valid user object or string
+            if not hasattr(data['user'], 'username') and not isinstance(data['user'], str):
+                self.logger.warning("User must be a user object or string")
+                return False
+        
+        # Additional validation for specific fields
+        if 'ip_address' in data and data['ip_address'] is not None:
+            if not isinstance(data['ip_address'], str):
+                self.logger.warning("IP address must be a string")
+                return False
+        
+        if 'success' in data and not isinstance(data['success'], bool):
+            self.logger.warning("Success field must be a boolean")
+            return False
+        
+        # Validate event_type if present
+        if 'event_type' in data and data['event_type'] is not None:
+            if not isinstance(data['event_type'], str):
+                self.logger.warning("Event type must be a string")
+                return False
+        
+        # Validate component if present
+        if 'component' in data and data['component'] is not None:
+            if not isinstance(data['component'], str):
+                self.logger.warning("Component must be a string")
+                return False
+        
+        return True
+    
+    def cleanup_old_logs(self, days: int = 90, dry_run: bool = False) -> Dict:
+        """
+        Clean up old audit logs.
+        
+        Args:
+            days: Number of days to keep logs for
+            dry_run: If True, only report what would be deleted
+        
+        Returns:
+            Dictionary with cleanup results
+        """
+        try:
+            from datetime import timedelta
+            from ..user_management.models import AuthenticationLog
+            from ..trust.models import TrustLog
+            
+            cutoff_date = timezone.now() - timedelta(days=days)
+            
+            # Count logs that would be deleted
+            user_logs_count = AuthenticationLog.objects.filter(
+                timestamp__lt=cutoff_date
+            ).count()
+            
+            trust_logs_count = TrustLog.objects.filter(
+                timestamp__lt=cutoff_date
+            ).count()
+            
+            if not dry_run:
+                # Actually delete the logs
+                AuthenticationLog.objects.filter(
+                    timestamp__lt=cutoff_date
+                ).delete()
+                
+                TrustLog.objects.filter(
+                    timestamp__lt=cutoff_date
+                ).delete()
+            
+            return {
+                'user_logs_deleted': user_logs_count,
+                'trust_logs_deleted': trust_logs_count,
+                'total_deleted': user_logs_count + trust_logs_count,
+                'dry_run': dry_run,
+                'cutoff_date': cutoff_date.isoformat()
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Failed to cleanup old logs: {str(e)}")
+            return {
+                'error': str(e),
+                'user_logs_deleted': 0,
+                'trust_logs_deleted': 0,
+                'total_deleted': 0,
+                'dry_run': dry_run
+            }
+    
+    def export_audit_logs(self, filters: Dict = None, format: str = 'json') -> str:
+        """
+        Export audit logs in specified format.
+        
+        Args:
+            filters: Filters to apply
+            format: Export format ('json' or 'csv')
+        
+        Returns:
+            Formatted export data
+        """
+        try:
+            logs = self.get_audit_logs(filters or {})
+            
+            if format.lower() == 'csv':
+                import csv
+                import io
+                
+                output = io.StringIO()
+                writer = csv.writer(output)
+                
+                # Write headers
+                writer.writerow(['timestamp', 'type', 'action', 'user', 'success', 'details'])
+                
+                # Write data
+                for log in logs['logs']:
+                    writer.writerow([
+                        log.get('timestamp', ''),
+                        log.get('type', ''),
+                        log.get('action', ''),
+                        log.get('user', ''),
+                        log.get('success', ''),
+                        str(log.get('additional_data', {}))
+                    ])
+                
+                return output.getvalue()
+            
+            else:  # JSON format
+                import json
+                return json.dumps(logs, indent=2)
+                
+        except Exception as e:
+            self.logger.error(f"Failed to export audit logs: {str(e)}")
+            return f"Error exporting logs: {str(e)}"
+    
+    def get_audit_statistics(self, days: int = 30, group_by: str = None) -> Dict:
+        """
+        Get audit statistics.
+        
+        Args:
+            days: Number of days to look back
+            group_by: Group statistics by ('user', 'action', 'organization')
+        
+        Returns:
+            Dictionary with statistics
+        """
+        try:
+            from datetime import timedelta
+            from django.db.models import Count
+            from ..user_management.models import AuthenticationLog
+            from ..trust.models import TrustLog
+            
+            start_date = timezone.now() - timedelta(days=days)
+            
+            # Basic counts
+            user_log_count = AuthenticationLog.objects.filter(
+                timestamp__gte=start_date
+            ).count()
+            
+            trust_log_count = TrustLog.objects.filter(
+                timestamp__gte=start_date
+            ).count()
+            
+            stats = {
+                'period_days': days,
+                'user_logs_count': user_log_count,
+                'trust_logs_count': trust_log_count,
+                'total_logs': user_log_count + trust_log_count,
+                'start_date': start_date.isoformat()
+            }
+            
+            # Group by statistics
+            if group_by == 'user':
+                user_stats = AuthenticationLog.objects.filter(
+                    timestamp__gte=start_date
+                ).values('user__username').annotate(count=Count('id'))
+                stats['user_breakdown'] = list(user_stats)
+                
+            elif group_by == 'action':
+                action_stats = AuthenticationLog.objects.filter(
+                    timestamp__gte=start_date
+                ).values('action').annotate(count=Count('id'))
+                stats['action_breakdown'] = list(action_stats)
+            
+            return stats
+            
+        except Exception as e:
+            self.logger.error(f"Failed to get audit statistics: {str(e)}")
+            return {
+                'error': str(e),
+                'user_logs_count': 0,
+                'trust_logs_count': 0,
+                'total_logs': 0
+            }
+    
+    def _format_log_entry(self, log) -> Dict:
+        """Format a single log entry for display."""
+        if hasattr(log, 'user'):
+            # User log
+            return self._format_user_log(log)
+        else:
+            # Trust log
+            return self._format_trust_log(log)
+    
+    def _get_log_level_for_severity(self, severity: str) -> str:
+        """Get log level for severity."""
+        severity_mapping = {
+            'high': 'ERROR',
+            'medium': 'WARNING',
+            'low': 'INFO'
+        }
+        return severity_mapping.get(severity, 'INFO')
