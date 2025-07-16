@@ -3,6 +3,7 @@ import * as d3 from 'd3';
 import CSSStyles from './assets/CSSStyles'; // Import the separate CSS file
 import logoImage from './assets/BlueV2.png';
 import * as api from './api.js';
+import UserManagementComponent from './components/UserManagement';
 
 
 function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthWrapper passes
@@ -172,7 +173,7 @@ function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthW
           {(isPublisher || isBlueVisionAdmin) && <TrustManagement active={activePage === 'trust-management'} userRole={userRole} userOrganization={userOrganization} />}
 
           {/* User Management - Publishers and BlueVision Admins only */}
-          {(isPublisher || isBlueVisionAdmin) && <UserManagement active={activePage === 'user-management'} isAdmin={hasAdminAccess} currentUser={user} userRole={userRole} userOrganization={userOrganization} showPage={showPage} />}
+          {(isPublisher || isBlueVisionAdmin || userRole === 'admin') && <UserManagementComponent active={activePage === 'user-management'} />}
 
           {/* Alerts System */}
           <AlertsSystem 
@@ -384,7 +385,7 @@ function Header({ user, onLogout, isAdmin, isBlueVisionAdmin, isPublisher, userR
                   </button>
                   
                   {/* Show user management for publishers and BlueVision admins */}
-                  {(isPublisher || isBlueVisionAdmin) && (
+                  {(isPublisher || isBlueVisionAdmin || userRole === 'admin') && (
                     <>
                       <div className="menu-divider"></div>
                       <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('user-management');}}>

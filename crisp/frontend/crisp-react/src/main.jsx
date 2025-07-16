@@ -8,6 +8,7 @@ import RegisterUser from "./RegisterUser.jsx";
 import CrispLogin from "./crisp_login.jsx";
 import LandingPage from "./LandingPage.jsx";
 import Construction from "./construction.jsx";
+import UserManagement from "./components/UserManagement.jsx";
 import "./assets/index.css";
 
 // Import Font Awesome
@@ -201,6 +202,22 @@ function AuthWrapper() {
                 <AppRegister user={userData} onLogout={handleLogout} />
               ) : (
                 <App user={userData} onLogout={handleLogout} />
+              )
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+
+        {/* User Management route - Admin only */}
+        <Route
+          path="/user-management"
+          element={
+            isAuthenticated ? (
+              isAdmin ? (
+                <UserManagement />
+              ) : (
+                <Navigate to="/dashboard" replace />
               )
             ) : (
               <Navigate to="/login" replace />

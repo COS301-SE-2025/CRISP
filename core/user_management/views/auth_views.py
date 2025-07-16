@@ -300,7 +300,13 @@ class AuthenticationViewSet(viewsets.ViewSet):
         }
         """
         try:
+            # Debug logging
+            logger.info(f"Change password request from user: {request.user}")
+            logger.info(f"Request data: {request.data}")
+            logger.info(f"User authenticated: {request.user.is_authenticated}")
+            
             if not request.user.is_authenticated:
+                logger.warning("Change password failed: User not authenticated")
                 return Response({
                     'success': False,
                     'message': 'Authentication required'
@@ -310,18 +316,23 @@ class AuthenticationViewSet(viewsets.ViewSet):
             new_password = request.data.get('new_password')
             new_password_confirm = request.data.get('new_password_confirm')
             
+            logger.info(f"Password fields - current: {'Present' if current_password else 'Missing'}, new: {'Present' if new_password else 'Missing'}, confirm: {'Present' if new_password_confirm else 'Missing'}")
+            
             if not all([current_password, new_password, new_password_confirm]):
+                logger.warning("Change password failed: Missing required fields")
                 return Response({
                     'success': False,
                     'message': 'All password fields are required'
                 }, status=status.HTTP_400_BAD_REQUEST)
             
             if new_password != new_password_confirm:
+                logger.warning("Change password failed: Password confirmation mismatch")
                 return Response({
                     'success': False,
                     'message': 'New passwords do not match'
                 }, status=status.HTTP_400_BAD_REQUEST)
             
+            logger.info(f"Calling user service to change password for user: {request.user.id}")
             success = self.user_service.change_user_password(
                 requesting_user=request.user,
                 user_id=str(request.user.id),
@@ -330,11 +341,13 @@ class AuthenticationViewSet(viewsets.ViewSet):
             )
             
             if success:
+                logger.info("Password change successful")
                 return Response({
                     'success': True,
                     'message': 'Password changed successfully'
                 }, status=status.HTTP_200_OK)
             else:
+                logger.warning("Password change failed in service layer")
                 return Response({
                     'success': False,
                     'message': 'Failed to change password'
@@ -342,6 +355,9 @@ class AuthenticationViewSet(viewsets.ViewSet):
         
         except Exception as e:
             logger.error(f"Change password error: {str(e)}")
+            logger.error(f"Exception type: {type(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return Response({
                 'success': False,
                 'message': str(e)
