@@ -19,8 +19,8 @@ class UserService:
     
     def __init__(self):
         self.access_control = AccessControlService()
-        # Don't instantiate factory here to avoid creating objects on import
-        self.user_factory = None
+        # UserFactory methods are class methods, no instance needed
+        self.user_factory = UserFactory
     
     def create_user(self, creating_user: CustomUser, user_data: Dict) -> CustomUser:
         """
@@ -65,8 +65,9 @@ class UserService:
         try:
             user = self.user_factory.create_user(target_role, user_data, creating_user)
             
+            creating_user_name = creating_user.username if creating_user else "anonymous"
             logger.info(
-                f"User {user.username} ({target_role}) created by {creating_user.username} "
+                f"User {user.username} ({target_role}) created by {creating_user_name} "
                 f"in organization {target_organization.name}"
             )
             

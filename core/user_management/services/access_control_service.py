@@ -144,8 +144,9 @@ class AccessControlService:
 
     def can_create_user_with_role(self, creating_user, role, organization=None):
         """Check if user can create another user with specified role"""
+        # Allow anonymous registration for viewer role only
         if not creating_user:
-            return False
+            return role == 'viewer'
             
         if creating_user.role == 'BlueVisionAdmin':
             return True

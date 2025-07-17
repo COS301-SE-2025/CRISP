@@ -363,6 +363,141 @@ class AuthenticationViewSet(viewsets.ViewSet):
                 'message': str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
     
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def register(self, request):
+        """
+        Register a new user.
+        
+        Expected payload:
+        {
+            "username": "string",
+            "password": "string",
+            "password_confirm": "string", 
+            "email": "string",
+            "first_name": "string",
+            "last_name": "string",
+            "organization": "string",
+            "role": "string"
+        }
+        """
+        try:
+            # Extract registration data
+            username = request.data.get('username')
+            password = request.data.get('password')
+            password_confirm = request.data.get('password_confirm')
+            email = request.data.get('email')
+            first_name = request.data.get('first_name')
+            last_name = request.data.get('last_name')
+            organization = request.data.get('organization')
+            role = request.data.get('role', 'viewer')
+            
+            # For anonymous registration, only allow viewer role
+            if not request.user.is_authenticated:
+                role = 'viewer'
+            
+            # Validate required fields
+            if not all([username, password, password_confirm, email, first_name, last_name, organization]):
+                return Response({
+                    'success': False,
+                    'message': 'All fields are required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Validate password confirmation
+            if password != password_confirm:
+                return Response({
+                    'success': False,
+                    'message': 'Passwords do not match'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Find or create organization by name
+            try:
+                from ..models import Organization
+                org, created = Organization.objects.get_or_create(
+                    name=organization,
+                    defaults={
+                        'domain': organization.lower().replace(' ', '') + '.local',
+                        'contact_email': email,
+                        'organization_type': 'educational',
+                        'is_active': True,
+                        'is_verified': False,
+                        'created_by': username
+                    }
+                )
+                
+                # Create user using UserService with correct parameter order
+                user_data = {
+                    'username': username,
+                    'password': password,
+                    'email': email,
+                    'first_name': first_name,
+                    'last_name': last_name,
+                    'organization_id': str(org.id),
+                    'role': role,
+                    'ip_address': request.META.get('REMOTE_ADDR', 'Unknown'),
+                    'user_agent': request.META.get('HTTP_USER_AGENT', 'Unknown')
+                }
+                
+                # Call with correct parameter order: creating_user, user_data
+                user = self.user_service.create_user(
+                    creating_user=request.user if request.user.is_authenticated else None,
+                    user_data=user_data
+                )
+                
+                result = {
+                    'success': True,
+                    'user_info': {
+                        'id': str(user.id),
+                        'username': user.username,
+                        'email': user.email,
+                        'first_name': user.first_name,
+                        'last_name': user.last_name,
+                        'role': user.role,
+                        'organization': user.organization.name if user.organization else None
+                    }
+                }
+                
+            except Exception as e:
+                logger.error(f"User creation error: {str(e)}")
+                result = {
+                    'success': False,
+                    'message': f'User creation failed: {str(e)}'
+                }
+            
+            if result['success']:
+                # Authenticate the newly created user
+                auth_result = self.auth_service.authenticate_user(
+                    username=username,
+                    password=password,
+                    request=request
+                )
+                
+                if auth_result.get('success'):
+                    return Response({
+                        'success': True,
+                        'message': 'User registered successfully',
+                        'user': auth_result.get('user'),
+                        'token': str(auth_result.get('tokens').get('access')),
+                        'refresh_token': str(auth_result.get('tokens').get('refresh'))
+                    }, status=status.HTTP_201_CREATED)
+                else:
+                    return Response({
+                        'success': True,
+                        'message': 'User created but authentication failed',
+                        'user': result.get('user_info')
+                    }, status=status.HTTP_201_CREATED)
+            else:
+                return Response({
+                    'success': False,
+                    'message': result.get('message', 'Registration failed')
+                }, status=status.HTTP_400_BAD_REQUEST)
+                
+        except Exception as e:
+            logger.error(f"Registration error: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Registration failed'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     @action(detail=False, methods=['get'])
     def dashboard(self, request):
         """
