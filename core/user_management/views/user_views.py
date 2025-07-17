@@ -253,6 +253,54 @@ class UserViewSet(GenericViewSet):
                 'message': 'Failed to deactivate user'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
+    @action(detail=True, methods=['post'])
+    def reactivate_user(self, request, pk=None):
+        """
+        Reactivate a user account.
+        
+        Expected payload:
+        {
+            "reason": "string"
+        }
+        """
+        try:
+            reason = request.data.get('reason', '')
+            
+            # Use update_user to reactivate
+            update_data = {
+                'is_active': True,
+                'updated_from_ip': self._get_client_ip(request),
+                'user_agent': request.META.get('HTTP_USER_AGENT', 'API')
+            }
+            
+            reactivated_user = self.user_service.update_user(
+                updating_user=request.user,
+                user_id=pk,
+                update_data=update_data
+            )
+            
+            return Response({
+                'success': True,
+                'data': {
+                    'message': f'User {reactivated_user.username} reactivated successfully',
+                    'user_id': str(reactivated_user.id),
+                    'reason': reason
+                }
+            }, status=status.HTTP_200_OK)
+        
+        except (ValidationError, PermissionDenied) as e:
+            return Response({
+                'success': False,
+                'message': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        except Exception as e:
+            logger.error(f"Reactivate user error: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Failed to reactivate user'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
     @action(detail=False, methods=['get'])
     def profile(self, request):
         """Get current user's profile."""

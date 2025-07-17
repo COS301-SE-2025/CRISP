@@ -4,21 +4,31 @@ import { useNavigate } from 'react-router-dom';
 import CSSStyles from './assets/CSSStyles';
 import logoImage from './assets/BlueV2.png';
 import { getUserProfile, updateUserProfile, getUserStatistics, changePassword, getEmailStatistics, getSystemHealth } from './api.js';
+import LoadingSpinner from './components/LoadingSpinner.jsx';
 
 
 function AppRegister({ user, onLogout }) {
   const navigate = useNavigate();
   // State to manage the active page
   const [activePage, setActivePage] = useState('dashboard');
+  const [isLoading, setIsLoading] = useState(false);
 
   // Function to switch between pages
   const showPage = (pageId) => {
-    setActivePage(pageId);
+    setIsLoading(true);
+    setTimeout(() => {
+      setActivePage(pageId);
+      setIsLoading(false);
+    }, 800);
   };
 
   // Function to navigate to RegisterUser page
   const navigateToRegisterUser = () => {
-    navigate('/register-user');
+    setIsLoading(true);
+    setTimeout(() => {
+      navigate('/register-user');
+      setIsLoading(false);
+    }, 800);
   };
 
   // Add resize listener to handle chart resizing when zooming
@@ -41,6 +51,7 @@ function AppRegister({ user, onLogout }) {
     <div className="App">
       {/* Include CSS styles */}
       <CSSStyles />
+      {isLoading && <LoadingSpinner fullscreen={true} />}
       
       {/* Header */}
       <Header user={user} onLogout={onLogout} navigateToRegisterUser={navigateToRegisterUser} showPage={showPage} />

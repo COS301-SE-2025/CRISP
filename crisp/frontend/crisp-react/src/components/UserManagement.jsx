@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getUsersList, createUser, updateUser, deactivateUser, getUserDetails, getOrganizations } from '../api.js';
+import { getUsersList, createUser, updateUser, deactivateUser, reactivateUser, getUserDetails, getOrganizations } from '../api.js';
+import LoadingSpinner from './LoadingSpinner.jsx';
 
 // Import alias for the API to avoid conflicts
 import * as api from '../api.js';
@@ -14,6 +15,9 @@ const UserManagement = ({ active = true }) => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
+  const [modalLoading, setModalLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [operationLoading, setOperationLoading] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -38,6 +42,8 @@ const UserManagement = ({ active = true }) => {
   const loadUsers = async () => {
     try {
       setLoading(true);
+      // Add delay to show loading spinner
+      await new Promise(resolve => setTimeout(resolve, 1000));
       const response = await api.getUsersList();
       console.log('Users API response:', response); // Debug log
       const usersData = response.data?.users || response.users || response.data || [];
@@ -82,57 +88,124 @@ const UserManagement = ({ active = true }) => {
 
   const handleEditUser = async (userId) => {
     try {
+      setModalLoading(true);
+      // Add delay to show loading spinner
+      await new Promise(resolve => setTimeout(resolve, 800));
       const response = await api.getUserDetails(userId);
-      const user = response.data || response.user;
+      console.log('Edit user response:', response);
+      
+      const user = response.data?.user || response.user || response.data;
+      console.log('Edit user data:', user);
+      
+      if (!user) {
+        console.error('User data not found in response. Full response:', response);
+        throw new Error('User data not found in response');
+      }
+      
+      // Check if user has the required fields - for admin operations, email might not be available
+      if (!user.username) {
+        console.error('Username is missing from user data:', user);
+        throw new Error('Invalid user data: missing username');
+      }
+      
       setModalMode('edit');
       setSelectedUser(user);
-      setFormData({
+      const formDataToSet = {
         username: user.username || '',
-        email: user.email || '',
+        email: user.email || '', // Email might not be available for basic access level
         first_name: user.first_name || '',
         last_name: user.last_name || '',
         password: '', // Don't pre-fill password
         role: user.role || 'viewer',
-        organization_id: user.organization_id || '',
-        is_verified: user.is_verified || false,
+        organization_id: user.organization?.id || user.organization_id || '',
+        is_verified: Boolean(user.is_verified),
         is_active: user.is_active !== false
-      });
+      };
+      
+      console.log('Setting form data for edit:', formDataToSet);
+      setFormData(formDataToSet);
       setShowModal(true);
     } catch (err) {
-      setError('Failed to load user details: ' + err.message);
+      console.error('Error in handleEditUser:', err);
+      setError('Failed to load user details: ' + (err.message || err));
+    } finally {
+      setModalLoading(false);
     }
   };
 
   const handleViewUser = async (userId) => {
     try {
+      setModalLoading(true);
+      // Add delay to show loading spinner
+      await new Promise(resolve => setTimeout(resolve, 800));
       const response = await api.getUserDetails(userId);
-      const user = response.data || response.user;
+      console.log('View user response:', response);
+      
+      const user = response.data?.user || response.user || response.data;
+      console.log('View user data:', user);
+      
+      if (!user) {
+        console.error('User data not found in response. Full response:', response);
+        throw new Error('User data not found in response');
+      }
+      
+      // Check if user has the required fields
+      if (!user.username) {
+        console.error('Username is missing from user data:', user);
+        throw new Error('Invalid user data: missing username');
+      }
+      
       setModalMode('view');
       setSelectedUser(user);
-      setFormData({
+      const formDataToSet = {
         username: user.username || '',
-        email: user.email || '',
+        email: user.email || '', // Email might not be available for basic access level
         first_name: user.first_name || '',
         last_name: user.last_name || '',
         password: '',
         role: user.role || 'viewer',
-        organization_id: user.organization_id || '',
-        is_verified: user.is_verified || false,
+        organization_id: user.organization?.id || user.organization_id || '',
+        is_verified: Boolean(user.is_verified),
         is_active: user.is_active !== false
-      });
+      };
+      
+      console.log('Setting form data for view:', formDataToSet);
+      setFormData(formDataToSet);
       setShowModal(true);
     } catch (err) {
-      setError('Failed to load user details: ' + err.message);
+      console.error('Error in handleViewUser:', err);
+      setError('Failed to load user details: ' + (err.message || err));
+    } finally {
+      setModalLoading(false);
     }
   };
 
   const handleDeleteUser = async (userId, username) => {
     if (window.confirm(`Are you sure you want to deactivate user "${username}"?`)) {
       try {
+        setOperationLoading(true);
+        await new Promise(resolve => setTimeout(resolve, 800));
         await api.deactivateUser(userId, 'Deactivated by admin');
         loadUsers();
       } catch (err) {
         setError('Failed to deactivate user: ' + err.message);
+      } finally {
+        setOperationLoading(false);
+      }
+    }
+  };
+
+  const handleReactivateUser = async (userId, username) => {
+    if (window.confirm(`Are you sure you want to reactivate user "${username}"?`)) {
+      try {
+        setOperationLoading(true);
+        await new Promise(resolve => setTimeout(resolve, 800));
+        await api.reactivateUser(userId, 'Reactivated by admin');
+        loadUsers();
+      } catch (err) {
+        setError('Failed to reactivate user: ' + err.message);
+      } finally {
+        setOperationLoading(false);
       }
     }
   };
@@ -140,28 +213,42 @@ const UserManagement = ({ active = true }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      setSubmitting(true);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       if (modalMode === 'add') {
+        console.log('Creating user with data:', formData);
         await api.createUser(formData);
       } else if (modalMode === 'edit') {
         const updateData = { ...formData };
         if (!updateData.password) {
           delete updateData.password; // Don't send empty password
         }
+        console.log('Updating user with data:', updateData);
+        console.log('Selected user ID:', selectedUser.id);
         await api.updateUser(selectedUser.id, updateData);
       }
       setShowModal(false);
       loadUsers();
     } catch (err) {
+      console.error('Error in handleSubmit:', err);
       setError('Failed to save user: ' + err.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+    console.log('Input change:', { name, value, type, checked });
+    setFormData(prev => {
+      const newData = {
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      };
+      console.log('Updated form data:', newData);
+      return newData;
+    });
   };
 
   const filteredUsers = Array.isArray(users) ? users.filter(user => {
@@ -182,11 +269,12 @@ const UserManagement = ({ active = true }) => {
   };
 
   if (!active) return null;
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading...</div>;
+  if (loading) return <LoadingSpinner fullscreen={true} />;
   if (error) return <div style={{ padding: '2rem', color: 'red' }}>{error}</div>;
 
   return (
-    <div style={{ padding: '2rem', fontFamily: 'Arial, sans-serif' }}>
+    <div style={{ padding: '2rem', fontFamily: 'Arial, sans-serif', position: 'relative' }}>
+      {(operationLoading || submitting) && <LoadingSpinner fullscreen={true} />}
       <h1 style={{ marginBottom: '2rem', color: '#333' }}>User Management</h1>
       
       {/* Controls */}
@@ -278,7 +366,7 @@ const UserManagement = ({ active = true }) => {
                     {user.role}
                   </span>
                 </td>
-                <td style={{ padding: '1rem' }}>{getOrganizationName(user.organization_id)}</td>
+                <td style={{ padding: '1rem' }}>{user.organization?.name || getOrganizationName(user.organization_id) || 'N/A'}</td>
                 <td style={{ padding: '1rem' }}>
                   <span style={{
                     padding: '0.25rem 0.5rem',
@@ -320,20 +408,37 @@ const UserManagement = ({ active = true }) => {
                     >
                       Edit
                     </button>
-                    <button
-                      onClick={() => handleDeleteUser(user.id, user.username)}
-                      style={{
-                        padding: '0.25rem 0.5rem',
-                        backgroundColor: '#dc3545',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem'
-                      }}
-                    >
-                      Deactivate
-                    </button>
+                    {user.is_active ? (
+                      <button
+                        onClick={() => handleDeleteUser(user.id, user.username)}
+                        style={{
+                          padding: '0.25rem 0.5rem',
+                          backgroundColor: '#dc3545',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem'
+                        }}
+                      >
+                        Deactivate
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleReactivateUser(user.id, user.username)}
+                        style={{
+                          padding: '0.25rem 0.5rem',
+                          backgroundColor: '#28a745',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem'
+                        }}
+                      >
+                        Reactivate
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -376,6 +481,10 @@ const UserManagement = ({ active = true }) => {
                modalMode === 'edit' ? 'Edit User' : 'View User'}
             </h2>
             
+            {modalLoading ? (
+              <LoadingSpinner size="medium" />
+            ) : (
+            
             <form onSubmit={handleSubmit}>
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
@@ -393,14 +502,15 @@ const UserManagement = ({ active = true }) => {
                     padding: '0.5rem',
                     border: '1px solid #ddd',
                     borderRadius: '4px',
-                    backgroundColor: modalMode === 'view' ? '#f8f9fa' : 'white'
+                    backgroundColor: modalMode === 'view' ? '#f8f9fa' : 'white',
+                    color: '#333'
                   }}
                 />
               </div>
 
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                  Email
+                  Email {!formData.email && modalMode === 'view' && '(Not available at current access level)'}
                 </label>
                 <input
                   type="email"
@@ -408,13 +518,15 @@ const UserManagement = ({ active = true }) => {
                   value={formData.email}
                   onChange={handleInputChange}
                   disabled={modalMode === 'view'}
-                  required
+                  required={modalMode === 'add'}
+                  placeholder={!formData.email && modalMode !== 'add' ? 'Email not available' : ''}
                   style={{
                     width: '100%',
                     padding: '0.5rem',
                     border: '1px solid #ddd',
                     borderRadius: '4px',
-                    backgroundColor: modalMode === 'view' ? '#f8f9fa' : 'white'
+                    backgroundColor: modalMode === 'view' ? '#f8f9fa' : 'white',
+                    color: '#333'
                   }}
                 />
               </div>
@@ -475,7 +587,8 @@ const UserManagement = ({ active = true }) => {
                       width: '100%',
                       padding: '0.5rem',
                       border: '1px solid #ddd',
-                      borderRadius: '4px'
+                      borderRadius: '4px',
+                      color: '#333'
                     }}
                   />
                 </div>
@@ -495,7 +608,8 @@ const UserManagement = ({ active = true }) => {
                       width: '100%',
                       padding: '0.5rem',
                       border: '1px solid #ddd',
-                      borderRadius: '4px'
+                      borderRadius: '4px',
+                      color: '#333'
                     }}
                   />
                 </div>
@@ -515,7 +629,8 @@ const UserManagement = ({ active = true }) => {
                     padding: '0.5rem',
                     border: '1px solid #ddd',
                     borderRadius: '4px',
-                    backgroundColor: modalMode === 'view' ? '#f8f9fa' : 'white'
+                    backgroundColor: modalMode === 'view' ? '#f8f9fa' : 'white',
+                    color: '#333'
                   }}
                 >
                   {roles.map(role => (
@@ -538,7 +653,8 @@ const UserManagement = ({ active = true }) => {
                     padding: '0.5rem',
                     border: '1px solid #ddd',
                     borderRadius: '4px',
-                    backgroundColor: modalMode === 'view' ? '#f8f9fa' : 'white'
+                    backgroundColor: modalMode === 'view' ? '#f8f9fa' : 'white',
+                    color: '#333'
                   }}
                 >
                   <option value="">No Organization</option>
@@ -603,6 +719,7 @@ const UserManagement = ({ active = true }) => {
                 )}
               </div>
             </form>
+            )}
           </div>
         </div>
       )}

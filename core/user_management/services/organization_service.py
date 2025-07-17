@@ -446,11 +446,11 @@ class OrganizationService:
                 'is_active': org.is_active,
                 'user_count': org.user_count,
                 'created_at': org.created_at.isoformat(),
-                'is_own_organization': org.id == requesting_user.organization.id
+                'is_own_organization': requesting_user.organization and org.id == requesting_user.organization.id
             }
             
             # Add access level information
-            if org.id != requesting_user.organization.id:
+            if requesting_user.organization and org.id != requesting_user.organization.id:
                 access_info = self.access_control.get_trust_aware_data_access(
                     requesting_user, 'organization_data', org
                 )

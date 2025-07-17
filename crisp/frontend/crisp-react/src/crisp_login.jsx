@@ -4,6 +4,7 @@ import BlueVLogo from './assets/BlueV.png';
 import CrispHelp from './crisp_help.jsx'; // Import the help component
 import Construction from './construction.jsx'; // Import construction component
 import ChangePassword from './components/ChangePassword.jsx'; // Import change password component
+import LoadingSpinner from './components/LoadingSpinner.jsx'; // Import loading spinner
 
 // Login Component that works with the AuthWrapper in main.jsx
 function CrispLogin({ onLoginSuccess, switchView }) {
@@ -46,13 +47,15 @@ function CrispLogin({ onLoginSuccess, switchView }) {
     setError('');
     
     try {
+      // Add delay to show loading spinner
+      await new Promise(resolve => setTimeout(resolve, 1000));
       // Call the API function
       const userData = await loginUser(username, password);
       
       // Call the onLoginSuccess callback with user data
       onLoginSuccess({
         user: userData.user,
-        token: userData.token
+        token: userData.tokens.access
       });
     } catch (error) {
       setError(error.message || 'Invalid username or password');
@@ -109,6 +112,7 @@ function CrispLogin({ onLoginSuccess, switchView }) {
   return (
     <>
       <CSSStyles />
+      {isLoading && <LoadingSpinner fullscreen={true} />}
       <div className="login-page">
         <div className="login-content">
           <div className="login-left">

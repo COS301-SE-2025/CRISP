@@ -48,6 +48,7 @@ function AuthWrapper() {
   // Callback for when login is successful
   const handleLoginSuccess = (authData) => {
     console.log("Login successful for user:", authData.user.username);
+    console.log("Token received:", authData.token ? authData.token.substring(0, 50) + '...' : 'No token');
 
     try {
       // Store authentication data

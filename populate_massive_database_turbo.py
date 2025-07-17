@@ -54,17 +54,17 @@ class TurboMassiveDatabasePopulator:
         self.trust_groups = []
         self.audit_service = AuditService()
         
-        # TURBO SCALE PARAMETERS
-        self.NUM_ORGANIZATIONS = 500      # 500 organizations (increased!)
-        self.USERS_PER_ORG = (20, 100)   # 20-100 users per org = 10,000-50,000 users
-        self.NUM_AUDIT_LOGS = 100000     # 100,000 audit logs (doubled!)
-        self.NUM_TRUST_RELATIONSHIPS = 2000  # 2,000 trust relationships
-        self.NUM_TRUST_GROUPS = 100     # 100 trust groups
-        self.NUM_USER_SESSIONS = 25000   # 25,000 user sessions
+        # OPTIMIZED SCALE PARAMETERS (faster execution)
+        self.NUM_ORGANIZATIONS = 50       # 50 organizations (reasonable amount)
+        self.USERS_PER_ORG = (10, 30)     # 10-30 users per org = 500-1,500 users
+        self.NUM_AUDIT_LOGS = 5000        # 5,000 audit logs (much faster)
+        self.NUM_TRUST_RELATIONSHIPS = 200  # 200 trust relationships
+        self.NUM_TRUST_GROUPS = 20        # 20 trust groups
+        self.NUM_USER_SESSIONS = 1000     # 1,000 user sessions
         
         # PARALLEL PROCESSING SETTINGS
-        self.MAX_WORKERS = min(cpu_count() * 2, 16)  # Optimal worker count
-        self.BATCH_SIZE = 50  # Items per batch for parallel processing
+        self.MAX_WORKERS = min(cpu_count(), 8)  # Reduced workers for smaller datasets
+        self.BATCH_SIZE = 25  # Smaller batch size for faster processing
         
         # Company data for realistic organizations
         self.company_types = [
@@ -353,7 +353,7 @@ class TurboMassiveDatabasePopulator:
                         is_active=status == 'active',
                         created_by=random.choice(source_admins),
                         created_at=fake.date_time_between(start_date='-1y', end_date='now', tzinfo=timezone.get_current_timezone()),
-                        description=fake.sentence(),
+                        notes=fake.sentence(),
                         metadata={'created_via': 'turbo_population_script'}
                     )
                     created_relationships.append(trust_rel)
@@ -585,7 +585,7 @@ class TurboMassiveDatabasePopulator:
     def print_summary(self):
         """Print summary of created data"""
         print("="*100)
-        print("🚀 TURBO MASSIVE DATABASE POPULATION COMPLETE!")
+        print("🚀 OPTIMIZED DATABASE POPULATION COMPLETE!")
         print("="*100)
         print("")
         print("📊 Summary of created data:")
@@ -614,24 +614,25 @@ class TurboMassiveDatabasePopulator:
             admin_count = len([u for u in self.users if u.organization == org and u.role == 'BlueVisionAdmin'])
             user_count = len([u for u in self.users if u.organization == org])
             print(f"    • {org.name}: {user_count} users ({admin_count} admins)")
-        print(f"    ... and {len(self.organizations) - 5} more organizations")
+        if len(self.organizations) > 5:
+            print(f"    ... and {len(self.organizations) - 5} more organizations")
         print("")
-        print("🎯 TURBO STRESS TEST READY! Maximum performance achieved!")
+        print("🎯 OPTIMIZED TEST DATA READY! Fast execution achieved!")
         print("="*100)
 
     def run(self):
         """Run the complete turbo massive database population"""
         start_time = time.time()
         
-        print("🚀 Starting TURBO MASSIVE CRISP Database Population...")
-        print("⚡ MAXIMUM SPEED EDITION with Parallel Processing!")
+        print("🚀 Starting OPTIMIZED CRISP Database Population...")
+        print("⚡ FAST EXECUTION with Parallel Processing!")
         print("="*60)
         print(f"🔧 System Configuration:")
         print(f"   • CPU Cores: {cpu_count()}")
         print(f"   • Max Workers: {self.MAX_WORKERS}")
         print(f"   • Batch Size: {self.BATCH_SIZE}")
         print("="*60)
-        print(f"📊 Target Data Volume:")
+        print(f"📊 Target Data Volume (Optimized for Speed):")
         print(f"   • {self.NUM_ORGANIZATIONS} organizations")
         print(f"   • {self.USERS_PER_ORG[0]}-{self.USERS_PER_ORG[1]} users per org = ~{self.NUM_ORGANIZATIONS * self.USERS_PER_ORG[0]}-{self.NUM_ORGANIZATIONS * self.USERS_PER_ORG[1]} users")
         print(f"   • {self.NUM_TRUST_RELATIONSHIPS} trust relationships")
@@ -641,7 +642,7 @@ class TurboMassiveDatabasePopulator:
         print("="*60)
         
         try:
-            confirm = input("🚀 Ready to launch TURBO population? (y/N): ")
+            confirm = input("🚀 Ready to launch OPTIMIZED population? (y/N): ")
             if confirm.lower() != 'y':
                 print("Cancelled.")
                 return
@@ -653,15 +654,15 @@ class TurboMassiveDatabasePopulator:
         try:
             # Run all phases with progress tracking
             phases = [
-                ("🧹 Phase 1/7", self.clear_existing_data),
-                ("🔐 Phase 2/7", self.create_trust_levels),
-                ("🏢 Phase 3/7", self.create_organizations),
-                ("👑 Phase 4/7", self.create_super_admin_users),
-                ("👥 Phase 5/7", self.create_users),
+                # ("🧹 Phase 1/7", self.clear_existing_data),
+                # ("🔐 Phase 2/7", self.create_trust_levels),
+                # ("🏢 Phase 3/7", self.create_organizations),
+                # ("👑 Phase 4/7", self.create_super_admin_users),
+                # ("👥 Phase 5/7", self.create_users),
                 ("🤝 Phase 6/7", self.create_trust_relationships),
                 ("🏗️ Phase 7/7", self.create_trust_groups),
-                ("🔐 Phase 8/7", self.create_user_sessions),
-                ("📝 Phase 9/7", self.create_audit_logs),
+                # ("🔐 Phase 8/7", self.create_user_sessions),
+                # ("📝 Phase 9/7", self.create_audit_logs),
             ]
             
             print(f"\n🎯 Executing {len(phases)} phases with turbo speed...")

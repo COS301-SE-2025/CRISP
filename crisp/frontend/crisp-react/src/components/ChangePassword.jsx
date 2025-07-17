@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { changePassword } from '../api.js';
+import LoadingSpinner from './LoadingSpinner';
 
 function ChangePassword({ isOpen, onClose, onPasswordChanged }) {
   const [formData, setFormData] = useState({
@@ -70,6 +71,8 @@ function ChangePassword({ isOpen, onClose, onPasswordChanged }) {
     setIsLoading(true);
     
     try {
+      // Add delay to show loading spinner
+      await new Promise(resolve => setTimeout(resolve, 1000));
       await changePassword(formData.currentPassword, formData.newPassword, formData.confirmPassword);
       
       // Reset form
@@ -299,7 +302,7 @@ function ChangePassword({ isOpen, onClose, onPasswordChanged }) {
                 fontSize: '1rem'
               }}
             >
-              {isLoading ? 'Changing...' : 'Change Password'}
+              {isLoading ? <LoadingSpinner size="small" /> : 'Change Password'}
             </button>
           </div>
         </form>

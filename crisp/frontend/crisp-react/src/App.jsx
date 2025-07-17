@@ -4,6 +4,7 @@ import CSSStyles from './assets/CSSStyles'; // Import the separate CSS file
 import logoImage from './assets/BlueV2.png';
 import * as api from './api.js';
 import UserManagementComponent from './components/UserManagement';
+import LoadingSpinner from './components/LoadingSpinner';
 
 
 function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthWrapper passes
@@ -86,11 +87,11 @@ function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthW
     console.log('Switching to page:', pageId);
     setIsLoading(true);
     
-    // Add a small delay for smooth transition
+    // Add delay to show loading spinner
     setTimeout(() => {
       setActivePage(pageId);
       setIsLoading(false);
-    }, 150);
+    }, 1000);
   };
 
   // Add resize listener to handle chart resizing when zooming
@@ -137,7 +138,7 @@ function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthW
           {isLoading && (
             <div className="loading-overlay">
               <div className="loading-spinner"></div>
-              <p>Loading...</p>
+              <LoadingSpinner />
             </div>
           )}
           
@@ -2418,7 +2419,7 @@ function UserProfileDetailed({ active, user }) {
             </div>
             <div className="card-content">
               {loading ? (
-                <div className="loading-spinner">Loading...</div>
+                <LoadingSpinner size="small" />
               ) : (
                 <div className="profile-form">
                   <div className="form-group">
@@ -2805,7 +2806,7 @@ function TrustManagementDetailed({ active }) {
             </div>
             <div className="card-content">
               {loading ? (
-                <div className="loading-spinner">Loading...</div>
+                <LoadingSpinner size="small" />
               ) : (
                 <table className="data-table">
                   <thead>
@@ -3401,7 +3402,7 @@ function UserManagementDetailed({ active }) {
         </div>
         <div className="card-content">
           {loading ? (
-            <div className="loading-spinner">Loading...</div>
+            <LoadingSpinner size="small" />
           ) : (
             <table className="data-table">
               <thead>
@@ -3762,7 +3763,7 @@ function AlertsSystemDetailed({ active }) {
             </div>
             <div className="card-content">
               {loading ? (
-                <div className="loading-spinner">Loading...</div>
+                <LoadingSpinner size="small" />
               ) : (
                 <div className="email-stats">
                   <div className="stat-card">

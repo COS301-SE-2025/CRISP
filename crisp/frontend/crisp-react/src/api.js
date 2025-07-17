@@ -36,13 +36,12 @@ export const loginUser = async (username, password) => {
   
   const data = await handleResponse(response);
   
-  // Save auth data to localStorage - UserTrust format
+  // Save auth data to localStorage - match main.jsx format
   if (data.success && data.tokens) {
-    localStorage.setItem('auth', JSON.stringify({
-      token: data.tokens.access,
-      refresh: data.tokens.refresh,
-      user: data.user
-    }));
+    localStorage.setItem('crisp_auth_token', data.tokens.access);
+    localStorage.setItem('crisp_user', JSON.stringify(data.user));
+    // Also store refresh token for later use
+    localStorage.setItem('crisp_refresh_token', data.tokens.refresh);
   }
   
   return data;
@@ -69,13 +68,12 @@ export const registerUser = async (username, password, fullName, organization, r
   
   const data = await handleResponse(response);
   
-  // Save auth data to localStorage if tokens are returned - UserTrust format
+  // Save auth data to localStorage if tokens are returned - match main.jsx format
   if (data.success && data.tokens) {
-    localStorage.setItem('auth', JSON.stringify({
-      token: data.tokens.access,
-      refresh: data.tokens.refresh,
-      user: data.user
-    }));
+    localStorage.setItem('crisp_auth_token', data.tokens.access);
+    localStorage.setItem('crisp_user', JSON.stringify(data.user));
+    // Also store refresh token for later use
+    localStorage.setItem('crisp_refresh_token', data.tokens.refresh);
   }
   
   return data;
@@ -83,21 +81,29 @@ export const registerUser = async (username, password, fullName, organization, r
 
 // Get current user function - useful for checking auth status
 export const getCurrentUser = () => {
-  const auth = JSON.parse(localStorage.getItem('auth'));
-  return auth?.user || null;
+  // Use the correct localStorage key structure from main.jsx
+  const userStr = localStorage.getItem('crisp_user');
+  return userStr ? JSON.parse(userStr) : null;
 };
 
 // Logout function
 export const logoutUser = () => {
-  localStorage.removeItem('auth');
+  // Clear all authentication-related localStorage keys
+  localStorage.removeItem('crisp_auth_token');
+  localStorage.removeItem('crisp_user');
+  localStorage.removeItem('crisp_refresh_token');
 };
 
 // Add authentication header to requests
 export const authHeader = () => {
-  const auth = JSON.parse(localStorage.getItem('auth'));
+  // Use the correct localStorage key structure from main.jsx
+  const token = localStorage.getItem('crisp_auth_token');
   
-  if (auth && auth.token) {
-    return { 'Authorization': `Bearer ${auth.token}` };
+  // Debug logging
+  console.log('Token from localStorage:', token ? token.substring(0, 50) + '...' : 'No token');
+  
+  if (token) {
+    return { 'Authorization': `Bearer ${token}` };
   } else {
     return {};
   }
@@ -105,27 +111,26 @@ export const authHeader = () => {
 
 // Function to refresh the token
 export const refreshToken = async () => {
-  const auth = JSON.parse(localStorage.getItem('auth'));
+  const refreshToken = localStorage.getItem('crisp_refresh_token');
   
-  if (!auth || !auth.refresh) {
+  if (!refreshToken) {
     return Promise.reject('No refresh token available');
   }
   
   const response = await fetch(`${API_URL}auth/refresh/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh: auth.refresh })
+    body: JSON.stringify({ refresh: refreshToken })
   });
   
   const data = await handleResponse(response);
   
-  // UserTrust format - check for success and update tokens
+  // Update tokens with new access token
   if (data.success && data.data && data.data.tokens) {
-    auth.token = data.data.tokens.access;
+    localStorage.setItem('crisp_auth_token', data.data.tokens.access);
     if (data.data.tokens.refresh) {
-      auth.refresh = data.data.tokens.refresh;
+      localStorage.setItem('crisp_refresh_token', data.data.tokens.refresh);
     }
-    localStorage.setItem('auth', JSON.stringify(auth));
   }
   
   return data;
@@ -179,7 +184,7 @@ export const getUsers = async (organizationId = null, filters = {}) => {
 };
 
 export const createUser = async (userData) => {
-  const response = await fetch(`${API_URL}users/create/`, {
+  const response = await fetch(`${API_URL}users/create_user/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(userData)
@@ -568,6 +573,17 @@ export const updateUser = async (userId, userData) => {
 // Deactivate user (soft delete)
 export const deactivateUser = async (userId, reason = '') => {
   const response = await fetch(`${API_URL}users/${userId}/deactivate/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify({ reason })
+  });
+  
+  return await handleResponse(response);
+};
+
+// Reactivate user
+export const reactivateUser = async (userId, reason = '') => {
+  const response = await fetch(`${API_URL}users/${userId}/reactivate/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify({ reason })
