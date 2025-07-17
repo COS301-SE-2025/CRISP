@@ -214,6 +214,7 @@ function CSSStyles() {
         .user-name {
             font-weight: 600;
             font-size: 14px;
+            color: var(--primary-blue);
         }
         
         .user-role {
@@ -433,7 +434,7 @@ function CSSStyles() {
         .user-name-large {
             font-weight: 600;
             font-size: 16px;
-            color: var(--text-dark);
+            color: var(--primary-blue);
         }
 
         .user-email {
