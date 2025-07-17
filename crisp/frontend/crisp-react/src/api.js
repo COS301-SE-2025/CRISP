@@ -58,9 +58,11 @@ export const registerUser = async (username, password, fullName, organization, r
     body: JSON.stringify({
       username,
       password,
-      email: `${username}@crisp.local`,
+      password_confirm: password,
+      email: username.includes('@') ? username : `${username}@crisp.local`,
       first_name: firstName || '',
       last_name: lastName || '',
+      organization: organization || 'Default Organization',
       role: role || 'viewer'
     })
   });

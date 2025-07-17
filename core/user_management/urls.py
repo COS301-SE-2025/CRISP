@@ -23,6 +23,7 @@ urlpatterns = [
     
     # Direct endpoint mappings for specific actions
     path('api/v1/auth/login/', AuthenticationViewSet.as_view({'post': 'login'}), name='auth-login'),
+    path('api/v1/auth/register/', AuthenticationViewSet.as_view({'post': 'register'}), name='auth-register'),
     path('api/v1/auth/logout/', AuthenticationViewSet.as_view({'post': 'logout'}), name='auth-logout'),
     path('api/v1/auth/refresh/', AuthenticationViewSet.as_view({'post': 'refresh'}), name='auth-refresh'),
     path('api/v1/auth/verify/', AuthenticationViewSet.as_view({'get': 'verify'}), name='auth-verify'),
