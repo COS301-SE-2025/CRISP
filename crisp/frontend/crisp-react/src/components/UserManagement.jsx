@@ -39,9 +39,13 @@ const UserManagement = ({ active = true }) => {
     try {
       setLoading(true);
       const response = await api.getUsersList();
-      setUsers(response.data || response.users || []);
+      console.log('Users API response:', response); // Debug log
+      const usersData = response.data?.users || response.users || response.data || [];
+      setUsers(Array.isArray(usersData) ? usersData : []);
     } catch (err) {
+      console.error('Failed to load users:', err);
       setError('Failed to load users: ' + err.message);
+      setUsers([]); // Ensure users is always an array
     } finally {
       setLoading(false);
     }
@@ -50,9 +54,12 @@ const UserManagement = ({ active = true }) => {
   const loadOrganizations = async () => {
     try {
       const response = await api.getOrganizations();
-      setOrganizations(response.data || response.organizations || []);
+      console.log('Organizations API response:', response); // Debug log
+      const orgData = response.data?.organizations || response.organizations || response.data || [];
+      setOrganizations(Array.isArray(orgData) ? orgData : []);
     } catch (err) {
       console.error('Failed to load organizations:', err);
+      setOrganizations([]); // Ensure organizations is always an array
     }
   };
 
@@ -157,7 +164,7 @@ const UserManagement = ({ active = true }) => {
     }));
   };
 
-  const filteredUsers = users.filter(user => {
+  const filteredUsers = Array.isArray(users) ? users.filter(user => {
     const matchesSearch = !searchTerm || 
       user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -167,7 +174,7 @@ const UserManagement = ({ active = true }) => {
     const matchesRole = !roleFilter || user.role === roleFilter;
     
     return matchesSearch && matchesRole;
-  });
+  }) : [];
 
   const getOrganizationName = (orgId) => {
     const org = organizations.find(o => o.id === orgId);

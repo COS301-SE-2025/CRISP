@@ -179,18 +179,17 @@ class AccessControlService:
             # Get organizations through trust relationships (only if user has organization)
             try:
                 relationships = TrustRelationship.objects.filter(
-                    source_organization=str(user.organization.id),
+                    source_organization=user.organization,
                     is_active=True,
                     status='active'
                 )
                 
                 for rel in relationships:
                     try:
-                        # Get target organization object
-                        target_org = Organization.objects.get(id=rel.target_organization)
-                        if target_org not in accessible:
-                            accessible.append(target_org)
-                    except Organization.DoesNotExist:
+                        # target_organization should be an Organization object
+                        if rel.target_organization not in accessible:
+                            accessible.append(rel.target_organization)
+                    except Exception:
                         continue
             except Exception:
                 pass  # Handle gracefully in case of model issues
