@@ -241,6 +241,35 @@ export const createOrganization = async (orgData) => {
   return await handleResponse(response);
 };
 
+export const getOrganizationDetails = async (organizationId) => {
+  const response = await fetch(`${API_URL}organizations/${organizationId}/`, {
+    method: 'GET',
+    headers: { ...authHeader() }
+  });
+  
+  return await handleResponse(response);
+};
+
+export const updateOrganization = async (organizationId, updateData) => {
+  const response = await fetch(`${API_URL}organizations/${organizationId}/`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify(updateData)
+  });
+  
+  return await handleResponse(response);
+};
+
+export const deactivateOrganization = async (organizationId, reason = '') => {
+  const response = await fetch(`${API_URL}organizations/${organizationId}/deactivate/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify({ reason })
+  });
+  
+  return await handleResponse(response);
+};
+
 export const getOrganizationStatistics = async () => {
   const response = await fetch(`${API_URL}organizations/statistics/`, {
     method: 'GET',

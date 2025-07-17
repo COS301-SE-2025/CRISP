@@ -641,13 +641,14 @@ const UserManagement = ({ active = true }) => {
 
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                  Organization
+                  Organization *
                 </label>
                 <select
                   name="organization_id"
                   value={formData.organization_id}
                   onChange={handleInputChange}
                   disabled={modalMode === 'view'}
+                  required={modalMode === 'add'}
                   style={{
                     width: '100%',
                     padding: '0.5rem',
@@ -657,7 +658,7 @@ const UserManagement = ({ active = true }) => {
                     color: '#333'
                   }}
                 >
-                  <option value="">No Organization</option>
+                  <option value="">Select Organization</option>
                   {organizations.map(org => (
                     <option key={org.id} value={org.id}>{org.name}</option>
                   ))}

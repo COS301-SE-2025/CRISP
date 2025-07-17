@@ -5,6 +5,8 @@ import CSSStyles from './assets/CSSStyles';
 import logoImage from './assets/BlueV2.png';
 import { getUserProfile, updateUserProfile, getUserStatistics, changePassword, getEmailStatistics, getSystemHealth } from './api.js';
 import LoadingSpinner from './components/LoadingSpinner.jsx';
+import UserManagement from './components/UserManagement.jsx';
+import InstitutionManagement from './components/InstitutionManagement.jsx';
 
 
 function AppRegister({ user, onLogout }) {
@@ -92,6 +94,9 @@ function AppRegister({ user, onLogout }) {
           {/* User Management */}
           <UserManagement active={activePage === 'user-management'} />
 
+          {/* Institution Management */}
+          <InstitutionManagement active={activePage === 'institution-management'} />
+
           {/* Account Settings */}
           <AccountSettings active={activePage === 'account-settings'} user={user} />
 
@@ -107,6 +112,7 @@ function AppRegister({ user, onLogout }) {
 function Header({ user, onLogout, navigateToRegisterUser, showPage }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showManagementSubmenu, setShowManagementSubmenu] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [systemStats, setSystemStats] = useState(null);
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
@@ -240,6 +246,7 @@ function Header({ user, onLogout, navigateToRegisterUser, showPage }) {
     e.stopPropagation();
     setShowNotifications(!showNotifications);
     setShowUserMenu(false);
+    setShowManagementSubmenu(false);
   };
 
   const handleUserMenuClick = (e) => {
@@ -284,12 +291,20 @@ function Header({ user, onLogout, navigateToRegisterUser, showPage }) {
       if (!event.target.closest('.notifications-container') && !event.target.closest('.user-profile-container')) {
         setShowNotifications(false);
         setShowUserMenu(false);
+        setShowManagementSubmenu(false);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Close submenu when main menu closes
+  useEffect(() => {
+    if (!showUserMenu) {
+      setShowManagementSubmenu(false);
+    }
+  }, [showUserMenu]);
 
   return (
     <header>
@@ -389,10 +404,25 @@ function Header({ user, onLogout, navigateToRegisterUser, showPage }) {
                     <span>Account Settings</span>
                   </button>
                   <div className="menu-divider"></div>
-                  <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('user-management');}} type="button">
-                    <i className="fas fa-users"></i>
-                    <span>User Management</span>
-                  </button>
+                  <div className="menu-item-submenu">
+                    <button className="menu-item" onClick={() => setShowManagementSubmenu(!showManagementSubmenu)} type="button">
+                      <i className="fas fa-users"></i>
+                      <span>Management</span>
+                      <i className={`fas fa-chevron-${showManagementSubmenu ? 'up' : 'down'} submenu-arrow`}></i>
+                    </button>
+                    {showManagementSubmenu && (
+                      <div className="submenu">
+                        <button className="submenu-item" onClick={() => {setShowUserMenu(false); setShowManagementSubmenu(false); showPage('user-management');}} type="button">
+                          <i className="fas fa-users"></i>
+                          <span>User Management</span>
+                        </button>
+                        <button className="submenu-item" onClick={() => {setShowUserMenu(false); setShowManagementSubmenu(false); showPage('institution-management');}} type="button">
+                          <i className="fas fa-university"></i>
+                          <span>Institution Management</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('admin-settings');}} type="button">
                     <i className="fas fa-shield-alt"></i>
                     <span>Admin Settings</span>

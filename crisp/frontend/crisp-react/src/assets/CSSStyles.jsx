@@ -498,6 +498,48 @@ function CSSStyles() {
             background: rgba(229, 62, 62, 0.1);
         }
 
+        /* Submenu Styles */
+        .menu-item-submenu {
+            position: relative;
+        }
+
+        .submenu-arrow {
+            margin-left: auto;
+            font-size: 12px;
+            transition: transform 0.2s;
+        }
+
+        .submenu {
+            background: var(--light-gray);
+            border-radius: 4px;
+            margin: 4px 0;
+            border-left: 3px solid var(--primary-blue);
+        }
+
+        .submenu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            padding: 10px 20px 10px 35px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            color: var(--text-dark);
+        }
+
+        .submenu-item:hover {
+            background: var(--medium-gray);
+        }
+
+        .submenu-item i {
+            width: 14px;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
         /* Notifications Grid */
         .notifications-grid {
             display: grid;
