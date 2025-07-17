@@ -51,7 +51,7 @@ def send_threat_alert(request):
         
         if not recipient_emails:
             return Response(
-                {'error': 'recipient_emails is required'}, 
+                {'success': False, 'error': 'recipient_emails is required'}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -71,7 +71,7 @@ def send_threat_alert(request):
     except Exception as e:
         logger.error(f"Error sending threat alert: {str(e)}")
         return Response(
-            {'error': f'Failed to send threat alert: {str(e)}'}, 
+            {'success': False, 'error': f'Failed to send threat alert: {str(e)}'}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
@@ -88,7 +88,7 @@ def send_feed_notification(request):
         
         if not recipient_emails:
             return Response(
-                {'error': 'recipient_emails is required'}, 
+                {'success': False, 'error': 'recipient_emails is required'}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -108,7 +108,7 @@ def send_feed_notification(request):
     except Exception as e:
         logger.error(f"Error sending feed notification: {str(e)}")
         return Response(
-            {'error': f'Failed to send feed notification: {str(e)}'}, 
+            {'success': False, 'error': f'Failed to send feed notification: {str(e)}'}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
@@ -131,12 +131,12 @@ def test_gmail_connection(request):
             return Response(result, status=status.HTTP_200_OK)
         else:
             logger.warning(f"Gmail SMTP connection test failed: {result['message']}")
-            return Response(result, status=status.HTTP_200_OK)  # Still return 200 but with error info
+            return Response(result, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
     except Exception as e:
         logger.error(f"Error testing Gmail connection: {str(e)}")
         return Response(
-            {'error': f'Failed to test Gmail connection: {str(e)}'}, 
+            {'success': False, 'error': f'Failed to test Gmail connection: {str(e)}'}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
@@ -171,13 +171,16 @@ def get_email_statistics(request):
         except Exception as e:
             stats['gmail_connection_status'] = 'error'
             logger.warning(f"Could not test Gmail connection for statistics: {str(e)}")
+            # Re-raise if it's a critical service error during testing
+            if "Service error" in str(e):
+                raise
         
         return Response(stats, status=status.HTTP_200_OK)
         
     except Exception as e:
         logger.error(f"Error getting email statistics: {str(e)}")
         return Response(
-            {'error': f'Failed to get email statistics: {str(e)}'}, 
+            {'success': False, 'error': f'Failed to get email statistics: {str(e)}'}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 

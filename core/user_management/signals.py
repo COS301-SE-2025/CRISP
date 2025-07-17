@@ -7,6 +7,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def _safe_get_organization_name(instance):
+    """Safely get organization name, handling deleted organizations"""
+    try:
+        return instance.organization.name if instance.organization else None
+    except:
+        return None
+
 
 @receiver(post_save, sender=CustomUser)
 def create_user_profile(sender, instance, created, **kwargs):
@@ -196,13 +203,13 @@ def user_deleted_handler(sender, instance, **kwargs):
     AuthenticationLog.log_authentication_event(
         user=None,  # User is being deleted
         action='user_deleted',
-        ip_address='system',
+        ip_address='127.0.0.1',
         user_agent='System',
         success=True,
         additional_data={
             'deleted_username': instance.username,
             'deleted_user_id': str(instance.id),
-            'organization': instance.organization.name if instance.organization else None
+            'organization': _safe_get_organization_name(instance)
         }
     )
 

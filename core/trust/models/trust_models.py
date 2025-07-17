@@ -740,6 +740,11 @@ class TrustLog(models.Model):
     def get_metadata(self, key: str, default=None):
         """Get a specific metadata value from the metadata JSON field."""
         return self.metadata.get(key, default)
+    
+    @property
+    def performed_by(self):
+        """Alias for user field for backward compatibility"""
+        return self.user
 
     @classmethod
     def log_trust_event(cls, action, source_organization, user, 

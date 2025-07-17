@@ -54,6 +54,12 @@ class TrustService:
         # Handle test pattern: create_trust_relationship(requesting_user, relationship_data)
         if requesting_user and relationship_data:
             try:
+                # Validate required fields
+                required_fields = ["source_organization", "target_organization", "trust_level"]
+                for field in required_fields:
+                    if field not in relationship_data:
+                        return {"success": False, "message": f"Missing required field: {field}"}
+                
                 # Check permissions
                 if requesting_user.role not in ["BlueVisionAdmin"] and str(requesting_user.organization.id) != str(relationship_data["source_organization"]):
                     return {"success": False, "message": "Insufficient permissions to create trust relationship for this organization"}
@@ -76,9 +82,12 @@ class TrustService:
                 
                 # Convert UUID strings to Organization objects if needed
                 from core.user_management.models import Organization
-                if isinstance(source_org, str):
+                import uuid
+                
+                # Handle UUID objects or strings
+                if isinstance(source_org, (str, uuid.UUID)):
                     source_org = Organization.objects.get(id=source_org)
-                if isinstance(target_org, str):
+                if isinstance(target_org, (str, uuid.UUID)):
                     target_org = Organization.objects.get(id=target_org)
                 
                 relationship_type = relationship_data.get("relationship_type", "bilateral")
@@ -95,7 +104,9 @@ class TrustService:
         elif source_org is not None and target_org is not None and trust_level_name is not None:
             # Convert string UUIDs to Organization objects if needed
             from core.user_management.models import Organization
-            if isinstance(source_org, str):
+            import uuid
+            
+            if isinstance(source_org, (str, uuid.UUID)):
                 try:
                     source_org = Organization.objects.get(id=source_org)
                 except Organization.DoesNotExist:
@@ -103,7 +114,7 @@ class TrustService:
                         return {"success": False, "message": f"Source organization {source_org} not found"}
                     else:
                         raise ValidationError(f"Source organization {source_org} not found")
-            if isinstance(target_org, str):
+            if isinstance(target_org, (str, uuid.UUID)):
                 try:
                     target_org = Organization.objects.get(id=target_org)
                 except Organization.DoesNotExist:
@@ -112,10 +123,10 @@ class TrustService:
                     else:
                         raise ValidationError(f"Target organization {target_org} not found")
         else:
-            if requesting_user and relationship_data:
-                return {"success": False, "message": "Invalid parameters: provide either (requesting_user, relationship_data) or (source_org, target_org, trust_level_name)"}
+            if requesting_user and relationship_data is not None:
+                return {"success": False, "message": "Parameter error: provide either (requesting_user, relationship_data) or (source_org, target_org, trust_level_name)"}
             else:
-                raise ValidationError("Invalid parameters: provide either (requesting_user, relationship_data) or (source_org, target_org, trust_level_name)")
+                raise ValidationError("Parameter error: provide either (requesting_user, relationship_data) or (source_org, target_org, trust_level_name)")
             
         if source_org == target_org:
             error_msg = "Source and target organizations cannot be the same."
@@ -193,7 +204,7 @@ class TrustService:
                 raise
         except Exception as e:
             error_msg = f"Unexpected error: {str(e)}"
-            if requesting_user and relationship_data:
+            if requesting_user and relationship_data is not None:
                 return {"success": False, "message": error_msg}
             else:
                 logger.error(f"Failed to create trust relationship: {str(e)}")
@@ -718,9 +729,9 @@ class TrustService:
     def create_trust_group(self, requesting_user, group_data: Dict) -> Dict[str, Any]:
         """Create a new trust group"""
         try:
-            # Check permissions
-            if requesting_user.role not in ["BlueVisionAdmin", "publisher"]:
-                return {"success": False, "error": "Insufficient permissions"}
+            # Check permissions - only BlueVisionAdmin can create trust groups
+            if requesting_user.role not in ["BlueVisionAdmin"]:
+                return {"success": False, "message": "Insufficient permissions to create trust groups"}
             
             group = TrustGroup.objects.create(
                 name=group_data["name"],
@@ -729,7 +740,7 @@ class TrustService:
                 is_public=group_data.get("is_public", False),
                 requires_approval=group_data.get("requires_approval", True),
                 default_trust_level_id=group_data.get("default_trust_level_id"),
-                created_by=str(requesting_user)  # Convert User object to string
+                created_by=str(requesting_user)
             )
             return {"success": True, "group": group}
         except Exception as e:
@@ -918,7 +929,7 @@ class TrustGroupService:
                             numerical_value=25,
                             description='Default trust level for groups',
                             is_system_default=True,
-                            created_by=user
+                            created_by=str(user)
                         )
             else:
                 # Get or create default trust level
@@ -930,7 +941,7 @@ class TrustGroupService:
                         numerical_value=25,
                         description='Default public trust level',
                         is_system_default=True,
-                        created_by=user
+                        created_by=str(user)
                     )
             
             group = TrustGroup.objects.create(
@@ -938,7 +949,7 @@ class TrustGroupService:
                 description=data.get('description', ''),
                 group_type=data.get('group_type', 'community'),
                 default_trust_level=trust_level,
-                created_by=user
+                created_by=str(user)
             )
             
             return group
@@ -1383,9 +1394,9 @@ class TrustGroupService:
     def create_trust_group(self, requesting_user, group_data: Dict) -> Dict[str, Any]:
         """Create a new trust group"""
         try:
-            # Check permissions
-            if requesting_user.role not in ["BlueVisionAdmin", "publisher"]:
-                return {"success": False, "error": "Insufficient permissions"}
+            # Check permissions - only BlueVisionAdmin can create trust groups
+            if requesting_user.role not in ["BlueVisionAdmin"]:
+                return {"success": False, "message": "Insufficient permissions to create trust groups"}
             
             group = TrustGroup.objects.create(
                 name=group_data["name"],
@@ -1394,7 +1405,7 @@ class TrustGroupService:
                 is_public=group_data.get("is_public", False),
                 requires_approval=group_data.get("requires_approval", True),
                 default_trust_level_id=group_data.get("default_trust_level_id"),
-                created_by=str(requesting_user)  # Convert User object to string
+                created_by=str(requesting_user)
             )
             return {"success": True, "group": group}
         except Exception as e:

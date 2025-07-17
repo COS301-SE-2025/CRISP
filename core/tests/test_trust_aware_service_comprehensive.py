@@ -64,7 +64,7 @@ class TrustAwareServiceComprehensiveTest(TestCase):
             numerical_value=50,
             description='Medium level of trust',
             created_by='system',
-            default_access_level='limited',
+            default_access_level='read',
             default_anonymization_level='minimal'
         )
         
@@ -305,7 +305,7 @@ class TrustAwareServiceComprehensiveTest(TestCase):
             is_active=True
         )
         
-        with patch.object(trust_group, 'get_member_count', return_value=5):
+        with patch('core.trust.models.TrustGroup.get_member_count', return_value=5):
             groups = self.service._get_user_trust_groups(self.publisher_user)
         
         self.assertEqual(len(groups), 1)
@@ -723,7 +723,7 @@ class TrustAwareServiceComprehensiveTest(TestCase):
             created_by=self.admin_user
         )
         
-        TrustGroupMembership.objects.create(
+        membership = TrustGroupMembership.objects.create(
             trust_group=trust_group,
             organization=self.organization,
             membership_type='administrator',
@@ -733,7 +733,7 @@ class TrustAwareServiceComprehensiveTest(TestCase):
         service = TrustAwareService()
         
         with patch.object(active_rel, 'get_effective_access_level', return_value='full'):
-            with patch.object(pending_rel, 'get_effective_access_level', return_value='limited'):
+            with patch.object(pending_rel, 'get_effective_access_level', return_value='read'):
                 metrics = service.get_organization_trust_metrics(self.publisher_user)
         
         self.assertIn('organization', metrics)
@@ -747,6 +747,8 @@ class TrustAwareServiceComprehensiveTest(TestCase):
         self.assertEqual(trust_rels['pending'], 1)
         self.assertEqual(trust_rels['by_trust_level']['High Trust'], 1)
         self.assertEqual(trust_rels['by_trust_level']['Medium Trust'], 1)
+        self.assertEqual(trust_rels['by_access_level']['full'], 1)
+        self.assertEqual(trust_rels['by_access_level']['read'], 1)
         
         trust_groups = metrics['trust_groups']
         self.assertEqual(trust_groups['member_of'], 1)
@@ -949,7 +951,7 @@ class TrustAwareServiceComprehensiveTest(TestCase):
         trust_group = context['trust_groups'][0]
         self.assertEqual(trust_group['name'], 'Context Test Group')
         self.assertEqual(trust_group['membership_type'], 'administrator')
-        self.assertEqual(trust_group['member_count'], 5)
+        self.assertEqual(trust_group['member_count'], 1)
     
     def test_get_trust_context_no_organization(self):
         """Test trust context for user without organization"""

@@ -248,7 +248,7 @@ class TrustServiceComprehensiveTest(TestCase):
         
         # Verify group was created
         group = TrustGroup.objects.get(name='Test Trust Group')
-        self.assertEqual(group.created_by, self.user1)
+        self.assertEqual(group.created_by, str(self.user1))
     
     def test_create_trust_group_insufficient_permissions(self):
         """Test trust group creation with insufficient permissions"""

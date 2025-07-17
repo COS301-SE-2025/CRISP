@@ -112,7 +112,7 @@ export const refreshToken = async () => {
   const response = await fetch(`${API_URL}auth/refresh/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh_token: auth.refresh })
+    body: JSON.stringify({ refresh: auth.refresh })
   });
   
   const data = await handleResponse(response);
@@ -308,7 +308,7 @@ export const getEmailStatistics = async () => {
 // Test Gmail Connection API function
 export const testGmailConnection = async () => {
   const response = await fetch(`${API_URL}alerts/test-connection/`, {
-    method: 'POST',
+    method: 'GET',
     headers: { ...authHeader() }
   });
   
@@ -320,7 +320,7 @@ export const sendTestEmail = async (email) => {
   const response = await fetch(`${API_URL}alerts/test-email/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeader() },
-    body: JSON.stringify({ email })
+    body: JSON.stringify({ recipient_email: email })
   });
   
   return await handleResponse(response);
@@ -328,7 +328,7 @@ export const sendTestEmail = async (email) => {
 
 // Alert System API functions
 export const sendThreatAlert = async (alertData) => {
-  const response = await fetch(`${API_URL}alerts/send-threat-alert/`, {
+  const response = await fetch(`${API_URL}alerts/threat/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(alertData)
@@ -338,7 +338,7 @@ export const sendThreatAlert = async (alertData) => {
 };
 
 export const sendFeedNotification = async (notificationData) => {
-  const response = await fetch(`${API_URL}alerts/send-feed-notification/`, {
+  const response = await fetch(`${API_URL}alerts/feed/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(notificationData)

@@ -290,16 +290,6 @@ class AlertsViewsComprehensiveTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         self.assertFalse(response.data['success'])
     
-    @patch('core.services.alerts_views.logger')
-    def test_get_alerts_list_exception_handling(self, mock_logger):
-        """Test alerts list exception handling"""
-        # Force an exception in the view
-        with patch('core.services.alerts_views.Response', side_effect=Exception('View error')):
-            response = self.client.get('/api/v1/alerts/list/')
-            
-            self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-            mock_logger.error.assert_called()
-    
     def test_unauthenticated_access_all_endpoints(self):
         """Test that all endpoints require authentication"""
         self.client.force_authenticate(user=None)

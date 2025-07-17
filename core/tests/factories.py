@@ -84,7 +84,7 @@ class TrustRelationshipFactory(DjangoModelFactory):
     status = 'pending'
     relationship_type = factory.Iterator(['bilateral', 'community', 'hierarchical', 'federation'])
     anonymization_level = 'partial'  # Set default to partial
-    access_level = factory.Iterator(['none', 'read', 'subscribe', 'contribute', 'full'])
+    access_level = 'read'
     notes = factory.Faker('sentence')
     valid_until = factory.LazyFunction(lambda: timezone.now() + timedelta(days=365))
     created_by = factory.SubFactory(CustomUserFactory)

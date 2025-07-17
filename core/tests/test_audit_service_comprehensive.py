@@ -559,18 +559,18 @@ class AuditServiceComprehensiveTest(TestCase):
         # Should handle None user gracefully
         self.assertIsInstance(result, bool)
     
-    @patch('core.services.audit_service.logger')
-    def test_logging_integration(self, mock_logger):
+    def test_logging_integration(self):
         """Test integration with Python logging"""
-        self.service.log_security_event(
-            event_type='test_event',
-            severity='high',
-            details={'test': 'data'},
-            ip_address='192.168.1.100'
-        )
-        
-        # Verify that the logger was called
-        mock_logger.error.assert_called()
+        with patch.object(self.service, 'logger') as mock_logger:
+            self.service.log_security_event(
+                event_type='test_event',
+                severity='high',
+                details={'test': 'data'},
+                ip_address='192.168.1.100'
+            )
+            
+            # Verify that the logger was called
+            mock_logger.error.assert_called()
     
     def test_performance_with_large_details(self):
         """Test performance with large details object"""

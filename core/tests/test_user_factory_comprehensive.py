@@ -5,6 +5,7 @@ Comprehensive tests for user factory to increase coverage
 from django.test import TestCase
 from django.core.exceptions import ValidationError
 from unittest.mock import patch, Mock
+import builtins
 from core.user_management.factories.user_factory import (
     UserCreator, StandardUserCreator, PublisherUserCreator, 
     AdminUserCreator, UserFactory
@@ -284,7 +285,12 @@ class UserCreatorComprehensiveTest(TestCase):
         """Test UserFactory permission checks for admin"""
         # Admin can create any role
         UserFactory.create_user('viewer', self.valid_user_data, self.admin_user)
-        UserFactory.create_user('publisher', self.valid_user_data.copy(), self.admin_user)
+        
+        # Create publisher user with different username
+        publisher_data = self.valid_user_data.copy()
+        publisher_data['username'] = 'publisher_created@example.com'
+        publisher_data['email'] = 'publisher_created@example.com'
+        UserFactory.create_user('publisher', publisher_data, self.admin_user)
     
     def test_user_factory_permission_check_publisher(self):
         """Test UserFactory permission checks for publisher"""
@@ -405,16 +411,28 @@ class UserCreatorComprehensiveTest(TestCase):
     
     def test_fallback_factory_organization(self):
         """Test fallback organization factory"""
-        # Mock import error to test fallback
-        with patch('builtins.__import__', side_effect=ImportError):
+        # Mock import error to test fallback - only for specific import
+        original_import = builtins.__import__
+        def mock_import(name, *args, **kwargs):
+            if name == 'factory_boy':
+                raise ImportError("Mocked import error")
+            return original_import(name, *args, **kwargs)
+        
+        with patch('builtins.__import__', side_effect=mock_import):
             from core.user_management.factories.user_factory import OrganizationFactory
             org = OrganizationFactory.create(name='Custom Org')
             self.assertEqual(org.name, 'Custom Org')
     
     def test_fallback_factory_user(self):
         """Test fallback user factory"""
-        # Mock import error to test fallback
-        with patch('builtins.__import__', side_effect=ImportError):
+        # Mock import error to test fallback - only for specific import
+        original_import = builtins.__import__
+        def mock_import(name, *args, **kwargs):
+            if name == 'factory_boy':
+                raise ImportError("Mocked import error")
+            return original_import(name, *args, **kwargs)
+        
+        with patch('builtins.__import__', side_effect=mock_import):
             from core.user_management.factories.user_factory import UserFactory as FallbackUserFactory
             user = FallbackUserFactory.create(username='fallback@example.com')
             self.assertEqual(user.username, 'fallback@example.com')

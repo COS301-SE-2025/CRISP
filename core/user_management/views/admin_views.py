@@ -25,11 +25,20 @@ class AdminViewSet(GenericViewSet):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.user_service = UserService()
-        self.org_service = OrganizationService()
-        self.trust_service = TrustAwareService()
-        self.access_control = AccessControlService()
-        self.audit_service = AuditService()
+        try:
+            self.user_service = UserService()
+            self.org_service = OrganizationService()
+            self.trust_service = TrustAwareService()
+            self.access_control = AccessControlService()
+            self.audit_service = AuditService()
+        except Exception as e:
+            # Handle service initialization errors gracefully
+            logger.error(f"Failed to initialize admin services: {str(e)}")
+            self.user_service = None
+            self.org_service = None
+            self.trust_service = None
+            self.access_control = None
+            self.audit_service = None
     
     def _check_admin_permission(self, user, permission):
         """Check if user has admin permission"""
@@ -40,6 +49,13 @@ class AdminViewSet(GenericViewSet):
     def dashboard(self, request):
         """Get comprehensive admin dashboard data."""
         try:
+            # Check if services are available
+            if not self.user_service or not self.org_service:
+                return Response({
+                    'success': False,
+                    'message': 'Failed to load admin dashboard'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
             self._check_admin_permission(request.user, 'can_view_system_analytics')
             
             # Get platform statistics
@@ -148,6 +164,13 @@ class AdminViewSet(GenericViewSet):
         - limit: Number of results (default 100, max 1000)
         """
         try:
+            # Check if services are available
+            if not self.audit_service:
+                return Response({
+                    'success': False,
+                    'message': 'Audit service unavailable'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
             self._check_admin_permission(request.user, 'can_view_system_analytics')
             
             # Get query parameters
@@ -164,15 +187,32 @@ class AdminViewSet(GenericViewSet):
             if action:
                 logs_query = logs_query.filter(action=action)
             if user_id:
-                logs_query = logs_query.filter(user_id=user_id)
+                try:
+                    logs_query = logs_query.filter(user_id=user_id)
+                except Exception:
+                    # Skip invalid user_id values
+                    pass
             if success is not None:
-                logs_query = logs_query.filter(success=success.lower() == 'true')
+                success_bool = success.lower() == 'true'
+                logs_query = logs_query.filter(success=success_bool)
             if start_date:
                 from django.utils.dateparse import parse_datetime
-                logs_query = logs_query.filter(timestamp__gte=parse_datetime(start_date))
+                try:
+                    parsed_start = parse_datetime(start_date)
+                    if parsed_start:
+                        logs_query = logs_query.filter(timestamp__gte=parsed_start)
+                except Exception:
+                    # Skip invalid date format
+                    pass
             if end_date:
                 from django.utils.dateparse import parse_datetime
-                logs_query = logs_query.filter(timestamp__lte=parse_datetime(end_date))
+                try:
+                    parsed_end = parse_datetime(end_date)
+                    if parsed_end:
+                        logs_query = logs_query.filter(timestamp__lte=parsed_end)
+                except Exception:
+                    # Skip invalid date format
+                    pass
             
             logs = logs_query[:limit]
             
@@ -184,7 +224,7 @@ class AdminViewSet(GenericViewSet):
                     'user': {
                         'id': str(log.user.id) if log.user else None,
                         'username': log.user.username if log.user else None,
-                        'organization': log.user.organization.name if log.user else None
+                        'organization': log.user.organization.name if log.user and log.user.organization else None
                     },
                     'ip_address': log.ip_address,
                     'user_agent': log.user_agent,

@@ -57,8 +57,11 @@ describe('API Service Tests', () => {
   describe('loginUser', () => {
     it('should login successfully and store auth data', async () => {
       const mockResponse = {
-        token: 'mock-access-token',
-        refresh: 'mock-refresh-token',
+        success: true,
+        tokens: {
+          access: 'mock-access-token',
+          refresh: 'mock-refresh-token'
+        },
         user: { id: 1, username: 'testuser', full_name: 'Test User' }
       };
 
@@ -69,15 +72,21 @@ describe('API Service Tests', () => {
 
       const result = await loginUser('testuser', 'password123');
 
-      expect(fetch).toHaveBeenCalledWith('http://localhost:8001/api/auth/login/', {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:8000/api/v1/auth/login/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: 'testuser', password: 'password123' })
       });
 
+      const expectedStoredAuth = {
+        token: 'mock-access-token',
+        refresh: 'mock-refresh-token',
+        user: { id: 1, username: 'testuser', full_name: 'Test User' }
+      };
+
       expect(localStorageMock.setItem).toHaveBeenCalledWith(
         'auth',
-        JSON.stringify(mockResponse)
+        JSON.stringify(expectedStoredAuth)
       );
 
       expect(result).toEqual(mockResponse);
@@ -140,8 +149,11 @@ describe('API Service Tests', () => {
   describe('registerUser', () => {
     it('should register successfully and store auth data', async () => {
       const mockResponse = {
-        token: 'mock-access-token',
-        refresh: 'mock-refresh-token',
+        success: true,
+        tokens: {
+          access: 'mock-access-token',
+          refresh: 'mock-refresh-token'
+        },
         user: { id: 1, username: 'newuser', full_name: 'New User' }
       };
 
@@ -158,22 +170,28 @@ describe('API Service Tests', () => {
         'researcher'
       );
 
-      expect(fetch).toHaveBeenCalledWith('http://localhost:8001/api/auth/register/', {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:8000/api/v1/auth/register/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: 'newuser',
           password: 'password123',
-          confirm_password: 'password123',
-          full_name: 'New User',
-          organization: 'Test Org',
+          email: 'newuser@crisp.local',
+          first_name: 'New',
+          last_name: 'User',
           role: 'researcher'
         })
       });
 
+      const expectedStoredAuth = {
+        token: 'mock-access-token',
+        refresh: 'mock-refresh-token',
+        user: { id: 1, username: 'newuser', full_name: 'New User' }
+      };
+
       expect(localStorageMock.setItem).toHaveBeenCalledWith(
         'auth',
-        JSON.stringify(mockResponse)
+        JSON.stringify(expectedStoredAuth)
       );
 
       expect(result).toEqual(mockResponse);
@@ -311,7 +329,14 @@ describe('API Service Tests', () => {
         user: { id: 1, username: 'testuser' }
       };
 
-      const mockResponse = { access: 'new-access-token' };
+      const mockResponse = { 
+        success: true,
+        data: {
+          tokens: {
+            access: 'new-access-token'
+          }
+        }
+      };
 
       localStorageMock.setItem('auth', JSON.stringify(mockAuth));
 
@@ -322,7 +347,7 @@ describe('API Service Tests', () => {
 
       const result = await refreshToken();
 
-      expect(fetch).toHaveBeenCalledWith('http://localhost:8001/api/auth/token/refresh/', {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:8000/api/v1/auth/refresh/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh: 'mock-refresh-token' })
