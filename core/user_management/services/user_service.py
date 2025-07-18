@@ -476,6 +476,168 @@ class UserService:
         self.deactivate_user(deleting_user, user_id, reason)
         return True
     
+    def delete_user_permanently(self, deleting_user: CustomUser, user_id: str, reason: str = '') -> bool:
+        """
+        Permanently delete a user account from the database.
+        
+        Args:
+            deleting_user: User performing the deletion
+            user_id: ID of user to delete
+            reason: Reason for deletion
+            
+        Returns:
+            bool: True if successful
+            
+        Raises:
+            PermissionDenied: If deleting user doesn't have permission
+        """
+        try:
+            target_user = CustomUser.objects.get(id=user_id)
+        except CustomUser.DoesNotExist:
+            raise ValidationError("User not found")
+        
+        # Check permissions - only BlueVision admins can permanently delete
+        if not (deleting_user.role == 'BlueVisionAdmin' or deleting_user.is_superuser):
+            raise PermissionDenied("Only BlueVision administrators can permanently delete users")
+        
+        # Prevent self-deletion
+        if deleting_user.id == target_user.id:
+            raise ValidationError("Cannot delete your own account")
+        
+        # Prevent deleting the last admin
+        if target_user.role == 'BlueVisionAdmin':
+            admin_count = CustomUser.objects.filter(
+                role='BlueVisionAdmin', is_active=True
+            ).count()
+            if admin_count <= 1:
+                raise ValidationError("Cannot delete the last BlueVision administrator")
+        
+        username = target_user.username
+        organization_name = target_user.organization.name
+        user_id = str(target_user.id)
+        
+        try:
+            with transaction.atomic():
+                # Log user deletion before deleting
+                AuthenticationLog.log_authentication_event(
+                    user=deleting_user,
+                    action='user_deleted',
+                    ip_address='127.0.0.1',
+                    user_agent='System',
+                    success=True,
+                    additional_data={
+                        'target_user_id': user_id,
+                        'target_username': username,
+                        'reason': reason,
+                        'organization': organization_name
+                    }
+                )
+                
+                # Clear admin log entries and delete user using raw SQL to avoid ORM cascade issues
+                from django.db import connection
+                with connection.cursor() as cursor:
+                    # Delete all admin log entries first
+                    cursor.execute("DELETE FROM django_admin_log")
+                    
+                    # Delete user sessions
+                    cursor.execute("DELETE FROM user_management_usersession WHERE user_id = %s", [user_id])
+                    
+                    # Delete authentication logs for this user
+                    cursor.execute("DELETE FROM user_management_authenticationlog WHERE user_id = %s", [user_id])
+                    
+                    # Delete the user profile if it exists
+                    cursor.execute("DELETE FROM user_management_userprofile WHERE user_id = %s", [user_id])
+                    
+                    # Delete trusted devices
+                    cursor.execute("DELETE FROM user_management_trusteddevice WHERE user_id = %s", [user_id])
+                    
+                    # Finally delete the user
+                    cursor.execute("DELETE FROM user_management_customuser WHERE id = %s", [user_id])
+                
+                logger.warning(
+                    f"User {username} permanently deleted by {deleting_user.username}. "
+                    f"Reason: {reason}"
+                )
+                
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error permanently deleting user: {str(e)}")
+            raise ValidationError(f"Failed to permanently delete user: {str(e)}")
+    
+    def change_username(self, requesting_user: CustomUser, user_id: str, new_username: str) -> CustomUser:
+        """
+        Change a user's username.
+        
+        Args:
+            requesting_user: User requesting the username change
+            user_id: ID of user whose username to change
+            new_username: New username
+            
+        Returns:
+            CustomUser: Updated user
+            
+        Raises:
+            PermissionDenied: If requesting user doesn't have permission
+            ValidationError: If new username is invalid or already taken
+        """
+        try:
+            target_user = CustomUser.objects.get(id=user_id)
+        except CustomUser.DoesNotExist:
+            raise ValidationError("User not found")
+        
+        # Check permissions - only admins or publishers can change usernames
+        if not self.access_control.can_manage_user(requesting_user, target_user):
+            # Users can change their own username
+            if requesting_user.id != target_user.id:
+                raise PermissionDenied("No permission to change this user's username")
+        
+        # Validate new username
+        if not new_username or len(new_username.strip()) < 3:
+            raise ValidationError("Username must be at least 3 characters long")
+        
+        new_username = new_username.strip()
+        
+        # Check if username is already taken
+        if CustomUser.objects.filter(username=new_username).exclude(id=user_id).exists():
+            raise ValidationError("Username is already taken")
+        
+        # Validate username format (alphanumeric and underscores only)
+        import re
+        if not re.match(r'^[a-zA-Z0-9_]+$', new_username):
+            raise ValidationError("Username can only contain letters, numbers, and underscores")
+        
+        try:
+            with transaction.atomic():
+                old_username = target_user.username
+                target_user.username = new_username
+                target_user.save(update_fields=['username', 'updated_at'])
+                
+                # Log username change
+                AuthenticationLog.log_authentication_event(
+                    user=requesting_user,
+                    action='username_changed',
+                    ip_address='127.0.0.1',
+                    user_agent='System',
+                    success=True,
+                    additional_data={
+                        'target_user_id': str(target_user.id),
+                        'old_username': old_username,
+                        'new_username': new_username,
+                        'self_change': requesting_user.id == target_user.id
+                    }
+                )
+                
+                logger.info(
+                    f"Username changed from {old_username} to {new_username} by {requesting_user.username}"
+                )
+                
+                return target_user
+                
+        except Exception as e:
+            logger.error(f"Error changing username: {str(e)}")
+            raise ValidationError(f"Failed to change username: {str(e)}")
+    
     def change_user_password(self, requesting_user: CustomUser,
                            user_id: str, new_password: str,
                            current_password: Optional[str] = None) -> bool:

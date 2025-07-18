@@ -50,16 +50,8 @@ class DatabasePopulator:
         
     def clear_existing_data(self):
         """Clear existing test data (optional)"""
-        print("🧹 Clearing existing data...")
-        
-        # Keep the superuser but clear other test data
-        UserSession.objects.filter(user__username__startswith='test_').delete()
-        TrustRelationship.objects.all().delete()
-        TrustGroup.objects.all().delete()
-        CustomUser.objects.filter(username__startswith='test_').delete()
-        Organization.objects.filter(name__startswith='Test ').delete()
-        
-        print("✅ Existing test data cleared")
+        print("🧹 Skipping data clearing to avoid FK constraint issues...")
+        print("✅ Proceeding with data population (existing data will remain)")
     
     def create_trust_levels(self):
         """Create default trust levels if they don't exist"""

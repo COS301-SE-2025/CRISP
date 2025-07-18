@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getUsersList, createUser, updateUser, deactivateUser, reactivateUser, getUserDetails, getOrganizations } from '../api.js';
+import { getUsersList, createUser, updateUser, deactivateUser, reactivateUser, deleteUser, changeUsername, getUserDetails, getOrganizations } from '../api.js';
 import LoadingSpinner from './LoadingSpinner.jsx';
 
 // Import alias for the API to avoid conflicts
@@ -11,8 +11,9 @@ const UserManagement = ({ active = true }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState('add'); // 'add', 'edit', 'view'
+  const [modalMode, setModalMode] = useState('add'); // 'add', 'edit', 'view', 'changeUsername'
   const [selectedUser, setSelectedUser] = useState(null);
+  const [newUsername, setNewUsername] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [modalLoading, setModalLoading] = useState(false);
@@ -226,6 +227,74 @@ const UserManagement = ({ active = true }) => {
     }
   };
 
+  const handlePermanentDeleteUser = async (userId, username) => {
+    if (window.confirm(`Are you sure you want to PERMANENTLY DELETE user "${username}"? This action cannot be undone.`)) {
+      const reason = prompt('Please provide a reason for deletion:');
+      if (reason !== null) {
+        try {
+          setOperationLoading(true);
+          await new Promise(resolve => setTimeout(resolve, 800));
+          await api.deleteUser(userId, reason);
+          loadUsers();
+        } catch (err) {
+          setError('Failed to delete user: ' + err.message);
+        } finally {
+          setOperationLoading(false);
+        }
+      }
+    }
+  };
+
+  const handleChangeUsername = (user) => {
+    setModalMode('changeUsername');
+    setSelectedUser(user);
+    setNewUsername(user.username);
+    setShowModal(true);
+  };
+
+  const handleUsernameChange = async (e) => {
+    e.preventDefault();
+    const username = newUsername.trim();
+    
+    // Client-side validation
+    if (!username) {
+      setError('Username cannot be empty');
+      return;
+    }
+    
+    if (username.length < 3) {
+      setError('Username must be at least 3 characters long');
+      return;
+    }
+    
+    // Check for valid characters (letters, numbers, underscores only)
+    const validUsernameRegex = /^[a-zA-Z0-9_]+$/;
+    if (!validUsernameRegex.test(username)) {
+      setError('Username can only contain letters, numbers, and underscores');
+      return;
+    }
+    
+    try {
+      setSubmitting(true);
+      await new Promise(resolve => setTimeout(resolve, 800));
+      await api.changeUsername(selectedUser.id, username);
+      setShowModal(false);
+      setError(null); // Clear any previous errors
+      loadUsers();
+    } catch (err) {
+      // Handle different error types
+      if (Array.isArray(err)) {
+        setError(err.join(', '));
+      } else if (typeof err === 'string') {
+        setError(err);
+      } else {
+        setError('Failed to change username: ' + (err.message || 'Unknown error'));
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -345,97 +414,237 @@ const UserManagement = ({ active = true }) => {
       </div>
 
       {/* Users Table */}
-      <div style={{ overflowX: 'auto' }}>
+      <div style={{ 
+        overflowX: 'auto',
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+        border: '1px solid #e9ecef'
+      }}>
         <table style={{ 
           width: '100%', 
           borderCollapse: 'collapse',
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          overflow: 'hidden',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+          minWidth: '1200px'
         }}>
           <thead>
-            <tr style={{ backgroundColor: '#f8f9fa' }}>
-              <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Username</th>
-              <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Name</th>
-              <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Email</th>
-              <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Role</th>
-              <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Organization</th>
-              <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Status</th>
-              <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Actions</th>
+            <tr style={{ 
+              backgroundColor: '#f8f9fa',
+              borderBottom: '2px solid #dee2e6'
+            }}>
+              <th style={{ 
+                padding: '1.25rem 1rem', 
+                textAlign: 'left', 
+                fontWeight: '600',
+                fontSize: '0.875rem',
+                color: '#495057',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                width: '120px'
+              }}>Username</th>
+              <th style={{ 
+                padding: '1.25rem 1rem', 
+                textAlign: 'left', 
+                fontWeight: '600',
+                fontSize: '0.875rem',
+                color: '#495057',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                width: '150px'
+              }}>Name</th>
+              <th style={{ 
+                padding: '1.25rem 1rem', 
+                textAlign: 'left', 
+                fontWeight: '600',
+                fontSize: '0.875rem',
+                color: '#495057',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                width: '200px'
+              }}>Email</th>
+              <th style={{ 
+                padding: '1.25rem 1rem', 
+                textAlign: 'left', 
+                fontWeight: '600',
+                fontSize: '0.875rem',
+                color: '#495057',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                width: '100px'
+              }}>Role</th>
+              <th style={{ 
+                padding: '1.25rem 1rem', 
+                textAlign: 'left', 
+                fontWeight: '600',
+                fontSize: '0.875rem',
+                color: '#495057',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                width: '180px'
+              }}>Organization</th>
+              <th style={{ 
+                padding: '1.25rem 1rem', 
+                textAlign: 'left', 
+                fontWeight: '600',
+                fontSize: '0.875rem',
+                color: '#495057',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                width: '100px'
+              }}>Status</th>
+              <th style={{ 
+                padding: '1.25rem 1rem', 
+                textAlign: 'left', 
+                fontWeight: '600',
+                fontSize: '0.875rem',
+                color: '#495057',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                width: '350px'
+              }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredUsers.map(user => (
-              <tr key={user.id} style={{ borderBottom: '1px solid #eee' }}>
-                <td style={{ padding: '1rem' }}>{user.username}</td>
-                <td style={{ padding: '1rem' }}>{`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'N/A'}</td>
-                <td style={{ padding: '1rem' }}>{user.email}</td>
-                <td style={{ padding: '1rem' }}>
+              <tr key={user.id} style={{ 
+                borderBottom: '1px solid #e9ecef',
+                transition: 'background-color 0.2s ease',
+                cursor: 'pointer'
+              }}
+              onMouseEnter={(e) => e.target.parentElement.style.backgroundColor = '#f8f9fa'}
+              onMouseLeave={(e) => e.target.parentElement.style.backgroundColor = 'transparent'}
+              >
+                <td style={{ 
+                  padding: '1.25rem 1rem',
+                  fontWeight: '500',
+                  color: '#212529'
+                }}>{user.username}</td>
+                <td style={{ 
+                  padding: '1.25rem 1rem',
+                  color: '#495057'
+                }}>{`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'N/A'}</td>
+                <td style={{ 
+                  padding: '1.25rem 1rem',
+                  color: '#495057',
+                  fontSize: '0.875rem'
+                }}>{user.email}</td>
+                <td style={{ padding: '1.25rem 1rem' }}>
                   <span style={{
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '4px',
-                    fontSize: '0.875rem',
+                    padding: '0.375rem 0.75rem',
+                    borderRadius: '6px',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
                     backgroundColor: user.role === 'admin' ? '#d4edda' : user.role === 'publisher' ? '#fff3cd' : '#f8f9fa',
                     color: user.role === 'admin' ? '#155724' : user.role === 'publisher' ? '#856404' : '#495057'
                   }}>
                     {user.role}
                   </span>
                 </td>
-                <td style={{ padding: '1rem' }}>{user.organization?.name || getOrganizationName(user.organization_id) || 'N/A'}</td>
-                <td style={{ padding: '1rem' }}>
+                <td style={{ 
+                  padding: '1.25rem 1rem',
+                  color: '#495057',
+                  fontSize: '0.875rem'
+                }}>{user.organization?.name || getOrganizationName(user.organization_id) || 'N/A'}</td>
+                <td style={{ padding: '1.25rem 1rem' }}>
                   <span style={{
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '4px',
-                    fontSize: '0.875rem',
+                    padding: '0.375rem 0.75rem',
+                    borderRadius: '6px',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
                     backgroundColor: user.is_active ? '#d4edda' : '#f8d7da',
                     color: user.is_active ? '#155724' : '#721c24'
                   }}>
                     {user.is_active ? 'Active' : 'Inactive'}
                   </span>
                 </td>
-                <td style={{ padding: '1rem' }}>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <td style={{ padding: '1.25rem 1rem', minWidth: '350px' }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: '0.5rem', 
+                    flexWrap: 'wrap',
+                    alignItems: 'center'
+                  }}>
                     <button
                       onClick={() => handleViewUser(user.id)}
                       style={{
-                        padding: '0.25rem 0.5rem',
+                        padding: '0.375rem 0.75rem',
                         backgroundColor: '#17a2b8',
                         color: 'white',
                         border: 'none',
-                        borderRadius: '4px',
+                        borderRadius: '6px',
                         cursor: 'pointer',
-                        fontSize: '0.875rem'
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        transition: 'all 0.2s ease'
                       }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#138496'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = '#17a2b8'}
                     >
                       View
                     </button>
                     <button
                       onClick={() => handleEditUser(user.id)}
                       style={{
-                        padding: '0.25rem 0.5rem',
+                        padding: '0.375rem 0.75rem',
                         backgroundColor: '#ffc107',
-                        color: 'black',
+                        color: '#212529',
                         border: 'none',
-                        borderRadius: '4px',
+                        borderRadius: '6px',
                         cursor: 'pointer',
-                        fontSize: '0.875rem'
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        transition: 'all 0.2s ease'
                       }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#e0a800'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = '#ffc107'}
                     >
                       Edit
+                    </button>
+                    <button
+                      onClick={() => handleChangeUsername(user)}
+                      style={{
+                        padding: '0.375rem 0.75rem',
+                        backgroundColor: '#6f42c1',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#5a32a3'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = '#6f42c1'}
+                    >
+                      Username
                     </button>
                     {user.is_active ? (
                       <button
                         onClick={() => handleDeleteUser(user.id, user.username)}
                         style={{
-                          padding: '0.25rem 0.5rem',
+                          padding: '0.375rem 0.75rem',
                           backgroundColor: '#dc3545',
                           color: 'white',
                           border: 'none',
-                          borderRadius: '4px',
+                          borderRadius: '6px',
                           cursor: 'pointer',
-                          fontSize: '0.875rem'
+                          fontSize: '0.75rem',
+                          fontWeight: '600',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          transition: 'all 0.2s ease'
                         }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#c82333'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = '#dc3545'}
                       >
                         Deactivate
                       </button>
@@ -443,18 +652,44 @@ const UserManagement = ({ active = true }) => {
                       <button
                         onClick={() => handleReactivateUser(user.id, user.username)}
                         style={{
-                          padding: '0.25rem 0.5rem',
+                          padding: '0.375rem 0.75rem',
                           backgroundColor: '#28a745',
                           color: 'white',
                           border: 'none',
-                          borderRadius: '4px',
+                          borderRadius: '6px',
                           cursor: 'pointer',
-                          fontSize: '0.875rem'
+                          fontSize: '0.75rem',
+                          fontWeight: '600',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          transition: 'all 0.2s ease'
                         }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#218838'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = '#28a745'}
                       >
                         Reactivate
                       </button>
                     )}
+                    <button
+                      onClick={() => handlePermanentDeleteUser(user.id, user.username)}
+                      style={{
+                        padding: '0.375rem 0.75rem',
+                        backgroundColor: '#6c757d',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#5a6268'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = '#6c757d'}
+                    >
+                      Delete
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -494,11 +729,72 @@ const UserManagement = ({ active = true }) => {
           }}>
             <h2 style={{ marginBottom: '1.5rem', color: '#333' }}>
               {modalMode === 'add' ? 'Add New User' : 
-               modalMode === 'edit' ? 'Edit User' : 'View User'}
+               modalMode === 'edit' ? 'Edit User' : 
+               modalMode === 'changeUsername' ? 'Change Username' : 'View User'}
             </h2>
             
             {modalLoading ? (
               <LoadingSpinner size="medium" />
+            ) : modalMode === 'changeUsername' ? (
+              <form onSubmit={handleUsernameChange}>
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                    Current Username: {selectedUser?.username}
+                  </label>
+                </div>
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                    New Username
+                  </label>
+                  <input
+                    type="text"
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                    required
+                    pattern="[a-zA-Z0-9_]+"
+                    title="Username can only contain letters, numbers, and underscores"
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      color: '#333'
+                    }}
+                  />
+                  <div style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.25rem' }}>
+                    Only letters, numbers, and underscores allowed (minimum 3 characters)
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      border: '1px solid #ddd',
+                      backgroundColor: 'white',
+                      color: '#666',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#6f42c1',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Change Username
+                  </button>
+                </div>
+              </form>
             ) : (
             
             <form onSubmit={handleSubmit}>
