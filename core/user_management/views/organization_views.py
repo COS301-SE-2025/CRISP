@@ -461,11 +461,12 @@ class OrganizationViewSet(GenericViewSet):
             
             # Get the relationship
             try:
-                relationship = TrustRelationship.objects.get(
-                    id=pk,
+                relationship = TrustRelationship.objects.filter(
+                    id=pk
+                ).filter(
                     Q(source_organization=user_org) | 
                     Q(target_organization=user_org)
-                )
+                ).get()
             except TrustRelationship.DoesNotExist:
                 return Response({
                     'success': False,
@@ -523,11 +524,12 @@ class OrganizationViewSet(GenericViewSet):
             
             # Get the relationship
             try:
-                relationship = TrustRelationship.objects.get(
-                    id=pk,
+                relationship = TrustRelationship.objects.filter(
+                    id=pk
+                ).filter(
                     Q(source_organization=user_org) | 
                     Q(target_organization=user_org)
-                )
+                ).get()
             except TrustRelationship.DoesNotExist:
                 return Response({
                     'success': False,
