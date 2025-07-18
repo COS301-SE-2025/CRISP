@@ -11,9 +11,8 @@ const UserManagement = ({ active = true }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState('add'); // 'add', 'edit', 'view', 'changeUsername'
+  const [modalMode, setModalMode] = useState('add'); // 'add', 'edit', 'view'
   const [selectedUser, setSelectedUser] = useState(null);
-  const [newUsername, setNewUsername] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [modalLoading, setModalLoading] = useState(false);
@@ -245,58 +244,27 @@ const UserManagement = ({ active = true }) => {
     }
   };
 
-  const handleChangeUsername = (user) => {
-    setModalMode('changeUsername');
-    setSelectedUser(user);
-    setNewUsername(user.username);
-    setShowModal(true);
-  };
-
-  const handleUsernameChange = async (e) => {
-    e.preventDefault();
-    const username = newUsername.trim();
-    
-    // Client-side validation
-    if (!username) {
-      setError('Username cannot be empty');
-      return;
-    }
-    
-    if (username.length < 3) {
-      setError('Username must be at least 3 characters long');
-      return;
-    }
-    
-    // Check for valid characters (letters, numbers, underscores only)
-    const validUsernameRegex = /^[a-zA-Z0-9_]+$/;
-    if (!validUsernameRegex.test(username)) {
-      setError('Username can only contain letters, numbers, and underscores');
-      return;
-    }
-    
-    try {
-      setSubmitting(true);
-      await new Promise(resolve => setTimeout(resolve, 800));
-      await api.changeUsername(selectedUser.id, username);
-      setShowModal(false);
-      setError(null); // Clear any previous errors
-      loadUsers();
-    } catch (err) {
-      // Handle different error types
-      if (Array.isArray(err)) {
-        setError(err.join(', '));
-      } else if (typeof err === 'string') {
-        setError(err);
-      } else {
-        setError('Failed to change username: ' + (err.message || 'Unknown error'));
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Client-side validation for username in edit mode
+    if (modalMode === 'edit' && formData.username) {
+      const username = formData.username.trim();
+      
+      if (username.length < 3) {
+        setError('Username must be at least 3 characters long');
+        return;
+      }
+      
+      // Check for valid characters (letters, numbers, underscores only)
+      const validUsernameRegex = /^[a-zA-Z0-9_]+$/;
+      if (!validUsernameRegex.test(username)) {
+        setError('Username can only contain letters, numbers, and underscores');
+        return;
+      }
+    }
+    
     try {
       setSubmitting(true);
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -309,15 +277,35 @@ const UserManagement = ({ active = true }) => {
         if (!updateData.password) {
           delete updateData.password; // Don't send empty password
         }
-        console.log('Updating user with data:', updateData);
-        console.log('Selected user ID:', selectedUser.id);
-        await api.updateUser(selectedUser.id, updateData);
+        
+        // Handle username change separately if it's different
+        if (updateData.username !== selectedUser.username) {
+          console.log('Username changed, updating via changeUsername API');
+          await api.changeUsername(selectedUser.id, updateData.username);
+          // Remove username from updateData to avoid duplicate update
+          delete updateData.username;
+        }
+        
+        // Update other fields if there are any remaining
+        if (Object.keys(updateData).length > 0) {
+          console.log('Updating user with data:', updateData);
+          console.log('Selected user ID:', selectedUser.id);
+          await api.updateUser(selectedUser.id, updateData);
+        }
       }
       setShowModal(false);
+      setError(null); // Clear any previous errors
       loadUsers();
     } catch (err) {
       console.error('Error in handleSubmit:', err);
-      setError('Failed to save user: ' + err.message);
+      // Handle different error types
+      if (Array.isArray(err)) {
+        setError(err.join(', '));
+      } else if (typeof err === 'string') {
+        setError(err);
+      } else {
+        setError('Failed to save user: ' + (err.message || 'Unknown error'));
+      }
     } finally {
       setSubmitting(false);
     }
@@ -499,7 +487,7 @@ const UserManagement = ({ active = true }) => {
                 color: '#495057',
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
-                width: '350px'
+                width: '280px'
               }}>Actions</th>
             </tr>
           </thead>
@@ -560,7 +548,7 @@ const UserManagement = ({ active = true }) => {
                     {user.is_active ? 'Active' : 'Inactive'}
                   </span>
                 </td>
-                <td style={{ padding: '1.25rem 1rem', minWidth: '350px' }}>
+                <td style={{ padding: '1.25rem 1rem', minWidth: '280px' }}>
                   <div style={{ 
                     display: 'flex', 
                     gap: '0.5rem', 
@@ -606,26 +594,6 @@ const UserManagement = ({ active = true }) => {
                       onMouseLeave={(e) => e.target.style.backgroundColor = '#ffc107'}
                     >
                       Edit
-                    </button>
-                    <button
-                      onClick={() => handleChangeUsername(user)}
-                      style={{
-                        padding: '0.375rem 0.75rem',
-                        backgroundColor: '#6f42c1',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => e.target.style.backgroundColor = '#5a32a3'}
-                      onMouseLeave={(e) => e.target.style.backgroundColor = '#6f42c1'}
-                    >
-                      Username
                     </button>
                     {user.is_active ? (
                       <button
@@ -729,72 +697,11 @@ const UserManagement = ({ active = true }) => {
           }}>
             <h2 style={{ marginBottom: '1.5rem', color: '#333' }}>
               {modalMode === 'add' ? 'Add New User' : 
-               modalMode === 'edit' ? 'Edit User' : 
-               modalMode === 'changeUsername' ? 'Change Username' : 'View User'}
+               modalMode === 'edit' ? 'Edit User' : 'View User'}
             </h2>
             
             {modalLoading ? (
               <LoadingSpinner size="medium" />
-            ) : modalMode === 'changeUsername' ? (
-              <form onSubmit={handleUsernameChange}>
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                    Current Username: {selectedUser?.username}
-                  </label>
-                </div>
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                    New Username
-                  </label>
-                  <input
-                    type="text"
-                    value={newUsername}
-                    onChange={(e) => setNewUsername(e.target.value)}
-                    required
-                    pattern="[a-zA-Z0-9_]+"
-                    title="Username can only contain letters, numbers, and underscores"
-                    style={{
-                      width: '100%',
-                      padding: '0.5rem',
-                      border: '1px solid #ddd',
-                      borderRadius: '4px',
-                      color: '#333'
-                    }}
-                  />
-                  <div style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.25rem' }}>
-                    Only letters, numbers, and underscores allowed (minimum 3 characters)
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      border: '1px solid #ddd',
-                      backgroundColor: 'white',
-                      color: '#666',
-                      borderRadius: '4px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    style={{
-                      padding: '0.5rem 1rem',
-                      backgroundColor: '#6f42c1',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Change Username
-                  </button>
-                </div>
-              </form>
             ) : (
             
             <form onSubmit={handleSubmit}>
@@ -809,6 +716,8 @@ const UserManagement = ({ active = true }) => {
                   onChange={handleInputChange}
                   disabled={modalMode === 'view'}
                   required
+                  pattern="[a-zA-Z0-9_]+"
+                  title="Username can only contain letters, numbers, and underscores"
                   style={{
                     width: '100%',
                     padding: '0.5rem',
@@ -818,6 +727,11 @@ const UserManagement = ({ active = true }) => {
                     color: '#333'
                   }}
                 />
+                {modalMode === 'edit' && (
+                  <div style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.25rem' }}>
+                    Only letters, numbers, and underscores allowed (minimum 3 characters)
+                  </div>
+                )}
               </div>
 
               <div style={{ marginBottom: '1rem' }}>
