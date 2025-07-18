@@ -31,6 +31,11 @@ function AuthWrapper() {
           setUserData(userObj);
           setIsAuthenticated(true);
           console.log("Session validated for user:", userObj.username);
+          console.log("User admin fields on session restore:", {
+            is_admin: userObj.is_admin,
+            is_staff: userObj.is_staff,
+            role: userObj.role
+          });
         }
       } catch (error) {
         console.error("Error validating session:", error);
@@ -49,6 +54,11 @@ function AuthWrapper() {
   const handleLoginSuccess = (authData) => {
     console.log("Login successful for user:", authData.user.username);
     console.log("Token received:", authData.token ? authData.token.substring(0, 50) + '...' : 'No token');
+    console.log("User admin status:", {
+      is_admin: authData.user.is_admin,
+      is_staff: authData.user.is_staff,
+      role: authData.user.role
+    });
 
     try {
       // Store authentication data
@@ -135,14 +145,35 @@ function AuthWrapper() {
     );
   }
 
-  // Check if user is admin
-  const isAdmin = userData &&
-    (userData.is_admin === true ||
-      userData.is_staff === true ||
-      (userData.role && userData.role.toLowerCase() === "admin") ||
-      (userData.role && userData.role.toLowerCase() === "administrator"));
+  // Check if user is admin - robust detection with multiple fallbacks
+  const isAdmin = userData && (
+    // Primary admin flags
+    userData.is_admin === true ||
+    userData.is_staff === true ||
+    // Role-based detection (case-insensitive)
+    (userData.role && [
+      'admin', 'administrator', 'bluevisionadmin', 'superuser', 'super_user'
+    ].includes(userData.role.toLowerCase())) ||
+    // Legacy role check for backwards compatibility
+    (userData.role && userData.role.toLowerCase().includes('admin'))
+  );
 
-  console.log("Auth state:", { isAuthenticated, isAdmin, userData });
+  // Enhanced logging for admin detection debugging
+  console.log("Auth state:", { 
+    isAuthenticated, 
+    isAdmin, 
+    userData,
+    adminChecks: userData ? {
+      is_admin: userData.is_admin,
+      is_staff: userData.is_staff,
+      role: userData.role,
+      roleLower: userData.role?.toLowerCase(),
+      adminRoleMatch: userData.role && [
+        'admin', 'administrator', 'bluevisionadmin', 'superuser', 'super_user'
+      ].includes(userData.role.toLowerCase()),
+      legacyAdminMatch: userData.role && userData.role.toLowerCase().includes('admin')
+    } : null
+  });
 
   return (
     <Router>

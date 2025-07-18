@@ -295,6 +295,11 @@ class TurboMassiveDatabasePopulator:
         relationship_types = ['bilateral', 'community', 'hierarchical']
         statuses = ['pending', 'active', 'suspended']
         
+        # Check if we have organizations and users to work with
+        if not self.organizations or not self.users:
+            print(f"Skipping trust relationships - no organizations ({len(self.organizations)}) or users ({len(self.users)}) available")
+            return created_relationships
+        
         attempts = 0
         max_attempts = batch_size * 10  # Increased retry attempts
         
@@ -391,6 +396,11 @@ class TurboMassiveDatabasePopulator:
     def create_trust_group_batch(self, batch_size):
         """Create a batch of trust groups"""
         created_groups = []
+        
+        # Check if we have organizations and users to work with
+        if not self.organizations or not self.users:
+            print(f"Skipping trust groups - no organizations ({len(self.organizations)}) or users ({len(self.users)}) available")
+            return created_groups
         
         for i in range(batch_size):
             try:

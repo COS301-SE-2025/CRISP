@@ -172,6 +172,8 @@ class AuthenticationService:
             'role': user.role,
             'is_publisher': user.is_publisher,
             'is_verified': user.is_verified,
+            'is_admin': user.is_superuser,
+            'is_staff': user.is_staff,
             'last_login': user.last_login.isoformat() if user.last_login else None,
             'two_factor_enabled': user.two_factor_enabled
         }

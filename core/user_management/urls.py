@@ -39,6 +39,7 @@ urlpatterns = [
     path('api/v1/users/statistics/', UserViewSet.as_view({'get': 'statistics'}), name='users-statistics'),
     path('api/v1/users/<uuid:pk>/', UserViewSet.as_view({'get': 'get_user', 'put': 'update_user', 'patch': 'update_user'}), name='users-detail'),
     path('api/v1/users/<uuid:pk>/deactivate/', UserViewSet.as_view({'post': 'deactivate_user'}), name='users-deactivate'),
+    path('api/v1/users/<uuid:pk>/reactivate/', UserViewSet.as_view({'post': 'reactivate_user'}), name='users-reactivate'),
     
     # Organization management endpoints
     path('api/v1/organizations/create/', OrganizationViewSet.as_view({'post': 'create_organization'}), name='organizations-create'),
