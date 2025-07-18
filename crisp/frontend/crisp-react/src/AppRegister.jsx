@@ -420,6 +420,10 @@ function Header({ user, onLogout, navigateToRegisterUser, showPage }) {
                           <i className="fas fa-university"></i>
                           <span>Institution Management</span>
                         </button>
+                        <button className="submenu-item" onClick={() => {setShowUserMenu(false); setShowManagementSubmenu(false); showPage('trust-management');}} type="button">
+                          <i className="fas fa-handshake"></i>
+                          <span>Trust Management</span>
+                        </button>
                       </div>
                     )}
                   </div>
