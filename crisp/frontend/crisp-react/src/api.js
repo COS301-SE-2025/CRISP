@@ -447,12 +447,20 @@ export const updateAlertSubscriptions = async (subscriptionData) => {
 
 // Trust Management API functions
 export const getTrustRelationships = async () => {
-  const response = await fetch(`${API_URL}organizations/trust-relationships/`, {
-    method: 'GET',
-    headers: { ...authHeader() }
-  });
-  
-  return await handleResponse(response);
+  try {
+    // Try to get trust overview from admin endpoint first
+    const response = await fetch(`${API_URL}admin/trust-overview/`, {
+      method: 'GET',
+      headers: { ...authHeader() }
+    });
+    
+    const result = await handleResponse(response);
+    // Extract relationships from the trust overview data
+    return result.data && result.data.relationships ? result.data.relationships : [];
+  } catch (error) {
+    console.error('Failed to fetch trust relationships:', error);
+    return [];
+  }
 };
 
 export const createTrustRelationship = async (orgId, trustData) => {
@@ -466,12 +474,29 @@ export const createTrustRelationship = async (orgId, trustData) => {
 };
 
 export const getTrustMetrics = async () => {
-  const response = await fetch(`${API_URL}organizations/trust-metrics/`, {
-    method: 'GET',
-    headers: { ...authHeader() }
-  });
-  
-  return await handleResponse(response);
+  try {
+    const response = await fetch(`${API_URL}organizations/trust-metrics/`, {
+      method: 'GET',
+      headers: { ...authHeader() }
+    });
+    
+    return await handleResponse(response);
+  } catch (error) {
+    console.error('Failed to fetch trust metrics:', error);
+    // Try to get from admin trust overview as fallback
+    try {
+      const adminResponse = await fetch(`${API_URL}admin/trust-overview/`, {
+        method: 'GET',
+        headers: { ...authHeader() }
+      });
+      
+      const adminResult = await handleResponse(adminResponse);
+      return adminResult.data || {};
+    } catch (adminError) {
+      console.error('Failed to fetch admin trust overview:', adminError);
+      return {};
+    }
+  }
 };
 
 export const updateTrustRelationship = async (relationshipId, updateData) => {
