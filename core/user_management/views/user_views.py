@@ -364,6 +364,109 @@ class UserViewSet(GenericViewSet):
                 'message': 'Failed to update profile'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
+    @action(detail=True, methods=['delete'])
+    def delete_user(self, request, pk=None):
+        """
+        Permanently delete a user account.
+        
+        Expected payload:
+        {
+            "reason": "string",
+            "confirm": true
+        }
+        """
+        try:
+            reason = request.data.get('reason', '')
+            confirm = request.data.get('confirm', False)
+            
+            if not confirm:
+                return Response({
+                    'success': False,
+                    'message': 'Confirmation required to delete user'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            success = self.user_service.delete_user_permanently(
+                deleting_user=request.user,
+                user_id=pk,
+                reason=reason
+            )
+            
+            if success:
+                return Response({
+                    'success': True,
+                    'data': {
+                        'message': 'User deleted successfully',
+                        'user_id': pk,
+                        'reason': reason
+                    }
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    'success': False,
+                    'message': 'Failed to delete user'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        except (ValidationError, PermissionDenied) as e:
+            return Response({
+                'success': False,
+                'message': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        except Exception as e:
+            logger.error(f"Delete user error: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Failed to delete user'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=True, methods=['patch'])
+    def change_username(self, request, pk=None):
+        """
+        Change a user's username.
+        
+        Expected payload:
+        {
+            "new_username": "string"
+        }
+        """
+        try:
+            new_username = request.data.get('new_username')
+            
+            if not new_username:
+                return Response({
+                    'success': False,
+                    'message': 'New username is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            updated_user = self.user_service.change_username(
+                requesting_user=request.user,
+                user_id=pk,
+                new_username=new_username
+            )
+            
+            user_details = self.user_service.get_user_details(request.user, str(updated_user.id))
+            
+            return Response({
+                'success': True,
+                'data': {
+                    'user': user_details,
+                    'message': f'Username changed to {new_username} successfully'
+                }
+            }, status=status.HTTP_200_OK)
+        
+        except (ValidationError, PermissionDenied) as e:
+            return Response({
+                'success': False,
+                'message': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        except Exception as e:
+            logger.error(f"Change username error: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Failed to change username'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
     @action(detail=False, methods=['get'])
     def statistics(self, request):
         """Get user statistics for accessible organizations."""

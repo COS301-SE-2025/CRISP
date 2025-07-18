@@ -11,12 +11,32 @@ const handleResponse = async (response) => {
   console.log('API Response Data:', data);
   
   if (!response.ok) {
-    // If response has a detail message, use it, otherwise use a generic error
-    const error = (data && data.detail) || 
-                  (data && data.message) ||
-                  (data && data.non_field_errors && data.non_field_errors[0]) || 
-                  response.statusText || 
-                  'Something went wrong';
+    // Handle different error response formats
+    let error;
+    
+    if (data && data.detail) {
+      error = data.detail;
+    } else if (data && data.message) {
+      error = data.message;
+    } else if (data && data.non_field_errors) {
+      error = Array.isArray(data.non_field_errors) ? data.non_field_errors.join(', ') : data.non_field_errors;
+    } else if (data && Array.isArray(data)) {
+      error = data.join(', ');
+    } else if (data && typeof data === 'object') {
+      // Handle field-specific errors
+      const fieldErrors = [];
+      for (const [field, messages] of Object.entries(data)) {
+        if (Array.isArray(messages)) {
+          fieldErrors.push(...messages);
+        } else if (typeof messages === 'string') {
+          fieldErrors.push(messages);
+        }
+      }
+      error = fieldErrors.length > 0 ? fieldErrors.join(', ') : response.statusText || 'Something went wrong';
+    } else {
+      error = response.statusText || 'Something went wrong';
+    }
+    
     console.error('API Error:', error);
     return Promise.reject(error);
   }
@@ -427,12 +447,20 @@ export const updateAlertSubscriptions = async (subscriptionData) => {
 
 // Trust Management API functions
 export const getTrustRelationships = async () => {
-  const response = await fetch(`${API_URL}organizations/trust-relationships/`, {
-    method: 'GET',
-    headers: { ...authHeader() }
-  });
-  
-  return await handleResponse(response);
+  try {
+    // Try to get trust overview from admin endpoint first
+    const response = await fetch(`${API_URL}admin/trust-overview/`, {
+      method: 'GET',
+      headers: { ...authHeader() }
+    });
+    
+    const result = await handleResponse(response);
+    // Extract relationships from the trust overview data
+    return result.data && result.data.relationships ? result.data.relationships : [];
+  } catch (error) {
+    console.error('Failed to fetch trust relationships:', error);
+    return [];
+  }
 };
 
 export const createTrustRelationship = async (trustData) => {
@@ -446,12 +474,29 @@ export const createTrustRelationship = async (trustData) => {
 };
 
 export const getTrustMetrics = async () => {
-  const response = await fetch(`${API_URL}organizations/trust-metrics/`, {
-    method: 'GET',
-    headers: { ...authHeader() }
-  });
-  
-  return await handleResponse(response);
+  try {
+    const response = await fetch(`${API_URL}organizations/trust-metrics/`, {
+      method: 'GET',
+      headers: { ...authHeader() }
+    });
+    
+    return await handleResponse(response);
+  } catch (error) {
+    console.error('Failed to fetch trust metrics:', error);
+    // Try to get from admin trust overview as fallback
+    try {
+      const adminResponse = await fetch(`${API_URL}admin/trust-overview/`, {
+        method: 'GET',
+        headers: { ...authHeader() }
+      });
+      
+      const adminResult = await handleResponse(adminResponse);
+      return adminResult.data || {};
+    } catch (adminError) {
+      console.error('Failed to fetch admin trust overview:', adminError);
+      return {};
+    }
+  }
 };
 
 export const updateTrustRelationship = async (relationshipId, updateData) => {
@@ -621,6 +666,28 @@ export const reactivateUser = async (userId, reason = '') => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify({ reason })
+  });
+  
+  return await handleResponse(response);
+};
+
+// Permanently delete user
+export const deleteUser = async (userId, reason = '') => {
+  const response = await fetch(`${API_URL}users/${userId}/delete_user/`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify({ reason, confirm: true })
+  });
+  
+  return await handleResponse(response);
+};
+
+// Change username
+export const changeUsername = async (userId, newUsername) => {
+  const response = await fetch(`${API_URL}users/${userId}/change_username/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify({ new_username: newUsername })
   });
   
   return await handleResponse(response);

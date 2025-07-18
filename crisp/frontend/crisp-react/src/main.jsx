@@ -9,7 +9,9 @@ import CrispLogin from "./crisp_login.jsx";
 import LandingPage from "./LandingPage.jsx";
 import Construction from "./construction.jsx";
 import UserManagement from "./components/UserManagement.jsx";
+import TrustManagement from "./components/TrustManagement.jsx";
 import "./assets/index.css";
+import "./assets/trust-management.css";
 
 // Import Font Awesome
 import "@fortawesome/fontawesome-free/css/all.min.css";
@@ -248,6 +250,22 @@ function AuthWrapper() {
             isAuthenticated ? (
               isAdmin ? (
                 <UserManagement />
+              ) : (
+                <Navigate to="/dashboard" replace />
+              )
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+
+        {/* Trust Management route - Publisher and Admin access */}
+        <Route
+          path="/trust-management"
+          element={
+            isAuthenticated ? (
+              (userData?.role === 'publisher' || userData?.role === 'BlueVisionAdmin' || isAdmin) ? (
+                <TrustManagement active={true} />
               ) : (
                 <Navigate to="/dashboard" replace />
               )

@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import CSSStyles from './assets/CSSStyles'; // Import the separate CSS file
+import './assets/trust-management.css'; // Import Trust Management CSS
 import logoImage from './assets/BlueV2.png';
 import * as api from './api.js';
 import UserManagementComponent from './components/UserManagement';
+import TrustManagement from './components/TrustManagement';
 import LoadingSpinner from './components/LoadingSpinner';
 
 
@@ -171,7 +173,7 @@ function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthW
           />
 
           {/* Trust Management - Publishers and BlueVision Admins only */}
-          {(isPublisher || isBlueVisionAdmin) && <TrustManagement active={activePage === 'trust-management'} userRole={userRole} userOrganization={userOrganization} />}
+          {(isPublisher || isBlueVisionAdmin) && <TrustManagement active={activePage === 'trust-management'} />}
 
           {/* User Management - Publishers and BlueVision Admins only */}
           {(isPublisher || isBlueVisionAdmin || userRole === 'admin') && <UserManagementComponent active={activePage === 'user-management'} />}
@@ -385,13 +387,17 @@ function Header({ user, onLogout, isAdmin, isBlueVisionAdmin, isPublisher, userR
                     <span>Account Settings</span>
                   </button>
                   
-                  {/* Show user management for publishers and BlueVision admins */}
+                  {/* Show management options for publishers and BlueVision admins */}
                   {(isPublisher || isBlueVisionAdmin || userRole === 'admin') && (
                     <>
                       <div className="menu-divider"></div>
-                      <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('user-management');}}>
+                      <button className="menu-item" onClick={() => {setShowUserMenu(false); window.location.href = '/user-management';}}>
                         <i className="fas fa-users"></i>
                         <span>User Management</span>
+                      </button>
+                      <button className="menu-item" onClick={() => {setShowUserMenu(false); window.location.href = '/trust-management';}}>
+                        <i className="fas fa-handshake"></i>
+                        <span>Trust Management</span>
                       </button>
                     </>
                   )}
@@ -2617,8 +2623,8 @@ function ChangePasswordForm({ onClose }) {
   );
 }
 
-// Trust Management Component - Simplified for now
-function TrustManagement({ active }) {
+// Trust Management Component is now imported from separate file - old components below are kept for reference
+function TrustManagementOld({ active }) {
   const [trustRelationships, setTrustRelationships] = useState([]);
   const [trustMetrics, setTrustMetrics] = useState(null);
   const [loading, setLoading] = useState(false);
