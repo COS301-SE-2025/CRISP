@@ -57,10 +57,14 @@ function TrustManagement({ active }) {
       ]);
 
       setTrustData({
-        relationships: relationshipsResponse.data || relationshipsResponse || [],
-        groups: groupsResponse.data || groupsResponse || [],
-        metrics: metricsResponse.data || metricsResponse || {},
-        organizations: orgsResponse.data || orgsResponse || []
+        relationships: Array.isArray(relationshipsResponse.data) ? relationshipsResponse.data : 
+                      Array.isArray(relationshipsResponse) ? relationshipsResponse : [],
+        groups: Array.isArray(groupsResponse.data) ? groupsResponse.data : 
+                Array.isArray(groupsResponse) ? groupsResponse : [],
+        metrics: (metricsResponse.data && typeof metricsResponse.data === 'object') ? metricsResponse.data : 
+                (metricsResponse && typeof metricsResponse === 'object') ? metricsResponse : {},
+        organizations: Array.isArray(orgsResponse.data) ? orgsResponse.data : 
+                      Array.isArray(orgsResponse) ? orgsResponse : []
       });
     } catch (err) {
       console.error('Error fetching trust data:', err);
@@ -160,13 +164,13 @@ function TrustManagement({ active }) {
           className={`tab ${activeTab === 'relationships' ? 'active' : ''}`}
           onClick={() => setActiveTab('relationships')}
         >
-          Trust Relationships ({trustData.relationships.length})
+          Trust Relationships ({Array.isArray(trustData.relationships) ? trustData.relationships.length : 0})
         </button>
         <button 
           className={`tab ${activeTab === 'groups' ? 'active' : ''}`}
           onClick={() => setActiveTab('groups')}
         >
-          Trust Groups ({trustData.groups.length})
+          Trust Groups ({Array.isArray(trustData.groups) ? trustData.groups.length : 0})
         </button>
         <button 
           className={`tab ${activeTab === 'metrics' ? 'active' : ''}`}
@@ -189,7 +193,7 @@ function TrustManagement({ active }) {
           </div>
 
           <div className="relationships-grid">
-            {trustData.relationships.length === 0 ? (
+            {!Array.isArray(trustData.relationships) || trustData.relationships.length === 0 ? (
               <div className="no-data">
                 <p>No trust relationships found.</p>
                 <p>Create your first trust relationship to start collaborating with other organizations.</p>
@@ -245,7 +249,7 @@ function TrustManagement({ active }) {
           </div>
 
           <div className="groups-grid">
-            {trustData.groups.length === 0 ? (
+            {!Array.isArray(trustData.groups) || trustData.groups.length === 0 ? (
               <div className="no-data">
                 <p>No trust groups found.</p>
                 <p>Create or join trust groups to collaborate with multiple organizations.</p>
@@ -286,11 +290,11 @@ function TrustManagement({ active }) {
           <div className="metrics-grid">
             <div className="metric-card">
               <h4>Total Relationships</h4>
-              <div className="metric-value">{trustData.relationships.length}</div>
+              <div className="metric-value">{Array.isArray(trustData.relationships) ? trustData.relationships.length : 0}</div>
             </div>
             <div className="metric-card">
               <h4>Active Groups</h4>
-              <div className="metric-value">{trustData.groups.length}</div>
+              <div className="metric-value">{Array.isArray(trustData.groups) ? trustData.groups.length : 0}</div>
             </div>
             <div className="metric-card">
               <h4>Trust Score</h4>
@@ -325,9 +329,9 @@ function TrustManagement({ active }) {
                   onChange={(e) => setNewRelationship({...newRelationship, target_organization: e.target.value})}
                 >
                   <option value="">Select Organization</option>
-                  {trustData.organizations.map(org => (
+                  {Array.isArray(trustData.organizations) ? trustData.organizations.map(org => (
                     <option key={org.id} value={org.id}>{org.name}</option>
-                  ))}
+                  )) : null}
                 </select>
               </div>
               <div className="form-group">

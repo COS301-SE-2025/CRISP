@@ -44,7 +44,6 @@ const InstitutionManagement = ({ active = true }) => {
     try {
       setLoading(true);
       setError(null);
-      await new Promise(resolve => setTimeout(resolve, 1000));
       const response = await getOrganizations();
       console.log('Institutions API response:', response);
       console.log('Full response object:', JSON.stringify(response, null, 2));
@@ -271,7 +270,6 @@ const InstitutionManagement = ({ active = true }) => {
     try {
       setSubmitting(true);
       setError(null); // Clear previous errors
-      await new Promise(resolve => setTimeout(resolve, 1000));
       
       if (modalMode === 'add') {
         console.log('Creating institution with data:', formData);
