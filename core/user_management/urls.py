@@ -49,6 +49,9 @@ urlpatterns = [
     path('api/v1/organizations/<uuid:pk>/', OrganizationViewSet.as_view({'get': 'get_organization', 'put': 'update_organization', 'patch': 'update_organization'}), name='organizations-detail'),
     path('api/v1/organizations/<uuid:pk>/deactivate/', OrganizationViewSet.as_view({'post': 'deactivate_organization'}), name='organizations-deactivate'),
     path('api/v1/organizations/<uuid:pk>/trust-relationship/', OrganizationViewSet.as_view({'post': 'create_trust_relationship'}), name='organizations-trust-relationship'),
+    path('api/v1/organizations/trust-relationships/', OrganizationViewSet.as_view({'get': 'list_trust_relationships'}), name='organizations-trust-relationships'),
+    path('api/v1/organizations/trust-relationships/<uuid:pk>/', OrganizationViewSet.as_view({'put': 'update_trust_relationship', 'delete': 'delete_trust_relationship'}), name='organizations-trust-relationship-detail'),
+    path('api/v1/organizations/trust-groups/', OrganizationViewSet.as_view({'get': 'list_trust_groups', 'post': 'create_trust_group'}), name='organizations-trust-groups'),
     
     # Admin endpoints
     path('api/v1/admin/dashboard/', AdminViewSet.as_view({'get': 'dashboard'}), name='admin-dashboard'),

@@ -435,8 +435,8 @@ export const getTrustRelationships = async () => {
   return await handleResponse(response);
 };
 
-export const createTrustRelationship = async (orgId, trustData) => {
-  const response = await fetch(`${API_URL}organizations/${orgId}/trust-relationship/`, {
+export const createTrustRelationship = async (trustData) => {
+  const response = await fetch(`${API_URL}organizations/${trustData.target_organization}/trust-relationship/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(trustData)

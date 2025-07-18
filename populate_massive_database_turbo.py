@@ -671,8 +671,8 @@ class TurboMassiveDatabasePopulator:
                 ("👥 Phase 5/7", self.create_users),
                 ("🤝 Phase 6/7", self.create_trust_relationships),
                 ("🏗️ Phase 7/7", self.create_trust_groups),
-                # ("🔐 Phase 8/7", self.create_user_sessions),
-                # ("📝 Phase 9/7", self.create_audit_logs),
+                ("🔐 Phase 8/7", self.create_user_sessions),
+                ("📝 Phase 9/7", self.create_audit_logs),
             ]
             
             print(f"\n🎯 Executing {len(phases)} phases with turbo speed...")

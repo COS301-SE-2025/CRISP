@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.core.exceptions import ValidationError, PermissionDenied
+from django.db.models import Q
 from ..services.organization_service import OrganizationService
 from ..services.trust_aware_service import TrustAwareService
 from ..services.access_control_service import AccessControlService
@@ -397,3 +398,267 @@ class OrganizationViewSet(GenericViewSet):
         else:
             ip = request.META.get('REMOTE_ADDR', '127.0.0.1')
         return ip
+
+    def list_trust_relationships(self, request):
+        """List trust relationships for user's organization."""
+        try:
+            from core.trust.models import TrustRelationship
+            
+            user_org = request.user.organization
+            if not user_org:
+                return Response({
+                    'success': False,
+                    'message': 'User is not associated with an organization'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Get all trust relationships where this org is source or target
+            relationships = TrustRelationship.objects.filter(
+                Q(source_organization=user_org) | 
+                Q(target_organization=user_org)
+            ).select_related('source_organization', 'target_organization', 'trust_level')
+            
+            relationship_data = []
+            for rel in relationships:
+                # Determine which is the "other" organization
+                other_org = rel.target_organization if rel.source_organization == user_org else rel.source_organization
+                
+                relationship_data.append({
+                    'id': str(rel.id),
+                    'target_organization_name': other_org.name,
+                    'target_organization_id': str(other_org.id),
+                    'trust_level': rel.trust_level.name if rel.trust_level else None,
+                    'trust_score': rel.trust_level.numerical_value if rel.trust_level else 0,
+                    'relationship_type': rel.relationship_type,
+                    'status': rel.status,
+                    'notes': rel.notes,
+                    'created_at': rel.created_at.isoformat() if rel.created_at else None,
+                    'is_source': rel.source_organization == user_org
+                })
+            
+            return Response({
+                'success': True,
+                'data': relationship_data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"List trust relationships error: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Failed to retrieve trust relationships'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def update_trust_relationship(self, request, pk=None):
+        """Update a trust relationship."""
+        try:
+            from core.trust.models import TrustRelationship, TrustLevel
+            
+            user_org = request.user.organization
+            if not user_org:
+                return Response({
+                    'success': False,
+                    'message': 'User is not associated with an organization'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Get the relationship
+            try:
+                relationship = TrustRelationship.objects.get(
+                    id=pk,
+                    Q(source_organization=user_org) | 
+                    Q(target_organization=user_org)
+                )
+            except TrustRelationship.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': 'Trust relationship not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Update fields
+            trust_level_id = request.data.get('trust_level')
+            if trust_level_id:
+                try:
+                    trust_level = TrustLevel.objects.get(id=trust_level_id)
+                    relationship.trust_level = trust_level
+                except TrustLevel.DoesNotExist:
+                    return Response({
+                        'success': False,
+                        'message': 'Invalid trust level'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            
+            if 'notes' in request.data:
+                relationship.notes = request.data.get('notes')
+            
+            if 'status' in request.data:
+                relationship.status = request.data.get('status')
+            
+            relationship.save()
+            
+            return Response({
+                'success': True,
+                'message': 'Trust relationship updated successfully',
+                'data': {
+                    'id': str(relationship.id),
+                    'status': relationship.status,
+                    'trust_level': relationship.trust_level.name if relationship.trust_level else None
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Update trust relationship error: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Failed to update trust relationship'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def delete_trust_relationship(self, request, pk=None):
+        """Delete a trust relationship."""
+        try:
+            from core.trust.models import TrustRelationship
+            
+            user_org = request.user.organization
+            if not user_org:
+                return Response({
+                    'success': False,
+                    'message': 'User is not associated with an organization'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Get the relationship
+            try:
+                relationship = TrustRelationship.objects.get(
+                    id=pk,
+                    Q(source_organization=user_org) | 
+                    Q(target_organization=user_org)
+                )
+            except TrustRelationship.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': 'Trust relationship not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Delete the relationship
+            relationship.delete()
+            
+            return Response({
+                'success': True,
+                'message': 'Trust relationship deleted successfully'
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Delete trust relationship error: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Failed to delete trust relationship'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def list_trust_groups(self, request):
+        """List trust groups."""
+        try:
+            from core.trust.models import TrustGroup, TrustGroupMembership
+            
+            user_org = request.user.organization
+            if not user_org:
+                return Response({
+                    'success': False,
+                    'message': 'User is not associated with an organization'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Get trust groups where this org is a member
+            memberships = TrustGroupMembership.objects.filter(
+                organization=user_org
+            ).select_related('group', 'group__default_trust_level')
+            
+            group_data = []
+            for membership in memberships:
+                group = membership.group
+                group_data.append({
+                    'id': str(group.id),
+                    'name': group.name,
+                    'description': group.description,
+                    'trust_level': group.default_trust_level.name if group.default_trust_level else None,
+                    'group_type': group.metadata.get('group_type', 'unknown') if group.metadata else 'unknown',
+                    'member_count': group.trustgroupmembership_set.count(),
+                    'is_active': group.is_active,
+                    'created_at': group.created_at.isoformat() if group.created_at else None,
+                    'user_role': membership.role
+                })
+            
+            return Response({
+                'success': True,
+                'data': group_data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"List trust groups error: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Failed to retrieve trust groups'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def create_trust_group(self, request):
+        """Create a new trust group."""
+        try:
+            from core.trust.models import TrustGroup, TrustLevel, TrustGroupMembership
+            
+            user_org = request.user.organization
+            if not user_org:
+                return Response({
+                    'success': False,
+                    'message': 'User is not associated with an organization'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Get request data
+            name = request.data.get('name')
+            description = request.data.get('description', '')
+            trust_level_name = request.data.get('trust_level')
+            group_type = request.data.get('group_type', 'industry')
+            
+            if not name:
+                return Response({
+                    'success': False,
+                    'message': 'Group name is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Get trust level
+            trust_level = None
+            if trust_level_name:
+                try:
+                    trust_level = TrustLevel.objects.get(name=trust_level_name)
+                except TrustLevel.DoesNotExist:
+                    return Response({
+                        'success': False,
+                        'message': 'Invalid trust level'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Create the group
+            group = TrustGroup.objects.create(
+                name=name,
+                description=description,
+                default_trust_level=trust_level,
+                created_by=request.user,
+                metadata={'group_type': group_type}
+            )
+            
+            # Add the creator's organization as an admin member
+            TrustGroupMembership.objects.create(
+                group=group,
+                organization=user_org,
+                role='admin'
+            )
+            
+            return Response({
+                'success': True,
+                'message': 'Trust group created successfully',
+                'data': {
+                    'id': str(group.id),
+                    'name': group.name,
+                    'description': group.description,
+                    'trust_level': group.default_trust_level.name if group.default_trust_level else None,
+                    'group_type': group_type
+                }
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            logger.error(f"Create trust group error: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Failed to create trust group'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

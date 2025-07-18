@@ -7,6 +7,7 @@ import { getUserProfile, updateUserProfile, getUserStatistics, changePassword, g
 import LoadingSpinner from './components/LoadingSpinner.jsx';
 import UserManagement from './components/UserManagement.jsx';
 import InstitutionManagement from './components/InstitutionManagement.jsx';
+import TrustManagement from './components/TrustManagement.jsx';
 
 
 function AppRegister({ user, onLogout }) {
@@ -96,6 +97,9 @@ function AppRegister({ user, onLogout }) {
 
           {/* Institution Management */}
           <InstitutionManagement active={activePage === 'institution-management'} />
+
+          {/* Trust Management */}
+          <TrustManagement active={activePage === 'trust-management'} />
 
           {/* Account Settings */}
           <AccountSettings active={activePage === 'account-settings'} user={user} />
