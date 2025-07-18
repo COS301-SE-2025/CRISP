@@ -42,11 +42,27 @@ const UserManagement = ({ active = true }) => {
   const loadUsers = async () => {
     try {
       setLoading(true);
+      setError(null);
       // Add delay to show loading spinner
       await new Promise(resolve => setTimeout(resolve, 1000));
       const response = await api.getUsersList();
       console.log('Users API response:', response); // Debug log
-      const usersData = response.data?.users || response.users || response.data || [];
+      console.log('Full response object:', JSON.stringify(response, null, 2));
+      
+      // More robust data extraction
+      let usersData = [];
+      if (response.data && response.data.users) {
+        usersData = response.data.users;
+      } else if (response.users) {
+        usersData = response.users;
+      } else if (response.data && Array.isArray(response.data)) {
+        usersData = response.data;
+      } else if (Array.isArray(response)) {
+        usersData = response;
+      }
+      
+      console.log('Extracted users data:', usersData);
+      console.log('Users data length:', usersData.length);
       setUsers(Array.isArray(usersData) ? usersData : []);
     } catch (err) {
       console.error('Failed to load users:', err);

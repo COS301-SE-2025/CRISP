@@ -42,10 +42,26 @@ const InstitutionManagement = ({ active = true }) => {
   const loadInstitutions = async () => {
     try {
       setLoading(true);
+      setError(null);
       await new Promise(resolve => setTimeout(resolve, 1000));
       const response = await getOrganizations();
       console.log('Institutions API response:', response);
-      const institutionsData = response.data?.organizations || response.organizations || response.data || [];
+      console.log('Full response object:', JSON.stringify(response, null, 2));
+      
+      // More robust data extraction
+      let institutionsData = [];
+      if (response.data && response.data.organizations) {
+        institutionsData = response.data.organizations;
+      } else if (response.organizations) {
+        institutionsData = response.organizations;
+      } else if (response.data && Array.isArray(response.data)) {
+        institutionsData = response.data;
+      } else if (Array.isArray(response)) {
+        institutionsData = response;
+      }
+      
+      console.log('Extracted institutions data:', institutionsData);
+      console.log('Institutions data length:', institutionsData.length);
       setInstitutions(Array.isArray(institutionsData) ? institutionsData : []);
     } catch (err) {
       console.error('Failed to load institutions:', err);
@@ -194,23 +210,45 @@ const InstitutionManagement = ({ active = true }) => {
     e.preventDefault();
     try {
       setSubmitting(true);
+      setError(null); // Clear previous errors
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       if (modalMode === 'add') {
         console.log('Creating institution with data:', formData);
-        await createOrganization(formData);
+        const response = await createOrganization(formData);
+        console.log('Institution created successfully:', response);
       } else if (modalMode === 'edit') {
         const updateData = { ...formData };
         delete updateData.primary_user; // Don't send primary_user for updates
         console.log('Updating institution with data:', updateData);
         console.log('Selected institution ID:', selectedInstitution.id);
-        await updateOrganization(selectedInstitution.id, updateData);
+        const response = await updateOrganization(selectedInstitution.id, updateData);
+        console.log('Institution updated successfully:', response);
       }
       setShowModal(false);
       loadInstitutions();
     } catch (err) {
       console.error('Error in handleSubmit:', err);
-      setError('Failed to save institution: ' + err.message);
+      
+      // Handle different types of errors
+      let errorMessage = 'Failed to save institution';
+      
+      if (err.message) {
+        // Check if it's a validation error with specific messages
+        if (err.message.includes('Primary user username already exists')) {
+          errorMessage = 'Username already exists. Please choose a different username for the primary user.';
+        } else if (err.message.includes('Primary user email already exists')) {
+          errorMessage = 'Email already exists. Please choose a different email for the primary user.';
+        } else if (err.message.includes('Organization name already exists')) {
+          errorMessage = 'Institution name already exists. Please choose a different name.';
+        } else if (err.message.includes('Organization domain already exists')) {
+          errorMessage = 'Domain already exists. Please choose a different domain.';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -219,6 +257,11 @@ const InstitutionManagement = ({ active = true }) => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     console.log('Input change:', { name, value });
+    
+    // Clear error when user starts typing
+    if (error) {
+      setError(null);
+    }
     
     if (name.startsWith('primary_user.')) {
       const field = name.substring(13); // Remove 'primary_user.'
@@ -468,6 +511,18 @@ const InstitutionManagement = ({ active = true }) => {
             ) : (
             
             <form onSubmit={handleSubmit}>
+              {error && (
+                <div style={{
+                  backgroundColor: '#f8d7da',
+                  color: '#721c24',
+                  padding: '0.75rem',
+                  borderRadius: '4px',
+                  marginBottom: '1rem',
+                  border: '1px solid #f5c6cb'
+                }}>
+                  {error}
+                </div>
+              )}
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
                   Institution Name *

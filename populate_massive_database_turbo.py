@@ -654,15 +654,15 @@ class TurboMassiveDatabasePopulator:
         try:
             # Run all phases with progress tracking
             phases = [
-                # ("🧹 Phase 1/7", self.clear_existing_data),
-                # ("🔐 Phase 2/7", self.create_trust_levels),
-                # ("🏢 Phase 3/7", self.create_organizations),
-                # ("👑 Phase 4/7", self.create_super_admin_users),
-                # ("👥 Phase 5/7", self.create_users),
+                ("🧹 Phase 1/7", self.clear_existing_data),
+                ("🔐 Phase 2/7", self.create_trust_levels),
+                ("🏢 Phase 3/7", self.create_organizations),
+                ("👑 Phase 4/7", self.create_super_admin_users),
+                ("👥 Phase 5/7", self.create_users),
                 ("🤝 Phase 6/7", self.create_trust_relationships),
                 ("🏗️ Phase 7/7", self.create_trust_groups),
-                # ("🔐 Phase 8/7", self.create_user_sessions),
-                # ("📝 Phase 9/7", self.create_audit_logs),
+                ("🔐 Phase 8/7", self.create_user_sessions),
+                ("📝 Phase 9/7", self.create_audit_logs),
             ]
             
             print(f"\n🎯 Executing {len(phases)} phases with turbo speed...")

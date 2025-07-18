@@ -7,6 +7,9 @@ const API_URL = 'http://localhost:8000/api/v1/';
 const handleResponse = async (response) => {
   const data = await response.json();
   
+  console.log('API Response Status:', response.status);
+  console.log('API Response Data:', data);
+  
   if (!response.ok) {
     // If response has a detail message, use it, otherwise use a generic error
     const error = (data && data.detail) || 
@@ -14,12 +17,14 @@ const handleResponse = async (response) => {
                   (data && data.non_field_errors && data.non_field_errors[0]) || 
                   response.statusText || 
                   'Something went wrong';
+    console.error('API Error:', error);
     return Promise.reject(error);
   }
   
   // Check for UserTrust success field
   if (data.success === false) {
     const error = data.message || 'Authentication failed';
+    console.error('API Success=false Error:', error);
     return Promise.reject(error);
   }
   
