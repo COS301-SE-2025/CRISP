@@ -35,12 +35,18 @@ function TrustManagement({ active }) {
       let overviewData = {};
       if (adminOverview.status === 'fulfilled' && adminOverview.value) {
         overviewData = adminOverview.value.data || adminOverview.value;
+        console.log('Admin overview data received:', overviewData);
+      } else {
+        console.log('Admin overview failed or empty:', adminOverview);
       }
 
       // Process trust metrics data
       let metricsData = {};
       if (trustMetrics.status === 'fulfilled' && trustMetrics.value) {
         metricsData = trustMetrics.value.data || trustMetrics.value;
+        console.log('Trust metrics data received:', metricsData);
+      } else {
+        console.log('Trust metrics failed or empty:', trustMetrics);
       }
 
       // Mock data for demonstration if no real data
@@ -115,18 +121,35 @@ function TrustManagement({ active }) {
         }
       ];
 
+      // Always use mock data for now since backend may not have trust data yet
+      const hasRealData = (overviewData.relationships && overviewData.relationships.length > 0) ||
+                         (Array.isArray(overviewData) && overviewData.length > 0);
+      
+      console.log('Has real trust data:', hasRealData);
+      console.log('Using mock data for trust relationships');
+      
       setTrustData({
-        relationships: overviewData.relationships || mockRelationships,
-        groups: overviewData.groups || mockGroups,
+        relationships: hasRealData ? (overviewData.relationships || overviewData) : mockRelationships,
+        groups: hasRealData ? (overviewData.groups || []) : mockGroups,
         metrics: {
-          total_relationships: overviewData.relationships?.total || mockRelationships.length,
-          active_relationships: overviewData.relationships?.active || mockRelationships.filter(r => r.status === 'active').length,
-          pending_relationships: overviewData.relationships?.pending || 0,
-          total_groups: overviewData.groups?.total || mockGroups.length,
-          active_groups: overviewData.groups?.active || mockGroups.length,
+          total_relationships: hasRealData ? 
+            (overviewData.relationships?.total || overviewData.length || 0) : 
+            mockRelationships.length,
+          active_relationships: hasRealData ? 
+            (overviewData.relationships?.active || overviewData.filter(r => r.status === 'active').length || 0) : 
+            mockRelationships.filter(r => r.status === 'active').length,
+          pending_relationships: hasRealData ? 
+            (overviewData.relationships?.pending || 0) : 
+            0,
+          total_groups: hasRealData ? 
+            (overviewData.groups?.total || overviewData.groups?.length || 0) : 
+            mockGroups.length,
+          active_groups: hasRealData ? 
+            (overviewData.groups?.active || overviewData.groups?.filter(g => g.is_active).length || 0) : 
+            mockGroups.length,
           ...metricsData
         },
-        recentActivities: overviewData.recent_activities || mockActivities
+        recentActivities: hasRealData ? (overviewData.recent_activities || []) : mockActivities
       });
 
     } catch (err) {
