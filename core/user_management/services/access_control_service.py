@@ -56,6 +56,7 @@ class AccessControlService:
             'admin': {
                 'manage_users',
                 'manage_organizations', 
+                'can_manage_organizations',
                 'delete_users',
                 'view_all_data',
                 'create_organizations',
@@ -73,6 +74,7 @@ class AccessControlService:
             'BlueVisionAdmin': {
                 'manage_users',
                 'manage_organizations', 
+                'can_manage_organizations',
                 'delete_users',
                 'view_all_data',
                 'create_organizations',

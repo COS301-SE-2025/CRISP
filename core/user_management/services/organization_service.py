@@ -555,6 +555,62 @@ class OrganizationService:
             logger.error(f"Error deactivating organization: {str(e)}")
             raise ValidationError(f"Failed to deactivate organization: {str(e)}")
     
+    def reactivate_organization(self, reactivating_user: CustomUser, 
+                               organization_id: str, reason: str = "") -> Organization:
+        """
+        Reactivate a previously deactivated organization.
+        
+        Args:
+            reactivating_user: User performing the reactivation
+            organization_id: ID of the organization to reactivate
+            reason: Reason for reactivation
+            
+        Returns:
+            Organization: The reactivated organization
+            
+        Raises:
+            ValidationError: If reactivation fails
+            PermissionDenied: If user lacks permission
+        """
+        try:
+            # Check permissions
+            self.access_control.require_permission(reactivating_user, 'can_manage_organizations')
+            
+            # Get organization
+            organization = Organization.objects.get(id=organization_id)
+            
+            # Check if organization is already active
+            if organization.is_active:
+                raise ValidationError("Organization is already active")
+            
+            # Reactivate the organization
+            organization.is_active = True
+            organization.save()
+            
+            # Log organization reactivation
+            AuthenticationLog.log_authentication_event(
+                user=reactivating_user,
+                action='organization_reactivated',
+                ip_address='127.0.0.1',
+                user_agent='System',
+                success=True,
+                additional_data={
+                    'organization_id': str(organization.id),
+                    'organization_name': organization.name,
+                    'reason': reason
+                }
+            )
+            
+            logger.info(f"Organization {organization.name} reactivated by {reactivating_user.username}")
+            
+            return organization
+            
+        except Organization.DoesNotExist:
+            raise ValidationError("Organization not found")
+        except Exception as e:
+            logger.error(f"Error reactivating organization: {str(e)}")
+            raise ValidationError(f"Failed to reactivate organization: {str(e)}")
+    
     def get_organization_statistics(self, requesting_user: CustomUser) -> Dict[str, Any]:
         """
         Get platform-wide organization statistics.

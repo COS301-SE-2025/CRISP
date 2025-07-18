@@ -248,7 +248,7 @@ export const getUserStatistics = async () => {
 
 // Organization Management API functions
 export const getOrganizations = async () => {
-  const response = await fetch(`${API_URL}organizations/list/`, {
+  const response = await fetch(`${API_URL}organizations/list_organizations/`, {
     method: 'GET',
     headers: { ...authHeader() }
   });
@@ -257,7 +257,7 @@ export const getOrganizations = async () => {
 };
 
 export const createOrganization = async (orgData) => {
-  const response = await fetch(`${API_URL}organizations/create/`, {
+  const response = await fetch(`${API_URL}organizations/create_organization/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(orgData)
@@ -267,7 +267,7 @@ export const createOrganization = async (orgData) => {
 };
 
 export const getOrganizationDetails = async (organizationId) => {
-  const response = await fetch(`${API_URL}organizations/${organizationId}/`, {
+  const response = await fetch(`${API_URL}organizations/${organizationId}/get_organization/`, {
     method: 'GET',
     headers: { ...authHeader() }
   });
@@ -276,8 +276,8 @@ export const getOrganizationDetails = async (organizationId) => {
 };
 
 export const updateOrganization = async (organizationId, updateData) => {
-  const response = await fetch(`${API_URL}organizations/${organizationId}/`, {
-    method: 'PUT',
+  const response = await fetch(`${API_URL}organizations/${organizationId}/update_organization/`, {
+    method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(updateData)
   });
@@ -286,7 +286,17 @@ export const updateOrganization = async (organizationId, updateData) => {
 };
 
 export const deactivateOrganization = async (organizationId, reason = '') => {
-  const response = await fetch(`${API_URL}organizations/${organizationId}/deactivate/`, {
+  const response = await fetch(`${API_URL}organizations/${organizationId}/deactivate_organization/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify({ reason })
+  });
+  
+  return await handleResponse(response);
+};
+
+export const reactivateOrganization = async (organizationId, reason = '') => {
+  const response = await fetch(`${API_URL}organizations/${organizationId}/reactivate_organization/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify({ reason })

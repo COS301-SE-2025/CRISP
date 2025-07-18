@@ -264,6 +264,47 @@ class OrganizationViewSet(GenericViewSet):
                 'message': 'Failed to deactivate organization'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
+    @action(detail=True, methods=['post'])
+    def reactivate_organization(self, request, pk=None):
+        """
+        Reactivate a previously deactivated organization.
+        
+        Expected payload:
+        {
+            "reason": "string"
+        }
+        """
+        try:
+            reason = request.data.get('reason', '')
+            
+            reactivated_org = self.org_service.reactivate_organization(
+                reactivating_user=request.user,
+                organization_id=pk,
+                reason=reason
+            )
+            
+            return Response({
+                'success': True,
+                'data': {
+                    'message': f'Organization {reactivated_org.name} reactivated successfully',
+                    'organization_id': str(reactivated_org.id),
+                    'reason': reason
+                }
+            }, status=status.HTTP_200_OK)
+        
+        except (ValidationError, PermissionDenied) as e:
+            return Response({
+                'success': False,
+                'message': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        except Exception as e:
+            logger.error(f"Reactivate organization error: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Failed to reactivate organization'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
     @action(detail=False, methods=['get'])
     def statistics(self, request):
         """Get organization statistics (admin only)."""

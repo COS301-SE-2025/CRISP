@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getOrganizations, createOrganization, updateOrganization, deactivateOrganization, getOrganizationDetails } from '../api.js';
+import { getOrganizations, createOrganization, updateOrganization, deactivateOrganization, reactivateOrganization, getOrganizationDetails } from '../api.js';
 import LoadingSpinner from './LoadingSpinner.jsx';
 
 const InstitutionManagement = ({ active = true }) => {
@@ -15,6 +15,7 @@ const InstitutionManagement = ({ active = true }) => {
   const [modalLoading, setModalLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [operationLoading, setOperationLoading] = useState(false);
+  const [userCanManageInstitutions, setUserCanManageInstitutions] = useState(true); // Default to true, will be updated based on errors
   const [formData, setFormData] = useState({
     name: '',
     domain: '',
@@ -65,7 +66,21 @@ const InstitutionManagement = ({ active = true }) => {
       setInstitutions(Array.isArray(institutionsData) ? institutionsData : []);
     } catch (err) {
       console.error('Failed to load institutions:', err);
-      setError('Failed to load institutions: ' + err.message);
+      let errorMessage = 'Failed to load institutions';
+      
+      if (err.message) {
+        if (err.message.includes('permission') || err.message.includes('Permission') || err.message.includes('403')) {
+          errorMessage = 'You do not have permission to view institutions. Please contact your administrator.';
+          setUserCanManageInstitutions(false);
+        } else if (err.message.includes('Authentication') || err.message.includes('401')) {
+          errorMessage = 'Please log in to view institutions.';
+          setUserCanManageInstitutions(false);
+        } else {
+          errorMessage = 'Failed to load institutions: ' + err.message;
+        }
+      }
+      
+      setError(errorMessage);
       setInstitutions([]);
     } finally {
       setLoading(false);
@@ -199,7 +214,52 @@ const InstitutionManagement = ({ active = true }) => {
         await deactivateOrganization(institutionId, 'Deactivated by admin');
         loadInstitutions();
       } catch (err) {
-        setError('Failed to deactivate institution: ' + err.message);
+        console.error('Deactivation error:', err);
+        let errorMessage = 'Failed to deactivate institution';
+        
+        if (err.message) {
+          if (err.message.includes('permission') || err.message.includes('Permission') || err.message.includes('403')) {
+            errorMessage = 'You do not have permission to deactivate institutions. Only administrators can perform this action.';
+          } else if (err.message.includes('404') || err.message.includes('not found')) {
+            errorMessage = 'Institution not found. It may have been deleted.';
+          } else if (err.message.includes('Cannot deactivate your own organization')) {
+            errorMessage = 'You cannot deactivate your own organization.';
+          } else {
+            errorMessage = 'Failed to deactivate institution: ' + err.message;
+          }
+        }
+        
+        setError(errorMessage);
+      } finally {
+        setOperationLoading(false);
+      }
+    }
+  };
+
+  const handleReactivateInstitution = async (institutionId, institutionName) => {
+    if (window.confirm(`Are you sure you want to reactivate institution "${institutionName}"?`)) {
+      try {
+        setOperationLoading(true);
+        await new Promise(resolve => setTimeout(resolve, 800));
+        await reactivateOrganization(institutionId, 'Reactivated by admin');
+        loadInstitutions();
+      } catch (err) {
+        console.error('Reactivation error:', err);
+        let errorMessage = 'Failed to reactivate institution';
+        
+        if (err.message) {
+          if (err.message.includes('permission') || err.message.includes('Permission') || err.message.includes('403')) {
+            errorMessage = 'You do not have permission to reactivate institutions. Only administrators can perform this action.';
+          } else if (err.message.includes('404') || err.message.includes('not found')) {
+            errorMessage = 'Institution not found. It may have been deleted.';
+          } else if (err.message.includes('already active')) {
+            errorMessage = 'Institution is already active.';
+          } else {
+            errorMessage = 'Failed to reactivate institution: ' + err.message;
+          }
+        }
+        
+        setError(errorMessage);
       } finally {
         setOperationLoading(false);
       }
@@ -353,19 +413,21 @@ const InstitutionManagement = ({ active = true }) => {
           <option value="inactive">Inactive</option>
         </select>
         
-        <button
-          onClick={handleAddInstitution}
-          style={{
-            padding: '0.5rem 1rem',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Add Institution
-        </button>
+        {userCanManageInstitutions && (
+          <button
+            onClick={handleAddInstitution}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Add Institution
+          </button>
+        )}
       </div>
 
       {/* Institutions Table */}
@@ -434,35 +496,54 @@ const InstitutionManagement = ({ active = true }) => {
                     >
                       View
                     </button>
-                    <button
-                      onClick={() => handleEditInstitution(institution.id)}
-                      style={{
-                        padding: '0.25rem 0.5rem',
-                        backgroundColor: '#ffc107',
-                        color: 'black',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem'
-                      }}
-                    >
-                      Edit
-                    </button>
-                    {institution.is_active && (
+                    {userCanManageInstitutions && (
                       <button
-                        onClick={() => handleDeleteInstitution(institution.id, institution.name)}
+                        onClick={() => handleEditInstitution(institution.id)}
                         style={{
                           padding: '0.25rem 0.5rem',
-                          backgroundColor: '#dc3545',
-                          color: 'white',
+                          backgroundColor: '#ffc107',
+                          color: 'black',
                           border: 'none',
                           borderRadius: '4px',
                           cursor: 'pointer',
                           fontSize: '0.875rem'
                         }}
                       >
-                        Deactivate
+                        Edit
                       </button>
+                    )}
+                    {userCanManageInstitutions && (
+                      institution.is_active ? (
+                        <button
+                          onClick={() => handleDeleteInstitution(institution.id, institution.name)}
+                          style={{
+                            padding: '0.25rem 0.5rem',
+                            backgroundColor: '#dc3545',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.875rem'
+                          }}
+                        >
+                          Deactivate
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleReactivateInstitution(institution.id, institution.name)}
+                          style={{
+                            padding: '0.25rem 0.5rem',
+                            backgroundColor: '#28a745',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.875rem'
+                          }}
+                        >
+                          Reactivate
+                        </button>
+                      )
                     )}
                   </div>
                 </td>
