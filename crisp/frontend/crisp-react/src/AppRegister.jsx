@@ -2867,15 +2867,21 @@ function AdminSettings({ active, onNavigate }) {
   const fetchSystemData = async () => {
     setIsLoading(true);
     try {
-      const [healthData, statsData] = await Promise.all([
+      const [healthResponse, statsResponse] = await Promise.all([
         getSystemHealth().catch(() => null),
         getEmailStatistics().catch(() => null)
       ]);
+      
+      // Extract data from API response structure
+      const healthData = healthResponse?.success ? healthResponse.data : healthResponse;
+      const statsData = statsResponse?.success ? statsResponse.data : statsResponse;
       
       setSystemHealth(healthData);
       setEmailStats(statsData);
     } catch (error) {
       console.error('Error fetching system data:', error);
+      setSystemHealth(null);
+      setEmailStats(null);
     } finally {
       setIsLoading(false);
     }
@@ -2889,12 +2895,19 @@ function AdminSettings({ active, onNavigate }) {
     setMessage('');
     
     try {
-      await sendTestEmail(email);
-      setMessage('Test email sent successfully!');
+      const response = await sendTestEmail(email);
+      if (response?.success) {
+        setMessage('✅ Test email sent successfully!');
+      } else {
+        setMessage(`❌ Error sending test email: ${response?.message || 'Unknown error'}`);
+      }
     } catch (error) {
-      setMessage(`Error sending test email: ${error}`);
+      console.error('Test email error:', error);
+      setMessage(`❌ Error sending test email: ${error?.message || error}`);
     } finally {
       setIsLoading(false);
+      // Clear message after 5 seconds
+      setTimeout(() => setMessage(''), 5000);
     }
   };
 
@@ -2903,12 +2916,19 @@ function AdminSettings({ active, onNavigate }) {
     setMessage('');
     
     try {
-      await testGmailConnection();
-      setMessage('Gmail connection test successful!');
+      const response = await testGmailConnection();
+      if (response?.success) {
+        setMessage('✅ Gmail connection test successful!');
+      } else {
+        setMessage(`❌ Gmail connection test failed: ${response?.message || 'Unknown error'}`);
+      }
     } catch (error) {
-      setMessage(`Gmail connection test failed: ${error}`);
+      console.error('Gmail connection test error:', error);
+      setMessage(`❌ Gmail connection test failed: ${error?.message || error}`);
     } finally {
       setIsLoading(false);
+      // Clear message after 5 seconds
+      setTimeout(() => setMessage(''), 5000);
     }
   };
 
@@ -2943,7 +2963,12 @@ function AdminSettings({ active, onNavigate }) {
             </div>
             {isLoading ? (
               <div className="loading">
-                <div className="loading-spinner"></div>
+                <div className="loading-animation">
+                  <div className="pulse-ring"></div>
+                  <div className="pulse-ring"></div>
+                  <div className="pulse-ring"></div>
+                  <div className="pulse-core"></div>
+                </div>
                 <p>Loading system health...</p>
               </div>
             ) : systemHealth ? (
@@ -3058,8 +3083,9 @@ function AdminSettings({ active, onNavigate }) {
                 </div>
 
                 <div className="health-actions">
-                  <button onClick={fetchSystemData} className="btn btn-primary">
-                    <i className="fas fa-sync-alt"></i> Refresh Data
+                  <button onClick={fetchSystemData} className="btn btn-primary" disabled={isLoading}>
+                    <i className={`fas fa-sync-alt ${isLoading ? 'fa-spin' : ''}`}></i> 
+                    {isLoading ? 'Refreshing...' : 'Refresh Data'}
                   </button>
                   <button className="btn btn-outline" onClick={() => console.log('System logs viewed')}>
                     <i className="fas fa-file-alt"></i> View Logs
@@ -3104,11 +3130,13 @@ function AdminSettings({ active, onNavigate }) {
                   </span>
                 </div>
                 <div className="email-actions">
-                  <button onClick={handleTestConnection} className="btn btn-outline">
-                    <i className="fas fa-plug"></i> Test Connection
+                  <button onClick={handleTestConnection} className="btn btn-outline" disabled={isLoading}>
+                    <i className="fas fa-plug"></i> 
+                    {isLoading ? 'Testing...' : 'Test Connection'}
                   </button>
-                  <button onClick={handleTestEmail} className="btn btn-primary">
-                    <i className="fas fa-paper-plane"></i> Send Test Email
+                  <button onClick={handleTestEmail} className="btn btn-primary" disabled={isLoading}>
+                    <i className="fas fa-paper-plane"></i> 
+                    {isLoading ? 'Sending...' : 'Send Test Email'}
                   </button>
                 </div>
               </div>

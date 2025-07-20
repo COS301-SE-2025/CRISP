@@ -559,6 +559,152 @@
   }
 }
 
+/* Admin Layout Styles */
+.admin-settings-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+  width: 100%;
+  overflow: hidden;
+}
+
+.admin-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+  overflow: hidden; /* Prevent content overflow */
+  height: fit-content;
+  max-width: 100%;
+}
+
+.admin-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.admin-card h3 {
+  margin: 0 0 1rem 0;
+  color: #374151;
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Alert Messages */
+.alert {
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.alert-success {
+  background: #d1fae5;
+  border: 1px solid #10b981;
+  color: #065f46;
+}
+
+.alert-error {
+  background: #fee2e2;
+  border: 1px solid #ef4444;
+  color: #991b1b;
+}
+
+.alert-warning {
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  color: #92400e;
+}
+
+/* Email System Styles */
+.email-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.stat-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0.5rem;
+}
+
+.stat-label {
+  color: #6b7280;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.stat-value {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 1rem;
+}
+
+.stat-value.success {
+  color: #10b981;
+}
+
+.stat-value.warning {
+  color: #f59e0b;
+}
+
+.stat-value.error {
+  color: #ef4444;
+}
+
+/* Action Buttons */
+.email-actions,
+.management-actions,
+.trust-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f3f4f6;
+}
+
+.email-actions .btn,
+.management-actions .btn,
+.trust-actions .btn {
+  flex: 1;
+  min-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Admin Card No Data State */
+.admin-card .no-data {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: #6b7280;
+}
+
 /* Professional System Health Dashboard Styles */
 .system-health-card {
   grid-column: 1 / -1; /* Span full width */
@@ -791,6 +937,77 @@
   border-top: 1px solid #f3f4f6;
 }
 
+.loading {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: #6b7280;
+}
+
+.loading-animation {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pulse-ring {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border: 3px solid #3b82f6;
+  border-radius: 50%;
+  opacity: 0;
+  animation: pulse-ring-animation 2s ease-out infinite;
+}
+
+.pulse-ring:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.pulse-ring:nth-child(2) {
+  animation-delay: 0.7s;
+}
+
+.pulse-ring:nth-child(3) {
+  animation-delay: 1.4s;
+}
+
+.pulse-core {
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border-radius: 50%;
+  animation: pulse-core-animation 2s ease-in-out infinite;
+}
+
+@keyframes pulse-ring-animation {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes pulse-core-animation {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.6);
+  }
+}
+
 .loading-spinner {
   width: 40px;
   height: 40px;
@@ -829,8 +1046,36 @@
   color: #6b7280;
 }
 
-/* Responsive Design for System Health */
+/* Responsive Design for Admin Layout */
 @media (max-width: 768px) {
+  .admin-settings-container {
+    padding: 1rem;
+  }
+  
+  .admin-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  
+  .admin-card {
+    padding: 1rem;
+  }
+  
+  .email-actions,
+  .management-actions,
+  .trust-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .email-actions .btn,
+  .management-actions .btn,
+  .trust-actions .btn {
+    width: 100%;
+    min-width: auto;
+  }
+  
   .system-health-card .card-header {
     padding: 1rem;
     flex-direction: column;
