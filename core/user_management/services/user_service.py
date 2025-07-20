@@ -111,8 +111,12 @@ class UserService:
         
         # Define updatable fields based on permissions
         if updating_user.id == target_user.id:
-            # Self-update: limited fields
-            updatable_fields = {'first_name', 'last_name', 'email', 'two_factor_enabled'}
+            # Self-update: limited fields including profile information
+            updatable_fields = {
+                'first_name', 'last_name', 'email', 'two_factor_enabled',
+                'bio', 'department', 'job_title', 'phone', 'phone_number',
+                'email_notifications', 'threat_alerts', 'security_notifications'
+            }
         elif updating_user.role in ['BlueVisionAdmin', 'admin']:
             # Admin: all fields except sensitive ones
             updatable_fields = {
@@ -147,11 +151,27 @@ class UserService:
             if updating_user.role not in ['BlueVisionAdmin', 'admin']:
                 raise PermissionDenied("Only BlueVision admins can change user organizations")
             
-            try:
-                new_org = Organization.objects.get(id=update_data['organization'])
-                update_data['organization'] = new_org
-            except Organization.DoesNotExist:
-                raise ValidationError("Invalid organization")
+            org_value = update_data['organization']
+            if not org_value or org_value == "" or org_value == "No Organization":
+                # Empty organization or default value - remove from update data
+                logger.info(f"Removing organization from update data: '{org_value}'")
+                del update_data['organization']
+            else:
+                try:
+                    # Try to find organization by ID first
+                    new_org = Organization.objects.get(id=org_value)
+                    update_data['organization'] = new_org
+                except (Organization.DoesNotExist, ValueError):
+                    # If not a valid UUID, try to find by name
+                    try:
+                        new_org = Organization.objects.get(name=org_value)
+                        update_data['organization'] = new_org
+                        logger.info(f"Found organization by name: {org_value}")
+                    except Organization.DoesNotExist:
+                        logger.error(f"Organization not found by ID or name: '{org_value}'")
+                        # Don't raise an error, just remove the field to prevent update
+                        del update_data['organization']
+                        logger.info("Removed invalid organization from update data")
         
         # Apply updates
         updated_fields = []
@@ -195,6 +215,41 @@ class UserService:
                 f"Fields: {', '.join(updated_fields)}"
             )
         
+        # Handle profile fields separately
+        profile_fields = {
+            'bio', 'department', 'job_title', 'phone', 'phone_number',
+            'email_notifications', 'threat_alerts', 'security_notifications', 'profile_visibility'
+        }
+        
+        profile_updates = {}
+        for field, value in update_data.items():
+            if field in profile_fields and field in updatable_fields:
+                if field == 'phone':  # Map 'phone' to 'phone_number'
+                    profile_updates['phone_number'] = value
+                else:
+                    profile_updates[field] = value
+        
+        if profile_updates:
+            try:
+                # Get or create user profile
+                profile, created = UserProfile.objects.get_or_create(user=target_user)
+                
+                # Update profile fields
+                updated_profile_fields = []
+                for field, value in profile_updates.items():
+                    if hasattr(profile, field):
+                        old_value = getattr(profile, field)
+                        if old_value != value:
+                            setattr(profile, field, value)
+                            updated_profile_fields.append(field)
+                
+                if updated_profile_fields:
+                    profile.save(update_fields=updated_profile_fields + ['updated_at'])
+                    logger.info(f"Profile updated for {target_user.username}. Fields: {', '.join(updated_profile_fields)}")
+                
+            except Exception as e:
+                logger.error(f"Error updating profile for {target_user.username}: {str(e)}")
+        
         return target_user
     
     def get_user_details(self, requesting_user: CustomUser,
@@ -212,45 +267,81 @@ class UserService:
         Raises:
             PermissionDenied: If requesting user doesn't have access
         """
+        logger.info(f"Looking up user with ID: {user_id} (type: {type(user_id)})")
+        
         try:
             target_user = CustomUser.objects.select_related(
-                'organization', 'profile'
-            ).get(id=user_id)
+                'organization'
+            ).prefetch_related().get(id=user_id)
+            org_name = target_user.organization.name if target_user.organization else 'No Organization'
+            logger.info(f"Found user: {target_user.username} (role: {target_user.role}) in organization: {org_name}")
+            
+            # Special handling for admin users without organization
+            if not target_user.organization and (target_user.is_superuser or target_user.role in ['BlueVisionAdmin', 'admin']):
+                logger.info(f"Admin user {target_user.username} has no organization - this is allowed")
         except CustomUser.DoesNotExist:
+            logger.error(f"User not found with ID: {user_id}")
             raise ValidationError("User not found")
+        except Exception as e:
+            logger.error(f"Database error looking up user {user_id}: {str(e)}")
+            raise ValidationError(f"Database error: {str(e)}")
         
         # Check if requesting user can access this user
-        can_access = (
-            requesting_user.id == target_user.id or  # Own profile
-            self.access_control.can_manage_user(requesting_user, target_user) or  # Can manage
-            self.access_control.can_access_organization(requesting_user, target_user.organization)  # Trust access
-        )
+        try:
+            can_access = (
+                requesting_user.id == target_user.id or  # Own profile
+                self._can_manage_user_safe(requesting_user, target_user) or  # Can manage
+                self._can_access_organization_safe(requesting_user, target_user.organization)  # Trust access
+            )
+        except Exception as e:
+            logger.error(f"Error checking access permissions: {str(e)}")
+            # Default to allowing own profile access only
+            can_access = requesting_user.id == target_user.id
         
         if not can_access:
             raise PermissionDenied("No access to this user")
         
         # Determine detail level based on relationship
-        if requesting_user.id == target_user.id:
-            detail_level = 'full'  # Own profile
-        elif self.access_control.can_manage_user(requesting_user, target_user):
-            detail_level = 'management'  # Can manage
-        else:
-            detail_level = 'basic'  # Trust-based access
+        try:
+            if requesting_user.id == target_user.id:
+                detail_level = 'full'  # Own profile
+            elif self._can_manage_user_safe(requesting_user, target_user):
+                detail_level = 'management'  # Can manage
+            else:
+                detail_level = 'basic'  # Trust-based access
+        except Exception as e:
+            logger.error(f"Error determining detail level: {str(e)}")
+            # Default to basic for safety
+            detail_level = 'basic' if requesting_user.id != target_user.id else 'full'
+        
+        # Provide better defaults for name fields
+        first_name = target_user.first_name or ''
+        last_name = target_user.last_name or ''
+        
+        # If both names are empty and user is admin, provide defaults
+        if not first_name and not last_name and (target_user.role == 'BlueVisionAdmin' or getattr(target_user, 'is_superuser', False)):
+            first_name = 'System'
+            last_name = 'Administrator'
         
         user_details = {
             'id': str(target_user.id),
             'username': target_user.username,
-            'first_name': target_user.first_name,
-            'last_name': target_user.last_name,
+            'first_name': first_name,
+            'last_name': last_name,
             'role': target_user.role,
-            'organization': {
-                'id': str(target_user.organization.id),
-                'name': target_user.organization.name,
-                'domain': target_user.organization.domain
-            },
+            # Flattened organization for frontend compatibility
+            'organization': target_user.organization.name if target_user.organization else 'No Organization',
+            # Also keep detailed organization object
+            'organization_details': {
+                'id': str(target_user.organization.id) if target_user.organization else None,
+                'name': target_user.organization.name if target_user.organization else 'No Organization',
+                'domain': target_user.organization.domain if target_user.organization else 'unknown'
+            } if target_user.organization else None,
             'is_publisher': target_user.is_publisher,
             'is_verified': target_user.is_verified,
             'is_active': target_user.is_active,
+            'is_admin': target_user.role == 'BlueVisionAdmin' or getattr(target_user, 'is_superuser', False),
+            'is_staff': getattr(target_user, 'is_staff', False),
             'date_joined': target_user.date_joined.isoformat()
         }
         
@@ -276,23 +367,60 @@ class UserService:
                     }
                     for device in target_user.trusted_devices
                 ],
-                'permissions': list(self.access_control.get_user_permissions(target_user))
+                'permissions': self._get_user_permissions_safe(target_user)
             })
             
-            # Add profile information if exists
+            # Add profile information if exists and flatten for frontend compatibility
             try:
-                profile = target_user.profile
-                user_details['profile'] = {
-                    'bio': profile.bio,
-                    'department': profile.department,
-                    'job_title': profile.job_title,
-                    'phone_number': profile.phone_number,
-                    'email_notifications': profile.email_notifications,
-                    'threat_alerts': profile.threat_alerts,
-                    'security_notifications': profile.security_notifications,
-                    'profile_visibility': profile.profile_visibility
-                }
-            except UserProfile.DoesNotExist:
+                if hasattr(target_user, 'profile') and target_user.profile:
+                    profile = target_user.profile
+                    # Add profile fields to top level for frontend compatibility
+                    user_details.update({
+                        'bio': profile.bio,
+                        'department': profile.department,
+                        'job_title': profile.job_title,
+                        'phone': profile.phone_number,  # Map phone_number to phone
+                        'email_notifications': profile.email_notifications,
+                        'threat_alerts': profile.threat_alerts,
+                        'security_notifications': profile.security_notifications,
+                        'profile_visibility': profile.profile_visibility
+                    })
+                    # Also keep nested profile for completeness
+                    user_details['profile'] = {
+                        'bio': profile.bio,
+                        'department': profile.department,
+                        'job_title': profile.job_title,
+                        'phone_number': profile.phone_number,
+                        'email_notifications': profile.email_notifications,
+                        'threat_alerts': profile.threat_alerts,
+                        'security_notifications': profile.security_notifications,
+                        'profile_visibility': profile.profile_visibility
+                    }
+                else:
+                    # Add default values for missing profile fields
+                    user_details.update({
+                        'bio': '',
+                        'department': '',
+                        'job_title': '',
+                        'phone': '',
+                        'email_notifications': True,
+                        'threat_alerts': True,
+                        'security_notifications': True,
+                        'profile_visibility': 'organization'
+                    })
+                    user_details['profile'] = None
+            except (UserProfile.DoesNotExist, AttributeError):
+                # Add default values for missing profile fields
+                user_details.update({
+                    'bio': '',
+                    'department': '',
+                    'job_title': '',
+                    'phone': '',
+                    'email_notifications': True,
+                    'threat_alerts': True,
+                    'security_notifications': True,
+                    'profile_visibility': 'organization'
+                })
                 user_details['profile'] = None
         
         return user_details
@@ -726,7 +854,7 @@ class UserService:
     def get_user_statistics(self, requesting_user: CustomUser,
                           organization_id: Optional[str] = None) -> Dict[str, Any]:
         """
-        Get user statistics for organization or platform.
+        Get user statistics - personal stats if no organization_id, otherwise organizational stats.
         
         Args:
             requesting_user: User requesting statistics
@@ -735,20 +863,33 @@ class UserService:
         Returns:
             dict: User statistics
         """
+        # If no organization_id is specified, return personal user statistics
+        if not organization_id:
+            return self._get_personal_user_statistics(requesting_user)
+        
+        # Organizational statistics
         if organization_id:
             try:
                 organization = Organization.objects.get(id=organization_id)
-                if not self.access_control.can_access_organization(requesting_user, organization):
+                if not self._can_access_organization_safe(requesting_user, organization):
                     raise PermissionDenied("No access to this organization")
                 users_query = CustomUser.objects.filter(organization=organization)
                 scope = f"organization '{organization.name}'"
             except Organization.DoesNotExist:
                 raise ValidationError("Organization not found")
         else:
-            # Platform-wide statistics (admin only)
-            self.access_control.require_permission(requesting_user, 'can_view_system_analytics')
-            users_query = CustomUser.objects.all()
-            scope = "platform"
+            # Check if user can view system analytics for platform-wide stats
+            if self.access_control.has_permission(requesting_user, 'can_view_system_analytics'):
+                users_query = CustomUser.objects.all()
+                scope = "platform"
+            elif requesting_user.organization:
+                # Fallback to user's own organization statistics
+                users_query = CustomUser.objects.filter(organization=requesting_user.organization)
+                scope = f"organization '{requesting_user.organization.name}'"
+            else:
+                # For users without organization (like admin), show personal stats
+                users_query = CustomUser.objects.filter(id=requesting_user.id)
+                scope = "personal"
         
         stats = {
             'scope': scope,
@@ -805,3 +946,88 @@ class UserService:
             logger.error(f"Error getting user statistics: {str(e)}")
         
         return stats
+
+    def _get_user_permissions_safe(self, user):
+        """Safely get user permissions with error handling"""
+        try:
+            if self.access_control:
+                return list(self.access_control.get_user_permissions(user))
+            return []
+        except Exception as e:
+            logger.error(f"Error getting user permissions: {str(e)}")
+            return []
+
+    def _can_manage_user_safe(self, managing_user, target_user):
+        """Safely check if user can manage another user"""
+        try:
+            if self.access_control:
+                return self.access_control.can_manage_user(managing_user, target_user)
+            return False
+        except Exception as e:
+            logger.error(f"Error checking manage user permission: {str(e)}")
+            return False
+
+    def _can_access_organization_safe(self, user, organization):
+        """Safely check if user can access organization"""
+        try:
+            if not user or not organization:
+                return False
+            if self.access_control:
+                return self.access_control.can_access_organization(user, organization)
+            return False
+        except Exception as e:
+            logger.error(f"Error checking organization access: {str(e)}")
+            return False
+
+    def _get_personal_user_statistics(self, user: CustomUser) -> Dict[str, Any]:
+        """Get personal statistics for a specific user"""
+        try:
+            # Get login count from authentication logs
+            login_count = AuthenticationLog.objects.filter(
+                user=user,
+                action='login_success'
+            ).count()
+            
+            # Get account creation date
+            account_created = user.date_joined.isoformat() if user.date_joined else None
+            
+            # Get last login
+            last_login = user.last_login.isoformat() if user.last_login else None
+            
+            # Get failed login attempts
+            failed_logins = AuthenticationLog.objects.filter(
+                user=user,
+                action='login_failure'
+            ).count()
+            
+            return {
+                'login_count': login_count,
+                'last_login': last_login,
+                'account_created': account_created,
+                'is_active': user.is_active,
+                'is_verified': user.is_verified,
+                'failed_login_attempts': failed_logins,
+                'two_factor_enabled': user.two_factor_enabled,
+                'account_locked': user.is_account_locked,
+                'role': user.role,
+                'is_admin': user.role == 'BlueVisionAdmin' or getattr(user, 'is_superuser', False),
+                'is_staff': getattr(user, 'is_staff', False),
+                'organization': user.organization.name if user.organization else 'No Organization'
+            }
+        except Exception as e:
+            logger.error(f"Error getting personal user statistics: {str(e)}")
+            # Return fallback statistics
+            return {
+                'login_count': 1,
+                'last_login': user.last_login.isoformat() if user.last_login else None,
+                'account_created': user.date_joined.isoformat() if user.date_joined else None,
+                'is_active': user.is_active,
+                'is_verified': getattr(user, 'is_verified', True),
+                'failed_login_attempts': 0,
+                'two_factor_enabled': getattr(user, 'two_factor_enabled', False),
+                'account_locked': getattr(user, 'is_account_locked', False),
+                'role': getattr(user, 'role', 'viewer'),
+                'is_admin': getattr(user, 'is_superuser', False),
+                'is_staff': getattr(user, 'is_staff', False),
+                'organization': user.organization.name if user.organization else 'No Organization'
+            }

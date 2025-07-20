@@ -2235,10 +2235,23 @@ function Profile({ active, user }) {
     setError('');
     try {
       const data = await getUserProfile();
+      
+      // Handle admin users with empty names
+      let firstName = data.first_name || '';
+      let lastName = data.last_name || '';
+      
+      if (!firstName && !lastName && (data.is_admin || data.is_staff || data.username === 'admin')) {
+        firstName = 'System';
+        lastName = 'Administrator';
+        // Update the data object too for display
+        data.first_name = firstName;
+        data.last_name = lastName;
+      }
+      
       setProfileData(data);
       setEditFormData({
-        first_name: data.first_name || '',
-        last_name: data.last_name || '',
+        first_name: firstName,
+        last_name: lastName,
         email: data.email || '',
         organization: data.organization || '',
         phone: data.phone || '',
@@ -2249,11 +2262,21 @@ function Profile({ active, user }) {
       setError('Failed to load profile data: ' + error);
       // Fallback to user data from props
       if (user) {
+        // Provide better defaults for admin users
+        let firstName = user.first_name || '';
+        let lastName = user.last_name || '';
+        
+        // If no name is set and user appears to be admin, provide defaults
+        if (!firstName && !lastName && (user.is_staff || user.is_superuser || user.username === 'admin')) {
+          firstName = 'System';
+          lastName = 'Administrator';
+        }
+        
         const fallbackData = {
           username: user.username,
           email: user.email || user.username,
-          first_name: user.first_name || '',
-          last_name: user.last_name || '',
+          first_name: firstName,
+          last_name: lastName,
           organization: user.organization || '',
           is_staff: user.is_staff || false,
           is_admin: user.is_admin || false,
