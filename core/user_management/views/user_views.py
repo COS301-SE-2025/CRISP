@@ -301,14 +301,60 @@ class UserViewSet(GenericViewSet):
                 'message': 'Failed to reactivate user'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get', 'put', 'patch'])
     def profile(self, request):
+        """Get or update current user's profile."""
+        if request.method == 'GET':
+            return self._get_profile(request)
+        else:
+            return self._update_profile(request)
+    
+    def _get_profile(self, request):
         """Get current user's profile."""
         try:
-            user_details = self.user_service.get_user_details(
-                requesting_user=request.user,
-                user_id=str(request.user.id)
-            )
+            # Check if user is authenticated
+            if not request.user or not request.user.is_authenticated:
+                logger.error("Profile request from unauthenticated user")
+                return Response({
+                    'success': False,
+                    'message': 'Authentication required'
+                }, status=status.HTTP_401_UNAUTHORIZED)
+            
+            # Check if user has an ID
+            if not hasattr(request.user, 'id') or not request.user.id:
+                logger.error(f"Profile request from user without ID: {request.user}")
+                return Response({
+                    'success': False,
+                    'message': 'Invalid user session'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            logger.info(f"Getting profile for user: {request.user.username} (ID: {request.user.id})")
+            
+            # Simple fallback if service fails
+            try:
+                user_details = self.user_service.get_user_details(
+                    requesting_user=request.user,
+                    user_id=str(request.user.id)
+                )
+            except Exception as service_error:
+                logger.error(f"UserService failed, creating basic profile: {str(service_error)}")
+                # Fallback to basic user data
+                user_details = {
+                    'id': str(request.user.id),
+                    'username': request.user.username,
+                    'first_name': request.user.first_name or '',
+                    'last_name': request.user.last_name or '',
+                    'email': request.user.email or '',
+                    'role': getattr(request.user, 'role', 'viewer'),
+                    'is_active': request.user.is_active,
+                    'date_joined': request.user.date_joined.isoformat() if request.user.date_joined else '',
+                    'organization': {
+                        'id': str(request.user.organization.id) if hasattr(request.user, 'organization') and request.user.organization else None,
+                        'name': request.user.organization.name if hasattr(request.user, 'organization') and request.user.organization else 'No Organization',
+                        'domain': request.user.organization.domain if hasattr(request.user, 'organization') and request.user.organization else 'unknown'
+                    } if hasattr(request.user, 'organization') and request.user.organization else None,
+                    'profile': None
+                }
             
             return Response({
                 'success': True,
@@ -317,18 +363,66 @@ class UserViewSet(GenericViewSet):
                 }
             }, status=status.HTTP_200_OK)
         
+        except PermissionDenied as e:
+            logger.error(f"Permission denied for profile request: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Access denied'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        except ValidationError as e:
+            logger.error(f"Validation error in profile request: {str(e)}")
+            return Response({
+                'success': False,
+                'message': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
         except Exception as e:
-            logger.error(f"Get profile error: {str(e)}")
+            logger.error(f"Get profile error: {str(e)}", exc_info=True)
             return Response({
                 'success': False,
                 'message': 'Failed to retrieve profile'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    @action(detail=False, methods=['put', 'patch'])
-    def update_profile(self, request):
+    def _update_profile(self, request):
         """Update current user's profile."""
         try:
             update_data = request.data.copy()
+            logger.info(f"Profile update data received: {update_data}")
+            
+            # Handle full_name field - split into first_name and last_name
+            if 'full_name' in update_data:
+                full_name = update_data['full_name'].strip()
+                if full_name:
+                    # Split full name into first and last name
+                    name_parts = full_name.split()
+                    if len(name_parts) >= 2:
+                        update_data['first_name'] = name_parts[0]
+                        update_data['last_name'] = ' '.join(name_parts[1:])
+                    elif len(name_parts) == 1:
+                        update_data['first_name'] = name_parts[0]
+                        update_data['last_name'] = ''
+                    else:
+                        update_data['first_name'] = ''
+                        update_data['last_name'] = ''
+                else:
+                    update_data['first_name'] = ''
+                    update_data['last_name'] = ''
+                # Remove the full_name field as it's not a database field
+                del update_data['full_name']
+                logger.info(f"Parsed full_name '{full_name}' into first_name: '{update_data.get('first_name')}', last_name: '{update_data.get('last_name')}'")
+            
+            # Clean up any empty or invalid UUID fields
+            uuid_fields = ['organization', 'organization_id']
+            invalid_org_values = ['', 'No Organization', 'null', 'undefined', None]
+            
+            for field in uuid_fields:
+                if field in update_data:
+                    value = update_data[field]
+                    if value in invalid_org_values:
+                        logger.info(f"Removing invalid UUID field '{field}': {value}")
+                        del update_data[field]
+            
             update_data['updated_from_ip'] = self._get_client_ip(request)
             update_data['user_agent'] = request.META.get('HTTP_USER_AGENT', 'API')
             
@@ -351,14 +445,22 @@ class UserViewSet(GenericViewSet):
                 }
             }, status=status.HTTP_200_OK)
         
-        except (ValidationError, PermissionDenied) as e:
+        except ValidationError as e:
+            logger.error(f"Validation error in profile update: {str(e)}")
             return Response({
                 'success': False,
                 'message': str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
         
+        except PermissionDenied as e:
+            logger.error(f"Permission denied in profile update: {str(e)}")
+            return Response({
+                'success': False,
+                'message': str(e)
+            }, status=status.HTTP_403_FORBIDDEN)
+        
         except Exception as e:
-            logger.error(f"Update profile error: {str(e)}")
+            logger.error(f"Update profile error: {str(e)}", exc_info=True)
             return Response({
                 'success': False,
                 'message': 'Failed to update profile'

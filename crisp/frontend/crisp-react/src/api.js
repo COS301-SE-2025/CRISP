@@ -224,7 +224,8 @@ export const getUserProfile = async () => {
     headers: { ...authHeader() }
   });
   
-  return await handleResponse(response);
+  const result = await handleResponse(response);
+  return result.data?.profile || result.data || result;
 };
 
 export const updateUserProfile = async (profileData) => {
@@ -243,7 +244,8 @@ export const getUserStatistics = async () => {
     headers: { ...authHeader() }
   });
   
-  return await handleResponse(response);
+  const result = await handleResponse(response);
+  return result.data?.statistics || result.data || result;
 };
 
 // Organization Management API functions

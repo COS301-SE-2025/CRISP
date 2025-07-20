@@ -35,7 +35,6 @@ urlpatterns = [
     # User management endpoints
     path('api/v1/users/create/', UserViewSet.as_view({'post': 'create_user'}), name='users-create'),
     path('api/v1/users/list/', UserViewSet.as_view({'get': 'list_users'}), name='users-list'),
-    path('api/v1/users/profile/', UserViewSet.as_view({'get': 'profile', 'put': 'update_profile', 'patch': 'update_profile'}), name='users-profile'),
     path('api/v1/users/statistics/', UserViewSet.as_view({'get': 'statistics'}), name='users-statistics'),
     path('api/v1/users/<uuid:pk>/', UserViewSet.as_view({'get': 'get_user', 'put': 'update_user', 'patch': 'update_user'}), name='users-detail'),
     path('api/v1/users/<uuid:pk>/deactivate/', UserViewSet.as_view({'post': 'deactivate_user'}), name='users-deactivate'),

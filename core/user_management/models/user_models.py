@@ -255,7 +255,8 @@ class CustomUser(AbstractUser):
         errors = {}
         
         # Only validate organization if the user instance has been saved or organization is set
-        if self.pk or hasattr(self, '_organization_id') or self.organization_id:
+        # Skip organization requirement for superusers and BlueVisionAdmin
+        if (self.pk or hasattr(self, '_organization_id') or self.organization_id) and not (self.is_superuser or self.role == 'BlueVisionAdmin'):
             try:
                 if not self.organization:
                     errors['organization'] = ValidationError("User must belong to an organization")

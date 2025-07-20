@@ -134,6 +134,10 @@ class AccessControlService:
         if managing_user.role == 'BlueVisionAdmin':
             return True
             
+        # Superusers can manage all users
+        if getattr(managing_user, 'is_superuser', False):
+            return True
+            
         # Admins can manage all users
         if managing_user.role == 'admin':
             return True
@@ -250,17 +254,26 @@ class AccessControlService:
         if user.role == 'BlueVisionAdmin':
             return True
             
-        # Check trust relationships
-        try:
-            relationship = TrustRelationship.objects.filter(
-                source_organization=user.organization,
-                target_organization=organization,
-                is_active=True,
-                status='active'
-            ).exists()
-            return relationship
-        except Exception:
-            return False
+        # Superusers can access all organizations
+        if getattr(user, 'is_superuser', False):
+            return True
+            
+        # Check trust relationships - only if user has an organization
+        if user.organization:
+            try:
+                from core.trust.models import TrustRelationship
+                relationship = TrustRelationship.objects.filter(
+                    source_organization=user.organization,
+                    target_organization=organization,
+                    is_active=True,
+                    status='active'
+                ).exists()
+                return relationship
+            except Exception:
+                # If trust models are not available or error occurs, allow basic access
+                return False
+        
+        return False
     
     def get_role_hierarchy_level(self, role):
         """Get the hierarchy level of a role"""
