@@ -3,7 +3,7 @@ import * as d3 from 'd3';
 import { useNavigate } from 'react-router-dom';
 import CSSStyles from './assets/CSSStyles';
 import logoImage from './assets/BlueV2.png';
-import { getUserProfile, updateUserProfile, getUserStatistics, changePassword, getEmailStatistics, getSystemHealth } from './api.js';
+import { getUserProfile, updateUserProfile, getUserStatistics, changePassword, getEmailStatistics, getSystemHealth, sendTestEmail, testGmailConnection } from './api.js';
 import LoadingSpinner from './components/LoadingSpinner.jsx';
 import UserManagement from './components/UserManagement.jsx';
 import InstitutionManagement from './components/InstitutionManagement.jsx';
@@ -2884,6 +2884,10 @@ function AdminSettings({ active }) {
     }
   };
 
+  const handleNavigation = (pageId) => {
+    setActivePage(pageId);
+  };
+
   return (
     <section className="page-section active">
       <div className="page-header">
@@ -2933,11 +2937,21 @@ function AdminSettings({ active }) {
               <div className="email-stats">
                 <div className="stat-item">
                   <span className="stat-label">Total Sent:</span>
-                  <span className="stat-value">{emailStats.total_sent || 0}</span>
+                  <span className="stat-value">{emailStats.total_emails_sent || 0}</span>
                 </div>
                 <div className="stat-item">
-                  <span className="stat-label">Failed:</span>
-                  <span className="stat-value error">{emailStats.failed_emails || 0}</span>
+                  <span className="stat-label">Threat Alerts:</span>
+                  <span className="stat-value">{emailStats.threat_alerts_sent || 0}</span>
+                </div>
+                <div className="stat-item">
+                  <span className="stat-label">Feed Notifications:</span>
+                  <span className="stat-value">{emailStats.feed_notifications_sent || 0}</span>
+                </div>
+                <div className="stat-item">
+                  <span className="stat-label">Connection Status:</span>
+                  <span className={`stat-value ${emailStats.gmail_connection_status === 'online' ? 'success' : emailStats.gmail_connection_status === 'offline' ? 'error' : 'warning'}`}>
+                    {emailStats.gmail_connection_status || 'Unknown'}
+                  </span>
                 </div>
                 <div className="email-actions">
                   <button onClick={handleTestConnection} className="btn btn-outline">
@@ -2962,13 +2976,13 @@ function AdminSettings({ active }) {
           <div className="admin-card">
             <h3><i className="fas fa-users"></i> User Management</h3>
             <div className="management-actions">
-              <button className="btn btn-primary">
+              <button onClick={() => handleNavigation('user-management')} className="btn btn-primary">
                 <i className="fas fa-user-plus"></i> Create User
               </button>
-              <button className="btn btn-outline">
+              <button onClick={() => handleNavigation('user-management')} className="btn btn-outline">
                 <i className="fas fa-users-cog"></i> Manage Roles
               </button>
-              <button className="btn btn-outline">
+              <button onClick={() => handleNavigation('user-management')} className="btn btn-outline">
                 <i className="fas fa-key"></i> Reset Passwords
               </button>
             </div>
@@ -2978,13 +2992,13 @@ function AdminSettings({ active }) {
           <div className="admin-card">
             <h3><i className="fas fa-handshake"></i> Trust System</h3>
             <div className="trust-actions">
-              <button className="btn btn-primary">
+              <button onClick={() => handleNavigation('trust-management')} className="btn btn-primary">
                 <i className="fas fa-network-wired"></i> Manage Relationships
               </button>
-              <button className="btn btn-outline">
+              <button onClick={() => handleNavigation('trust-management')} className="btn btn-outline">
                 <i className="fas fa-chart-line"></i> Trust Metrics
               </button>
-              <button className="btn btn-outline">
+              <button onClick={() => handleNavigation('trust-management')} className="btn btn-outline">
                 <i className="fas fa-cogs"></i> System Configuration
               </button>
             </div>

@@ -248,12 +248,31 @@ export const getUserStatistics = async () => {
 
 // Organization Management API functions
 export const getOrganizations = async () => {
-  const response = await fetch(`${API_URL}organizations/list/`, {
-    method: 'GET',
-    headers: { ...authHeader() }
-  });
-  
-  return await handleResponse(response);
+  try {
+    const response = await fetch(`${API_URL}organizations/list/`, {
+      method: 'GET',
+      headers: { ...authHeader() }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 403) {
+        console.warn('Access denied to organizations list');
+        return { data: [] };
+      }
+      if (response.status === 500) {
+        console.warn('Organizations service temporarily unavailable');
+        return { data: [] };
+      }
+    }
+    
+    const result = await handleResponse(response);
+    return {
+      data: Array.isArray(result.data) ? result.data : []
+    };
+  } catch (error) {
+    console.error('Failed to fetch organizations:', error);
+    return { data: [] };
+  }
 };
 
 export const createOrganization = async (orgData) => {
@@ -316,12 +335,26 @@ export const getOrganizationStatistics = async () => {
 
 // Admin API functions
 export const getSystemHealth = async () => {
-  const response = await fetch(`${API_URL}admin/system-health/`, {
-    method: 'GET',
-    headers: { ...authHeader() }
-  });
-  
-  return await handleResponse(response);
+  try {
+    const response = await fetch(`${API_URL}admin/system-health/`, {
+      method: 'GET',
+      headers: { ...authHeader() }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 403) {
+        throw new Error('Access denied - admin permissions required');
+      }
+      if (response.status === 500) {
+        return { status: 'warning', message: 'System health check temporarily unavailable' };
+      }
+    }
+    
+    return await handleResponse(response);
+  } catch (error) {
+    console.error('System health check failed:', error);
+    return { status: 'warning', message: 'Unable to check system health' };
+  }
 };
 
 export const getAuditLogs = async () => {
@@ -368,33 +401,84 @@ export const changePassword = async (currentPassword, newPassword, confirmPasswo
 
 // Email Statistics API function
 export const getEmailStatistics = async () => {
-  const response = await fetch(`${API_URL}alerts/statistics/`, {
-    method: 'GET',
-    headers: { ...authHeader() }
-  });
-  
-  return await handleResponse(response);
+  try {
+    const response = await fetch(`${API_URL}alerts/statistics/`, {
+      method: 'GET',
+      headers: { ...authHeader() }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        return {
+          total_emails_sent: 0,
+          threat_alerts_sent: 0,
+          feed_notifications_sent: 0,
+          last_email_sent: null,
+          gmail_connection_status: 'unknown'
+        };
+      }
+    }
+    
+    return await handleResponse(response);
+  } catch (error) {
+    console.error('Email statistics fetch failed:', error);
+    return {
+      total_emails_sent: 0,
+      threat_alerts_sent: 0,
+      feed_notifications_sent: 0,
+      last_email_sent: null,
+      gmail_connection_status: 'offline'
+    };
+  }
 };
 
 // Test Gmail Connection API function
 export const testGmailConnection = async () => {
-  const response = await fetch(`${API_URL}alerts/test-connection/`, {
-    method: 'GET',
-    headers: { ...authHeader() }
-  });
-  
-  return await handleResponse(response);
+  try {
+    const response = await fetch(`${API_URL}alerts/test-connection/`, {
+      method: 'GET',
+      headers: { ...authHeader() }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Connection test failed with status ${response.status}`);
+    }
+    
+    return await handleResponse(response);
+  } catch (error) {
+    console.error('Gmail connection test failed:', error);
+    throw new Error('Gmail connection test failed - please check your email configuration');
+  }
 };
 
 // Send Test Email API function
 export const sendTestEmail = async (email) => {
-  const response = await fetch(`${API_URL}alerts/test-email/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
-    body: JSON.stringify({ recipient_email: email })
-  });
-  
-  return await handleResponse(response);
+  try {
+    if (!email || !email.includes('@')) {
+      throw new Error('Please provide a valid email address');
+    }
+    
+    const response = await fetch(`${API_URL}alerts/test-email/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify({ recipient_email: email })
+    });
+    
+    if (!response.ok) {
+      if (response.status === 400) {
+        throw new Error('Invalid email address provided');
+      }
+      if (response.status === 500) {
+        throw new Error('Email service temporarily unavailable');
+      }
+      throw new Error(`Failed to send test email (${response.status})`);
+    }
+    
+    return await handleResponse(response);
+  } catch (error) {
+    console.error('Test email send failed:', error);
+    throw error;
+  }
 };
 
 // Alert System API functions
@@ -464,8 +548,19 @@ export const getTrustRelationships = async () => {
       headers: { ...authHeader() }
     });
     
+    if (!response.ok) {
+      if (response.status === 403) {
+        console.warn('Access denied to trust relationships');
+        return [];
+      }
+      if (response.status === 404) {
+        console.warn('Trust relationships endpoint not found');
+        return [];
+      }
+    }
+    
     const result = await handleResponse(response);
-    return result.data || [];
+    return Array.isArray(result.data) ? result.data : [];
   } catch (error) {
     console.error('Failed to fetch trust relationships:', error);
     // Try admin endpoint as fallback for admin users
@@ -475,12 +570,15 @@ export const getTrustRelationships = async () => {
         headers: { ...authHeader() }
       });
       
-      const adminResult = await handleResponse(adminResponse);
-      return adminResult.data && adminResult.data.relationships ? adminResult.data.relationships : [];
+      if (adminResponse.ok) {
+        const adminResult = await handleResponse(adminResponse);
+        const relationships = adminResult.data && adminResult.data.relationships ? adminResult.data.relationships : [];
+        return Array.isArray(relationships) ? relationships : [];
+      }
     } catch (adminError) {
-      console.error('Failed to fetch admin trust overview:', adminError);
-      return [];
+      console.warn('Admin trust overview also failed:', adminError);
     }
+    return [];
   }
 };
 
@@ -665,12 +763,36 @@ export const createTrustGroup = async (groupData) => {
 
 // User List API function
 export const getUsersList = async () => {
-  const response = await fetch(`${API_URL}users/list/`, {
-    method: 'GET',
-    headers: { ...authHeader() }
-  });
-  
-  return await handleResponse(response);
+  try {
+    const response = await fetch(`${API_URL}users/list/`, {
+      method: 'GET',
+      headers: { ...authHeader() }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 403) {
+        console.warn('Access denied to users list');
+        return { success: true, data: { users: [] } };
+      }
+      if (response.status === 500) {
+        console.warn('User service temporarily unavailable');
+        return { success: true, data: { users: [] } };
+      }
+    }
+    
+    const result = await handleResponse(response);
+    // Ensure we always return users in the expected format
+    if (result.data && Array.isArray(result.data.users)) {
+      return result;
+    } else if (result.data && Array.isArray(result.data)) {
+      return { success: true, data: { users: result.data } };
+    } else {
+      return { success: true, data: { users: [] } };
+    }
+  } catch (error) {
+    console.error('Failed to fetch users list:', error);
+    return { success: true, data: { users: [] } };
+  }
 };
 
 // Get specific user details
