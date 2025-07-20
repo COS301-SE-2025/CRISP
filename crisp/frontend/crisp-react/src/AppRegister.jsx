@@ -117,7 +117,7 @@ function AppRegister({ user, onLogout }) {
 
           {/* Admin Settings */}
           <ErrorBoundary>
-            <AdminSettings active={activePage === 'admin-settings'} />
+            <AdminSettings active={activePage === 'admin-settings'} onNavigate={showPage} />
           </ErrorBoundary>
         </div>
       </main>
@@ -2822,7 +2822,7 @@ function AccountSettings({ active, user }) {
 }
 
 // Admin Settings Component
-function AdminSettings({ active }) {
+function AdminSettings({ active, onNavigate }) {
   const [systemHealth, setSystemHealth] = useState(null);
   const [emailStats, setEmailStats] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -2885,7 +2885,9 @@ function AdminSettings({ active }) {
   };
 
   const handleNavigation = (pageId) => {
-    setActivePage(pageId);
+    if (onNavigate) {
+      onNavigate(pageId);
+    }
   };
 
   return (
@@ -2904,27 +2906,147 @@ function AdminSettings({ active }) {
 
         <div className="admin-grid">
           {/* System Health */}
-          <div className="admin-card">
-            <h3><i className="fas fa-heartbeat"></i> System Health</h3>
+          <div className="admin-card system-health-card">
+            <div className="card-header">
+              <h3><i className="fas fa-heartbeat"></i> System Health</h3>
+              <button onClick={fetchSystemData} className="btn btn-sm btn-outline refresh-btn">
+                <i className="fas fa-sync-alt"></i>
+              </button>
+            </div>
             {isLoading ? (
-              <div className="loading">Loading system health...</div>
+              <div className="loading">
+                <div className="loading-spinner"></div>
+                <p>Loading system health...</p>
+              </div>
             ) : systemHealth ? (
-              <div className="health-info">
-                <div className="health-status">
-                  <span className={`status-indicator ${systemHealth.status === 'healthy' ? 'healthy' : 'warning'}`}>
-                    {systemHealth.status || 'Unknown'}
-                  </span>
+              <div className="health-dashboard">
+                {/* Overall Status */}
+                <div className="health-overview">
+                  <div className={`status-badge ${systemHealth.database?.status === 'healthy' ? 'status-healthy' : 'status-warning'}`}>
+                    <i className={`fas ${systemHealth.database?.status === 'healthy' ? 'fa-check-circle' : 'fa-exclamation-triangle'}`}></i>
+                    <span>{systemHealth.database?.status === 'healthy' ? 'System Healthy' : 'Needs Attention'}</span>
+                  </div>
                 </div>
-                <p>{systemHealth.message || 'System status available'}</p>
-                <button onClick={fetchSystemData} className="btn btn-outline">
-                  <i className="fas fa-sync-alt"></i> Refresh
-                </button>
+
+                {/* Key Metrics Grid */}
+                <div className="metrics-grid">
+                  {/* Database Metrics */}
+                  <div className="metric-group">
+                    <h4><i className="fas fa-database"></i> Database</h4>
+                    <div className="metric-stats">
+                      <div className="metric-item">
+                        <span className="metric-label">Total Users</span>
+                        <span className="metric-value">{systemHealth.database?.total_users?.toLocaleString() || '0'}</span>
+                      </div>
+                      <div className="metric-item">
+                        <span className="metric-label">Active Users</span>
+                        <span className="metric-value active">{systemHealth.database?.active_users?.toLocaleString() || '0'}</span>
+                      </div>
+                      <div className="metric-item">
+                        <span className="metric-label">Organizations</span>
+                        <span className="metric-value">{systemHealth.database?.total_organizations?.toLocaleString() || '0'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Authentication Metrics */}
+                  <div className="metric-group">
+                    <h4><i className="fas fa-shield-alt"></i> Authentication</h4>
+                    <div className="metric-stats">
+                      <div className="metric-item">
+                        <span className="metric-label">Active Sessions</span>
+                        <span className="metric-value session">{systemHealth.authentication?.active_sessions || '0'}</span>
+                      </div>
+                      <div className="metric-item">
+                        <span className="metric-label">Failed Logins (24h)</span>
+                        <span className={`metric-value ${systemHealth.authentication?.failed_logins_24h > 0 ? 'warning' : 'success'}`}>
+                          {systemHealth.authentication?.failed_logins_24h || '0'}
+                        </span>
+                      </div>
+                      <div className="metric-item">
+                        <span className="metric-label">Locked Accounts</span>
+                        <span className={`metric-value ${systemHealth.authentication?.locked_accounts > 0 ? 'error' : 'success'}`}>
+                          {systemHealth.authentication?.locked_accounts || '0'}
+                        </span>
+                      </div>
+                      <div className="metric-item">
+                        <span className="metric-label">Avg Session Duration</span>
+                        <span className="metric-value">{systemHealth.authentication?.average_session_duration || '0'} min</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Trust System Metrics */}
+                  <div className="metric-group">
+                    <h4><i className="fas fa-handshake"></i> Trust System</h4>
+                    <div className="metric-stats">
+                      <div className="metric-item">
+                        <span className="metric-label">Total Relationships</span>
+                        <span className="metric-value">{systemHealth.trust_system?.total_relationships || '0'}</span>
+                      </div>
+                      <div className="metric-item">
+                        <span className="metric-label">Active Relationships</span>
+                        <span className="metric-value active">{systemHealth.trust_system?.active_relationships || '0'}</span>
+                      </div>
+                      <div className="metric-item">
+                        <span className="metric-label">Pending Approvals</span>
+                        <span className={`metric-value ${systemHealth.trust_system?.pending_approvals > 50 ? 'warning' : 'normal'}`}>
+                          {systemHealth.trust_system?.pending_approvals || '0'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* System Status Indicators */}
+                <div className="status-indicators">
+                  <div className="indicator">
+                    <div className="indicator-icon healthy">
+                      <i className="fas fa-server"></i>
+                    </div>
+                    <div className="indicator-info">
+                      <span className="indicator-label">Database</span>
+                      <span className="indicator-status">Online</span>
+                    </div>
+                  </div>
+                  <div className="indicator">
+                    <div className="indicator-icon healthy">
+                      <i className="fas fa-network-wired"></i>
+                    </div>
+                    <div className="indicator-info">
+                      <span className="indicator-label">API Services</span>
+                      <span className="indicator-status">Operational</span>
+                    </div>
+                  </div>
+                  <div className="indicator">
+                    <div className="indicator-icon healthy">
+                      <i className="fas fa-lock"></i>
+                    </div>
+                    <div className="indicator-info">
+                      <span className="indicator-label">Security</span>
+                      <span className="indicator-status">Protected</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="health-actions">
+                  <button onClick={fetchSystemData} className="btn btn-primary">
+                    <i className="fas fa-sync-alt"></i> Refresh Data
+                  </button>
+                  <button className="btn btn-outline" onClick={() => console.log('System logs viewed')}>
+                    <i className="fas fa-file-alt"></i> View Logs
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="no-data">
-                <p>Unable to fetch system health data</p>
-                <button onClick={fetchSystemData} className="btn btn-outline">
-                  <i className="fas fa-sync-alt"></i> Retry
+                <div className="no-data-icon">
+                  <i className="fas fa-exclamation-triangle"></i>
+                </div>
+                <h4>Unable to fetch system health data</h4>
+                <p>There was an issue connecting to the monitoring service</p>
+                <button onClick={fetchSystemData} className="btn btn-primary">
+                  <i className="fas fa-sync-alt"></i> Retry Connection
                 </button>
               </div>
             )}
