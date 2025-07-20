@@ -328,6 +328,7 @@ class UserService:
             'username': target_user.username,
             'first_name': first_name,
             'last_name': last_name,
+            'full_name': f"{first_name} {last_name}".strip(),  # Add full_name for compatibility
             'role': target_user.role,
             # Flattened organization for frontend compatibility
             'organization': target_user.organization.name if target_user.organization else 'No Organization',

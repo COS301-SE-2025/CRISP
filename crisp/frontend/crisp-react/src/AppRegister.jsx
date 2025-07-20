@@ -2678,6 +2678,11 @@ function AccountSettings({ active, user }) {
       
       await updateUserProfile(profileData);
       setMessage('Profile updated successfully!');
+      
+      // Refresh the page after a short delay to show updated data
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (error) {
       setMessage(`Error updating profile: ${error}`);
     } finally {

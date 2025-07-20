@@ -390,6 +390,28 @@ class UserViewSet(GenericViewSet):
             update_data = request.data.copy()
             logger.info(f"Profile update data received: {update_data}")
             
+            # Handle full_name field - split into first_name and last_name
+            if 'full_name' in update_data:
+                full_name = update_data['full_name'].strip()
+                if full_name:
+                    # Split full name into first and last name
+                    name_parts = full_name.split()
+                    if len(name_parts) >= 2:
+                        update_data['first_name'] = name_parts[0]
+                        update_data['last_name'] = ' '.join(name_parts[1:])
+                    elif len(name_parts) == 1:
+                        update_data['first_name'] = name_parts[0]
+                        update_data['last_name'] = ''
+                    else:
+                        update_data['first_name'] = ''
+                        update_data['last_name'] = ''
+                else:
+                    update_data['first_name'] = ''
+                    update_data['last_name'] = ''
+                # Remove the full_name field as it's not a database field
+                del update_data['full_name']
+                logger.info(f"Parsed full_name '{full_name}' into first_name: '{update_data.get('first_name')}', last_name: '{update_data.get('last_name')}'")
+            
             # Clean up any empty or invalid UUID fields
             uuid_fields = ['organization', 'organization_id']
             invalid_org_values = ['', 'No Organization', 'null', 'undefined', None]
