@@ -487,6 +487,15 @@ class TrustAwareService:
         self.access_control.require_permission(user, 'can_view_organization_analytics')
         
         org = user.organization
+        
+        # Handle case where user has no organization (admin users)
+        if not org:
+            if user.role == 'BlueVisionAdmin':
+                # Return system-wide metrics for admin users
+                return self._get_system_wide_trust_metrics()
+            else:
+                raise PermissionDenied("User is not associated with an organization")
+        
         metrics = {
             'organization': {
                 'id': str(org.id),
@@ -548,6 +557,74 @@ class TrustAwareService:
             
         except Exception as e:
             logger.error(f"Error getting trust metrics: {str(e)}")
+        
+        return metrics
+    
+    def _get_system_wide_trust_metrics(self) -> Dict[str, Any]:
+        """
+        Get system-wide trust metrics for admin users.
+        
+        Returns:
+            dict: System-wide trust metrics and statistics
+        """
+        metrics = {
+            'organization': {
+                'id': 'system-wide',
+                'name': 'System Overview'
+            },
+            'trust_relationships': {
+                'total': 0,
+                'active': 0,
+                'pending': 0,
+                'by_trust_level': {},
+                'by_access_level': {}
+            },
+            'trust_groups': {
+                'total_groups': 0,
+                'total_memberships': 0
+            },
+            'organizations': {
+                'total': 0,
+                'active': 0,
+                'verified': 0,
+                'publishers': 0
+            }
+        }
+        
+        try:
+            # Get all trust relationships
+            relationships = TrustRelationship.objects.select_related('trust_level')
+            
+            metrics['trust_relationships']['total'] = relationships.count()
+            metrics['trust_relationships']['active'] = relationships.filter(
+                status='active', is_active=True
+            ).count()
+            metrics['trust_relationships']['pending'] = relationships.filter(
+                status='pending'
+            ).count()
+            
+            # Group by trust level
+            for rel in relationships:
+                if rel.trust_level:
+                    level = rel.trust_level.name
+                    metrics['trust_relationships']['by_trust_level'][level] = \
+                        metrics['trust_relationships']['by_trust_level'].get(level, 0) + 1
+            
+            # Get trust group metrics
+            from core.trust.models import TrustGroup, TrustGroupMembership
+            metrics['trust_groups']['total_groups'] = TrustGroup.objects.count()
+            metrics['trust_groups']['total_memberships'] = TrustGroupMembership.objects.filter(
+                is_active=True
+            ).count()
+            
+            # Get organization metrics
+            metrics['organizations']['total'] = Organization.objects.count()
+            metrics['organizations']['active'] = Organization.objects.filter(is_active=True).count()
+            metrics['organizations']['verified'] = Organization.objects.filter(is_verified=True).count()
+            metrics['organizations']['publishers'] = Organization.objects.filter(is_publisher=True).count()
+            
+        except Exception as e:
+            logger.error(f"Error getting system-wide trust metrics: {str(e)}")
         
         return metrics
     

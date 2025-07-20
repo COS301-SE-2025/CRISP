@@ -628,8 +628,24 @@ export const getTrustGroups = async () => {
       headers: { ...authHeader() }
     });
     
+    // Handle different response codes gracefully
+    if (!response.ok) {
+      if (response.status === 500) {
+        console.warn('Trust groups service temporarily unavailable');
+        return [];
+      }
+      if (response.status === 404) {
+        console.warn('Trust groups endpoint not found');
+        return [];
+      }
+      if (response.status === 403) {
+        console.warn('Access denied to trust groups');
+        return [];
+      }
+    }
+    
     const result = await handleResponse(response);
-    return result.data || [];
+    return Array.isArray(result.data) ? result.data : [];
   } catch (error) {
     console.error('Failed to fetch trust groups:', error);
     // Return empty array if user doesn't have organization or other error

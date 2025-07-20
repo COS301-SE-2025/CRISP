@@ -178,7 +178,7 @@ function AuthWrapper() {
   });
 
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         {/* Landing page route - accessible to everyone */}
         <Route

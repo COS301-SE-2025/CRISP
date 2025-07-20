@@ -8,6 +8,7 @@ import LoadingSpinner from './components/LoadingSpinner.jsx';
 import UserManagement from './components/UserManagement.jsx';
 import InstitutionManagement from './components/InstitutionManagement.jsx';
 import TrustManagement from './components/TrustManagement.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 
 function AppRegister({ user, onLogout }) {
@@ -90,22 +91,34 @@ function AppRegister({ user, onLogout }) {
           <Notifications active={activePage === 'notifications'} />
 
           {/* Profile */}
-          <Profile active={activePage === 'profile'} user={user} />
+          <ErrorBoundary>
+            <Profile active={activePage === 'profile'} user={user} />
+          </ErrorBoundary>
 
           {/* User Management */}
-          <UserManagement active={activePage === 'user-management'} />
+          <ErrorBoundary>
+            <UserManagement active={activePage === 'user-management'} />
+          </ErrorBoundary>
 
           {/* Institution Management */}
-          <InstitutionManagement active={activePage === 'institution-management'} />
+          <ErrorBoundary>
+            <InstitutionManagement active={activePage === 'institution-management'} />
+          </ErrorBoundary>
 
           {/* Trust Management */}
-          <TrustManagement active={activePage === 'trust-management'} />
+          <ErrorBoundary>
+            <TrustManagement active={activePage === 'trust-management'} />
+          </ErrorBoundary>
 
           {/* Account Settings */}
-          <AccountSettings active={activePage === 'account-settings'} user={user} />
+          <ErrorBoundary>
+            <AccountSettings active={activePage === 'account-settings'} user={user} />
+          </ErrorBoundary>
 
           {/* Admin Settings */}
-          <AdminSettings active={activePage === 'admin-settings'} />
+          <ErrorBoundary>
+            <AdminSettings active={activePage === 'admin-settings'} />
+          </ErrorBoundary>
         </div>
       </main>
     </div>
@@ -2207,8 +2220,6 @@ function Profile({ active, user }) {
     confirmPassword: ''
   });
 
-  if (!active) return null;
-
   // Fetch profile data on component mount
   useEffect(() => {
     if (active) {
@@ -2216,6 +2227,8 @@ function Profile({ active, user }) {
       fetchUserStatistics();
     }
   }, [active]);
+
+  if (!active) return null;
 
   const fetchProfileData = async () => {
     setIsLoading(true);
@@ -2815,13 +2828,13 @@ function AdminSettings({ active }) {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  if (!active) return null;
-
   useEffect(() => {
     if (active) {
       fetchSystemData();
     }
   }, [active]);
+
+  if (!active) return null;
 
   const fetchSystemData = async () => {
     setIsLoading(true);
