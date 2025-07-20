@@ -3131,12 +3131,12 @@ function AdminSettings({ active, onNavigate }) {
                 </div>
                 <div className="email-actions">
                   <button onClick={handleTestConnection} className="btn btn-outline" disabled={isLoading}>
-                    <i className="fas fa-plug"></i> 
-                    {isLoading ? 'Testing...' : 'Test Connection'}
+                    <i className="fas fa-plug"></i>
+                    <span>{isLoading ? 'Testing...' : 'Test Connection'}</span>
                   </button>
                   <button onClick={handleTestEmail} className="btn btn-primary" disabled={isLoading}>
-                    <i className="fas fa-paper-plane"></i> 
-                    {isLoading ? 'Sending...' : 'Send Test Email'}
+                    <i className="fas fa-paper-plane"></i>
+                    <span>{isLoading ? 'Sending...' : 'Send Test Email'}</span>
                   </button>
                 </div>
               </div>
@@ -3155,13 +3155,16 @@ function AdminSettings({ active, onNavigate }) {
             <h3><i className="fas fa-users"></i> User Management</h3>
             <div className="management-actions">
               <button onClick={() => handleNavigation('user-management')} className="btn btn-primary">
-                <i className="fas fa-user-plus"></i> Create User
+                <i className="fas fa-user-plus"></i>
+                <span>Create New User</span>
               </button>
               <button onClick={() => handleNavigation('user-management')} className="btn btn-outline">
-                <i className="fas fa-users-cog"></i> Manage Roles
+                <i className="fas fa-users-cog"></i>
+                <span>Manage User Roles</span>
               </button>
               <button onClick={() => handleNavigation('user-management')} className="btn btn-outline">
-                <i className="fas fa-key"></i> Reset Passwords
+                <i className="fas fa-key"></i>
+                <span>Reset User Passwords</span>
               </button>
             </div>
           </div>
@@ -3171,13 +3174,16 @@ function AdminSettings({ active, onNavigate }) {
             <h3><i className="fas fa-handshake"></i> Trust System</h3>
             <div className="trust-actions">
               <button onClick={() => handleNavigation('trust-management')} className="btn btn-primary">
-                <i className="fas fa-network-wired"></i> Manage Relationships
+                <i className="fas fa-network-wired"></i>
+                <span>Manage Trust Relationships</span>
               </button>
               <button onClick={() => handleNavigation('trust-management')} className="btn btn-outline">
-                <i className="fas fa-chart-line"></i> Trust Metrics
+                <i className="fas fa-chart-line"></i>
+                <span>View Trust Metrics</span>
               </button>
               <button onClick={() => handleNavigation('trust-management')} className="btn btn-outline">
-                <i className="fas fa-cogs"></i> System Configuration
+                <i className="fas fa-cogs"></i>
+                <span>System Configuration</span>
               </button>
             </div>
           </div>

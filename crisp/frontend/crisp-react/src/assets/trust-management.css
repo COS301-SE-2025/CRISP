@@ -677,9 +677,7 @@
 }
 
 /* Action Buttons */
-.email-actions,
-.management-actions,
-.trust-actions {
+.email-actions {
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
@@ -688,14 +686,96 @@
   border-top: 1px solid #f3f4f6;
 }
 
-.email-actions .btn,
-.management-actions .btn,
-.trust-actions .btn {
+.management-actions,
+.trust-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f3f4f6;
+}
+
+/* Email buttons can be side by side */
+.email-actions .btn {
   flex: 1;
   min-width: 140px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.email-actions .btn i {
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+}
+
+.email-actions .btn span {
+  flex: 1;
+}
+
+/* Management and Trust buttons get full width for better text display */
+.management-actions .btn,
+.trust-actions .btn {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  white-space: normal;
+  word-wrap: break-word;
+  min-height: 48px;
+  line-height: 1.4;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+}
+
+.management-actions .btn:hover,
+.trust-actions .btn:hover {
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.management-actions .btn i,
+.trust-actions .btn i {
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+  font-size: 1rem;
+}
+
+/* Button text styling */
+.management-actions .btn span,
+.trust-actions .btn span {
+  flex: 1;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+/* Different styles for primary vs outline buttons */
+.management-actions .btn.btn-primary,
+.trust-actions .btn.btn-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border: none;
+  color: white;
+}
+
+.management-actions .btn.btn-outline,
+.trust-actions .btn.btn-outline {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #374151;
+}
+
+.management-actions .btn.btn-outline:hover,
+.trust-actions .btn.btn-outline:hover {
+  background: #f1f5f9;
+  border-color: #3b82f6;
+  color: #1d4ed8;
 }
 
 /* Admin Card No Data State */
@@ -1062,18 +1142,26 @@
     padding: 1rem;
   }
   
-  .email-actions,
-  .management-actions,
-  .trust-actions {
+  .email-actions {
     flex-direction: column;
     gap: 0.5rem;
   }
   
-  .email-actions .btn,
-  .management-actions .btn,
-  .trust-actions .btn {
+  .email-actions .btn {
     width: 100%;
     min-width: auto;
+    justify-content: flex-start;
+  }
+  
+  .management-actions,
+  .trust-actions {
+    gap: 0.5rem;
+  }
+  
+  .management-actions .btn,
+  .trust-actions .btn {
+    padding: 0.65rem 1rem;
+    min-height: 40px;
   }
   
   .system-health-card .card-header {
