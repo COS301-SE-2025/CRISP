@@ -2932,11 +2932,6 @@ function AdminSettings({ active, onNavigate }) {
     }
   };
 
-  const handleNavigation = (pageId) => {
-    if (onNavigate) {
-      onNavigate(pageId);
-    }
-  };
 
   return (
     <section className="page-section active">
@@ -3154,15 +3149,15 @@ function AdminSettings({ active, onNavigate }) {
           <div className="admin-card">
             <h3><i className="fas fa-users"></i> User Management</h3>
             <div className="management-actions">
-              <button onClick={() => handleNavigation('user-management')} className="btn btn-primary">
+              <button onClick={() => onNavigate('user-management', { section: 'create' })} className="btn btn-primary">
                 <i className="fas fa-user-plus"></i>
                 <span>Create New User</span>
               </button>
-              <button onClick={() => handleNavigation('user-management')} className="btn btn-outline">
+              <button onClick={() => onNavigate('user-management', { section: 'roles' })} className="btn btn-outline">
                 <i className="fas fa-users-cog"></i>
                 <span>Manage User Roles</span>
               </button>
-              <button onClick={() => handleNavigation('user-management')} className="btn btn-outline">
+              <button onClick={() => onNavigate('user-management', { section: 'passwords' })} className="btn btn-outline">
                 <i className="fas fa-key"></i>
                 <span>Reset User Passwords</span>
               </button>
@@ -3173,17 +3168,17 @@ function AdminSettings({ active, onNavigate }) {
           <div className="admin-card">
             <h3><i className="fas fa-handshake"></i> Trust System</h3>
             <div className="trust-actions">
-              <button onClick={() => handleNavigation('trust-management')} className="btn btn-primary">
+              <button onClick={() => onNavigate('trust-management', { tab: 'relationships' })} className="btn btn-primary">
                 <i className="fas fa-network-wired"></i>
                 <span>Manage Trust Relationships</span>
               </button>
-              <button onClick={() => handleNavigation('trust-management')} className="btn btn-outline">
+              <button onClick={() => onNavigate('trust-management', { tab: 'metrics' })} className="btn btn-outline">
                 <i className="fas fa-chart-line"></i>
                 <span>View Trust Metrics</span>
               </button>
-              <button onClick={() => handleNavigation('trust-management')} className="btn btn-outline">
+              <button onClick={() => onNavigate('trust-management', { tab: 'groups' })} className="btn btn-outline">
                 <i className="fas fa-cogs"></i>
-                <span>System Configuration</span>
+                <span>Manage Trust Groups</span>
               </button>
             </div>
           </div>

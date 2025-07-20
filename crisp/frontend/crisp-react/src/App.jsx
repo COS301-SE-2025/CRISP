@@ -10,9 +10,23 @@ import LoadingSpinner from './components/LoadingSpinner';
 
 
 function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthWrapper passes
-  // State to manage the active page
-  const [activePage, setActivePage] = useState('dashboard');
+  // State to manage the active page with URL synchronization
+  const [activePage, setActivePage] = useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('page') || 'dashboard';
+  });
   const [isLoading, setIsLoading] = useState(false);
+  const [urlParams, setUrlParams] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      page: params.get('page') || 'dashboard',
+      tab: params.get('tab') || null,
+      section: params.get('section') || null
+    };
+  });
+  
+  // Function to get current URL parameters
+  const getUrlParams = () => urlParams;
   
   // Determine user role and permissions
   const userRole = user?.role || 'viewer';
@@ -84,17 +98,82 @@ function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthW
     return getUserNotifications().filter(notif => !notif.read).length;
   };
   
-  // Function to switch between pages with loading state
-  const showPage = (pageId) => {
-    console.log('Switching to page:', pageId);
-    setIsLoading(true);
-    
-    // Add delay to show loading spinner
-    setTimeout(() => {
-      setActivePage(pageId);
+  // Function to switch between pages with loading state and URL synchronization
+  const showPage = (pageId, options = {}) => {
+    try {
+      console.log('App: Switching to page:', pageId, 'with options:', options);
+      
+      if (!pageId) {
+        console.error('App: No pageId provided to showPage');
+        return;
+      }
+      
+      setIsLoading(true);
+      
+      // Update URL with page and options
+      const params = new URLSearchParams(window.location.search);
+      params.set('page', pageId);
+      
+      // Add any additional options as URL parameters
+      if (options.tab) {
+        params.set('tab', options.tab);
+      } else {
+        params.delete('tab');
+      }
+      
+      if (options.section) {
+        params.set('section', options.section);
+      } else {
+        params.delete('section');
+      }
+      
+      // Update URL without page reload
+      const newUrl = `${window.location.pathname}?${params.toString()}`;
+      window.history.pushState({ pageId, options }, '', newUrl);
+      
+      // Update our internal state
+      const newUrlParams = {
+        page: pageId,
+        tab: options.tab || null,
+        section: options.section || null
+      };
+      console.log('App: Updating URL params to:', newUrlParams);
+      setUrlParams(newUrlParams);
+      
+      // Add delay to show loading spinner
+      setTimeout(() => {
+        setActivePage(pageId);
+        setIsLoading(false);
+      }, 1000);
+    } catch (error) {
+      console.error('App: Error in showPage:', error);
       setIsLoading(false);
-    }, 1000);
+    }
   };
+
+  // Handle browser back/forward navigation
+  useEffect(() => {
+    const handlePopState = (event) => {
+      const params = new URLSearchParams(window.location.search);
+      const pageFromUrl = params.get('page') || 'dashboard';
+      const newUrlParams = {
+        page: pageFromUrl,
+        tab: params.get('tab') || null,
+        section: params.get('section') || null
+      };
+      
+      console.log('App: PopState detected, updating to:', newUrlParams);
+      setUrlParams(newUrlParams);
+      if (pageFromUrl !== activePage) {
+        setActivePage(pageFromUrl);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [activePage]);
 
   // Add resize listener to handle chart resizing when zooming
   useEffect(() => {
@@ -173,10 +252,16 @@ function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthW
           />
 
           {/* Trust Management - Publishers and BlueVision Admins only */}
-          {(isPublisher || isBlueVisionAdmin) && <TrustManagement active={activePage === 'trust-management'} />}
+          {(isPublisher || isBlueVisionAdmin) && <TrustManagement 
+            active={activePage === 'trust-management'} 
+            initialTab={getUrlParams().tab}
+          />}
 
           {/* User Management - Publishers and BlueVision Admins only */}
-          {(isPublisher || isBlueVisionAdmin || userRole === 'admin') && <UserManagementComponent active={activePage === 'user-management'} />}
+          {(isPublisher || isBlueVisionAdmin || userRole === 'admin') && <UserManagementComponent 
+            active={activePage === 'user-management'} 
+            initialSection={getUrlParams().section}
+          />}
 
           {/* Alerts System */}
           <AlertsSystem 

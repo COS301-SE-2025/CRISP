@@ -3,7 +3,8 @@ import * as api from '../api.js';
 import LoadingSpinner from './LoadingSpinner.jsx';
 
 // Trust Management Component
-function TrustManagement({ active }) {
+function TrustManagement({ active, initialTab = null }) {
+  console.log('TrustManagement rendered with props:', { active, initialTab });
   const [trustData, setTrustData] = useState({
     relationships: [],
     groups: [],
@@ -12,7 +13,14 @@ function TrustManagement({ active }) {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('relationships');
+  const [activeTab, setActiveTab] = useState(() => {
+    // Use initialTab prop first, then URL params, then default
+    if (initialTab && ['relationships', 'groups', 'metrics'].includes(initialTab)) {
+      return initialTab;
+    }
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('tab') || 'relationships';
+  });
   const [showNewRelationshipModal, setShowNewRelationshipModal] = useState(false);
   const [showNewGroupModal, setShowNewGroupModal] = useState(false);
 
@@ -38,6 +46,59 @@ function TrustManagement({ active }) {
       fetchTrustData();
     }
   }, [active]);
+
+  // Update tab when initialTab prop changes
+  useEffect(() => {
+    if (initialTab && ['relationships', 'groups', 'metrics'].includes(initialTab) && initialTab !== activeTab) {
+      console.log('TrustManagement: Setting tab from prop:', initialTab);
+      setActiveTab(initialTab);
+    }
+  }, [initialTab, activeTab]);
+
+  // Listen for URL changes to update active tab
+  useEffect(() => {
+    const handleUrlChange = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabFromUrl = urlParams.get('tab');
+      if (tabFromUrl && ['relationships', 'groups', 'metrics'].includes(tabFromUrl)) {
+        setActiveTab(tabFromUrl);
+      }
+    };
+
+    // Check URL immediately when component mounts or becomes active
+    if (active) {
+      handleUrlChange();
+    }
+
+    // Listen for popstate events (back/forward navigation)
+    window.addEventListener('popstate', handleUrlChange);
+    
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+    };
+  }, [active]);
+
+  // Function to handle tab switching with URL update
+  const handleTabChange = (tabName) => {
+    try {
+      console.log('TrustManagement: Changing tab to:', tabName);
+      if (!['relationships', 'groups', 'metrics'].includes(tabName)) {
+        console.error('Invalid tab name:', tabName);
+        return;
+      }
+      
+      setActiveTab(tabName);
+      
+      // Update URL to reflect tab change
+      const urlParams = new URLSearchParams(window.location.search);
+      urlParams.set('tab', tabName);
+      const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
+      window.history.pushState(null, '', newUrl);
+      console.log('TrustManagement: Updated URL to:', newUrl);
+    } catch (error) {
+      console.error('TrustManagement: Error changing tab:', error);
+    }
+  };
 
   const fetchTrustData = async () => {
     try {
@@ -162,19 +223,19 @@ function TrustManagement({ active }) {
       <div className="trust-tabs">
         <button 
           className={`tab ${activeTab === 'relationships' ? 'active' : ''}`}
-          onClick={() => setActiveTab('relationships')}
+          onClick={() => handleTabChange('relationships')}
         >
           Trust Relationships ({Array.isArray(trustData.relationships) ? trustData.relationships.length : 0})
         </button>
         <button 
           className={`tab ${activeTab === 'groups' ? 'active' : ''}`}
-          onClick={() => setActiveTab('groups')}
+          onClick={() => handleTabChange('groups')}
         >
           Trust Groups ({Array.isArray(trustData.groups) ? trustData.groups.length : 0})
         </button>
         <button 
           className={`tab ${activeTab === 'metrics' ? 'active' : ''}`}
-          onClick={() => setActiveTab('metrics')}
+          onClick={() => handleTabChange('metrics')}
         >
           Trust Metrics
         </button>

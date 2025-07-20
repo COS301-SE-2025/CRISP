@@ -5,13 +5,26 @@ import LoadingSpinner from './LoadingSpinner.jsx';
 // Import alias for the API to avoid conflicts
 import * as api from '../api.js';
 
-const UserManagement = ({ active = true }) => {
+const UserManagement = ({ active = true, initialSection = null }) => {
+  console.log('UserManagement rendered with props:', { active, initialSection });
   const [users, setUsers] = useState([]);
   const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState('add'); // 'add', 'edit', 'view'
+  const [showModal, setShowModal] = useState(() => {
+    // Use initialSection prop first, then URL params
+    if (initialSection === 'create') return true;
+    const urlParams = new URLSearchParams(window.location.search);
+    const section = urlParams.get('section');
+    return section === 'create';
+  });
+  const [modalMode, setModalMode] = useState(() => {
+    // Set modal mode based on initialSection prop or URL section
+    if (initialSection === 'create') return 'add';
+    const urlParams = new URLSearchParams(window.location.search);
+    const section = urlParams.get('section');
+    return section === 'create' ? 'add' : 'add';
+  });
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
@@ -38,6 +51,41 @@ const UserManagement = ({ active = true }) => {
       loadOrganizations();
     }
   }, [active]);
+
+  // Handle initialSection prop changes
+  useEffect(() => {
+    if (initialSection === 'create') {
+      console.log('UserManagement: Opening create modal from prop');
+      setShowModal(true);
+      setModalMode('add');
+    } else if (initialSection === 'roles' || initialSection === 'passwords') {
+      console.log('UserManagement: Section from prop:', initialSection);
+      setShowModal(false);
+    }
+  }, [initialSection]);
+
+  // Handle URL parameter changes for section navigation
+  useEffect(() => {
+    const handleUrlChange = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const section = urlParams.get('section');
+      
+      if (section === 'create') {
+        setShowModal(true);
+        setModalMode('add');
+      } else if (section === 'roles' || section === 'passwords') {
+        // For roles and passwords, we can show a message or highlight relevant sections
+        setShowModal(false);
+      }
+    };
+
+    // Listen for popstate events (back/forward navigation)
+    window.addEventListener('popstate', handleUrlChange);
+    
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+    };
+  }, []);
 
   const loadUsers = async () => {
     try {
