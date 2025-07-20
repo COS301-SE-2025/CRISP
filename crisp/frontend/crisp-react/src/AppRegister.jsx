@@ -13,17 +13,75 @@ import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 function AppRegister({ user, onLogout }) {
   const navigate = useNavigate();
-  // State to manage the active page
-  const [activePage, setActivePage] = useState('dashboard');
+  
+  // State to manage the active page with URL synchronization
+  const [activePage, setActivePage] = useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('page') || 'dashboard';
+  });
   const [isLoading, setIsLoading] = useState(false);
+  const [urlParams, setUrlParams] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      page: params.get('page') || 'dashboard',
+      tab: params.get('tab') || null,
+      section: params.get('section') || null
+    };
+  });
+  
+  // Function to get current URL parameters
+  const getUrlParams = () => urlParams;
 
-  // Function to switch between pages
-  const showPage = (pageId) => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setActivePage(pageId);
+  // Function to switch between pages with URL synchronization
+  const showPage = (pageId, options = {}) => {
+    try {
+      console.log('AppRegister: Switching to page:', pageId, 'with options:', options);
+      
+      if (!pageId) {
+        console.error('AppRegister: No pageId provided to showPage');
+        return;
+      }
+      
+      setIsLoading(true);
+      
+      // Update URL with page and options
+      const params = new URLSearchParams(window.location.search);
+      params.set('page', pageId);
+      
+      // Add any additional options as URL parameters
+      if (options.tab) {
+        params.set('tab', options.tab);
+      } else {
+        params.delete('tab');
+      }
+      
+      if (options.section) {
+        params.set('section', options.section);
+      } else {
+        params.delete('section');
+      }
+      
+      // Update URL without page reload
+      const newUrl = `${window.location.pathname}?${params.toString()}`;
+      window.history.pushState({ pageId, options }, '', newUrl);
+      
+      // Update our internal state
+      const newUrlParams = {
+        page: pageId,
+        tab: options.tab || null,
+        section: options.section || null
+      };
+      console.log('AppRegister: Updating URL params to:', newUrlParams);
+      setUrlParams(newUrlParams);
+      
+      setTimeout(() => {
+        setActivePage(pageId);
+        setIsLoading(false);
+      }, 800);
+    } catch (error) {
+      console.error('AppRegister: Error in showPage:', error);
       setIsLoading(false);
-    }, 800);
+    }
   };
 
   // Function to navigate to RegisterUser page
@@ -35,13 +93,38 @@ function AppRegister({ user, onLogout }) {
     }, 800);
   };
 
+  // Handle browser back/forward navigation
+  useEffect(() => {
+    const handlePopState = (event) => {
+      const params = new URLSearchParams(window.location.search);
+      const pageFromUrl = params.get('page') || 'dashboard';
+      const newUrlParams = {
+        page: pageFromUrl,
+        tab: params.get('tab') || null,
+        section: params.get('section') || null
+      };
+      
+      console.log('AppRegister: PopState detected, updating to:', newUrlParams);
+      setUrlParams(newUrlParams);
+      if (pageFromUrl !== activePage) {
+        setActivePage(pageFromUrl);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [activePage]);
+
   // Add resize listener to handle chart resizing when zooming
   useEffect(() => {
     const handleResize = () => {
       // This forces a redraw of charts when window size changes (including zoom)
       if (activePage === 'dashboard') {
-        const event = new Event('resize');
-        window.dispatchEvent(event);
+        // Use a different approach to trigger chart redraw without infinite loop
+        // Just force a re-render by updating state slightly
+        setIsLoading(prev => prev);
       }
     };
 
@@ -97,7 +180,10 @@ function AppRegister({ user, onLogout }) {
 
           {/* User Management */}
           <ErrorBoundary>
-            <UserManagement active={activePage === 'user-management'} />
+            <UserManagement 
+              active={activePage === 'user-management'} 
+              initialSection={getUrlParams().section}
+            />
           </ErrorBoundary>
 
           {/* Institution Management */}
@@ -107,7 +193,10 @@ function AppRegister({ user, onLogout }) {
 
           {/* Trust Management */}
           <ErrorBoundary>
-            <TrustManagement active={activePage === 'trust-management'} />
+            <TrustManagement 
+              active={activePage === 'trust-management'} 
+              initialTab={getUrlParams().tab}
+            />
           </ErrorBoundary>
 
           {/* Account Settings */}
@@ -2851,6 +2940,7 @@ function AccountSettings({ active, user }) {
 
 // Admin Settings Component
 function AdminSettings({ active, onNavigate }) {
+  console.log('AdminSettings rendered with props:', { active, onNavigate: !!onNavigate });
   const [systemHealth, setSystemHealth] = useState(null);
   const [emailStats, setEmailStats] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
