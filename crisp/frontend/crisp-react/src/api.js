@@ -388,14 +388,28 @@ export const getSecurityEvents = async () => {
 
 // Change Password API function
 export const changePassword = async (currentPassword, newPassword, confirmPassword) => {
+  // Ensure all parameters are strings
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    throw new Error('All password fields are required');
+  }
+  
+  const requestBody = {
+    current_password: String(currentPassword).trim(),
+    new_password: String(newPassword).trim(),
+    new_password_confirm: String(confirmPassword).trim()
+  };
+  
+  console.log('API changePassword request body:', {
+    current_password: currentPassword ? '***filled***' : 'empty',
+    new_password: newPassword ? '***filled***' : 'empty',
+    new_password_confirm: confirmPassword ? '***filled***' : 'empty'
+  });
+  console.log('Actual request body being sent:', requestBody);
+  
   const response = await fetch(`${API_URL}auth/change-password/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeader() },
-    body: JSON.stringify({
-      current_password: currentPassword,
-      new_password: newPassword,
-      new_password_confirm: confirmPassword
-    })
+    body: JSON.stringify(requestBody)
   });
   
   return await handleResponse(response);

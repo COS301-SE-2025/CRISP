@@ -112,6 +112,192 @@
   min-height: 400px;
 }
 
+/* Profile Tabs - Enhanced for better readability */
+.profile-tabs {
+  display: flex;
+  background: var(--card-background);
+  border-radius: 8px;
+  padding: 0.5rem;
+  margin-bottom: 1.5rem;
+  gap: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.profile-tabs .tab-button {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-tabs .tab-button:hover {
+  background: var(--hover-background);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.profile-tabs .tab-button.active {
+  background: linear-gradient(135deg, var(--primary-color), #1976d2);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+  transform: translateY(-1px);
+}
+
+.profile-tabs .tab-button.active i {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.profile-tabs .tab-button i {
+  font-size: 1rem;
+  transition: transform 0.3s ease;
+}
+
+.profile-tabs .tab-button:hover i {
+  transform: scale(1.1);
+}
+
+/* Change Password Form - Enhanced styling */
+.change-password-form {
+  background: var(--card-background);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.change-password-form .form-group {
+  margin-bottom: 1.5rem;
+}
+
+.change-password-form .form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.change-password-form .form-group input[type="password"] {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  background: white !important;
+  color: #333 !important;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.change-password-form .form-group input[type="password"]:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+  background: white;
+}
+
+.change-password-form .form-group input[type="password"]:hover {
+  border-color: var(--primary-color);
+}
+
+.change-password-form .form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.change-password-form .error-message {
+  background: #ffebee;
+  color: #c62828;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  border-left: 4px solid #f44336;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+/* Badge styles for profile */
+.badge-inactive {
+  background: #ffebee !important;
+  color: #c62828 !important;
+  border: 1px solid #f44336 !important;
+}
+
+/* Profile form enhanced styling */
+.profile-form .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.profile-form .form-group {
+  margin-bottom: 1.5rem;
+}
+
+.profile-form .form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.profile-form .form-group input,
+.profile-form .form-group textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--input-background, white);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.profile-form .form-group input:focus,
+.profile-form .form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+  background: white;
+}
+
+.profile-form .form-group input:hover,
+.profile-form .form-group textarea:hover {
+  border-color: var(--primary-color);
+}
+
+.profile-form .form-group input:disabled {
+  background: var(--disabled-background, #f5f5f5);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .profile-form .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Trust Relationships */
 .trust-relationships-grid {
   display: grid;

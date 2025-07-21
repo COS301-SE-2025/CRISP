@@ -218,7 +218,6 @@ function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthW
         <div className="container">
           {isLoading && (
             <div className="loading-overlay">
-              <div className="loading-spinner"></div>
               <LoadingSpinner />
             </div>
           )}
@@ -2099,6 +2098,19 @@ function UserProfile({ active, user, userRole, userOrganization, notifications, 
     department: user?.department || ''
   });
 
+  // Update form data when user prop changes
+  React.useEffect(() => {
+    setFormData({
+      username: user?.username || '',
+      fullName: user?.full_name || `${user?.first_name || ''} ${user?.last_name || ''}`.trim(),
+      email: user?.email || user?.username || '',
+      organization: userOrganization?.name || '',
+      role: userRole || 'viewer',
+      phone: user?.phone_number || '',
+      department: user?.department || ''
+    });
+  }, [user, userOrganization, userRole]);
+
   if (!active) return null;
 
   const handleSave = async () => {
@@ -2298,12 +2310,22 @@ function UserProfile({ active, user, userRole, userOrganization, notifications, 
                     <div className="stat-item">
                       <div className="stat-label">Account Status</div>
                       <div className="stat-value">
-                        <span className="badge badge-active">Active</span>
+                        <span className={`badge ${user?.is_active ? 'badge-active' : 'badge-inactive'}`}>
+                          {user?.is_active ? 'Active' : 'Inactive'}
+                        </span>
                       </div>
                     </div>
                     <div className="stat-item">
                       <div className="stat-label">Last Login</div>
-                      <div className="stat-value">Just now</div>
+                      <div className="stat-value">
+                        {user?.last_login ? new Date(user.last_login).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : 'Never'}
+                      </div>
                     </div>
                     <div className="stat-item">
                       <div className="stat-label">Notifications</div>
@@ -2311,7 +2333,12 @@ function UserProfile({ active, user, userRole, userOrganization, notifications, 
                     </div>
                     <div className="stat-item">
                       <div className="stat-label">Member Since</div>
-                      <div className="stat-value">January 2025</div>
+                      <div className="stat-value">
+                        {user?.date_joined ? new Date(user.date_joined).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long'
+                        }) : 'Unknown'}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2655,7 +2682,12 @@ function ChangePasswordForm({ onClose }) {
     try {
       setLoading(true);
       setError('');
-      await api.changePassword(passwordData.currentPassword, passwordData.newPassword);
+      console.log('Sending password change request with data:', {
+        currentPassword: passwordData.currentPassword ? '***filled***' : 'empty',
+        newPassword: passwordData.newPassword ? '***filled***' : 'empty', 
+        confirmPassword: passwordData.confirmPassword ? '***filled***' : 'empty'
+      });
+      await api.changePassword(passwordData.currentPassword, passwordData.newPassword, passwordData.confirmPassword);
       onClose();
     } catch (error) {
       setError(error.toString());
@@ -4239,7 +4271,7 @@ function AccountSettings({ active, user }) {
     setMessage('');
 
     try {
-      await api.changePassword(formData.currentPassword, formData.newPassword);
+      await api.changePassword(formData.currentPassword, formData.newPassword, formData.confirmPassword);
       setMessage('Password changed successfully!');
       setFormData(prev => ({
         ...prev,

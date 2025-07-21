@@ -2457,7 +2457,7 @@ function Profile({ active, user }) {
 
     setIsLoading(true);
     try {
-      await changePassword(passwordForm.currentPassword, passwordForm.newPassword);
+      await changePassword(passwordForm.currentPassword, passwordForm.newPassword, passwordForm.confirmPassword);
       setSuccess('Password changed successfully!');
       setPasswordForm({
         currentPassword: '',
@@ -2790,7 +2790,7 @@ function AccountSettings({ active, user }) {
     setMessage('');
 
     try {
-      await changePassword(formData.currentPassword, formData.newPassword);
+      await changePassword(formData.currentPassword, formData.newPassword, formData.confirmPassword);
       setMessage('Password changed successfully!');
       setFormData(prev => ({
         ...prev,
