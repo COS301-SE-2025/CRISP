@@ -1,6 +1,7 @@
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.core.exceptions import ValidationError, PermissionDenied
 from ..models import Organization
 from ..serializers import OrganizationSerializer, OrganizationDetailSerializer
 from ..services.organization_service import OrganizationService
@@ -96,10 +97,10 @@ class OrganizationViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_400_BAD_REQUEST)
         
         except Exception as e:
-            logger.error(f"Create organization error: {str(e)}")
+            logger.error(f"Create organization error: {str(e)}", exc_info=True)
             return Response({
                 'success': False,
-                'message': 'Failed to create organization'
+                'message': f'Failed to create organization: {str(e)}'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     @action(detail=True, methods=['get'])

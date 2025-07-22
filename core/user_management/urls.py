@@ -42,6 +42,7 @@ urlpatterns = [
     
     # Organization management endpoints
     path('api/v1/organizations/create/', OrganizationViewSet.as_view({'post': 'create_organization'}), name='organizations-create'),
+    path('api/v1/organizations/create_organization/', OrganizationViewSet.as_view({'post': 'create_organization'}), name='organizations-create-alt'),
     path('api/v1/organizations/list/', OrganizationViewSet.as_view({'get': 'list_organizations'}), name='organizations-list'),
     path('api/v1/organizations/statistics/', OrganizationViewSet.as_view({'get': 'statistics'}), name='organizations-statistics'),
     path('api/v1/organizations/trust-metrics/', OrganizationViewSet.as_view({'get': 'trust_metrics'}), name='organizations-trust-metrics'),

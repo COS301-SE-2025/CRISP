@@ -98,11 +98,26 @@ class OrganizationService:
         
         try:
             with transaction.atomic():
+                # Generate domain if not provided
+                domain = org_data.get('domain', '')
+                if not domain:
+                    # Generate a unique domain based on organization name
+                    import re
+                    import uuid
+                    base_domain = re.sub(r'[^a-zA-Z0-9]', '', org_data['name'].lower())
+                    if not base_domain:
+                        base_domain = 'org'
+                    domain = f"{base_domain}-{str(uuid.uuid4())[:8]}.com"
+                    
+                    # Ensure domain is unique
+                    while Organization.objects.filter(domain=domain).exists():
+                        domain = f"{base_domain}-{str(uuid.uuid4())[:8]}.com"
+                
                 # Create organization
                 organization = Organization.objects.create(
                     name=org_data['name'],
                     description=org_data.get('description', ''),
-                    domain=org_data.get('domain', ''),
+                    domain=domain,
                     contact_email=org_data.get('contact_email', primary_user_data.get('email', '')),
                     website=org_data.get('website', ''),
                     organization_type=org_data.get('organization_type', 'educational'),
