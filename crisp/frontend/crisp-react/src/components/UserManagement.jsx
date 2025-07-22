@@ -937,7 +937,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                 }}
                 style={{
                   padding: '0.75rem 1rem',
-                  backgroundColor: '#17a2b8',
+                  backgroundColor: '#5D8AA8',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -947,10 +947,10 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                   transition: 'all 0.2s ease',
                   textAlign: 'left'
                 }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#138496'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#17a2b8'}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#4A7088'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#5D8AA8'}
               >
-                👁️ View Details
+                View Details
               </button>
               
               <button
@@ -960,8 +960,8 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                 }}
                 style={{
                   padding: '0.75rem 1rem',
-                  backgroundColor: '#ffc107',
-                  color: '#212529',
+                  backgroundColor: '#5D8AA8',
+                  color: 'white',
                   border: 'none',
                   borderRadius: '6px',
                   cursor: 'pointer',
@@ -970,10 +970,10 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                   transition: 'all 0.2s ease',
                   textAlign: 'left'
                 }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#e0a800'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#ffc107'}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#4A7088'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#5D8AA8'}
               >
-                ✏️ Edit User
+                Edit User
               </button>
               
               {selectedUserForActions.is_active ? (
@@ -984,9 +984,9 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                   }}
                   style={{
                     padding: '0.75rem 1rem',
-                    backgroundColor: '#dc3545',
-                    color: 'white',
-                    border: 'none',
+                    backgroundColor: 'white',
+                    color: '#5D8AA8',
+                    border: '2px solid #5D8AA8',
                     borderRadius: '6px',
                     cursor: 'pointer',
                     fontSize: '0.875rem',
@@ -994,10 +994,16 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                     transition: 'all 0.2s ease',
                     textAlign: 'left'
                   }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = '#c82333'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = '#dc3545'}
+                  onMouseEnter={(e) => {
+                    e.target.style.borderColor = '#dc3545';
+                    e.target.style.color = '#dc3545';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.borderColor = '#5D8AA8';
+                    e.target.style.color = '#5D8AA8';
+                  }}
                 >
-                  ⏸️ Deactivate User
+                  Deactivate User
                 </button>
               ) : (
                 <button
@@ -1007,9 +1013,9 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                   }}
                   style={{
                     padding: '0.75rem 1rem',
-                    backgroundColor: '#28a745',
-                    color: 'white',
-                    border: 'none',
+                    backgroundColor: 'white',
+                    color: '#5D8AA8',
+                    border: '2px solid #5D8AA8',
                     borderRadius: '6px',
                     cursor: 'pointer',
                     fontSize: '0.875rem',
@@ -1017,10 +1023,16 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                     transition: 'all 0.2s ease',
                     textAlign: 'left'
                   }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = '#218838'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = '#28a745'}
+                  onMouseEnter={(e) => {
+                    e.target.style.borderColor = '#28a745';
+                    e.target.style.color = '#28a745';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.borderColor = '#5D8AA8';
+                    e.target.style.color = '#5D8AA8';
+                  }}
                 >
-                  ▶️ Reactivate User
+                  Reactivate User
                 </button>
               )}
               
@@ -1031,7 +1043,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                 }}
                 style={{
                   padding: '0.75rem 1rem',
-                  backgroundColor: '#6c757d',
+                  backgroundColor: '#5D8AA8',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -1041,10 +1053,10 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                   transition: 'all 0.2s ease',
                   textAlign: 'left'
                 }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#5a6268'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#6c757d'}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#4A7088'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#5D8AA8'}
               >
-                🗑️ Permanently Delete
+                Permanently Delete
               </button>
             </div>
             
