@@ -22,4 +22,6 @@ urlpatterns = [
         # Alerts system URLs (e.g., /api/v1/alerts/)
         path('alerts/', include('core.alerts.alerts_urls')),
     ])),
+    # User management URLs with explicit endpoints
+    path('', include('core.user_management.urls')),
 ]

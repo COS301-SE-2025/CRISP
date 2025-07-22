@@ -20,6 +20,14 @@ class TrustRelationshipViewSet(viewsets.ViewSet):
     def list(self, request):
         """Get list of trust relationships."""
         try:
+            # BlueVision admins can see all relationships
+            if request.user.is_bluevision_admin:
+                relationships = self.trust_service.get_all_trust_relationships()
+                return Response({
+                    'success': True,
+                    'data': relationships
+                }, status=status.HTTP_200_OK)
+            
             # Get organization ID from authenticated user
             organization_id = request.user.organization.id if request.user.organization else None
             if not organization_id:
@@ -46,11 +54,22 @@ class TrustGroupViewSet(viewsets.ViewSet):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.group_service = TrustGroupService()
+        self.trust_service = TrustService()
 
     def list(self, request):
         """Get list of trust groups."""
         try:
+            # BlueVision admins can see all groups
+            if request.user.is_bluevision_admin:
+                result = self.trust_service.get_all_trust_groups()
+                if not result.get('success', False):
+                    return Response(result, status=status.HTTP_400_BAD_REQUEST)
+                groups = result.get('groups', [])
+                return Response({
+                    'success': True,
+                    'data': groups
+                }, status=status.HTTP_200_OK)
+            
             # Get organization ID from authenticated user
             organization_id = request.user.organization.id if request.user.organization else None
             if not organization_id:
@@ -59,7 +78,10 @@ class TrustGroupViewSet(viewsets.ViewSet):
                     'message': 'User has no associated organization'
                 }, status=status.HTTP_400_BAD_REQUEST)
 
-            groups = self.group_service.get_trust_groups(request.user)
+            result = self.trust_service.get_trust_groups(request.user)
+            if not result.get('success', False):
+                return Response(result, status=status.HTTP_400_BAD_REQUEST)
+            groups = result.get('groups', [])
             return Response({
                 'success': True,
                 'data': groups
@@ -82,6 +104,14 @@ class TrustMetricsViewSet(viewsets.ViewSet):
     def list(self, request):
         """Get trust metrics."""
         try:
+            # BlueVision admins can see all metrics
+            if request.user.is_bluevision_admin:
+                metrics = self.trust_service.get_all_trust_metrics()
+                return Response({
+                    'success': True,
+                    'data': metrics
+                }, status=status.HTTP_200_OK)
+            
             # Get organization ID from authenticated user
             organization_id = request.user.organization.id if request.user.organization else None
             if not organization_id:
