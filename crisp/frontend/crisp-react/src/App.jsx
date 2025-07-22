@@ -235,7 +235,7 @@ function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthW
           {(isPublisher || isBlueVisionAdmin) && <TTPAnalysis active={activePage === 'ttp-analysis'} userRole={userRole} userOrganization={userOrganization} />}
 
           {/* Institutions - Publishers and BlueVision Admins only */}
-          {(isPublisher || isBlueVisionAdmin) && <Institutions active={activePage === 'institutions'} userRole={userRole} userOrganization={userOrganization} />}
+          {(isPublisher || isBlueVisionAdmin) && <Organisations active={activePage === 'organisations'} userRole={userRole} userOrganization={userOrganization} />}
 
           {/* Reports */}
           <Reports active={activePage === 'reports'} userRole={userRole} userOrganization={userOrganization} />
@@ -527,7 +527,7 @@ function MainNav({ activePage, showPage, isAdmin, userRole, isPublisher }) {
   // Additional items for publishers and admins
   const publisherNavItems = [
     { id: 'ttp-analysis', icon: 'fas fa-sitemap', label: 'TTP Analysis' },
-    { id: 'institutions', icon: 'fas fa-building', label: 'Institutions' },
+    { id: 'organisations', icon: 'fas fa-building', label: 'Organisations' },
     { id: 'trust-management', icon: 'fas fa-handshake', label: 'Trust Management' }
   ];
   
@@ -1790,17 +1790,17 @@ function TTPAnalysis({ active }) {
   );
 }
 
-// Institutions Component
-function Institutions({ active }) {
+// Organisations Component
+function Organisations({ active }) {
   const mapRef = useRef(null);
   
   useEffect(() => {
     if (active && mapRef.current) {
-      createInstitutionMap();
+      createOrganisationMap();
       
       // Add resize handler for responsive map
       const handleResize = () => {
-        createInstitutionMap();
+        createOrganisationMap();
       };
       
       window.addEventListener('resize', handleResize);
@@ -1808,7 +1808,7 @@ function Institutions({ active }) {
     }
   }, [active]);
 
-  const createInstitutionMap = () => {
+  const createOrganisationMap = () => {
     // Clear previous chart if any
     d3.select(mapRef.current).selectAll("*").remove();
     
@@ -1823,7 +1823,7 @@ function Institutions({ active }) {
       .attr("height", height);
     
     // Sample data for institutions
-    const institutions = [
+    const organisations = [
       { name: "University of Pretoria", location: [28.2, -25.7], type: "Education", size: 90 },
       { name: "Cyber Security Hub", location: [28.0, -26.2], type: "Government", size: 85 },
       { name: "SANReN CSIRT", location: [18.4, -33.9], type: "Security", size: 75 },
@@ -1853,7 +1853,7 @@ function Institutions({ active }) {
     
     // Add institutions as circles
     svg.selectAll("circle")
-      .data(institutions)
+      .data(organisations)
       .enter()
       .append("circle")
       .attr("cx", d => projection(d.location)[0])
@@ -1869,12 +1869,12 @@ function Institutions({ active }) {
     // Add connections between institutions
     // For simplicity, connecting the first institution with others
     svg.selectAll(".connection")
-      .data(institutions.slice(1, 6))
+      .data(organisations.slice(1, 6))
       .enter()
       .append("line")
       .attr("class", "connection")
-      .attr("x1", projection(institutions[0].location)[0])
-      .attr("y1", projection(institutions[0].location)[1])
+      .attr("x1", projection(organisations[0].location)[0])
+      .attr("y1", projection(organisations[0].location)[1])
       .attr("x2", d => projection(d.location)[0])
       .attr("y2", d => projection(d.location)[1])
       .attr("stroke", "#0056b3")

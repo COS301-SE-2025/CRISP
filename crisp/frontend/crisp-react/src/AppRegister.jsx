@@ -6,7 +6,7 @@ import logoImage from './assets/BlueV2.png';
 import { getUserProfile, updateUserProfile, getUserStatistics, changePassword, getEmailStatistics, getSystemHealth, sendTestEmail, testGmailConnection, getAuditLogs, getComprehensiveAuditLogs } from './api.js';
 import LoadingSpinner from './components/LoadingSpinner.jsx';
 import UserManagement from './components/UserManagement.jsx';
-import InstitutionManagement from './components/InstitutionManagement.jsx';
+import OrganisationManagement from './components/OrganisationManagement.jsx';
 import TrustManagement from './components/TrustManagement.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 
@@ -161,8 +161,8 @@ function AppRegister({ user, onLogout }) {
           {/* TTP Analysis */}
           <TTPAnalysis active={activePage === 'ttp-analysis'} />
 
-          {/* Institutions */}
-          <Institutions active={activePage === 'institutions'} />
+          {/* Organisations */}
+          <OrganisationManagement active={activePage === 'organisations'} />
 
           {/* Reports */}
           <Reports active={activePage === 'reports'} />
@@ -186,9 +186,9 @@ function AppRegister({ user, onLogout }) {
             />
           </ErrorBoundary>
 
-          {/* Institution Management */}
+          {/* Organisation Management */}
           <ErrorBoundary>
-            <InstitutionManagement active={activePage === 'institution-management'} />
+            <OrganisationManagement active={activePage === 'organisation-management'} />
           </ErrorBoundary>
 
           {/* Trust Management */}
@@ -522,9 +522,9 @@ function Header({ user, onLogout, navigateToRegisterUser, showPage }) {
                           <i className="fas fa-users"></i>
                           <span>User Management</span>
                         </button>
-                        <button className="submenu-item" onClick={() => {setShowUserMenu(false); setShowManagementSubmenu(false); showPage('institution-management');}} type="button">
+                        <button className="submenu-item" onClick={() => {setShowUserMenu(false); setShowManagementSubmenu(false); showPage('organisation-management');}} type="button">
                           <i className="fas fa-university"></i>
-                          <span>Institution Management</span>
+                          <span>Organisation Management</span>
                         </button>
                         <button className="submenu-item" onClick={() => {setShowUserMenu(false); setShowManagementSubmenu(false); showPage('trust-management');}} type="button">
                           <i className="fas fa-handshake"></i>
@@ -563,7 +563,7 @@ function MainNav({ activePage, showPage }) {
     { id: 'threat-feeds', icon: 'fas fa-rss', label: 'Threat Feeds' },
     { id: 'ioc-management', icon: 'fas fa-search', label: 'IoC Management' },
     { id: 'ttp-analysis', icon: 'fas fa-sitemap', label: 'TTP Analysis' },
-    { id: 'institutions', icon: 'fas fa-building', label: 'Institutions' },
+    { id: 'organisations', icon: 'fas fa-building', label: 'Organisations' },
     { id: 'reports', icon: 'fas fa-file-alt', label: 'Reports' }
   ];
 
@@ -1783,17 +1783,17 @@ function TTPAnalysis({ active }) {
   );
 }
 
-// Institutions Component
-function Institutions({ active }) {
+// Organisations Component
+function Organisations({ active }) {
   const mapRef = useRef(null);
   
   useEffect(() => {
     if (active && mapRef.current) {
-      createInstitutionMap();
+      createOrganisationMap();
       
       // Add resize handler to handle map resizing
       const handleResize = () => {
-        createInstitutionMap();
+        createOrganisationMap();
       };
       
       window.addEventListener('resize', handleResize);
@@ -1801,7 +1801,7 @@ function Institutions({ active }) {
     }
   }, [active]);
 
-  const createInstitutionMap = () => {
+  const createOrganisationMap = () => {
     // Clear previous chart if any
     d3.select(mapRef.current).selectAll("*").remove();
     
@@ -1815,8 +1815,8 @@ function Institutions({ active }) {
       .attr("width", width)
       .attr("height", height);
     
-    // Sample data for institutions
-    const institutions = [
+    // Sample data for organisations
+    const organisations = [
       { name: "University of Pretoria", location: [28.2, -25.7], type: "Education", size: 90 },
       { name: "Cyber Security Hub", location: [28.0, -26.2], type: "Government", size: 85 },
       { name: "SANReN CSIRT", location: [18.4, -33.9], type: "Security", size: 75 },
@@ -1846,7 +1846,7 @@ function Institutions({ active }) {
     
     // Add institutions as circles
     svg.selectAll("circle")
-      .data(institutions)
+      .data(organisations)
       .enter()
       .append("circle")
       .attr("cx", d => projection(d.location)[0])
@@ -1862,12 +1862,12 @@ function Institutions({ active }) {
     // Add connections between institutions
     // For simplicity, connecting the first institution with others
     svg.selectAll(".connection")
-      .data(institutions.slice(1, 6))
+      .data(organisations.slice(1, 6))
       .enter()
       .append("line")
       .attr("class", "connection")
-      .attr("x1", projection(institutions[0].location)[0])
-      .attr("y1", projection(institutions[0].location)[1])
+      .attr("x1", projection(organisations[0].location)[0])
+      .attr("y1", projection(organisations[0].location)[1])
       .attr("x2", d => projection(d.location)[0])
       .attr("y2", d => projection(d.location)[1])
       .attr("stroke", "#0056b3")
