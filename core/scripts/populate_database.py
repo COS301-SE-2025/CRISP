@@ -135,7 +135,7 @@ class DatabasePopulator:
                 description=f"Leading {company_type.lower()} organization specializing in {fake.bs()}",
                 contact_email=f"contact@{domain}",
                 website=f"https://{domain}",
-                organization_type=random.choice(['educational', 'government', 'private', 'healthcare', 'financial']),
+                organization_type=random.choice(['educational', 'government', 'private']),
                 is_publisher=random.choice([True, False]),
                 is_verified=random.choice([True, True, False]),  # 66% verified
                 is_active=random.choice([True, True, True, False]),  # 75% active

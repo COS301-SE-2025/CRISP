@@ -336,6 +336,15 @@ export const getOrganizationStatistics = async () => {
   return await handleResponse(response);
 };
 
+export const getOrganizationTypes = async () => {
+  const response = await fetch(`${API_URL}organizations/types/`, {
+    method: 'GET',
+    headers: { ...authHeader() }
+  });
+  
+  return await handleResponse(response);
+};
+
 // Admin API functions
 export const getSystemHealth = async () => {
   try {

@@ -313,6 +313,28 @@ class OrganizationViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     @action(detail=False, methods=['get'])
+    def organization_types(self, request):
+        """Get available organization types for filtering."""
+        try:
+            from ..models import ORGANIZATION_TYPE_CHOICES
+            
+            types = [{'value': choice[0], 'label': choice[1]} for choice in ORGANIZATION_TYPE_CHOICES]
+            
+            return Response({
+                'success': True,
+                'data': {
+                    'organization_types': types
+                }
+            }, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            logger.error(f"Get organization types error: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Failed to retrieve organization types'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=False, methods=['get'])
     def statistics(self, request):
         """Get organization statistics (admin only)."""
         try:
