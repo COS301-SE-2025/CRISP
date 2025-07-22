@@ -54,7 +54,7 @@ function App() {
       <main className="main-content">
         <div className="container">
           {/* Dashboard */}
-          <Dashboard active={activePage === 'dashboard'} />
+          <Dashboard active={activePage === 'dashboard'} showPage={showPage} />
 
           {/* Threat Feeds */}
           <ThreatFeeds active={activePage === 'threat-feeds'} />
@@ -198,7 +198,7 @@ function MainNav({ activePage, showPage }) {
 }
 
 // Dashboard Component
-function Dashboard({ active }) {
+function Dashboard({ active, showPage }) {
   // State for dashboard data
   const [dashboardStats, setDashboardStats] = useState({
     threat_feeds: 0,
@@ -388,7 +388,7 @@ function Dashboard({ active }) {
         </div>
         <div className="action-buttons">
           <button className="btn btn-outline"><i className="fas fa-download"></i> Export Data</button>
-          <button className="btn btn-primary"><i className="fas fa-plus"></i> Add New Feed</button>
+          <button className="btn btn-primary" onClick={() => showPage('threat-feeds')}><i className="fas fa-plus"></i> Add New Feed</button>
         </div>
       </div>
 
@@ -695,6 +695,17 @@ function Dashboard({ active }) {
 function ThreatFeeds({ active }) {
   const [threatFeeds, setThreatFeeds] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    is_external: true,
+    taxii_server_url: '',
+    taxii_api_root: '',
+    taxii_collection_id: '',
+    taxii_username: '',
+    taxii_password: ''
+  });
   
   // Fetch threat feeds from backend
   useEffect(() => {
@@ -720,6 +731,41 @@ function ThreatFeeds({ active }) {
       fetchThreatFeeds();
     }
   };
+
+  const handleAddFeed = () => {
+    setShowAddModal(true);
+  };
+
+  const handleFormChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    const result = await api.post('/api/threat-feeds/', formData);
+    if (result) {
+      setShowAddModal(false);
+      setFormData({
+        name: '',
+        description: '',
+        is_external: true,
+        taxii_server_url: '',
+        taxii_api_root: '',
+        taxii_collection_id: '',
+        taxii_username: '',
+        taxii_password: ''
+      });
+      fetchThreatFeeds();
+    }
+  };
+
+  const closeModal = () => {
+    setShowAddModal(false);
+  };
   
   return (
     <section id="threat-feeds" className={`page-section ${active ? 'active' : ''}`}>
@@ -730,7 +776,7 @@ function ThreatFeeds({ active }) {
         </div>
         <div className="action-buttons">
           <button className="btn btn-outline"><i className="fas fa-filter"></i> Filter Feeds</button>
-          <button className="btn btn-primary"><i className="fas fa-plus"></i> Add New Feed</button>
+          <button className="btn btn-primary" onClick={handleAddFeed}><i className="fas fa-plus"></i> Add New Feed</button>
         </div>
       </div>
 
@@ -842,6 +888,123 @@ function ThreatFeeds({ active }) {
         <div className="page-item">3</div>
         <div className="page-item"><i className="fas fa-chevron-right"></i></div>
       </div>
+
+      {/* Add New Feed Modal */}
+      {showAddModal && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Add New Threat Feed</h2>
+              <button className="modal-close" onClick={closeModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <form onSubmit={handleFormSubmit} className="modal-body">
+              <div className="form-group">
+                <label>Feed Name *</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleFormChange}
+                  placeholder="Enter feed name"
+                  required
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>Description</label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleFormChange}
+                  placeholder="Enter feed description"
+                  rows="3"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="is_external"
+                    checked={formData.is_external}
+                    onChange={handleFormChange}
+                  />
+                  External Feed
+                </label>
+              </div>
+              
+              <div className="form-group">
+                <label>TAXII Server URL *</label>
+                <input
+                  type="url"
+                  name="taxii_server_url"
+                  value={formData.taxii_server_url}
+                  onChange={handleFormChange}
+                  placeholder="https://example.com/taxii"
+                  required
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>API Root</label>
+                <input
+                  type="text"
+                  name="taxii_api_root"
+                  value={formData.taxii_api_root}
+                  onChange={handleFormChange}
+                  placeholder="api-root"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>Collection ID</label>
+                <input
+                  type="text"
+                  name="taxii_collection_id"
+                  value={formData.taxii_collection_id}
+                  onChange={handleFormChange}
+                  placeholder="collection-id"
+                />
+              </div>
+              
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Username</label>
+                  <input
+                    type="text"
+                    name="taxii_username"
+                    value={formData.taxii_username}
+                    onChange={handleFormChange}
+                    placeholder="Username"
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label>Password</label>
+                  <input
+                    type="password"
+                    name="taxii_password"
+                    value={formData.taxii_password}
+                    onChange={handleFormChange}
+                    placeholder="Password"
+                  />
+                </div>
+              </div>
+              
+              <div className="modal-footer">
+                <button type="button" className="btn btn-outline" onClick={closeModal}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  <i className="fas fa-plus"></i> Add Feed
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -3302,6 +3465,128 @@ function CSSStyles() {
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 15px;
+            }
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--medium-gray);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: var(--text-dark);
+            font-size: 1.25rem;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .modal-close:hover {
+            background-color: var(--medium-gray);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-dark);
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--medium-gray);
+            border-radius: 4px;
+            font-size: 0.875rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--secondary-blue);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .checkbox-label {
+            display: flex !important;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: auto !important;
+            margin: 0;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 1rem;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
             }
         }
       `}
