@@ -869,3 +869,141 @@ class TrustService:
         except Exception as e:
             return {"success": True, "groups": []}
 
+    def get_all_trust_relationships(self) -> List[Dict]:
+        """Get all trust relationships for BlueVisionAdmin users"""
+        try:
+            relationships = TrustRelationship.objects.filter(
+                is_active=True
+            ).select_related('trust_level', 'source_organization', 'target_organization')
+            
+            formatted_relationships = []
+            for rel in relationships:
+                formatted_relationships.append({
+                    "id": str(rel.id),
+                    "source_organization": str(rel.source_organization.id),
+                    "source_organization_name": rel.source_organization.name,
+                    "target_organization": str(rel.target_organization.id),
+                    "target_organization_name": rel.target_organization.name,
+                    "trust_level": rel.trust_level.name,
+                    "status": rel.status,
+                    "relationship_type": rel.relationship_type,
+                    "created_at": rel.created_at.isoformat()
+                })
+            return formatted_relationships
+        except Exception as e:
+            logger.error(f"Failed to get all trust relationships: {str(e)}")
+            return []
+
+    def get_all_trust_groups(self) -> Dict[str, Any]:
+        """Get all trust groups for BlueVisionAdmin users"""
+        try:
+            groups = TrustGroup.objects.filter(is_active=True)
+            
+            formatted_groups = []
+            for group in groups:
+                member_count = TrustGroupMembership.objects.filter(
+                    trust_group=group,
+                    is_active=True
+                ).count()
+                
+                formatted_groups.append({
+                    "id": str(group.id),
+                    "name": group.name,
+                    "description": group.description,
+                    "group_type": group.group_type,
+                    "is_public": group.is_public,
+                    "requires_approval": group.requires_approval,
+                    "default_trust_level": group.default_trust_level.name if group.default_trust_level else None,
+                    "member_count": member_count,
+                    "status": "active" if group.is_active else "inactive"
+                })
+            return {"success": True, "groups": formatted_groups}
+        except Exception as e:
+            logger.error(f"Failed to get all trust groups: {str(e)}")
+            return {"success": False, "groups": [], "error": str(e)}
+
+    def get_all_trust_metrics(self) -> Dict[str, Any]:
+        """Get all trust metrics for BlueVisionAdmin users"""
+        try:
+            total_relationships = TrustRelationship.objects.count()
+            active_relationships = TrustRelationship.objects.filter(status="active").count()
+            pending_relationships = TrustRelationship.objects.filter(status="pending").count()
+            total_organizations = TrustRelationship.objects.values(
+                'source_organization', 'target_organization'
+            ).distinct().count()
+            
+            metrics = {
+                "total_relationships": total_relationships,
+                "active_relationships": active_relationships,
+                "pending_relationships": pending_relationships,
+                "total_organizations_with_trust": total_organizations,
+                "average_trust_score": self._calculate_global_trust_score()
+            }
+            return metrics
+        except Exception as e:
+            logger.error(f"Failed to get all trust metrics: {str(e)}")
+            return {
+                "total_relationships": 0,
+                "active_relationships": 0,
+                "pending_relationships": 0,
+                "total_organizations_with_trust": 0,
+                "average_trust_score": 0
+            }
+
+    def _check_organization_access(self, requesting_user, organization_id: str) -> bool:
+        """Check if user can access organization data"""
+        try:
+            # BlueVision admins can access all organization data
+            if hasattr(requesting_user, 'is_bluevision_admin') and requesting_user.is_bluevision_admin:
+                return True
+            
+            # Users can access their own organization data
+            if (hasattr(requesting_user, 'organization') and 
+                getattr(requesting_user, 'organization', None) and
+                str(requesting_user.organization.id) == str(organization_id)):
+                return True
+            
+            return False
+        except Exception:
+            return False
+
+    def _calculate_trust_score(self, organization_id: str) -> float:
+        """Calculate trust score for an organization"""
+        try:
+            # Simple trust score calculation based on active relationships
+            active_relationships = TrustRelationship.objects.filter(
+                source_organization_id=organization_id,
+                status="active"
+            )
+            
+            if not active_relationships.exists():
+                return 0.0
+            
+            total_score = 0
+            for rel in active_relationships:
+                if hasattr(rel.trust_level, 'numerical_value'):
+                    total_score += rel.trust_level.numerical_value
+                
+            return round(total_score / active_relationships.count(), 2)
+        except Exception:
+            return 0.0
+
+    def _calculate_global_trust_score(self) -> float:
+        """Calculate global average trust score"""
+        try:
+            active_relationships = TrustRelationship.objects.filter(status="active")
+            
+            if not active_relationships.exists():
+                return 0.0
+            
+            total_score = 0
+            count = 0
+            for rel in active_relationships:
+                if hasattr(rel.trust_level, 'numerical_value'):
+                    total_score += rel.trust_level.numerical_value
+                    count += 1
+                
+            return round(total_score / count, 2) if count > 0 else 0.0
+        except Exception:
+            return 0.0
+

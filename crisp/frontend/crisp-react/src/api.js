@@ -339,7 +339,7 @@ export const getOrganizationStatistics = async () => {
 // Admin API functions
 export const getSystemHealth = async () => {
   try {
-    const response = await fetch(`${API_URL}admin/system-health/`, {
+    const response = await fetch(`${API_URL}admin/system_health/`, {
       method: 'GET',
       headers: { ...authHeader() }
     });
@@ -362,7 +362,7 @@ export const getSystemHealth = async () => {
 
 export const getAuditLogs = async (params = {}) => {
   const queryString = new URLSearchParams(params).toString();
-  const url = `${API_URL}admin/audit-logs/${queryString ? `?${queryString}` : ''}`;
+  const url = `${API_URL}admin/audit_logs/${queryString ? `?${queryString}` : ''}`;
   
   const response = await fetch(url, {
     method: 'GET',
@@ -374,7 +374,7 @@ export const getAuditLogs = async (params = {}) => {
 
 export const getComprehensiveAuditLogs = async (params = {}) => {
   const queryString = new URLSearchParams(params).toString();
-  const url = `${API_URL}admin/comprehensive-audit-logs/${queryString ? `?${queryString}` : ''}`;
+  const url = `${API_URL}admin/comprehensive_audit_logs/${queryString ? `?${queryString}` : ''}`;
   
   const response = await fetch(url, {
     method: 'GET',
@@ -385,7 +385,7 @@ export const getComprehensiveAuditLogs = async (params = {}) => {
 };
 
 export const getTrustOverview = async () => {
-  const response = await fetch(`${API_URL}admin/trust-overview/`, {
+  const response = await fetch(`${API_URL}admin/trust_overview/`, {
     method: 'GET',
     headers: { ...authHeader() }
   });
@@ -394,7 +394,7 @@ export const getTrustOverview = async () => {
 };
 
 export const getSecurityEvents = async () => {
-  const response = await fetch(`${API_URL}admin/security-events/`, {
+  const response = await fetch(`${API_URL}admin/security_events/`, {
     method: 'GET',
     headers: { ...authHeader() }
   });
@@ -597,7 +597,7 @@ export const getTrustRelationships = async () => {
     console.error('Failed to fetch trust relationships:', error);
     // Try admin endpoint as fallback for admin users
     try {
-      const adminResponse = await fetch(`${API_URL}admin/trust-overview/`, {
+      const adminResponse = await fetch(`${API_URL}admin/trust_overview/`, {
         method: 'GET',
         headers: { ...authHeader() }
       });
@@ -637,7 +637,7 @@ export const getTrustMetrics = async () => {
     console.error('Failed to fetch trust metrics:', error);
     // Try to get from admin trust overview as fallback
     try {
-      const adminResponse = await fetch(`${API_URL}admin/trust-overview/`, {
+      const adminResponse = await fetch(`${API_URL}admin/trust_overview/`, {
         method: 'GET',
         headers: { ...authHeader() }
       });

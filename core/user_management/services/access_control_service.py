@@ -174,16 +174,15 @@ class AccessControlService:
         """Get organizations accessible to the user"""
         accessible = []
         
+        # BlueVisionAdmin can access ALL organizations
+        if user.role == 'BlueVisionAdmin':
+            return list(Organization.objects.all())
+        
         # User's own organization is always accessible
         if user.organization:
             accessible.append(user.organization)
-        
-        # BlueVisionAdmin can access all organizations
-        if user.role == 'BlueVisionAdmin':
-            all_orgs = Organization.objects.exclude(id=user.organization.id if user.organization else None)
-            accessible.extend(all_orgs)
-        elif user.organization:
-            # Get organizations through trust relationships (only if user has organization)
+            
+            # Get organizations through trust relationships
             try:
                 relationships = TrustRelationship.objects.filter(
                     source_organization=user.organization,
