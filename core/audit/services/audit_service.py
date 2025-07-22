@@ -70,7 +70,7 @@ class AuditService:
                 self.logger.debug("Skipping audit log in test environment")
                 return True
                 
-            from ..user_management.models import AuthenticationLog
+            from ...user_management.models import AuthenticationLog
             
             # Skip logging if user doesn't exist in database
             if user and hasattr(user, 'pk') and not user.pk:
@@ -81,7 +81,7 @@ class AuditService:
             if user and hasattr(user, 'pk') and user.pk:
                 try:
                     # Check if user actually exists in database
-                    from ..user_management.models import CustomUser
+                    from ...user_management.models import CustomUser
                     CustomUser.objects.get(pk=user.pk)
                 except CustomUser.DoesNotExist:
                     self.logger.warning(f"Skipping log for non-existent user: {user.pk}")
@@ -156,7 +156,7 @@ class AuditService:
             if user and hasattr(user, 'pk') and user.pk:
                 try:
                     # Check if user actually exists in database
-                    from ..user_management.models import CustomUser
+                    from ...user_management.models import CustomUser
                     CustomUser.objects.get(pk=user.pk)
                 except CustomUser.DoesNotExist:
                     self.logger.warning(f"Skipping log for non-existent user: {user.pk}")

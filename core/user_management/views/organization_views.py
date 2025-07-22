@@ -1,30 +1,36 @@
-from rest_framework import status, permissions
+from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.viewsets import GenericViewSet
-from rest_framework_simplejwt.authentication import JWTAuthentication
-from django.core.exceptions import ValidationError, PermissionDenied
-from django.db.models import Q
+from ..models import Organization
+from ..serializers import OrganizationSerializer, OrganizationDetailSerializer
 from ..services.organization_service import OrganizationService
-from ..services.trust_aware_service import TrustAwareService
 from ..services.access_control_service import AccessControlService
+from ...audit.services.audit_service import AuditService
 import logging
 
 logger = logging.getLogger(__name__)
 
+class IsAdminOrReadOnly(permissions.BasePermission):
+    """
+    Custom permission to only allow admins to edit organizations.
+    Read is allowed for any authenticated user.
+    """
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return request.user and request.user.is_staff
 
-class OrganizationViewSet(GenericViewSet):
+class OrganizationViewSet(viewsets.ModelViewSet):
     """
-    Organization management API endpoints with trust relationship support.
+    API endpoint for managing organizations.
     """
-    
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
-    
+    queryset = Organization.objects.all()
+    serializer_class = OrganizationSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrReadOnly]
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.org_service = OrganizationService()
-        self.trust_service = TrustAwareService()
         self.access_control = AccessControlService()
     
     @action(detail=False, methods=['post'])
