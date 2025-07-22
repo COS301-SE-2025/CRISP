@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getOrganizations, createOrganization, updateOrganization, deactivateOrganization, reactivateOrganization, getOrganizationDetails } from '../api.js';
+import { getOrganizations, createOrganization, updateOrganization, deactivateOrganization, reactivateOrganization, getOrganizationDetails, getOrganizationTypes } from '../api.js';
 import LoadingSpinner from './LoadingSpinner.jsx';
 
 import * as api from '../api.js';
@@ -7,6 +7,7 @@ import * as api from '../api.js';
 const OrganisationManagement = ({ active = true, initialSection = null }) => {
   console.log('OrganisationManagement rendered with props:', { active, initialSection });
   const [organizations, setOrganizations] = useState([]);
+  const [organizationTypes, setOrganizationTypes] = useState(['educational', 'government', 'private']);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(() => {
@@ -45,11 +46,26 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
     }
   });
 
-  const organizationTypes = ['educational', 'government', 'private'];
+  const loadOrganizationTypes = async () => {
+    try {
+      const response = await api.getOrganizationTypes();
+      console.log('Organization types response:', response);
+      
+      if (response.success && response.data?.organization_types) {
+        const types = response.data.organization_types.map(type => type.value);
+        setOrganizationTypes(types);
+        console.log('Loaded organization types:', types);
+      }
+    } catch (err) {
+      console.error('Failed to load organization types:', err);
+      // Keep default types if API fails
+    }
+  };
 
   useEffect(() => {
     if (active) {
       loadOrganizations();
+      loadOrganizationTypes();
     }
   }, [active]);
 

@@ -13,6 +13,12 @@ USER_ROLE_CHOICES = [
     ('BlueVisionAdmin', 'BlueVision Administrator'),
 ]
 
+ORGANIZATION_TYPE_CHOICES = [
+    ('educational', 'Educational'),
+    ('government', 'Government'),
+    ('private', 'Private'),
+]
+
 
 class CustomUserManager(BaseUserManager):
     """Custom user manager for CustomUser model"""
@@ -74,6 +80,7 @@ class Organization(models.Model):
     )
     organization_type = models.CharField(
         max_length=100,
+        choices=ORGANIZATION_TYPE_CHOICES,
         default='educational',
         help_text="Type of organization (educational, government, private)"
     )

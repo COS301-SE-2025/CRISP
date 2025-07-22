@@ -155,10 +155,41 @@ class TurboMassiveDatabasePopulator:
             domain_base = company_name.lower().replace(' ', '').replace('&', 'and')[:15]
             domain = f"{domain_base}{i}.{random.choice(self.domain_suffixes)}"  # Add index to avoid duplicates
             
+            # Map company types to valid organization types
+            org_type_mapping = {
+                'Government': 'government',
+                'Education': 'educational',
+                'Legal Services': 'government',
+                'Defense': 'government',
+                'Banking': 'private',
+                'Financial Services': 'private',
+                'Technology': 'private',
+                'Healthcare': 'private',
+                'Manufacturing': 'private',
+                'Retail': 'private',
+                'Energy': 'private',
+                'Transportation': 'private',
+                'Telecommunications': 'private',
+                'Consulting': 'private',
+                'Real Estate': 'private',
+                'Insurance': 'private',
+                'Media': 'private',
+                'Aerospace': 'private',
+                'Pharmaceuticals': 'private',
+                'Automotive': 'private',
+                'Construction': 'private',
+                'E-commerce': 'private',
+                'Logistics': 'private',
+                'Entertainment': 'private',
+                'Publishing': 'private'
+            }
+            
+            organization_type = org_type_mapping.get(company_type, 'private')
+            
             org_data = {
                 'name': company_name,
                 'domain': domain,
-                'organization_type': company_type.lower(),
+                'organization_type': organization_type,
                 'description': fake.catch_phrase(),
                 'contact_email': f"contact@{domain}",
                 'website': f"https://www.{domain}",
