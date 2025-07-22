@@ -31,6 +31,8 @@ const UserManagement = ({ active = true, initialSection = null }) => {
   const [modalLoading, setModalLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [operationLoading, setOperationLoading] = useState(false);
+  const [showActionsPopup, setShowActionsPopup] = useState(false);
+  const [selectedUserForActions, setSelectedUserForActions] = useState(null);
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -389,6 +391,16 @@ const UserManagement = ({ active = true, initialSection = null }) => {
     return org ? org.name : 'N/A';
   };
 
+  const handleUserClick = (user) => {
+    setSelectedUserForActions(user);
+    setShowActionsPopup(true);
+  };
+
+  const closeActionsPopup = () => {
+    setShowActionsPopup(false);
+    setSelectedUserForActions(null);
+  };
+
   if (!active) return null;
   if (loading) return <LoadingSpinner fullscreen={true} />;
   if (error) return <div style={{ padding: '2rem', color: 'red' }}>{error}</div>;
@@ -449,269 +461,114 @@ const UserManagement = ({ active = true, initialSection = null }) => {
         </button>
       </div>
 
-      {/* Users Table */}
+      {/* Hint Text */}
       <div style={{ 
-        overflowX: 'auto',
+        marginBottom: '1rem', 
+        color: '#6c757d', 
+        fontSize: '0.875rem',
+        textAlign: 'center'
+      }}>
+        💡 Click on any user row to view available actions
+      </div>
+
+      {/* Users List */}
+      <div style={{ 
         backgroundColor: 'white',
         borderRadius: '12px',
         boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
         border: '1px solid #e9ecef'
       }}>
-        <table style={{ 
-          width: '100%', 
-          borderCollapse: 'collapse',
-          minWidth: '1200px'
-        }}>
-          <thead>
-            <tr style={{ 
-              backgroundColor: '#f8f9fa',
-              borderBottom: '2px solid #dee2e6'
+        {filteredUsers.map(user => (
+          <div 
+            key={user.id} 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleUserClick(user);
+            }}
+            style={{ 
+              display: 'flex',
+              alignItems: 'center',
+              padding: '1.25rem',
+              borderBottom: '1px solid #e9ecef',
+              transition: 'all 0.2s ease',
+              cursor: 'pointer',
+              backgroundColor: 'transparent'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#f8f9fa';
+              e.currentTarget.style.transform = 'translateX(4px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.transform = 'translateX(0px)';
+            }}
+          >
+            <div style={{ flex: '1', minWidth: '0' }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '1rem',
+                flexWrap: 'wrap'
+              }}>
+                <div style={{ fontWeight: '600', color: '#212529', fontSize: '1.1rem' }}>
+                  {user.username}
+                </div>
+                <div style={{ color: '#495057' }}>
+                  {`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'N/A'}
+                </div>
+                <span style={{
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '4px',
+                  fontSize: '0.75rem',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  backgroundColor: user.role === 'admin' ? '#d4edda' : user.role === 'publisher' ? '#fff3cd' : '#f8f9fa',
+                  color: user.role === 'admin' ? '#155724' : user.role === 'publisher' ? '#856404' : '#495057'
+                }}>
+                  {user.role}
+                </span>
+                <span style={{
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '4px',
+                  fontSize: '0.75rem',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  backgroundColor: user.is_active ? '#d4edda' : '#f8d7da',
+                  color: user.is_active ? '#155724' : '#721c24'
+                }}>
+                  {user.is_active ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              <div style={{ 
+                marginTop: '0.5rem', 
+                color: '#6c757d', 
+                fontSize: '0.875rem',
+                display: 'flex',
+                gap: '1rem',
+                flexWrap: 'wrap'
+              }}>
+                <span>{user.email || 'No email'}</span>
+                <span>Org: {user.organization?.name || getOrganizationName(user.organization_id) || 'N/A'}</span>
+              </div>
+            </div>
+            <div style={{ 
+              fontSize: '1.2rem', 
+              color: '#6c757d',
+              marginLeft: '1rem',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(108, 117, 125, 0.1)'
             }}>
-              <th style={{ 
-                padding: '1.25rem 1rem', 
-                textAlign: 'left', 
-                fontWeight: '600',
-                fontSize: '0.875rem',
-                color: '#495057',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                width: '120px'
-              }}>Username</th>
-              <th style={{ 
-                padding: '1.25rem 1rem', 
-                textAlign: 'left', 
-                fontWeight: '600',
-                fontSize: '0.875rem',
-                color: '#495057',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                width: '150px'
-              }}>Name</th>
-              <th style={{ 
-                padding: '1.25rem 1rem', 
-                textAlign: 'left', 
-                fontWeight: '600',
-                fontSize: '0.875rem',
-                color: '#495057',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                width: '200px'
-              }}>Email</th>
-              <th style={{ 
-                padding: '1.25rem 1rem', 
-                textAlign: 'left', 
-                fontWeight: '600',
-                fontSize: '0.875rem',
-                color: '#495057',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                width: '100px'
-              }}>Role</th>
-              <th style={{ 
-                padding: '1.25rem 1rem', 
-                textAlign: 'left', 
-                fontWeight: '600',
-                fontSize: '0.875rem',
-                color: '#495057',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                width: '180px'
-              }}>Organization</th>
-              <th style={{ 
-                padding: '1.25rem 1rem', 
-                textAlign: 'left', 
-                fontWeight: '600',
-                fontSize: '0.875rem',
-                color: '#495057',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                width: '100px'
-              }}>Status</th>
-              <th style={{ 
-                padding: '1.25rem 1rem', 
-                textAlign: 'left', 
-                fontWeight: '600',
-                fontSize: '0.875rem',
-                color: '#495057',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                width: '280px'
-              }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredUsers.map(user => (
-              <tr key={user.id} style={{ 
-                borderBottom: '1px solid #e9ecef',
-                transition: 'background-color 0.2s ease',
-                cursor: 'pointer'
-              }}
-              onMouseEnter={(e) => e.target.parentElement.style.backgroundColor = '#f8f9fa'}
-              onMouseLeave={(e) => e.target.parentElement.style.backgroundColor = 'transparent'}
-              >
-                <td style={{ 
-                  padding: '1.25rem 1rem',
-                  fontWeight: '500',
-                  color: '#212529'
-                }}>{user.username}</td>
-                <td style={{ 
-                  padding: '1.25rem 1rem',
-                  color: '#495057'
-                }}>{`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'N/A'}</td>
-                <td style={{ 
-                  padding: '1.25rem 1rem',
-                  color: '#495057',
-                  fontSize: '0.875rem'
-                }}>{user.email}</td>
-                <td style={{ padding: '1.25rem 1rem' }}>
-                  <span style={{
-                    padding: '0.375rem 0.75rem',
-                    borderRadius: '6px',
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    backgroundColor: user.role === 'admin' ? '#d4edda' : user.role === 'publisher' ? '#fff3cd' : '#f8f9fa',
-                    color: user.role === 'admin' ? '#155724' : user.role === 'publisher' ? '#856404' : '#495057'
-                  }}>
-                    {user.role}
-                  </span>
-                </td>
-                <td style={{ 
-                  padding: '1.25rem 1rem',
-                  color: '#495057',
-                  fontSize: '0.875rem'
-                }}>{user.organization?.name || getOrganizationName(user.organization_id) || 'N/A'}</td>
-                <td style={{ padding: '1.25rem 1rem' }}>
-                  <span style={{
-                    padding: '0.375rem 0.75rem',
-                    borderRadius: '6px',
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    backgroundColor: user.is_active ? '#d4edda' : '#f8d7da',
-                    color: user.is_active ? '#155724' : '#721c24'
-                  }}>
-                    {user.is_active ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td style={{ padding: '1.25rem 1rem', minWidth: '280px' }}>
-                  <div style={{ 
-                    display: 'flex', 
-                    gap: '0.5rem', 
-                    flexWrap: 'wrap',
-                    alignItems: 'center'
-                  }}>
-                    <button
-                      onClick={() => handleViewUser(user.id)}
-                      style={{
-                        padding: '0.375rem 0.75rem',
-                        backgroundColor: '#17a2b8',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => e.target.style.backgroundColor = '#138496'}
-                      onMouseLeave={(e) => e.target.style.backgroundColor = '#17a2b8'}
-                    >
-                      View
-                    </button>
-                    <button
-                      onClick={() => handleEditUser(user.id)}
-                      style={{
-                        padding: '0.375rem 0.75rem',
-                        backgroundColor: '#ffc107',
-                        color: '#212529',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => e.target.style.backgroundColor = '#e0a800'}
-                      onMouseLeave={(e) => e.target.style.backgroundColor = '#ffc107'}
-                    >
-                      Edit
-                    </button>
-                    {user.is_active ? (
-                      <button
-                        onClick={() => handleDeleteUser(user.id, user.username)}
-                        style={{
-                          padding: '0.375rem 0.75rem',
-                          backgroundColor: '#dc3545',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '0.75rem',
-                          fontWeight: '600',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.05em',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = '#c82333'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = '#dc3545'}
-                      >
-                        Deactivate
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleReactivateUser(user.id, user.username)}
-                        style={{
-                          padding: '0.375rem 0.75rem',
-                          backgroundColor: '#28a745',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '0.75rem',
-                          fontWeight: '600',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.05em',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = '#218838'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = '#28a745'}
-                      >
-                        Reactivate
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handlePermanentDeleteUser(user.id, user.username)}
-                      style={{
-                        padding: '0.375rem 0.75rem',
-                        backgroundColor: '#6c757d',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => e.target.style.backgroundColor = '#5a6268'}
-                      onMouseLeave={(e) => e.target.style.backgroundColor = '#6c757d'}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+              →
+            </div>
+          </div>
+        ))}
       </div>
 
       {filteredUsers.length === 0 && (
@@ -995,6 +852,235 @@ const UserManagement = ({ active = true, initialSection = null }) => {
               </div>
             </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Actions Popup */}
+      {showActionsPopup && selectedUserForActions && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1001
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '2rem',
+            borderRadius: '12px',
+            minWidth: '300px',
+            maxWidth: '400px',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+          }}>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h3 style={{ 
+                margin: '0 0 0.5rem 0', 
+                color: '#333',
+                fontSize: '1.25rem'
+              }}>
+                {selectedUserForActions.username}
+              </h3>
+              <div style={{ 
+                color: '#666', 
+                fontSize: '0.875rem',
+                marginBottom: '0.5rem'
+              }}>
+                {`${selectedUserForActions.first_name || ''} ${selectedUserForActions.last_name || ''}`.trim() || 'N/A'}
+              </div>
+              <div style={{ 
+                color: '#666', 
+                fontSize: '0.875rem',
+                display: 'flex',
+                gap: '0.5rem',
+                alignItems: 'center'
+              }}>
+                <span style={{
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '4px',
+                  fontSize: '0.75rem',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  backgroundColor: selectedUserForActions.role === 'admin' ? '#d4edda' : selectedUserForActions.role === 'publisher' ? '#fff3cd' : '#f8f9fa',
+                  color: selectedUserForActions.role === 'admin' ? '#155724' : selectedUserForActions.role === 'publisher' ? '#856404' : '#495057'
+                }}>
+                  {selectedUserForActions.role}
+                </span>
+                <span style={{
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '4px',
+                  fontSize: '0.75rem',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  backgroundColor: selectedUserForActions.is_active ? '#d4edda' : '#f8d7da',
+                  color: selectedUserForActions.is_active ? '#155724' : '#721c24'
+                }}>
+                  {selectedUserForActions.is_active ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+            </div>
+            
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column',
+              gap: '0.75rem'
+            }}>
+              <button
+                onClick={() => {
+                  closeActionsPopup();
+                  handleViewUser(selectedUserForActions.id);
+                }}
+                style={{
+                  padding: '0.75rem 1rem',
+                  backgroundColor: '#5D8AA8',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  transition: 'all 0.2s ease',
+                  textAlign: 'left'
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#4A7088'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#5D8AA8'}
+              >
+                View Details
+              </button>
+              
+              <button
+                onClick={() => {
+                  closeActionsPopup();
+                  handleEditUser(selectedUserForActions.id);
+                }}
+                style={{
+                  padding: '0.75rem 1rem',
+                  backgroundColor: '#5D8AA8',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  transition: 'all 0.2s ease',
+                  textAlign: 'left'
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#4A7088'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#5D8AA8'}
+              >
+                Edit User
+              </button>
+              
+              {selectedUserForActions.is_active ? (
+                <button
+                  onClick={() => {
+                    closeActionsPopup();
+                    handleDeleteUser(selectedUserForActions.id, selectedUserForActions.username);
+                  }}
+                  style={{
+                    padding: '0.75rem 1rem',
+                    backgroundColor: 'white',
+                    color: '#5D8AA8',
+                    border: '2px solid #5D8AA8',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    transition: 'all 0.2s ease',
+                    textAlign: 'left'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.borderColor = '#dc3545';
+                    e.target.style.color = '#dc3545';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.borderColor = '#5D8AA8';
+                    e.target.style.color = '#5D8AA8';
+                  }}
+                >
+                  Deactivate User
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    closeActionsPopup();
+                    handleReactivateUser(selectedUserForActions.id, selectedUserForActions.username);
+                  }}
+                  style={{
+                    padding: '0.75rem 1rem',
+                    backgroundColor: 'white',
+                    color: '#5D8AA8',
+                    border: '2px solid #5D8AA8',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    transition: 'all 0.2s ease',
+                    textAlign: 'left'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.borderColor = '#28a745';
+                    e.target.style.color = '#28a745';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.borderColor = '#5D8AA8';
+                    e.target.style.color = '#5D8AA8';
+                  }}
+                >
+                  Reactivate User
+                </button>
+              )}
+              
+              <button
+                onClick={() => {
+                  closeActionsPopup();
+                  handlePermanentDeleteUser(selectedUserForActions.id, selectedUserForActions.username);
+                }}
+                style={{
+                  padding: '0.75rem 1rem',
+                  backgroundColor: '#5D8AA8',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  transition: 'all 0.2s ease',
+                  textAlign: 'left'
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#4A7088'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#5D8AA8'}
+              >
+                Permanently Delete
+              </button>
+            </div>
+            
+            <div style={{ 
+              marginTop: '1.5rem',
+              paddingTop: '1rem',
+              borderTop: '1px solid #e9ecef'
+            }}>
+              <button
+                onClick={closeActionsPopup}
+                style={{
+                  padding: '0.5rem 1rem',
+                  border: '1px solid #ddd',
+                  backgroundColor: 'white',
+                  color: '#666',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  width: '100%',
+                  fontSize: '0.875rem'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
