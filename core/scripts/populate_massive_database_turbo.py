@@ -737,33 +737,37 @@ class TurboMassiveDatabasePopulator:
         try:
             # Run all phases with progress tracking
             phases = [
-                ("🧹 Phase 1/7", self.clear_existing_data),
-                ("🔐 Phase 2/7", self.create_trust_levels),
-                ("🏢 Phase 3/7", self.create_organizations),
-                ("👑 Phase 4/7", self.create_super_admin_users),
-                ("👥 Phase 5/7", self.create_users),
-                ("🤝 Phase 6/7", self.create_trust_relationships),
-                ("🏗️ Phase 7/7", self.create_trust_groups),
-                ("🔐 Phase 8/7", self.create_user_sessions),
-                ("📝 Phase 9/7", self.create_audit_logs),
+                ("🧹 Phase 1/9: Clearing Data", self.clear_existing_data),
+                ("🔐 Phase 2/9: Trust Levels", self.create_trust_levels),
+                ("🏢 Phase 3/9: Organizations", self.create_organizations),
+                ("👑 Phase 4/9: Super Admins", self.create_super_admin_users),
+                ("👥 Phase 5/9: Users", self.create_users),
+                ("🤝 Phase 6/9: Trust Relationships", self.create_trust_relationships),
+                ("🏗️ Phase 7/9: Trust Groups", self.create_trust_groups),
+                ("🔐 Phase 8/9: User Sessions", self.create_user_sessions),
+                ("📝 Phase 9/9: Audit Logs", self.create_audit_logs),
             ]
             
             print(f"\n🎯 Executing {len(phases)} phases with turbo speed...")
             
-            for phase_name, phase_func in tqdm(phases, desc="Overall Progress", unit="phase", 
-                                               position=1, leave=True, file=sys.stdout, dynamic_ncols=True):
-                phase_start = time.time()
-                print(f"\n{phase_name}: Starting...")
+            # Use a manual tqdm context manager for better control
+            with tqdm(total=len(phases), desc="Overall Progress", unit="phase", 
+                      position=1, leave=True, file=sys.stdout, dynamic_ncols=True,
+                      bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]') as overall_pbar:
                 
-                phase_func()
-                
-                phase_time = time.time() - phase_start
-                print(f"{phase_name}: Completed in {phase_time:.1f}s")
-                
-            total_time = time.time() - start_time
-            print(f"\n⚡ Total execution time: {total_time/60:.1f} minutes ({total_time:.1f} seconds)")
-            
-            self.print_summary()
+                for phase_name, phase_func in phases:
+                    phase_start = time.time()
+                    # Update the description of the overall bar to show the current phase
+                    overall_pbar.set_description(f"🚀 {phase_name}")
+                    
+                    # Run the phase function (which contains its own tqdm bar at position=0)
+                    phase_func()
+                    
+                    phase_time = time.time() - phase_start
+                    overall_pbar.update(1)
+                    # Use set_postfix_str to show the time taken for the last completed phase
+                    overall_pbar.set_postfix_str(f"Last phase: {phase_time:.1f}s", refresh=True)
+
             
         except Exception as e:
             print(f"❌ Error during population: {str(e)}")

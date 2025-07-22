@@ -251,7 +251,7 @@ export const getUserStatistics = async () => {
 // Organization Management API functions
 export const getOrganizations = async () => {
   try {
-    const response = await fetch(`${API_URL}organizations/list/`, {
+    const response = await fetch(`${API_URL}organizations/`, {
       method: 'GET',
       headers: { ...authHeader() }
     });
@@ -268,8 +268,9 @@ export const getOrganizations = async () => {
     }
     
     const result = await handleResponse(response);
+    // The API returns an array directly. We need to wrap it in the expected format.
     return {
-      data: Array.isArray(result.data) ? result.data : []
+      data: Array.isArray(result) ? result : []
     };
   } catch (error) {
     console.error('Failed to fetch organizations:', error);
@@ -573,8 +574,8 @@ export const updateAlertSubscriptions = async (subscriptionData) => {
 // Trust Management API functions
 export const getTrustRelationships = async () => {
   try {
-    // Use the correct organization endpoint for trust relationships
-    const response = await fetch(`${API_URL}organizations/trust-relationships/`, {
+    // Use the correct trust endpoint for trust relationships
+    const response = await fetch(`${API_URL}trust/relationships/`, {
       method: 'GET',
       headers: { ...authHeader() }
     });
@@ -614,7 +615,7 @@ export const getTrustRelationships = async () => {
 };
 
 export const createTrustRelationship = async (trustData) => {
-  const response = await fetch(`${API_URL}organizations/${trustData.target_organization}/trust-relationship/`, {
+  const response = await fetch(`${API_URL}trust/relationships/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(trustData)
@@ -625,7 +626,7 @@ export const createTrustRelationship = async (trustData) => {
 
 export const getTrustMetrics = async () => {
   try {
-    const response = await fetch(`${API_URL}organizations/trust-metrics/`, {
+    const response = await fetch(`${API_URL}trust/metrics/`, {
       method: 'GET',
       headers: { ...authHeader() }
     });
@@ -651,7 +652,7 @@ export const getTrustMetrics = async () => {
 };
 
 export const updateTrustRelationship = async (relationshipId, updateData) => {
-  const response = await fetch(`${API_URL}organizations/trust-relationships/${relationshipId}/`, {
+  const response = await fetch(`${API_URL}trust/relationships/${relationshipId}/`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(updateData)
@@ -661,7 +662,7 @@ export const updateTrustRelationship = async (relationshipId, updateData) => {
 };
 
 export const deleteTrustRelationship = async (relationshipId) => {
-  const response = await fetch(`${API_URL}organizations/trust-relationships/${relationshipId}/`, {
+  const response = await fetch(`${API_URL}trust/relationships/${relationshipId}/`, {
     method: 'DELETE',
     headers: { ...authHeader() }
   });
@@ -752,7 +753,7 @@ export const revokeSession = async (sessionId) => {
 // Trust Groups API functions
 export const getTrustGroups = async () => {
   try {
-    const response = await fetch(`${API_URL}organizations/trust-groups/`, {
+    const response = await fetch(`${API_URL}trust/groups/`, {
       method: 'GET',
       headers: { ...authHeader() }
     });
@@ -783,7 +784,7 @@ export const getTrustGroups = async () => {
 };
 
 export const createTrustGroup = async (groupData) => {
-  const response = await fetch(`${API_URL}organizations/trust-groups/`, {
+  const response = await fetch(`${API_URL}trust/groups/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(groupData)

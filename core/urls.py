@@ -1,22 +1,25 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .user_management.views.auth_views import AuthenticationViewSet
+from .user_management.views.admin_views import AdminViewSet
+from .user_management.views.organization_views import OrganizationViewSet
+from .user_management.views.user_views import UserViewSet
 
 router = DefaultRouter()
 router.register(r'auth', AuthenticationViewSet, basename='auth')
-
-urlpatterns = [
-    path('api/v1/', include(router.urls)),
-]
+router.register(r'admin', AdminViewSet, basename='admin')
+router.register(r'organizations', OrganizationViewSet, basename='organization')
+router.register(r'users', UserViewSet, basename='user')
 
 # Main URL configuration for the core application
-urlpatterns += [
-    # User management system URLs
-    path('', include('core.user_management.urls')),
-    
-    # Trust management system URLs  
-    path('trust/', include('core.trust.urls')),
-
-    # Alerts system URLs
-    path('api/v1/alerts/', include('core.alerts.alerts_urls')),
+# All application URLs are now correctly nested under /api/v1/
+urlpatterns = [
+    path('api/v1/', include([
+        # All viewsets are now registered in this single router
+        path('', include(router.urls)),
+        # Trust management system URLs (e.g., /api/v1/trust/relationships/)
+        path('trust/', include('core.trust.urls')),
+        # Alerts system URLs (e.g., /api/v1/alerts/)
+        path('alerts/', include('core.alerts.alerts_urls')),
+    ])),
 ]
