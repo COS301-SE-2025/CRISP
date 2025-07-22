@@ -4,7 +4,7 @@ Comprehensive tests for audit service to increase coverage
 
 from django.test import TestCase
 from unittest.mock import patch, Mock
-from core.services.audit_service import AuditService
+from core.audit.services.audit_service import AuditService
 from core.user_management.models import CustomUser, Organization
 from django.utils import timezone
 from datetime import timedelta

@@ -294,7 +294,7 @@ class AuditMiddleware(MiddlewareMixin):
     def get_audit_service(self):
         """Get or create audit service instance"""
         try:
-            from core.services.audit_service import AuditService
+            from core.audit.services.audit_service import AuditService
             return AuditService()
         except ImportError:
             return logging.getLogger('audit')

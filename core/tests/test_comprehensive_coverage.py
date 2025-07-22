@@ -536,7 +536,7 @@ class UtilityFunctionCoverageTest(BaseTestCase):
     
     def test_service_utilities(self):
         """Test service utility methods"""
-        from core.services.audit_service import AuditService
+        from core.audit.services.audit_service import AuditService
         
         audit_service = AuditService()
         

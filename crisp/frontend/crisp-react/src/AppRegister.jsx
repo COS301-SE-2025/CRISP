@@ -3,7 +3,7 @@ import * as d3 from 'd3';
 import { useNavigate } from 'react-router-dom';
 import CSSStyles from './assets/CSSStyles';
 import logoImage from './assets/BlueV2.png';
-import { getUserProfile, updateUserProfile, getUserStatistics, changePassword, getEmailStatistics, getSystemHealth, sendTestEmail, testGmailConnection } from './api.js';
+import { getUserProfile, updateUserProfile, getUserStatistics, changePassword, getEmailStatistics, getSystemHealth, sendTestEmail, testGmailConnection, getAuditLogs, getComprehensiveAuditLogs } from './api.js';
 import LoadingSpinner from './components/LoadingSpinner.jsx';
 import UserManagement from './components/UserManagement.jsx';
 import InstitutionManagement from './components/InstitutionManagement.jsx';
@@ -2945,6 +2945,16 @@ function AdminSettings({ active, onNavigate }) {
   const [emailStats, setEmailStats] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [showLogsModal, setShowLogsModal] = useState(false);
+  const [logs, setLogs] = useState([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsFilter, setLogsFilter] = useState({
+    limit: 50,
+    action: '',
+    success: '',
+    start_date: '',
+    end_date: ''
+  });
 
   useEffect(() => {
     if (active) {
@@ -2975,6 +2985,31 @@ function AdminSettings({ active, onNavigate }) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const fetchLogs = async (filters = logsFilter) => {
+    setLogsLoading(true);
+    try {
+      // Remove empty filter values
+      const cleanFilters = Object.fromEntries(
+        Object.entries(filters).filter(([key, value]) => value !== '')
+      );
+      
+      const response = await getComprehensiveAuditLogs(cleanFilters);
+      const logsData = response?.success ? response.data : response;
+      
+      setLogs(logsData?.logs || []);
+    } catch (error) {
+      console.error('Error fetching logs:', error);
+      setLogs([]);
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const handleViewLogs = () => {
+    setShowLogsModal(true);
+    fetchLogs();
   };
 
   const handleTestEmail = async () => {
@@ -3172,7 +3207,7 @@ function AdminSettings({ active, onNavigate }) {
                     <i className={`fas fa-sync-alt ${isLoading ? 'fa-spin' : ''}`}></i> 
                     {isLoading ? 'Refreshing...' : 'Refresh Data'}
                   </button>
-                  <button className="btn btn-outline" onClick={() => console.log('System logs viewed')}>
+                  <button className="btn btn-outline" onClick={handleViewLogs}>
                     <i className="fas fa-file-alt"></i> View Logs
                   </button>
                 </div>
@@ -3274,6 +3309,123 @@ function AdminSettings({ active, onNavigate }) {
           </div>
         </div>
       </div>
+
+      {/* Logs Modal */}
+      {showLogsModal && (
+        <div className="modal-overlay" onClick={() => setShowLogsModal(false)}>
+          <div className="modal-content logs-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2><i className="fas fa-file-alt"></i> System Audit Logs</h2>
+              <button className="modal-close" onClick={() => setShowLogsModal(false)}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              {/* Filters */}
+              <div className="logs-filters">
+                <div className="filter-row">
+                  <div className="filter-group">
+                    <label>Action</label>
+                    <select 
+                      value={logsFilter.action} 
+                      onChange={(e) => setLogsFilter({...logsFilter, action: e.target.value})}
+                    >
+                      <option value="">All Actions</option>
+                      <option value="login_success">Login Success</option>
+                      <option value="login_failure">Login Failure</option>
+                      <option value="logout">Logout</option>
+                      <option value="password_change">Password Change</option>
+                      <option value="profile_update">Profile Update</option>
+                    </select>
+                  </div>
+                  <div className="filter-group">
+                    <label>Status</label>
+                    <select 
+                      value={logsFilter.success} 
+                      onChange={(e) => setLogsFilter({...logsFilter, success: e.target.value})}
+                    >
+                      <option value="">All</option>
+                      <option value="true">Success</option>
+                      <option value="false">Failed</option>
+                    </select>
+                  </div>
+                  <div className="filter-group">
+                    <label>Limit</label>
+                    <select 
+                      value={logsFilter.limit} 
+                      onChange={(e) => setLogsFilter({...logsFilter, limit: e.target.value})}
+                    >
+                      <option value="25">25</option>
+                      <option value="50">50</option>
+                      <option value="100">100</option>
+                      <option value="200">200</option>
+                    </select>
+                  </div>
+                  <button 
+                    className="btn btn-primary" 
+                    onClick={() => fetchLogs(logsFilter)}
+                    disabled={logsLoading}
+                  >
+                    <i className={`fas fa-search ${logsLoading ? 'fa-spin' : ''}`}></i>
+                    Filter
+                  </button>
+                </div>
+              </div>
+
+              {/* Logs Content */}
+              <div className="logs-content">
+                {logsLoading ? (
+                  <div className="logs-loading">
+                    <LoadingSpinner size="small" />
+                    <p>Loading logs...</p>
+                  </div>
+                ) : logs.length > 0 ? (
+                  <div className="logs-table-container">
+                    <table className="logs-table">
+                      <thead>
+                        <tr>
+                          <th>Timestamp</th>
+                          <th>User</th>
+                          <th>Action</th>
+                          <th>Status</th>
+                          <th>IP Address</th>
+                          <th>Details</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {logs.map((log, index) => (
+                          <tr key={index} className={log.success ? 'log-success' : 'log-failure'}>
+                            <td>{new Date(log.timestamp).toLocaleString()}</td>
+                            <td>{log.user || 'Unknown'}</td>
+                            <td>
+                              <span className={`action-badge action-${log.action?.replace('_', '-')}`}>
+                                {log.action?.replace('_', ' ').toUpperCase() || 'UNKNOWN'}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={`status-badge ${log.success ? 'status-success' : 'status-failure'}`}>
+                                {log.success ? 'SUCCESS' : 'FAILED'}
+                              </span>
+                            </td>
+                            <td>{log.ip_address || 'N/A'}</td>
+                            <td className="log-details">{log.details || 'No details'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="no-logs">
+                    <i className="fas fa-file-alt"></i>
+                    <p>No logs found matching the current filters</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

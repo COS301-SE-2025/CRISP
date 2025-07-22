@@ -705,11 +705,11 @@ class OrganizationViewSet(GenericViewSet):
                             'name': group.name,
                             'description': group.description or '',
                             'trust_level': group.default_trust_level.name if group.default_trust_level else None,
-                            'group_type': group.metadata.get('group_type', 'unknown') if hasattr(group, 'metadata') and group.metadata else 'unknown',
+                            'group_type': getattr(group, 'group_type', 'community'),
                             'member_count': member_count,
                             'is_active': getattr(group, 'is_active', True),
                             'created_at': group.created_at.isoformat() if hasattr(group, 'created_at') and group.created_at else None,
-                            'user_role': getattr(membership, 'role', 'member')
+                            'user_role': getattr(membership, 'membership_type', 'member')
                         })
                     except Exception as group_error:
                         logger.warning(f"Error processing trust group {group.id if 'group' in locals() else 'unknown'}: {group_error}")

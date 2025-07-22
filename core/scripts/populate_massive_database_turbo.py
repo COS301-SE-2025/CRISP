@@ -41,7 +41,7 @@ django.setup()
 
 from core.user_management.models import CustomUser, Organization, UserSession
 from core.trust.models import TrustRelationship, TrustGroup, TrustLevel, TrustGroupMembership
-from core.services.audit_service import AuditService
+from core.audit.services.audit_service import AuditService
 from django.db import transaction, connection
 
 fake = Faker()
@@ -110,9 +110,9 @@ class TurboMassiveDatabasePopulator:
         print("🔐 Creating trust levels...")
         
         levels = [
-            {'name': 'Basic', 'level': 1, 'numerical_value': 1.0, 'description': 'Basic trust level for initial partnerships'},
-            {'name': 'Standard', 'level': 2, 'numerical_value': 2.0, 'description': 'Standard trust level for established relationships'},
-            {'name': 'Premium', 'level': 3, 'numerical_value': 3.0, 'description': 'Premium trust level for strategic partnerships'},
+            {'name': 'Basic Trust', 'level': 'public', 'numerical_value': 25, 'description': 'Basic trust level for initial partnerships', 'created_by': 'system'},
+            {'name': 'Standard Trust', 'level': 'trusted', 'numerical_value': 50, 'description': 'Standard trust level for established relationships', 'created_by': 'system'},
+            {'name': 'Premium Trust', 'level': 'restricted', 'numerical_value': 75, 'description': 'Premium trust level for strategic partnerships', 'created_by': 'system'},
         ]
         
         for level_data in tqdm(levels, desc="Creating trust levels", unit="level", 
@@ -315,6 +315,11 @@ class TurboMassiveDatabasePopulator:
         super_admins = [u for u in self.users if u.is_superuser]
         fallback_admin = super_admins[0] if super_admins else None
         
+        # Ensure we have trust levels available
+        if not self.trust_levels:
+            print("Warning: No trust levels available for trust relationships")
+            return created_relationships
+        
         while len(created_relationships) < batch_size and attempts < max_attempts:
             attempts += 1
             
@@ -349,6 +354,8 @@ class TurboMassiveDatabasePopulator:
                 status = random.choice(statuses)
                 
                 with transaction.atomic():
+                    selected_admin = random.choice(source_admins)
+                    
                     trust_rel = TrustRelationship.objects.create(
                         source_organization=source_org,
                         target_organization=target_org,
@@ -356,11 +363,25 @@ class TurboMassiveDatabasePopulator:
                         relationship_type=relationship_type,
                         status=status,
                         is_active=status == 'active',
-                        created_by=random.choice(source_admins),
+                        created_by=selected_admin,
                         created_at=fake.date_time_between(start_date='-1y', end_date='now', tzinfo=timezone.get_current_timezone()),
                         notes=fake.sentence(),
-                        metadata={'created_via': 'turbo_population_script'}
+                        metadata={'created_via': 'turbo_population_script'},
+                        # Set default anonymization and access levels based on trust level
+                        anonymization_level=trust_level.default_anonymization_level if hasattr(trust_level, 'default_anonymization_level') else 'partial',
+                        access_level=trust_level.default_access_level if hasattr(trust_level, 'default_access_level') else 'read'
                     )
+                    
+                    # Auto-approve some relationships for testing
+                    if random.choice([True, False]):
+                        trust_rel.approved_by_source = True
+                        trust_rel.approved_by_source_user = selected_admin
+                        if random.choice([True, False]):
+                            trust_rel.approved_by_target = True
+                            trust_rel.approved_by_target_user = selected_admin
+                            trust_rel.status = 'active'
+                        trust_rel.save()
+                    
                     created_relationships.append(trust_rel)
                     
             except Exception as e:
@@ -398,45 +419,76 @@ class TurboMassiveDatabasePopulator:
         created_groups = []
         
         # Check if we have organizations and users to work with
-        if not self.organizations or not self.users:
-            print(f"Skipping trust groups - no organizations ({len(self.organizations)}) or users ({len(self.users)}) available")
+        if not self.organizations or not self.users or not self.trust_levels:
+            print(f"Skipping trust groups - no organizations ({len(self.organizations)}), users ({len(self.users)}), or trust levels ({len(self.trust_levels)}) available")
             return created_groups
         
         for i in range(batch_size):
             try:
                 admin_users = [u for u in self.users if u.role == 'BlueVisionAdmin']
                 if not admin_users:
-                    continue
+                    # Use super admin as fallback
+                    admin_users = [u for u in self.users if u.is_superuser]
+                    if not admin_users:
+                        continue
                     
                 admin_user = random.choice(admin_users)
                 
-                group_name = f"{fake.word().title()} {random.choice(['Alliance', 'Network', 'Consortium', 'Partnership', 'Coalition'])} {i}"
+                group_name = f"{fake.word().title()} {random.choice(['Alliance', 'Network', 'Consortium', 'Partnership', 'Coalition'])}"
+                
+                # Ensure unique name
+                counter = 0
+                original_name = group_name
+                while TrustGroup.objects.filter(name=group_name).exists() and counter < 100:
+                    counter += 1
+                    group_name = f"{original_name} {counter}"
                 
                 with transaction.atomic():
                     trust_group = TrustGroup.objects.create(
                         name=group_name,
                         description=fake.paragraph(),
-                        trust_level=random.choice(self.trust_levels),
-                        created_by=admin_user,
+                        default_trust_level=random.choice(self.trust_levels),
+                        created_by=str(admin_user),  # Store as string for compatibility
                         is_active=random.choice([True, True, False]),
-                        metadata={'group_type': random.choice(['industry', 'regional', 'strategic'])}
+                        group_type=random.choice(['industry', 'regional', 'strategic', 'community']),
+                        is_public=random.choice([True, False]),
+                        requires_approval=random.choice([True, False]),
+                        administrators=[str(admin_user.organization.id)] if admin_user.organization else []
                     )
                     
+                    # Add the admin user's organization as first member with administrator role
+                    if admin_user.organization:
+                        TrustGroupMembership.objects.create(
+                            trust_group=trust_group,
+                            organization=admin_user.organization,
+                            membership_type='administrator',
+                            is_active=True,
+                            joined_at=fake.date_time_between(start_date='-6m', end_date='now', tzinfo=timezone.get_current_timezone()),
+                            invited_by=str(admin_user.organization.id),
+                            approved_by=str(admin_user)
+                        )
+                    
                     # Add random organizations to the group
-                    num_members = random.randint(3, 15)
-                    member_orgs = random.sample(self.organizations, min(num_members, len(self.organizations)))
+                    num_members = random.randint(2, 8)  # Reduced to avoid too many members
+                    available_orgs = [org for org in self.organizations if org != admin_user.organization]
+                    member_orgs = random.sample(available_orgs, min(num_members, len(available_orgs)))
                     
                     for org in member_orgs:
+                        membership_type = random.choice(['member', 'member', 'member', 'moderator'])  # Favor regular members
                         TrustGroupMembership.objects.create(
-                            group=trust_group,
+                            trust_group=trust_group,
                             organization=org,
-                            role=random.choice(['member', 'admin', 'observer']),
-                            joined_at=fake.date_time_between(start_date='-6m', end_date='now', tzinfo=timezone.get_current_timezone())
+                            membership_type=membership_type,
+                            is_active=random.choice([True, True, False]),  # Most active
+                            joined_at=fake.date_time_between(start_date='-6m', end_date='now', tzinfo=timezone.get_current_timezone()),
+                            invited_by=str(admin_user.organization.id) if admin_user.organization else None,
+                            approved_by=str(admin_user) if trust_group.requires_approval else None
                         )
                         
                     created_groups.append(trust_group)
                     
             except Exception as e:
+                print(f"Trust group creation error: {e}")
                 continue
                 
         return created_groups
@@ -467,6 +519,11 @@ class TurboMassiveDatabasePopulator:
         """Create a batch of user sessions"""
         created_sessions = []
         
+        # Check if we have users available
+        if not self.users:
+            print(f"Warning: No users available for session creation")
+            return 0
+        
         for i in range(batch_size):
             try:
                 user = random.choice(self.users)
@@ -474,18 +531,24 @@ class TurboMassiveDatabasePopulator:
                 session_duration = timedelta(minutes=random.randint(5, 480))
                 
                 with transaction.atomic():
-                    UserSession.objects.create(
+                    session = UserSession.objects.create(
                         user=user,
-                        session_key=fake.uuid4(),
+                        session_token=fake.sha256(),
+                        refresh_token=fake.sha256(),
+                        device_info={
+                            'user_agent': fake.user_agent(), 
+                            'browser': fake.random_element(['Chrome', 'Firefox', 'Safari', 'Edge', 'Opera']),
+                            'os': fake.random_element(['Windows', 'macOS', 'Linux', 'iOS', 'Android'])
+                        },
                         ip_address=fake.ipv4(),
-                        user_agent=fake.user_agent(),
-                        created_at=session_start,
-                        last_activity=session_start + session_duration,
-                        is_active=random.choice([True, False])
+                        is_active=random.choice([True, False]),
+                        expires_at=session_start + session_duration,
+                        is_trusted_device=random.choice([True, False])
                     )
-                    created_sessions.append(True)
+                    created_sessions.append(session)
                     
             except Exception as e:
+                print(f"Error creating user session: {e}")
                 continue
                 
         return len(created_sessions)
@@ -494,7 +557,16 @@ class TurboMassiveDatabasePopulator:
         """Create massive number of user sessions with parallel processing"""
         print(f"🔐 Creating {self.NUM_USER_SESSIONS} user sessions with {self.MAX_WORKERS} workers...")
         
+        # Check prerequisites
+        if not self.users:
+            print("❌ No users available for session creation!")
+            return
+        
+        print(f"📊 Available users for sessions: {len(self.users)}")
+        
         batch_size = self.NUM_USER_SESSIONS // self.MAX_WORKERS
+        if batch_size == 0:
+            batch_size = 1
         
         with ThreadPoolExecutor(max_workers=self.MAX_WORKERS) as executor:
             with tqdm(total=self.NUM_USER_SESSIONS, desc="Creating user sessions", unit="session", 

@@ -15,7 +15,7 @@ from datetime import timedelta
 from core.user_management.models import CustomUser, Organization, AuthenticationLog
 from core.trust.models import TrustLog
 from core.middleware.audit_middleware import AuditMiddleware
-from core.services.audit_service import AuditService
+from core.audit.services.audit_service import AuditService
 from core.tests.test_fixtures import BaseTestCase
 
 

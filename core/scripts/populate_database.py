@@ -22,7 +22,7 @@ django.setup()
 
 from core.user_management.models import CustomUser, Organization, UserSession
 from core.trust.models import TrustRelationship, TrustGroup, TrustLevel, TrustGroupMembership
-from core.services.audit_service import AuditService
+from core.audit.services.audit_service import AuditService
 
 fake = Faker()
 

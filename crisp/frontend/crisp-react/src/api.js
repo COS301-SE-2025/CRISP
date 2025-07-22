@@ -359,8 +359,23 @@ export const getSystemHealth = async () => {
   }
 };
 
-export const getAuditLogs = async () => {
-  const response = await fetch(`${API_URL}admin/audit-logs/`, {
+export const getAuditLogs = async (params = {}) => {
+  const queryString = new URLSearchParams(params).toString();
+  const url = `${API_URL}admin/audit-logs/${queryString ? `?${queryString}` : ''}`;
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { ...authHeader() }
+  });
+  
+  return await handleResponse(response);
+};
+
+export const getComprehensiveAuditLogs = async (params = {}) => {
+  const queryString = new URLSearchParams(params).toString();
+  const url = `${API_URL}admin/comprehensive-audit-logs/${queryString ? `?${queryString}` : ''}`;
+  
+  const response = await fetch(url, {
     method: 'GET',
     headers: { ...authHeader() }
   });

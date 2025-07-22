@@ -50,7 +50,7 @@ class AuditMiddleware(MiddlewareMixin):
         """Get or create audit service instance"""
         # Import here to avoid circular imports
         try:
-            from core.services.audit_service import AuditService
+            from core.audit.services.audit_service import AuditService
             return AuditService()
         except ImportError:
             # Fallback to logging if service doesn't exist
