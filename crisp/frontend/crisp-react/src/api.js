@@ -298,8 +298,8 @@ export const getOrganizationDetails = async (organizationId) => {
 };
 
 export const updateOrganization = async (organizationId, updateData) => {
-  const response = await fetch(`${API_URL}organizations/${organizationId}/update_organization/`, {
-    method: 'POST',
+  const response = await fetch(`${API_URL}organizations/${organizationId}/`, {
+    method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(updateData)
   });
