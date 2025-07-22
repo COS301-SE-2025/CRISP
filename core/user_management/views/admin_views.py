@@ -8,7 +8,7 @@ from ..services.user_service import UserService
 from ..services.organization_service import OrganizationService
 from ..services.trust_aware_service import TrustAwareService
 from ..services.access_control_service import AccessControlService
-from ...services.audit_service import AuditService
+from ...audit.services.audit_service import AuditService
 from ..models import CustomUser, AuthenticationLog
 import logging
 

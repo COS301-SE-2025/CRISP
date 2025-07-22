@@ -16,7 +16,7 @@ urlpatterns += [
     
     # Trust management system URLs  
     path('trust/', include('core.trust.urls')),
-    
+
     # Alerts system URLs
-    path('api/v1/alerts/', include('core.services.alerts_urls')),
+    path('api/v1/alerts/', include('core.alerts.alerts_urls')),
 ]
