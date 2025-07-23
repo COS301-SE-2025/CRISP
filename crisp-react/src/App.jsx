@@ -1166,6 +1166,7 @@ function IoCManagement({ active }) {
       fetchIndicators();
     }
   }, [active]);
+
   
   const fetchIndicators = async () => {
     setLoading(true);
@@ -1274,7 +1275,10 @@ function IoCManagement({ active }) {
         <div className="card-header">
           <h2 className="card-title"><i className="fas fa-search card-icon"></i> Indicators of Compromise</h2>
           <div className="card-actions">
-            <button className="btn btn-outline btn-sm"><i className="fas fa-sync-alt"></i> Refresh</button>
+            <button className="btn btn-outline btn-sm" onClick={handleRefresh} disabled={loading}>
+              <i className={`fas fa-sync-alt ${loading ? 'fa-spin' : ''}`}></i> 
+              {loading ? 'Refreshing...' : 'Refresh'}
+            </button>
           </div>
         </div>
         <div className="card-content">
@@ -1531,6 +1535,11 @@ function IoCManagement({ active }) {
     });
     setFormErrors({});
   }
+
+  function handleRefresh() {
+    fetchIndicators();
+  }
+
 
   function validateForm() {
     const errors = {};
