@@ -117,6 +117,9 @@ class UserService:
                 'bio', 'department', 'job_title', 'phone', 'phone_number',
                 'email_notifications', 'threat_alerts', 'security_notifications'
             }
+            # Allow admin users to update their own organization and role
+            if updating_user.role in ['BlueVisionAdmin', 'admin']:
+                updatable_fields.update({'organization', 'role'})
         elif updating_user.role in ['BlueVisionAdmin', 'admin']:
             # Admin: all fields except sensitive ones
             updatable_fields = {

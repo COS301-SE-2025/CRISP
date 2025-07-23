@@ -3,7 +3,7 @@ import * as d3 from 'd3';
 import { useNavigate } from 'react-router-dom';
 import CSSStyles from './assets/CSSStyles';
 import logoImage from './assets/BlueV2.png';
-import { getUserProfile, updateUserProfile, getUserStatistics, changePassword, getEmailStatistics, getSystemHealth, sendTestEmail, testGmailConnection, getAuditLogs, getComprehensiveAuditLogs } from './api.js';
+import { getUserProfile, updateUserProfile, getUserStatistics, changePassword, getEmailStatistics, getSystemHealth, sendTestEmail, testGmailConnection, getAuditLogs, getComprehensiveAuditLogs, getOrganizations } from './api.js';
 import LoadingSpinner from './components/LoadingSpinner.jsx';
 import UserManagement from './components/UserManagement.jsx';
 import OrganisationManagement from './components/OrganisationManagement.jsx';
@@ -2741,6 +2741,7 @@ function AccountSettings({ active, user }) {
     fullName: user?.full_name || '',
     email: user?.email || user?.username || '',
     organization: user?.organization || '',
+    organization_id: user?.organization_details?.id || '',
     role: user?.role || '',
     currentPassword: '',
     newPassword: '',
@@ -2748,6 +2749,118 @@ function AccountSettings({ active, user }) {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [organizations, setOrganizations] = useState([]);
+  const [availableRoles] = useState([
+    { value: 'viewer', label: 'Viewer' },
+    { value: 'publisher', label: 'Publisher' },
+    { value: 'BlueVisionAdmin', label: 'BlueVision Administrator' }
+  ]);
+
+  // Helper function to check if role is valid
+  const isValidRole = (role) => {
+    return availableRoles.some(validRole => validRole.value === role);
+  };
+
+  // Check if current user role is invalid
+  const hasInvalidRole = user?.role && !isValidRole(user.role);
+  
+  const [actualProfileData, setActualProfileData] = useState(null);
+  
+  // Debug logging to verify component is working
+  console.log('AccountSettings Debug (AppRegister):', {
+    userRole: user?.role,
+    isValid: isValidRole(user?.role),
+    hasInvalidRole,
+    availableRoles: availableRoles.map(r => r.value),
+    actualProfileData: actualProfileData,
+    formData: formData,
+    organizationsCount: organizations.length,
+    selectedOrgId: formData.organization_id
+  });
+
+  useEffect(() => {
+    if (active) {
+      fetchOrganizations();
+      fetchActualProfile();
+    }
+  }, [active]);
+
+  // Effect to match organization when both profile data and organizations are loaded
+  useEffect(() => {
+    if (actualProfileData && organizations.length > 0) {
+      matchCurrentOrganization();
+    }
+  }, [actualProfileData, organizations]);
+
+  const matchCurrentOrganization = () => {
+    if (!actualProfileData?.organization) return;
+    
+    // Try to find organization by name since we have the name in profile
+    const matchingOrg = organizations.find(org => 
+      org.name === actualProfileData.organization
+    );
+    
+    if (matchingOrg) {
+      console.log('Matched current organization:', matchingOrg);
+      setFormData(prev => ({
+        ...prev,
+        organization_id: matchingOrg.id,
+        organization: matchingOrg.name
+      }));
+    } else {
+      console.log('Could not find matching organization for:', actualProfileData.organization);
+    }
+  };
+
+  const fetchActualProfile = async () => {
+    try {
+      const profileData = await getUserProfile();
+      console.log('Fetched actual profile data:', profileData);
+      setActualProfileData(profileData);
+      
+      // Update form with actual profile data
+      setFormData({
+        username: profileData?.username || '',
+        fullName: profileData?.full_name || `${profileData?.first_name || ''} ${profileData?.last_name || ''}`.trim(),
+        email: profileData?.email || '',
+        organization: profileData?.organization || '',
+        organization_id: profileData?.organization_details?.id || '',
+        role: profileData?.role || '',
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } catch (error) {
+      console.error('Failed to fetch actual profile:', error);
+      // Fallback to user prop
+      if (user) {
+        setFormData({
+          username: user?.username || '',
+          fullName: user?.full_name || `${user?.first_name || ''} ${user?.last_name || ''}`.trim(),
+          email: user?.email || user?.username || '',
+          organization: user?.organization || '',
+          organization_id: user?.organization_details?.id || '',
+          role: user?.role || '',
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+      }
+    }
+  };
+
+  const fetchOrganizations = async () => {
+    try {
+      const response = await getOrganizations();
+      if (response && response.data) {
+        setOrganizations(response.data);
+        console.log('Fetched organizations:', response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch organizations:', error);
+      setOrganizations([]);
+    }
+  };
 
   if (!active) return null;
 
@@ -2764,15 +2877,32 @@ function AccountSettings({ active, user }) {
     setIsLoading(true);
     setMessage('');
 
+    // Validate role before submission
+    if (!formData.role || !isValidRole(formData.role)) {
+      setMessage('Error: Please select a valid role from the dropdown.');
+      setIsLoading(false);
+      return;
+    }
+
+    // Validate organization before submission
+    if (!formData.organization_id) {
+      setMessage('Error: Please select an organization from the dropdown.');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const profileData = {
         full_name: formData.fullName,
-        organization: formData.organization,
+        email: formData.email,
+        organization: formData.organization_id, // Send UUID only
         role: formData.role
       };
       
+      console.log('Sending profile update:', profileData);
+      
       await updateUserProfile(profileData);
-      setMessage('Profile updated successfully!');
+      setMessage('Profile updated successfully! Invalid role has been corrected.');
       
       // Refresh the page after a short delay to show updated data
       setTimeout(() => {
@@ -2829,6 +2959,49 @@ function AccountSettings({ active, user }) {
           {/* Profile Information */}
           <div className="settings-card">
             <h3><i className="fas fa-user"></i> Profile Information</h3>
+            
+            {/* Current Information Display */}
+            <div className="current-info-section" style={{
+              backgroundColor: '#f8f9fa',
+              border: '1px solid #e9ecef',
+              borderRadius: '8px',
+              padding: '1rem',
+              marginBottom: '1.5rem'
+            }}>
+              <h4 style={{marginTop: 0, marginBottom: '0.75rem', color: '#495057'}}>
+                <i className="fas fa-info-circle"></i> Current Information
+              </h4>
+              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
+                <div>
+                  <strong>Full Name:</strong>
+                  <div style={{color: '#6c757d', marginTop: '0.25rem'}}>
+                    {actualProfileData?.full_name || 
+                     `${actualProfileData?.first_name || ''} ${actualProfileData?.last_name || ''}`.trim() || 
+                     'Not set'}
+                  </div>
+                </div>
+                <div>
+                  <strong>Organization:</strong>
+                  <div style={{color: '#6c757d', marginTop: '0.25rem'}}>
+                    {actualProfileData?.organization || 'No Organization'}
+                  </div>
+                </div>
+                <div>
+                  <strong>Role:</strong>
+                  <div style={{color: '#6c757d', marginTop: '0.25rem'}}>
+                    {availableRoles.find(r => r.value === actualProfileData?.role)?.label || 
+                     actualProfileData?.role || 'Not set'}
+                  </div>
+                </div>
+                <div>
+                  <strong>Email:</strong>
+                  <div style={{color: '#6c757d', marginTop: '0.25rem'}}>
+                    {actualProfileData?.email || 'Not set'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <form onSubmit={handleProfileUpdate}>
               <div className="form-group">
                 <label htmlFor="username">Username</label>
@@ -2867,25 +3040,57 @@ function AccountSettings({ active, user }) {
               </div>
               <div className="form-group">
                 <label htmlFor="organization">Organization</label>
-                <input
-                  type="text"
+                <select
                   id="organization"
-                  name="organization"
-                  value={formData.organization}
-                  onChange={handleInputChange}
-                  className="form-control"
-                />
+                  name="organization_id"
+                  value={formData.organization_id}
+                  onChange={(e) => {
+                    const selectedOrg = organizations.find(org => org.id === e.target.value);
+                    setFormData({
+                      ...formData, 
+                      organization_id: e.target.value,
+                      organization: selectedOrg ? selectedOrg.name : ''
+                    });
+                  }}
+                  className="form-select form-control"
+                >
+                  <option value="">Select an organization...</option>
+                  {organizations.map(org => (
+                    <option key={org.id} value={org.id}>
+                      {org.name} ({org.domain})
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="form-group">
                 <label htmlFor="role">Role</label>
-                <input
-                  type="text"
+                {hasInvalidRole && (
+                  <div className="alert alert-warning" style={{marginBottom: '0.5rem', padding: '0.5rem'}}>
+                    <i className="fas fa-exclamation-triangle"></i> 
+                    <strong>Invalid Role Detected:</strong> "{user.role}" is not a valid system role. 
+                    Please select a valid role from the dropdown below.
+                  </div>
+                )}
+                <select
                   id="role"
                   name="role"
-                  value={formData.role}
+                  value={isValidRole(formData.role) ? formData.role : ''}
                   onChange={handleInputChange}
-                  className="form-control"
-                />
+                  className={`form-select form-control ${hasInvalidRole ? 'invalid-field' : ''}`}
+                  required
+                >
+                  <option value="">Select a role...</option>
+                  {availableRoles.map(role => (
+                    <option key={role.value} value={role.value}>
+                      {role.label}
+                    </option>
+                  ))}
+                </select>
+                {hasInvalidRole && (
+                  <small className="form-text text-warning">
+                    Current invalid role: "{user.role}" - Please select a valid role above
+                  </small>
+                )}
               </div>
               <button type="submit" className="btn btn-primary" disabled={isLoading}>
                 {isLoading ? 'Updating...' : 'Update Profile'}

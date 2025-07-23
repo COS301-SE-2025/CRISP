@@ -2444,12 +2444,19 @@ function UserProfileDetailed({ active, user }) {
   const [formData, setFormData] = useState({});
   const [sessions, setSessions] = useState([]);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [organizations, setOrganizations] = useState([]);
+  const [availableRoles] = useState([
+    { value: 'viewer', label: 'Viewer' },
+    { value: 'publisher', label: 'Publisher' },
+    { value: 'BlueVisionAdmin', label: 'BlueVision Administrator' }
+  ]);
 
   useEffect(() => {
     if (active) {
       try {
         fetchProfileData();
         fetchSessions();
+        fetchOrganizations();
       } catch (error) {
         console.error('Error in UserProfile useEffect:', error);
       }
@@ -2461,7 +2468,12 @@ function UserProfileDetailed({ active, user }) {
       setLoading(true);
       const data = await api.getUserProfile();
       setProfileData(data);
-      setFormData(data);
+      // Initialize form data with organization_id for the dropdown
+      const initFormData = {
+        ...data,
+        organization_id: data?.organization_details?.id || ''
+      };
+      setFormData(initFormData);
     } catch (error) {
       console.error('Failed to fetch profile:', error);
       // Set some default data to prevent crashes
@@ -2477,6 +2489,18 @@ function UserProfileDetailed({ active, user }) {
       setSessions(data);
     } catch (error) {
       console.error('Failed to fetch sessions:', error);
+    }
+  };
+
+  const fetchOrganizations = async () => {
+    try {
+      const response = await api.getOrganizations();
+      if (response && response.data) {
+        setOrganizations(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch organizations:', error);
+      setOrganizations([]);
     }
   };
 
@@ -2568,20 +2592,56 @@ function UserProfileDetailed({ active, user }) {
                   </div>
                   <div className="form-group">
                     <label>Organization</label>
-                    <input
-                      type="text"
-                      value={editing ? formData.organization || '' : profileData?.organization || ''}
-                      onChange={(e) => setFormData({...formData, organization: e.target.value})}
-                      disabled={!editing}
-                    />
+                    {editing ? (
+                      <select
+                        value={formData.organization_id || profileData?.organization_details?.id || ''}
+                        onChange={(e) => {
+                          const selectedOrg = organizations.find(org => org.id === e.target.value);
+                          setFormData({
+                            ...formData, 
+                            organization_id: e.target.value,
+                            organization: selectedOrg ? selectedOrg.name : ''
+                          });
+                        }}
+                        className="form-select"
+                      >
+                        <option value="">Select an organization...</option>
+                        {organizations.map(org => (
+                          <option key={org.id} value={org.id}>
+                            {org.name} ({org.domain})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        value={profileData?.organization || 'No Organization'}
+                        disabled={true}
+                      />
+                    )}
                   </div>
                   <div className="form-group">
                     <label>Role</label>
-                    <input
-                      type="text"
-                      value={profileData?.role || ''}
-                      disabled={true}
-                    />
+                    {editing ? (
+                      <select
+                        value={formData.role || profileData?.role || ''}
+                        onChange={(e) => setFormData({...formData, role: e.target.value})}
+                        className="form-select"
+                      >
+                        <option value="">Select a role...</option>
+                        {availableRoles.map(role => (
+                          <option key={role.value} value={role.value}>
+                            {role.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        value={availableRoles.find(r => r.value === profileData?.role)?.label || profileData?.role || ''}
+                        disabled={true}
+                      />
+                    )}
                   </div>
                 </div>
               )}
@@ -4229,6 +4289,7 @@ function AccountSettings({ active, user }) {
     fullName: user?.full_name || '',
     email: user?.email || user?.username || '',
     organization: user?.organization || '',
+    organization_id: user?.organization_details?.id || '',
     role: user?.role || '',
     currentPassword: '',
     newPassword: '',
@@ -4236,6 +4297,62 @@ function AccountSettings({ active, user }) {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [organizations, setOrganizations] = useState([]);
+  const [availableRoles] = useState([
+    { value: 'viewer', label: 'Viewer' },
+    { value: 'publisher', label: 'Publisher' },
+    { value: 'BlueVisionAdmin', label: 'BlueVision Administrator' }
+  ]);
+
+  // Helper function to check if role is valid
+  const isValidRole = (role) => {
+    return availableRoles.some(validRole => validRole.value === role);
+  };
+
+  // Check if current user role is invalid
+  const hasInvalidRole = user?.role && !isValidRole(user.role);
+  
+  // Debug logging to verify component is working
+  console.log('AccountSettings Debug:', {
+    userRole: user?.role,
+    isValid: isValidRole(user?.role),
+    hasInvalidRole,
+    availableRoles: availableRoles.map(r => r.value)
+  });
+
+  useEffect(() => {
+    if (active) {
+      fetchOrganizations();
+    }
+  }, [active]);
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        username: user?.username || '',
+        fullName: user?.full_name || '',
+        email: user?.email || user?.username || '',
+        organization: user?.organization || '',
+        organization_id: user?.organization_details?.id || '',
+        role: user?.role || '',
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    }
+  }, [user]);
+
+  const fetchOrganizations = async () => {
+    try {
+      const response = await api.getOrganizations();
+      if (response && response.data) {
+        setOrganizations(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch organizations:', error);
+      setOrganizations([]);
+    }
+  };
 
   if (!active) return null;
 
@@ -4252,15 +4369,24 @@ function AccountSettings({ active, user }) {
     setIsLoading(true);
     setMessage('');
 
+    // Validate role before submission
+    if (!formData.role || !isValidRole(formData.role)) {
+      setMessage('Error: Please select a valid role from the dropdown.');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const profileData = {
         full_name: formData.fullName,
+        email: formData.email,
         organization: formData.organization,
+        organization_id: formData.organization_id,
         role: formData.role
       };
       
       await api.updateUserProfile(profileData);
-      setMessage('Profile updated successfully!');
+      setMessage('Profile updated successfully! Invalid role has been corrected.');
     } catch (error) {
       setMessage(`Error updating profile: ${error}`);
     } finally {
@@ -4346,6 +4472,60 @@ function AccountSettings({ active, user }) {
                   className="form-control"
                   required
                 />
+              </div>
+              <div className="form-group">
+                <label htmlFor="organization">Organization</label>
+                <select
+                  id="organization"
+                  name="organization_id"
+                  value={formData.organization_id}
+                  onChange={(e) => {
+                    const selectedOrg = organizations.find(org => org.id === e.target.value);
+                    setFormData({
+                      ...formData, 
+                      organization_id: e.target.value,
+                      organization: selectedOrg ? selectedOrg.name : ''
+                    });
+                  }}
+                  className="form-select form-control"
+                >
+                  <option value="">Select an organization...</option>
+                  {organizations.map(org => (
+                    <option key={org.id} value={org.id}>
+                      {org.name} ({org.domain})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="role">Role</label>
+                {hasInvalidRole && (
+                  <div className="alert alert-warning" style={{marginBottom: '0.5rem', padding: '0.5rem'}}>
+                    <i className="fas fa-exclamation-triangle"></i> 
+                    <strong>Invalid Role Detected:</strong> "{user.role}" is not a valid system role. 
+                    Please select a valid role from the dropdown below.
+                  </div>
+                )}
+                <select
+                  id="role"
+                  name="role"
+                  value={isValidRole(formData.role) ? formData.role : ''}
+                  onChange={handleInputChange}
+                  className={`form-select form-control ${hasInvalidRole ? 'invalid-field' : ''}`}
+                  required
+                >
+                  <option value="">Select a role...</option>
+                  {availableRoles.map(role => (
+                    <option key={role.value} value={role.value}>
+                      {role.label}
+                    </option>
+                  ))}
+                </select>
+                {hasInvalidRole && (
+                  <small className="form-text text-warning">
+                    Current invalid role: "{user.role}" - Please select a valid role above
+                  </small>
+                )}
               </div>
               <button type="submit" className="btn btn-primary" disabled={isLoading}>
                 {isLoading ? 'Updating...' : 'Update Profile'}
