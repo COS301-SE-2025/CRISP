@@ -427,7 +427,9 @@ const UserManagement = ({ active = true, initialSection = null }) => {
             padding: '0.5rem',
             border: '1px solid #ddd',
             borderRadius: '4px',
-            minWidth: '200px'
+            minWidth: '200px',
+            backgroundColor: 'white',
+            color: '#666'
           }}
         />
         
@@ -437,7 +439,9 @@ const UserManagement = ({ active = true, initialSection = null }) => {
           style={{
             padding: '0.5rem',
             border: '1px solid #ddd',
-            borderRadius: '4px'
+            borderRadius: '4px',
+            backgroundColor: 'white',
+            color: '#666'
           }}
         >
           <option value="">All Roles</option>
@@ -882,7 +886,9 @@ const UserManagement = ({ active = true, initialSection = null }) => {
               <h3 style={{ 
                 margin: '0 0 0.5rem 0', 
                 color: '#333',
-                fontSize: '1.25rem'
+                fontSize: '1.25rem',
+                wordBreak: 'break-word',
+                lineHeight: '1.3'
               }}>
                 {selectedUserForActions.username}
               </h3>

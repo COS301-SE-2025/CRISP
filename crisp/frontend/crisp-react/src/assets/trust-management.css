@@ -399,7 +399,7 @@
   border: 1px solid var(--border-color);
   border-radius: 6px;
   background: white;
-  color: var(--text-primary);
+  color: #666;
   font-size: 0.9rem;
 }
 
@@ -940,6 +940,49 @@
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Modal Form Elements */
+.modal-body .form-group input,
+.modal-body .form-group select,
+.modal-body .form-group textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: white !important;
+  color: #666 !important;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.modal-body .form-group input:focus,
+.modal-body .form-group select:focus,
+.modal-body .form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+  background: white !important;
+  color: #666 !important;
+}
+
+.modal-body .form-group input:hover,
+.modal-body .form-group select:hover,
+.modal-body .form-group textarea:hover {
+  border-color: var(--primary-color);
+}
+
+.modal-body .form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.modal-body .form-group {
+  margin-bottom: 1.5rem;
 }
 
 /* Responsive Design */
