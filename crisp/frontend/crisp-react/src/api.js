@@ -1,7 +1,7 @@
 // api.js - API Service for CRISP
 
 // Base API URL - UserTrust Django backend
-const API_URL = 'http://localhost:8001/api/v1/';
+const API_URL = 'http://localhost:8000/api/v1/';
 
 // Helper function to handle API responses
 const handleResponse = async (response) => {
