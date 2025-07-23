@@ -380,7 +380,9 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
             padding: '0.5rem',
             border: '1px solid #ddd',
             borderRadius: '4px',
-            minWidth: '200px'
+            minWidth: '200px',
+            backgroundColor: 'white',
+            color: '#666'
           }}
         />
         
@@ -390,7 +392,9 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
           style={{
             padding: '0.5rem',
             border: '1px solid #ddd',
-            borderRadius: '4px'
+            borderRadius: '4px',
+            backgroundColor: 'white',
+            color: '#666'
           }}
         >
           <option value="">All Types</option>
@@ -709,7 +713,7 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
                   <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
                     <div style={{ flex: 1 }}>
                       <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                        Username *
+                        Username {!formData.primary_user.username && <span style={{ color: 'red' }}>*</span>}
                       </label>
                       <input
                         type="text"
@@ -722,13 +726,14 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
                           padding: '0.5rem',
                           border: '1px solid #ddd',
                           borderRadius: '4px',
-                          color: '#333'
+                          backgroundColor: 'white',
+                          color: '#000'
                         }}
                       />
                     </div>
                     <div style={{ flex: 1 }}>
                       <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                        Email *
+                        Email {!formData.primary_user.email && <span style={{ color: 'red' }}>*</span>}
                       </label>
                       <input
                         type="email"
@@ -741,7 +746,8 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
                           padding: '0.5rem',
                           border: '1px solid #ddd',
                           borderRadius: '4px',
-                          color: '#333'
+                          backgroundColor: 'white',
+                          color: '#000'
                         }}
                       />
                     </div>
@@ -750,7 +756,7 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
                   <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
                     <div style={{ flex: 1 }}>
                       <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                        First Name *
+                        First Name {!formData.primary_user.first_name && <span style={{ color: 'red' }}>*</span>}
                       </label>
                       <input
                         type="text"
@@ -763,13 +769,14 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
                           padding: '0.5rem',
                           border: '1px solid #ddd',
                           borderRadius: '4px',
-                          color: '#333'
+                          backgroundColor: 'white',
+                          color: '#000'
                         }}
                       />
                     </div>
                     <div style={{ flex: 1 }}>
                       <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                        Last Name *
+                        Last Name {!formData.primary_user.last_name && <span style={{ color: 'red' }}>*</span>}
                       </label>
                       <input
                         type="text"
@@ -782,7 +789,8 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
                           padding: '0.5rem',
                           border: '1px solid #ddd',
                           borderRadius: '4px',
-                          color: '#333'
+                          backgroundColor: 'white',
+                          color: '#000'
                         }}
                       />
                     </div>
@@ -790,7 +798,7 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
 
                   <div style={{ marginBottom: '1rem' }}>
                     <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                      Password *
+                      Password {!formData.primary_user.password && <span style={{ color: 'red' }}>*</span>}
                     </label>
                     <input
                       type="password"
@@ -803,7 +811,8 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
                         padding: '0.5rem',
                         border: '1px solid #ddd',
                         borderRadius: '4px',
-                        color: '#333'
+                        backgroundColor: 'white',
+                        color: '#999'
                       }}
                     />
                   </div>

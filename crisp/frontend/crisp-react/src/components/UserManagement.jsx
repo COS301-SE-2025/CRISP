@@ -616,7 +616,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
             <form onSubmit={handleSubmit}>
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                  Username
+                  Username {!formData.username && modalMode === 'add' && <span style={{ color: 'red' }}>*</span>}
                 </label>
                 <input
                   type="text"
@@ -633,7 +633,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                     border: '1px solid #ddd',
                     borderRadius: '4px',
                     backgroundColor: modalMode === 'view' ? '#f8f9fa' : 'white',
-                    color: '#333'
+                    color: modalMode === 'view' ? '#333' : '#000'
                   }}
                 />
                 {modalMode === 'edit' && (
@@ -645,7 +645,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
 
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                  Email {!formData.email && modalMode === 'view' && '(Not available at current access level)'}
+                  Email {modalMode === 'add' && !formData.email && <span style={{ color: 'red' }}>*</span>} {!formData.email && modalMode === 'view' && '(Not available at current access level)'}
                 </label>
                 <input
                   type="email"
@@ -661,7 +661,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                     border: '1px solid #ddd',
                     borderRadius: '4px',
                     backgroundColor: modalMode === 'view' ? '#f8f9fa' : 'white',
-                    color: '#333'
+                    color: modalMode === 'view' ? '#333' : '#000'
                   }}
                 />
               </div>
@@ -682,7 +682,8 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                       padding: '0.5rem',
                       border: '1px solid #ddd',
                       borderRadius: '4px',
-                      backgroundColor: modalMode === 'view' ? '#f8f9fa' : 'white'
+                      backgroundColor: modalMode === 'view' ? '#f8f9fa' : 'white',
+                      color: modalMode === 'view' ? '#333' : '#000'
                     }}
                   />
                 </div>
@@ -701,7 +702,8 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                       padding: '0.5rem',
                       border: '1px solid #ddd',
                       borderRadius: '4px',
-                      backgroundColor: modalMode === 'view' ? '#f8f9fa' : 'white'
+                      backgroundColor: modalMode === 'view' ? '#f8f9fa' : 'white',
+                      color: modalMode === 'view' ? '#333' : '#000'
                     }}
                   />
                 </div>
@@ -710,7 +712,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
               {modalMode === 'add' && (
                 <div style={{ marginBottom: '1rem' }}>
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                    Password
+                    Password {!formData.password && <span style={{ color: 'red' }}>*</span>}
                   </label>
                   <input
                     type="password"
@@ -723,7 +725,8 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                       padding: '0.5rem',
                       border: '1px solid #ddd',
                       borderRadius: '4px',
-                      color: '#333'
+                      backgroundColor: 'white',
+                      color: '#999'
                     }}
                   />
                 </div>
@@ -744,7 +747,8 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                       padding: '0.5rem',
                       border: '1px solid #ddd',
                       borderRadius: '4px',
-                      color: '#333'
+                      backgroundColor: 'white',
+                      color: '#999'
                     }}
                   />
                 </div>
@@ -765,7 +769,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                     border: '1px solid #ddd',
                     borderRadius: '4px',
                     backgroundColor: modalMode === 'view' ? '#f8f9fa' : 'white',
-                    color: '#333'
+                    color: modalMode === 'view' ? '#333' : '#000'
                   }}
                 >
                   {roles.map(role => (
@@ -776,7 +780,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
 
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                  Organization *
+                  Organization {modalMode === 'add' && !formData.organization_id && <span style={{ color: 'red' }}>*</span>}
                 </label>
                 <select
                   name="organization_id"
@@ -790,7 +794,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                     border: '1px solid #ddd',
                     borderRadius: '4px',
                     backgroundColor: modalMode === 'view' ? '#f8f9fa' : 'white',
-                    color: '#333'
+                    color: modalMode === 'view' ? '#333' : '#000'
                   }}
                 >
                   <option value="">Select Organization</option>
