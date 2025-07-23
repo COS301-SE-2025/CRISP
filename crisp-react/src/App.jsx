@@ -1159,6 +1159,9 @@ function IoCManagement({ active }) {
   });
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState('csv');
+  const [exporting, setExporting] = useState(false);
   
   // Fetch indicators from backend
   useEffect(() => {
@@ -1213,7 +1216,7 @@ function IoCManagement({ active }) {
           <p className="page-subtitle">Manage and analyze indicators of compromise</p>
         </div>
         <div className="action-buttons">
-          <button className="btn btn-outline"><i className="fas fa-file-export"></i> Export IoCs</button>
+          <button className="btn btn-outline" onClick={() => setShowExportModal(true)}><i className="fas fa-file-export"></i> Export IoCs</button>
           <button className="btn btn-outline"><i className="fas fa-file-import"></i> Import IoCs</button>
           <button className="btn btn-primary" onClick={() => setShowAddModal(true)}><i className="fas fa-plus"></i> Add New IoC</button>
         </div>
@@ -1519,6 +1522,66 @@ function IoCManagement({ active }) {
           </div>
         </div>
       )}
+
+      {/* Export IoCs Modal */}
+      {showExportModal && (
+        <div className="modal-overlay" onClick={closeExportModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2><i className="fas fa-file-export"></i> Export IoCs</h2>
+              <button className="modal-close" onClick={closeExportModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">Export Format</label>
+                <select 
+                  value={exportFormat} 
+                  onChange={(e) => setExportFormat(e.target.value)}
+                  className="form-control"
+                >
+                  <option value="csv">CSV (Comma Separated Values)</option>
+                  <option value="json">JSON (JavaScript Object Notation)</option>
+                  <option value="stix">STIX 2.1 (Structured Threat Information)</option>
+                </select>
+              </div>
+
+              <div className="export-info">
+                <div className="info-card">
+                  <i className="fas fa-info-circle"></i>
+                  <div>
+                    <strong>Export Details:</strong>
+                    <p>You are about to export {indicators.length} indicators of compromise.</p>
+                    {exportFormat === 'csv' && (
+                      <p><strong>CSV Format:</strong> Suitable for spreadsheet analysis. Includes all indicator fields in tabular format.</p>
+                    )}
+                    {exportFormat === 'json' && (
+                      <p><strong>JSON Format:</strong> Machine-readable format suitable for programmatic processing and API integration.</p>
+                    )}
+                    {exportFormat === 'stix' && (
+                      <p><strong>STIX 2.1 Format:</strong> Industry-standard format for threat intelligence sharing. Compatible with TAXII servers.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" className="btn btn-outline" onClick={closeExportModal} disabled={exporting}>
+                  Cancel
+                </button>
+                <button type="button" className="btn btn-primary" onClick={handleExport} disabled={exporting}>
+                  {exporting ? (
+                    <><i className="fas fa-spinner fa-spin"></i> Exporting...</>
+                  ) : (
+                    <><i className="fas fa-download"></i> Export {indicators.length} IoCs</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 
@@ -1538,6 +1601,161 @@ function IoCManagement({ active }) {
 
   function handleRefresh() {
     fetchIndicators();
+  }
+
+  function closeExportModal() {
+    setShowExportModal(false);
+    setExportFormat('csv');
+  }
+
+  async function handleExport() {
+    if (indicators.length === 0) {
+      alert('No indicators to export');
+      return;
+    }
+
+    setExporting(true);
+    
+    try {
+      let exportData;
+      let filename;
+      let mimeType;
+
+      switch (exportFormat) {
+        case 'csv':
+          exportData = exportToCSV(indicators);
+          filename = `iocs_export_${new Date().toISOString().split('T')[0]}.csv`;
+          mimeType = 'text/csv';
+          break;
+        case 'json':
+          exportData = exportToJSON(indicators);
+          filename = `iocs_export_${new Date().toISOString().split('T')[0]}.json`;
+          mimeType = 'application/json';
+          break;
+        case 'stix':
+          exportData = exportToSTIX(indicators);
+          filename = `iocs_export_${new Date().toISOString().split('T')[0]}.json`;
+          mimeType = 'application/json';
+          break;
+        default:
+          throw new Error('Unsupported export format');
+      }
+
+      // Create and download file
+      const blob = new Blob([exportData], { type: mimeType });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      // Close modal
+      closeExportModal();
+      
+      console.log(`Successfully exported ${indicators.length} IoCs as ${exportFormat.toUpperCase()}`);
+      
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Export failed. Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  function exportToCSV(data) {
+    const headers = ['Type', 'Value', 'Severity', 'Source', 'Date Added', 'Status'];
+    const csvHeaders = headers.join(',');
+    
+    const csvRows = data.map(indicator => [
+      `"${indicator.type}"`,
+      `"${indicator.value}"`,
+      `"${indicator.severity}"`,
+      `"${indicator.source}"`,
+      `"${indicator.created}"`,
+      `"${indicator.status}"`
+    ].join(','));
+
+    return [csvHeaders, ...csvRows].join('\n');
+  }
+
+  function exportToJSON(data) {
+    const exportObject = {
+      export_date: new Date().toISOString(),
+      total_indicators: data.length,
+      indicators: data.map(indicator => ({
+        id: indicator.id,
+        type: indicator.type,
+        value: indicator.value,
+        severity: indicator.severity,
+        source: indicator.source,
+        created: indicator.created,
+        status: indicator.status
+      }))
+    };
+    
+    return JSON.stringify(exportObject, null, 2);
+  }
+
+  function exportToSTIX(data) {
+    const stixBundle = {
+      type: "bundle",
+      id: `bundle--${generateUUID()}`,
+      spec_version: "2.1",
+      created: new Date().toISOString(),
+      modified: new Date().toISOString(),
+      objects: data.map(indicator => ({
+        type: "indicator",
+        id: `indicator--${generateUUID()}`,
+        created: new Date(indicator.created).toISOString(),
+        modified: new Date().toISOString(),
+        labels: ["malicious-activity"],
+        pattern: generateSTIXPattern(indicator),
+        indicator_types: ["malicious-activity"],
+        confidence: getConfidenceFromSeverity(indicator.severity),
+        x_crisp_source: indicator.source,
+        x_crisp_severity: indicator.severity,
+        x_crisp_status: indicator.status
+      }))
+    };
+
+    return JSON.stringify(stixBundle, null, 2);
+  }
+
+  function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c == 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
+  function generateSTIXPattern(indicator) {
+    switch (indicator.type.toLowerCase()) {
+      case 'ip address':
+        return `[ipv4-addr:value = '${indicator.value}']`;
+      case 'domain':
+        return `[domain-name:value = '${indicator.value}']`;
+      case 'url':
+        return `[url:value = '${indicator.value}']`;
+      case 'file hash':
+        return `[file:hashes.MD5 = '${indicator.value}' OR file:hashes.SHA1 = '${indicator.value}' OR file:hashes.SHA256 = '${indicator.value}']`;
+      case 'email':
+        return `[email-addr:value = '${indicator.value}']`;
+      default:
+        return `[x-custom:value = '${indicator.value}']`;
+    }
+  }
+
+  function getConfidenceFromSeverity(severity) {
+    switch (severity.toLowerCase()) {
+      case 'high': return 85;
+      case 'medium': return 60;
+      case 'low': return 30;
+      default: return 50;
+    }
   }
 
 
@@ -4069,6 +4287,35 @@ function CSSStyles() {
             margin-top: 1.5rem;
             padding-top: 1rem;
             border-top: 1px solid var(--medium-gray);
+        }
+
+        .export-info {
+            margin: 1.5rem 0;
+        }
+
+        .info-card {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid var(--primary-blue);
+        }
+
+        .info-card i {
+            color: var(--primary-blue);
+            font-size: 1.25rem;
+            margin-top: 0.25rem;
+        }
+
+        .info-card p {
+            margin: 0.5rem 0;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .info-card strong {
+            color: var(--text-dark);
         }
 
         @media (max-width: 768px) {
