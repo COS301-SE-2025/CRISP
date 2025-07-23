@@ -1148,6 +1148,17 @@ function ThreatFeeds({ active }) {
 function IoCManagement({ active }) {
   const [indicators, setIndicators] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newIoC, setNewIoC] = useState({
+    type: '',
+    value: '',
+    severity: 'Medium',
+    description: '',
+    source: '',
+    confidence: 50
+  });
+  const [formErrors, setFormErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
   
   // Fetch indicators from backend
   useEffect(() => {
@@ -1203,7 +1214,7 @@ function IoCManagement({ active }) {
         <div className="action-buttons">
           <button className="btn btn-outline"><i className="fas fa-file-export"></i> Export IoCs</button>
           <button className="btn btn-outline"><i className="fas fa-file-import"></i> Import IoCs</button>
-          <button className="btn btn-primary"><i className="fas fa-plus"></i> Add New IoC</button>
+          <button className="btn btn-primary" onClick={() => setShowAddModal(true)}><i className="fas fa-plus"></i> Add New IoC</button>
         </div>
       </div>
 
@@ -1386,8 +1397,236 @@ function IoCManagement({ active }) {
           </div>
         </div>
       </div>
+
+      {/* Add New IoC Modal */}
+      {showAddModal && (
+        <div className="modal-overlay" onClick={closeAddModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2><i className="fas fa-plus"></i> Add New IoC</h2>
+              <button className="modal-close" onClick={closeAddModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={handleAddIoC}>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label className="form-label">IoC Type *</label>
+                    <select 
+                      value={newIoC.type} 
+                      onChange={(e) => setNewIoC({...newIoC, type: e.target.value})}
+                      className={formErrors.type ? 'form-control error' : 'form-control'}
+                      required
+                    >
+                      <option value="">Select Type</option>
+                      <option value="ip">IP Address</option>
+                      <option value="domain">Domain</option>
+                      <option value="url">URL</option>
+                      <option value="file_hash">File Hash</option>
+                      <option value="email">Email</option>
+                      <option value="user_agent">User Agent</option>
+                      <option value="registry">Registry Key</option>
+                      <option value="mutex">Mutex</option>
+                      <option value="process">Process</option>
+                    </select>
+                    {formErrors.type && <span className="error-text">{formErrors.type}</span>}
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Severity</label>
+                    <select 
+                      value={newIoC.severity} 
+                      onChange={(e) => setNewIoC({...newIoC, severity: e.target.value})}
+                      className="form-control"
+                    >
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">IoC Value *</label>
+                  <input 
+                    type="text" 
+                    value={newIoC.value} 
+                    onChange={(e) => setNewIoC({...newIoC, value: e.target.value})}
+                    className={formErrors.value ? 'form-control error' : 'form-control'}
+                    placeholder="Enter the indicator value (e.g., 192.168.1.1, malicious.com, etc.)"
+                    required
+                  />
+                  {formErrors.value && <span className="error-text">{formErrors.value}</span>}
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Source</label>
+                  <input 
+                    type="text" 
+                    value={newIoC.source} 
+                    onChange={(e) => setNewIoC({...newIoC, source: e.target.value})}
+                    className="form-control"
+                    placeholder="Source of this IoC (e.g., Internal Analysis, OSINT, etc.)"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Confidence Level: {newIoC.confidence}%</label>
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="100" 
+                    value={newIoC.confidence} 
+                    onChange={(e) => setNewIoC({...newIoC, confidence: parseInt(e.target.value)})}
+                    className="form-range"
+                  />
+                  <div className="range-labels">
+                    <span>Low (0%)</span>
+                    <span>High (100%)</span>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Description</label>
+                  <textarea 
+                    value={newIoC.description} 
+                    onChange={(e) => setNewIoC({...newIoC, description: e.target.value})}
+                    className="form-control"
+                    rows="3"
+                    placeholder="Additional notes or description about this IoC..."
+                  ></textarea>
+                </div>
+
+                <div className="modal-actions">
+                  <button type="button" className="btn btn-outline" onClick={closeAddModal} disabled={submitting}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary" disabled={submitting}>
+                    {submitting ? (
+                      <><i className="fas fa-spinner fa-spin"></i> Adding...</>
+                    ) : (
+                      <><i className="fas fa-plus"></i> Add IoC</>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
+
+  // Helper functions
+  function closeAddModal() {
+    setShowAddModal(false);
+    setNewIoC({
+      type: '',
+      value: '',
+      severity: 'Medium',
+      description: '',
+      source: '',
+      confidence: 50
+    });
+    setFormErrors({});
+  }
+
+  function validateForm() {
+    const errors = {};
+    
+    if (!newIoC.type) {
+      errors.type = 'IoC type is required';
+    }
+    
+    if (!newIoC.value.trim()) {
+      errors.value = 'IoC value is required';
+    } else {
+      // Validate based on type
+      const value = newIoC.value.trim();
+      switch (newIoC.type) {
+        case 'ip':
+          const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+          if (!ipRegex.test(value)) {
+            errors.value = 'Invalid IP address format';
+          }
+          break;
+        case 'domain':
+          const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$/;
+          if (!domainRegex.test(value)) {
+            errors.value = 'Invalid domain format';
+          }
+          break;
+        case 'url':
+          try {
+            new URL(value);
+          } catch {
+            errors.value = 'Invalid URL format';
+          }
+          break;
+        case 'email':
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(value)) {
+            errors.value = 'Invalid email format';
+          }
+          break;
+        case 'file_hash':
+          const hashRegex = /^[a-fA-F0-9]+$/;
+          if (!hashRegex.test(value) || ![32, 40, 64, 128].includes(value.length)) {
+            errors.value = 'Invalid hash format (MD5, SHA1, SHA256, or SHA512)';
+          }
+          break;
+      }
+    }
+    
+    return errors;
+  }
+
+  async function handleAddIoC(e) {
+    e.preventDefault();
+    
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    
+    setSubmitting(true);
+    setFormErrors({});
+    
+    try {
+      // For now, we'll simulate API call and add to local state
+      // TODO: Replace with actual API call when backend endpoint is ready
+      const newIndicator = {
+        id: Date.now(), // Temporary ID
+        type: newIoC.type === 'ip' ? 'IP Address' : 
+              newIoC.type === 'domain' ? 'Domain' :
+              newIoC.type === 'url' ? 'URL' :
+              newIoC.type === 'file_hash' ? 'File Hash' :
+              newIoC.type === 'email' ? 'Email' : newIoC.type,
+        value: newIoC.value.trim(),
+        severity: newIoC.severity,
+        source: newIoC.source || 'Manual Entry',
+        created: new Date().toISOString().split('T')[0],
+        status: 'Active'
+      };
+      
+      // Add to indicators list
+      setIndicators(prev => [newIndicator, ...prev]);
+      
+      // Close modal
+      closeAddModal();
+      
+      // Show success message (you can implement a toast notification here)
+      console.log('IoC added successfully:', newIndicator);
+      
+    } catch (error) {
+      console.error('Error adding IoC:', error);
+      setFormErrors({ submit: 'Failed to add IoC. Please try again.' });
+    } finally {
+      setSubmitting(false);
+    }
+  }
 }
 
 // TTP Analysis Component
@@ -3723,6 +3962,106 @@ function CSSStyles() {
             margin-top: 1.5rem;
         }
 
+        /* Additional styles for Add IoC Modal */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-dark);
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--medium-gray);
+            border-radius: 6px;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+            box-sizing: border-box;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(52, 144, 220, 0.1);
+        }
+
+        .form-control.error {
+            border-color: #dc3545;
+        }
+
+        .form-control.error:focus {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+        }
+
+        .form-range {
+            width: 100%;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--medium-gray);
+            outline: none;
+            margin: 0.5rem 0;
+        }
+
+        .form-range::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary-blue);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .form-range::-webkit-slider-thumb:hover {
+            background: var(--secondary-blue);
+        }
+
+        .form-range::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary-blue);
+            cursor: pointer;
+            border: none;
+        }
+
+        .range-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .error-text {
+            color: #dc3545;
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+            display: block;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--medium-gray);
+        }
+
         @media (max-width: 768px) {
             .modal-content {
                 width: 95%;
@@ -3731,6 +4070,14 @@ function CSSStyles() {
             
             .form-row {
                 grid-template-columns: 1fr;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-actions {
+                flex-direction: column;
             }
         }
       `}
