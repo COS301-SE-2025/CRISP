@@ -58,8 +58,8 @@ def send_threat_alert(request):
         # Initialize Gmail service
         gmail_service = GmailSMTPService()
         
-        # Send the alert
-        result = gmail_service.send_threat_alert_email(recipient_emails, alert_data)
+        # Send the alert with user context
+        result = gmail_service.send_threat_alert_email(recipient_emails, alert_data, user=request.user)
         
         if result['success']:
             logger.info(f"Threat alert sent successfully to {len(recipient_emails)} recipients")
@@ -95,8 +95,8 @@ def send_feed_notification(request):
         # Initialize Gmail service
         gmail_service = GmailSMTPService()
         
-        # Send the notification
-        result = gmail_service.send_feed_notification_email(recipient_emails, notification_data)
+        # Send the notification with user context
+        result = gmail_service.send_feed_notification_email(recipient_emails, notification_data, user=request.user)
         
         if result['success']:
             logger.info(f"Feed notification sent successfully to {len(recipient_emails)} recipients")
@@ -148,12 +148,20 @@ def get_email_statistics(request):
     Get email statistics for the current user/organization
     """
     try:
-        # Default safe statistics that will never cause crashes
+        # Get real email statistics from database
+        from .models import EmailLog
+        
+        # Get organization-specific stats if user belongs to one
+        organization = request.user.organization if hasattr(request.user, 'organization') else None
+        email_stats = EmailLog.get_statistics(organization=organization, days=30)
+        
         stats = {
-            'total_emails_sent': 0,
-            'threat_alerts_sent': 0,
-            'feed_notifications_sent': 0,
-            'last_email_sent': None,
+            'total_emails_sent': email_stats['total_emails_sent'],
+            'threat_alerts_sent': email_stats['threat_alerts_sent'],
+            'feed_notifications_sent': email_stats['feed_notifications_sent'],
+            'test_emails_sent': email_stats.get('test_emails_sent', 0),
+            'failed_emails': email_stats.get('failed_emails', 0),
+            'last_email_sent': email_stats['last_email_sent'].isoformat() if email_stats['last_email_sent'] else None,
             'gmail_connection_status': 'unknown',
             'configuration_status': {
                 'smtp_configured': False,
@@ -233,8 +241,8 @@ def send_test_email(request):
             }
         }
         
-        # Send the test email
-        result = gmail_service.send_threat_alert_email([recipient_email], test_alert_data)
+        # Send the test email with user context
+        result = gmail_service.send_threat_alert_email([recipient_email], test_alert_data, user=request.user)
         
         if result['success']:
             logger.info(f"Test email sent successfully to {recipient_email}")

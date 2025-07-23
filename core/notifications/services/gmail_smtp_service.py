@@ -45,7 +45,8 @@ class GmailSMTPService:
     
     def send_email(self, to_emails: List[str], subject: str, html_content: str, 
                    text_content: str = None, sender_name: str = None, 
-                   sender_email: str = None) -> Dict[str, Any]:
+                   sender_email: str = None, email_type: str = 'system_notification',
+                   alert_id: str = None, priority: str = None, user=None) -> Dict[str, Any]:
         """
         Send an email via Gmail SMTP.
         
@@ -56,10 +57,33 @@ class GmailSMTPService:
             text_content: Plain text content (optional)
             sender_name: Sender name (optional, uses default)
             sender_email: Sender email (optional, uses default)
+            email_type: Type of email (threat_alert, feed_notification, etc.)
+            alert_id: Alert ID for tracking
+            priority: Email priority
+            user: User sending the email
             
         Returns:
             Dictionary with send result
         """
+        # Create email log entry
+        email_log = None
+        try:
+            from core.alerts.models import EmailLog
+            email_log = EmailLog.objects.create(
+                email_type=email_type,
+                recipient_emails=to_emails,
+                sender_email=sender_email or self.default_sender['email'],
+                subject=subject,
+                alert_id=alert_id,
+                priority=priority,
+                sent_by=user,
+                organization=user.organization if user else None,
+                status='pending'
+            )
+        except Exception as log_error:
+            # Don't fail email sending if logging fails
+            pass
+        
         try:
             # Create message
             msg = MIMEMultipart('alternative')
@@ -92,6 +116,14 @@ class GmailSMTPService:
             server.send_message(msg)
             server.quit()
             
+            # Update email log on success
+            if email_log:
+                try:
+                    email_log.status = 'sent'
+                    email_log.save()
+                except:
+                    pass
+            
             logger.info(f"Email sent successfully to {len(to_emails)} recipients")
             return {
                 'success': True,
@@ -100,6 +132,15 @@ class GmailSMTPService:
             }
             
         except smtplib.SMTPAuthenticationError as e:
+            # Update email log on failure
+            if email_log:
+                try:
+                    email_log.status = 'failed'
+                    email_log.error_message = f'Authentication failed: {str(e)}'
+                    email_log.save()
+                except:
+                    pass
+            
             logger.error(f"Authentication failed: {str(e)}")
             return {
                 'success': False,
@@ -107,6 +148,15 @@ class GmailSMTPService:
                 'error_type': 'authentication'
             }
         except smtplib.SMTPConnectError as e:
+            # Update email log on failure
+            if email_log:
+                try:
+                    email_log.status = 'failed'
+                    email_log.error_message = f'Connection failed: {str(e)}'
+                    email_log.save()
+                except:
+                    pass
+                    
             logger.error(f"Connection failed: {str(e)}")
             return {
                 'success': False,
@@ -114,6 +164,15 @@ class GmailSMTPService:
                 'error_type': 'connection'
             }
         except Exception as e:
+            # Update email log on failure
+            if email_log:
+                try:
+                    email_log.status = 'failed'
+                    email_log.error_message = f'Unexpected error: {str(e)}'
+                    email_log.save()
+                except:
+                    pass
+                    
             logger.error(f"Unexpected error sending email: {str(e)}")
             return {
                 'success': False,
@@ -121,7 +180,7 @@ class GmailSMTPService:
                 'error_type': 'unknown'
             }
     
-    def send_threat_alert_email(self, recipient_emails: List[str], alert_data: Dict[str, Any]) -> Dict[str, Any]:
+    def send_threat_alert_email(self, recipient_emails: List[str], alert_data: Dict[str, Any], user=None) -> Dict[str, Any]:
         """
         Send a threat alert email.
         
@@ -156,10 +215,14 @@ class GmailSMTPService:
             to_emails=recipient_emails,
             subject=subject,
             html_content=html_content,
-            text_content=text_content
+            text_content=text_content,
+            email_type='threat_alert',
+            alert_id=alert_data.get('alert_id'),
+            priority=priority,
+            user=user
         )
     
-    def send_feed_notification_email(self, recipient_emails: List[str], notification_data: Dict[str, Any]) -> Dict[str, Any]:
+    def send_feed_notification_email(self, recipient_emails: List[str], notification_data: Dict[str, Any], user=None) -> Dict[str, Any]:
         """
         Send a feed notification email.
         
@@ -185,7 +248,11 @@ class GmailSMTPService:
             to_emails=recipient_emails,
             subject=subject,
             html_content=html_content,
-            text_content=text_content
+            text_content=text_content,
+            email_type='feed_notification',
+            alert_id=notification_data.get('notification_id'),
+            priority='medium',
+            user=user
         )
     
     def _generate_threat_alert_html(self, alert_data: Dict[str, Any]) -> str:
