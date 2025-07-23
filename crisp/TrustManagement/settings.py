@@ -84,12 +84,8 @@ WSGI_APPLICATION = 'crisp.TrustManagement.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME', 'crisp_trust_db'),
-        'USER': os.getenv('DB_USER', 'crisp_user'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'crisp_password'),
-        'HOST': os.getenv('DB_HOST', 'localhost'),
-        'PORT': os.getenv('DB_PORT', '5432'),
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'crisp' / 'db.sqlite3',
     }
 }
 

@@ -423,17 +423,32 @@ class AuthenticationViewSet(viewsets.ViewSet):
             # Find or create organization by name
             try:
                 from ..models import Organization
-                org, created = Organization.objects.get_or_create(
-                    name=organization,
-                    defaults={
-                        'domain': organization.lower().replace(' ', '') + '.local',
-                        'contact_email': email,
-                        'organization_type': 'educational',
-                        'is_active': True,
-                        'is_verified': False,
-                        'created_by': username
-                    }
-                )
+                
+                # First try to find existing organization by name
+                try:
+                    org = Organization.objects.get(name=organization)
+                    created = False
+                except Organization.DoesNotExist:
+                    # Organization doesn't exist, create a new one with unique domain
+                    base_domain = organization.lower().replace(' ', '') + '.local'
+                    domain = base_domain
+                    counter = 1
+                    
+                    # Ensure domain is unique
+                    while Organization.objects.filter(domain=domain).exists():
+                        domain = f"{base_domain.replace('.local', '')}{counter}.local"
+                        counter += 1
+                    
+                    org = Organization.objects.create(
+                        name=organization,
+                        domain=domain,
+                        contact_email=email,
+                        organization_type='educational',
+                        is_active=True,
+                        is_verified=False,
+                        created_by=username
+                    )
+                    created = True
                 
                 # Create user using UserService with correct parameter order
                 user_data = {
