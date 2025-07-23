@@ -696,6 +696,16 @@ function ThreatFeeds({ active }) {
   const [threatFeeds, setThreatFeeds] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [activeTab, setActiveTab] = useState('all');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    type: '',
+    status: '',
+    source: '',
+    search: ''
+  });
+  const itemsPerPage = 10;
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -766,6 +776,84 @@ function ThreatFeeds({ active }) {
   const closeModal = () => {
     setShowAddModal(false);
   };
+
+  // Filter and paginate feeds
+  const getFilteredFeeds = () => {
+    let filtered = threatFeeds;
+
+    // Apply tab filter
+    if (activeTab === 'active') {
+      filtered = filtered.filter(f => f.is_active);
+    } else if (activeTab === 'external') {
+      filtered = filtered.filter(f => f.is_external);
+    } else if (activeTab === 'internal') {
+      filtered = filtered.filter(f => !f.is_external);
+    }
+
+    // Apply dropdown filters
+    if (filters.type) {
+      filtered = filtered.filter(f => 
+        (filters.type === 'stix-taxii' && f.taxii_server_url) ||
+        (filters.type === 'internal' && !f.is_external) ||
+        (filters.type === 'external' && f.is_external)
+      );
+    }
+
+    if (filters.status) {
+      filtered = filtered.filter(f => 
+        (filters.status === 'active' && f.is_active) ||
+        (filters.status === 'disabled' && !f.is_active)
+      );
+    }
+
+    if (filters.source) {
+      filtered = filtered.filter(f => 
+        (filters.source === 'external' && f.is_external) ||
+        (filters.source === 'internal' && !f.is_external)
+      );
+    }
+
+    if (filters.search) {
+      filtered = filtered.filter(f => 
+        f.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+        (f.description && f.description.toLowerCase().includes(filters.search.toLowerCase())) ||
+        (f.taxii_server_url && f.taxii_server_url.toLowerCase().includes(filters.search.toLowerCase()))
+      );
+    }
+
+    return filtered;
+  };
+
+  const getPaginatedFeeds = () => {
+    const filtered = getFilteredFeeds();
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filtered.slice(startIndex, startIndex + itemsPerPage);
+  };
+
+  const getTotalPages = () => {
+    return Math.ceil(getFilteredFeeds().length / itemsPerPage);
+  };
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setCurrentPage(1);
+  };
+
+  const handleFilterChange = (filterType, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterType]: value
+    }));
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const toggleFilters = () => {
+    setShowFilters(!showFilters);
+  };
   
   return (
     <section id="threat-feeds" className={`page-section ${active ? 'active' : ''}`}>
@@ -775,17 +863,20 @@ function ThreatFeeds({ active }) {
           <p className="page-subtitle">Manage and monitor all threat intelligence feeds</p>
         </div>
         <div className="action-buttons">
-          <button className="btn btn-outline"><i className="fas fa-filter"></i> Filter Feeds</button>
+          <button className="btn btn-outline" onClick={toggleFilters}>
+            <i className="fas fa-filter"></i> Filter Feeds {showFilters ? '▲' : '▼'}
+          </button>
           <button className="btn btn-primary" onClick={handleAddFeed}><i className="fas fa-plus"></i> Add New Feed</button>
         </div>
       </div>
 
-      <div className="filters-section">
-        <div className="filters-grid">
+      {showFilters && (
+        <div className="filters-section">
+          <div className="filters-grid">
           <div className="filter-group">
             <label className="filter-label">Feed Type</label>
             <div className="filter-control">
-              <select>
+              <select value={filters.type} onChange={(e) => handleFilterChange('type', e.target.value)}>
                 <option value="">All Types</option>
                 <option value="stix-taxii">STIX/TAXII</option>
                 <option value="misp">MISP</option>
@@ -797,7 +888,7 @@ function ThreatFeeds({ active }) {
           <div className="filter-group">
             <label className="filter-label">Status</label>
             <div className="filter-control">
-              <select>
+              <select value={filters.status} onChange={(e) => handleFilterChange('status', e.target.value)}>
                 <option value="">All Statuses</option>
                 <option value="active">Active</option>
                 <option value="disabled">Disabled</option>
@@ -808,7 +899,7 @@ function ThreatFeeds({ active }) {
           <div className="filter-group">
             <label className="filter-label">Source</label>
             <div className="filter-control">
-              <select>
+              <select value={filters.source} onChange={(e) => handleFilterChange('source', e.target.value)}>
                 <option value="">All Sources</option>
                 <option value="external">External</option>
                 <option value="internal">Internal</option>
@@ -819,17 +910,43 @@ function ThreatFeeds({ active }) {
           <div className="filter-group">
             <label className="filter-label">Search Feeds</label>
             <div className="filter-control">
-              <input type="text" placeholder="Search by name or URL..." />
+              <input 
+                type="text" 
+                placeholder="Search by name or URL..." 
+                value={filters.search}
+                onChange={(e) => handleFilterChange('search', e.target.value)}
+              />
             </div>
           </div>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="tabs">
-        <div className="tab active">Active Feeds ({threatFeeds.filter(f => f.is_active).length})</div>
-        <div className="tab">External ({threatFeeds.filter(f => f.is_external).length})</div>
-        <div className="tab">Internal ({threatFeeds.filter(f => !f.is_external).length})</div>
-        <div className="tab">All Feeds ({threatFeeds.length})</div>
+        <div 
+          className={`tab ${activeTab === 'active' ? 'active' : ''}`}
+          onClick={() => handleTabChange('active')}
+        >
+          Active Feeds ({threatFeeds.filter(f => f.is_active).length})
+        </div>
+        <div 
+          className={`tab ${activeTab === 'external' ? 'active' : ''}`}
+          onClick={() => handleTabChange('external')}
+        >
+          External ({threatFeeds.filter(f => f.is_external).length})
+        </div>
+        <div 
+          className={`tab ${activeTab === 'internal' ? 'active' : ''}`}
+          onClick={() => handleTabChange('internal')}
+        >
+          Internal ({threatFeeds.filter(f => !f.is_external).length})
+        </div>
+        <div 
+          className={`tab ${activeTab === 'all' ? 'active' : ''}`}
+          onClick={() => handleTabChange('all')}
+        >
+          All Feeds ({threatFeeds.length})
+        </div>
       </div>
 
       <div className="card">
@@ -840,7 +957,7 @@ function ThreatFeeds({ active }) {
             </div>
           ) : (
             <ul className="feed-items">
-              {threatFeeds.map((feed) => (
+              {getPaginatedFeeds().map((feed) => (
                 <li key={feed.id} className="feed-item">
                   <div className="feed-icon">
                     <i className={feed.is_external ? "fas fa-globe" : "fas fa-server"}></i>
@@ -881,13 +998,31 @@ function ThreatFeeds({ active }) {
         </div>
       </div>
 
-      <div className="pagination">
-        <div className="page-item"><i className="fas fa-chevron-left"></i></div>
-        <div className="page-item active">1</div>
-        <div className="page-item">2</div>
-        <div className="page-item">3</div>
-        <div className="page-item"><i className="fas fa-chevron-right"></i></div>
-      </div>
+      {getTotalPages() > 1 && (
+        <div className="pagination">
+          <div 
+            className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}
+            onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+          >
+            <i className="fas fa-chevron-left"></i>
+          </div>
+          {Array.from({ length: getTotalPages() }, (_, i) => i + 1).map(page => (
+            <div 
+              key={page}
+              className={`page-item ${page === currentPage ? 'active' : ''}`}
+              onClick={() => handlePageChange(page)}
+            >
+              {page}
+            </div>
+          ))}
+          <div 
+            className={`page-item ${currentPage === getTotalPages() ? 'disabled' : ''}`}
+            onClick={() => currentPage < getTotalPages() && handlePageChange(currentPage + 1)}
+          >
+            <i className="fas fa-chevron-right"></i>
+          </div>
+        </div>
+      )}
 
       {/* Add New Feed Modal */}
       {showAddModal && (
@@ -3332,13 +3467,22 @@ function CSSStyles() {
             transition: all 0.3s;
         }
         
-        .page-item:hover {
+        .page-item:hover:not(.disabled) {
             background-color: var(--light-blue);
         }
         
         .page-item.active {
             background-color: var(--primary-blue);
             color: white;
+        }
+
+        .page-item.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .tab {
+            cursor: pointer;
         }
         
         /* Chart Containers */
