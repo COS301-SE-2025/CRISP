@@ -227,6 +227,10 @@ function CrispLogin({ onLoginSuccess, switchView }) {
                     <i data-feather="lock"></i>
                     Change Password
                   </button>
+                  <a href="/forgot-password" className="help-link">
+                    <i data-feather="key"></i>
+                    Forgot Password?
+                  </a>
                 </div>
               </div>
             </div>

@@ -30,6 +30,9 @@ urlpatterns = [
     path('api/v1/auth/sessions/', AuthenticationViewSet.as_view({'get': 'sessions'}), name='auth-sessions'),
     path('api/v1/auth/revoke-session/', AuthenticationViewSet.as_view({'post': 'revoke_session'}), name='auth-revoke-session'),
     path('api/v1/auth/change-password/', AuthenticationViewSet.as_view({'post': 'change_password'}), name='auth-change-password'),
+    path('api/v1/auth/forgot-password/', AuthenticationViewSet.as_view({'post': 'forgot_password'}), name='auth-forgot-password'),
+    path('api/v1/auth/validate-reset-token/', AuthenticationViewSet.as_view({'post': 'validate_reset_token'}), name='auth-validate-reset-token'),
+    path('api/v1/auth/reset-password/', AuthenticationViewSet.as_view({'post': 'reset_password'}), name='auth-reset-password'),
     path('api/v1/auth/dashboard/', AuthenticationViewSet.as_view({'get': 'dashboard'}), name='auth-dashboard'),
     
     # User management endpoints

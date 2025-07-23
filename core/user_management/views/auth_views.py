@@ -9,6 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from ..services.auth_service import AuthenticationService
 from ..services.user_service import UserService
 from ..services.trust_aware_service import TrustAwareService
+from ..models import CustomUser, AuthenticationLog
 import logging
 import json
 import uuid
@@ -29,6 +30,16 @@ class AuthenticationViewSet(viewsets.ViewSet):
     
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]  # Default permission
+    
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        if self.action in ['login', 'register', 'forgot_password', 'validate_reset_token', 'reset_password']:
+            permission_classes = [AllowAny]
+        else:
+            permission_classes = self.permission_classes
+        return [permission() for permission in permission_classes]
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -522,4 +533,270 @@ class AuthenticationViewSet(viewsets.ViewSet):
             return Response({
                 'success': False,
                 'message': 'Failed to load dashboard data'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def forgot_password(self, request):
+        """
+        Request password reset email.
+        
+        Expected payload:
+        {
+            "email": "user@example.com"
+        }
+        """
+        try:
+            email = request.data.get('email')
+            
+            if not email:
+                return Response({
+                    'success': False,
+                    'message': 'Email address is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Find user by email
+            try:
+                user = CustomUser.objects.get(email=email, is_active=True)
+            except CustomUser.DoesNotExist:
+                # For security, don't reveal if email exists or not
+                return Response({
+                    'success': True,
+                    'message': 'If an account with this email exists, password reset instructions have been sent.'
+                }, status=status.HTTP_200_OK)
+            
+            # Generate password reset token
+            from django.contrib.auth.tokens import default_token_generator
+            from django.utils.http import urlsafe_base64_encode
+            from django.utils.encoding import force_bytes
+            
+            token = default_token_generator.make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            
+            # Create reset URL pointing to React frontend
+            frontend_url = "http://localhost:5173"  # React frontend URL
+            reset_url = f"{frontend_url}/reset-password?token={uid}-{token}"
+            
+            # Send email (you'll need to implement the email service)
+            try:
+                from core.notifications.services.gmail_smtp_service import GmailSMTPService
+                email_service = GmailSMTPService()
+                
+                subject = "CRISP - Password Reset Request"
+                html_content = f"""
+                <html>
+                <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; text-align: center;">
+                        <h1 style="color: white; margin: 0;">CRISP Password Reset</h1>
+                    </div>
+                    
+                    <div style="padding: 30px; background-color: #f8f9fa;">
+                        <p>Hello {user.first_name or user.username},</p>
+                        
+                        <p>We received a request to reset your password for your CRISP account. If you didn't make this request, you can safely ignore this email.</p>
+                        
+                        <p>To reset your password, click the button below:</p>
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="{reset_url}" 
+                               style="background: linear-gradient(135deg, #667eea, #764ba2); 
+                                      color: white; 
+                                      padding: 12px 30px; 
+                                      text-decoration: none; 
+                                      border-radius: 8px; 
+                                      display: inline-block;
+                                      font-weight: bold;">
+                                Reset My Password
+                            </a>
+                        </div>
+                        
+                        <p style="color: #666; font-size: 14px;">
+                            If the button doesn't work, you can also copy and paste this link into your browser:
+                        </p>
+                        <p style="word-break: break-all; background-color: #e9ecef; padding: 10px; border-radius: 4px; font-size: 12px;">
+                            {reset_url}
+                        </p>
+                        
+                        <p style="color: #666; font-size: 14px; margin-top: 30px;">
+                            This link will expire in 24 hours for security reasons.
+                        </p>
+                        
+                        <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+                        
+                        <p style="color: #999; font-size: 12px;">
+                            If you're having trouble, please contact our support team.
+                        </p>
+                    </div>
+                </body>
+                </html>
+                """
+                
+                email_service.send_email(
+                    to_emails=[email],
+                    subject=subject,
+                    html_content=html_content
+                )
+                
+                logger.info(f"Password reset email sent to {email}")
+                
+            except Exception as e:
+                logger.error(f"Failed to send password reset email to {email}: {str(e)}")
+                return Response({
+                    'success': False,
+                    'message': 'Failed to send password reset email. Please try again later.'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            return Response({
+                'success': True,
+                'message': 'Password reset instructions have been sent to your email address.'
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Forgot password error: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'An error occurred while processing your request'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def validate_reset_token(self, request):
+        """
+        Validate password reset token.
+        
+        Expected payload:
+        {
+            "token": "uid-token"
+        }
+        """
+        try:
+            token_string = request.data.get('token')
+            
+            if not token_string or '-' not in token_string:
+                return Response({
+                    'success': False,
+                    'message': 'Invalid token format'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            try:
+                uid, token = token_string.split('-', 1)
+                
+                from django.utils.http import urlsafe_base64_decode
+                from django.utils.encoding import force_str
+                
+                user_id = force_str(urlsafe_base64_decode(uid))
+                user = CustomUser.objects.get(pk=user_id, is_active=True)
+                
+                from django.contrib.auth.tokens import default_token_generator
+                
+                if default_token_generator.check_token(user, token):
+                    return Response({
+                        'success': True,
+                        'message': 'Token is valid'
+                    }, status=status.HTTP_200_OK)
+                else:
+                    return Response({
+                        'success': False,
+                        'message': 'Invalid or expired token'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                    
+            except (ValueError, CustomUser.DoesNotExist):
+                return Response({
+                    'success': False,
+                    'message': 'Invalid token'
+                }, status=status.HTTP_400_BAD_REQUEST)
+                
+        except Exception as e:
+            logger.error(f"Token validation error: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Token validation failed'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def reset_password(self, request):
+        """
+        Reset password using valid token.
+        
+        Expected payload:
+        {
+            "token": "uid-token",
+            "new_password": "newpassword123"
+        }
+        """
+        try:
+            token_string = request.data.get('token')
+            new_password = request.data.get('new_password')
+            
+            if not token_string or not new_password:
+                return Response({
+                    'success': False,
+                    'message': 'Token and new password are required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            if '-' not in token_string:
+                return Response({
+                    'success': False,
+                    'message': 'Invalid token format'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            try:
+                uid, token = token_string.split('-', 1)
+                
+                from django.utils.http import urlsafe_base64_decode
+                from django.utils.encoding import force_str
+                from django.contrib.auth.tokens import default_token_generator
+                
+                user_id = force_str(urlsafe_base64_decode(uid))
+                user = CustomUser.objects.get(pk=user_id, is_active=True)
+                
+                if not default_token_generator.check_token(user, token):
+                    return Response({
+                        'success': False,
+                        'message': 'Invalid or expired token'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Validate password strength
+                from django.contrib.auth.password_validation import validate_password
+                from django.core.exceptions import ValidationError
+                
+                try:
+                    validate_password(new_password, user)
+                except ValidationError as e:
+                    return Response({
+                        'success': False,
+                        'message': ', '.join(e.messages)
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Reset password
+                user.set_password(new_password)
+                user.failed_login_attempts = 0  # Reset failed attempts
+                user.save(update_fields=['password', 'failed_login_attempts'])
+                
+                # Log password reset
+                AuthenticationLog.log_authentication_event(
+                    user=user,
+                    action='password_reset',
+                    ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1'),
+                    user_agent=request.META.get('HTTP_USER_AGENT', 'API'),
+                    success=True,
+                    additional_data={'reset_method': 'email_token'}
+                )
+                
+                logger.info(f"Password reset successful for user {user.username}")
+                
+                return Response({
+                    'success': True,
+                    'message': 'Password has been reset successfully'
+                }, status=status.HTTP_200_OK)
+                
+            except (ValueError, CustomUser.DoesNotExist):
+                return Response({
+                    'success': False,
+                    'message': 'Invalid token'
+                }, status=status.HTTP_400_BAD_REQUEST)
+                
+        except Exception as e:
+            logger.error(f"Password reset error: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Password reset failed'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

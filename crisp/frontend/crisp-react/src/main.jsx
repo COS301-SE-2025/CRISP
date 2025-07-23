@@ -10,6 +10,8 @@ import LandingPage from "./LandingPage.jsx";
 import Construction from "./construction.jsx";
 import UserManagement from "./components/UserManagement.jsx";
 import TrustManagement from "./components/TrustManagement.jsx";
+import ForgotPassword from "./components/ForgotPassword.jsx";
+import ResetPassword from "./components/ResetPassword.jsx";
 import "./assets/index.css";
 import "./assets/trust-management.css";
 
@@ -198,6 +200,30 @@ function AuthWrapper() {
           element={
             !isAuthenticated ? (
               <CrispLogin onLoginSuccess={handleLoginSuccess} />
+            ) : (
+              <Navigate to="/dashboard" replace />
+            )
+          }
+        />
+
+        {/* Forgot Password route - only accessible when not authenticated */}
+        <Route
+          path="/forgot-password"
+          element={
+            !isAuthenticated ? (
+              <ForgotPassword />
+            ) : (
+              <Navigate to="/dashboard" replace />
+            )
+          }
+        />
+
+        {/* Reset Password route - only accessible when not authenticated */}
+        <Route
+          path="/reset-password"
+          element={
+            !isAuthenticated ? (
+              <ResetPassword />
             ) : (
               <Navigate to="/dashboard" replace />
             )
