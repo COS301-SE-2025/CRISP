@@ -33,6 +33,7 @@ class GmailSMTPService:
         self.email_host = getattr(settings, 'EMAIL_HOST', 'smtp.gmail.com')
         self.email_port = getattr(settings, 'EMAIL_PORT', 587)
         self.email_use_tls = getattr(settings, 'EMAIL_USE_TLS', True)
+        self.email_use_ssl = getattr(settings, 'EMAIL_USE_SSL', False)
         self.email_host_user = email_host_user or getattr(settings, 'EMAIL_HOST_USER', None)
         self.email_host_password = email_host_password or getattr(settings, 'EMAIL_HOST_PASSWORD', None)
         
@@ -76,10 +77,16 @@ class GmailSMTPService:
             msg.attach(part2)
             
             # Send email
-            server = smtplib.SMTP(self.email_host, self.email_port)
-            
-            if self.email_use_tls:
-                server.starttls()
+            if self.email_use_ssl:
+                import ssl
+                context = ssl.create_default_context()
+                context.check_hostname = False
+                context.verify_mode = ssl.CERT_NONE
+                server = smtplib.SMTP_SSL(self.email_host, self.email_port, context=context)
+            else:
+                server = smtplib.SMTP(self.email_host, self.email_port)
+                if self.email_use_tls:
+                    server.starttls()
             
             server.login(self.email_host_user, self.email_host_password)
             server.send_message(msg)
@@ -485,13 +492,30 @@ This is an automated message from CRISP (Cyber Risk Information Sharing Platform
         Returns:
             Dictionary with connection test result
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        
         try:
-            server = smtplib.SMTP(self.email_host, self.email_port)
+            logger.info(f"Testing Gmail connection - Host: {self.email_host}, Port: {self.email_port}, SSL: {self.email_use_ssl}, User: {self.email_host_user}")
             
-            if self.email_use_tls:
-                server.starttls()
+            # Use SSL or TLS based on configuration
+            if self.email_use_ssl:
+                logger.info("Using SMTP_SSL connection")
+                import ssl
+                context = ssl.create_default_context()
+                context.check_hostname = False
+                context.verify_mode = ssl.CERT_NONE
+                server = smtplib.SMTP_SSL(self.email_host, self.email_port, context=context, timeout=30)
+            else:
+                logger.info("Using regular SMTP connection")
+                server = smtplib.SMTP(self.email_host, self.email_port, timeout=30)
+                if self.email_use_tls:
+                    logger.info("Starting TLS")
+                    server.starttls()
             
+            logger.info("Attempting login...")
             server.login(self.email_host_user, self.email_host_password)
+            logger.info("Login successful, closing connection")
             server.quit()
             
             return {
@@ -500,18 +524,28 @@ This is an automated message from CRISP (Cyber Risk Information Sharing Platform
                 'status': 'online'
             }
         except smtplib.SMTPAuthenticationError as e:
+            logger.error(f"SMTP Authentication Error: {str(e)}")
             return {
                 'success': False,
                 'message': f'Authentication failed: {str(e)}',
                 'status': 'error'
             }
         except smtplib.SMTPConnectError as e:
+            logger.error(f"SMTP Connection Error: {str(e)}")
             return {
                 'success': False,
                 'message': f'Connection failed: {str(e)}',
                 'status': 'error'
             }
+        except ConnectionRefusedError as e:
+            logger.error(f"Connection Refused Error: {str(e)}")
+            return {
+                'success': False,
+                'message': f'Connection refused: {str(e)}',
+                'status': 'error'
+            }
         except Exception as e:
+            logger.error(f"Gmail SMTP connection error: {str(e)}")
             return {
                 'success': False,
                 'message': f'Gmail SMTP connection error: {str(e)}',
