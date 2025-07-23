@@ -3385,30 +3385,39 @@ function AdminSettings({ active, onNavigate }) {
                 {/* System Status Indicators */}
                 <div className="status-indicators">
                   <div className="indicator">
-                    <div className="indicator-icon healthy">
+                    <div className={`indicator-icon ${systemHealth?.database?.status === 'healthy' ? 'healthy' : systemHealth?.database?.status === 'offline' ? 'error' : 'warning'}`}>
                       <i className="fas fa-server"></i>
                     </div>
                     <div className="indicator-info">
                       <span className="indicator-label">Database</span>
-                      <span className="indicator-status">Online</span>
+                      <span className="indicator-status">
+                        {systemHealth?.database?.status === 'healthy' ? 'Online' : 
+                         systemHealth?.database?.status === 'offline' ? 'Offline' : 'Warning'}
+                      </span>
                     </div>
                   </div>
                   <div className="indicator">
-                    <div className="indicator-icon healthy">
+                    <div className={`indicator-icon ${systemHealth?.authentication?.status === 'healthy' ? 'healthy' : systemHealth?.authentication?.status === 'offline' ? 'error' : 'warning'}`}>
                       <i className="fas fa-network-wired"></i>
                     </div>
                     <div className="indicator-info">
                       <span className="indicator-label">API Services</span>
-                      <span className="indicator-status">Operational</span>
+                      <span className="indicator-status">
+                        {systemHealth?.authentication?.status === 'healthy' ? 'Operational' : 
+                         systemHealth?.authentication?.status === 'offline' ? 'Offline' : 'Warning'}
+                      </span>
                     </div>
                   </div>
                   <div className="indicator">
-                    <div className="indicator-icon healthy">
+                    <div className={`indicator-icon ${systemHealth?.trust_system?.status === 'healthy' ? 'healthy' : systemHealth?.trust_system?.status === 'offline' ? 'error' : 'warning'}`}>
                       <i className="fas fa-lock"></i>
                     </div>
                     <div className="indicator-info">
                       <span className="indicator-label">Security</span>
-                      <span className="indicator-status">Protected</span>
+                      <span className="indicator-status">
+                        {systemHealth?.trust_system?.status === 'healthy' ? 'Protected' : 
+                         systemHealth?.trust_system?.status === 'offline' ? 'Offline' : 'Warning'}
+                      </span>
                     </div>
                   </div>
                 </div>

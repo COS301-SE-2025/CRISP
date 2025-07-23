@@ -358,14 +358,34 @@ export const getSystemHealth = async () => {
         throw new Error('Access denied - admin permissions required');
       }
       if (response.status === 500) {
-        return { status: 'warning', message: 'System health check temporarily unavailable' };
+        // Return offline status for database/system failures
+        return { 
+          success: true,
+          data: {
+            database: { status: 'offline' },
+            authentication: { status: 'offline' },
+            trust_system: { status: 'offline' }
+          },
+          status: 'error', 
+          message: 'System components offline' 
+        };
       }
     }
     
     return await handleResponse(response);
   } catch (error) {
     console.error('System health check failed:', error);
-    return { status: 'warning', message: 'Unable to check system health' };
+    // Return offline status for network/connection failures
+    return { 
+      success: true,
+      data: {
+        database: { status: 'offline' },
+        authentication: { status: 'offline' },
+        trust_system: { status: 'offline' }
+      },
+      status: 'error', 
+      message: 'Unable to connect to system' 
+    };
   }
 };
 

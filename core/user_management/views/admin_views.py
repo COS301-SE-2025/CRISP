@@ -112,23 +112,30 @@ class AdminViewSet(GenericViewSet):
         try:
             self._check_admin_permission(request.user, 'can_view_system_analytics')
             
+            # Individual component health checks
+            db_health = self._check_database_health()
+            auth_health = self._check_authentication_health()
+            trust_health = self._check_trust_system_health()
+            
             health_data = {
                 'database': {
-                    'status': 'healthy',  # Would implement actual health checks
-                    'total_users': CustomUser.objects.count(),
-                    'active_users': CustomUser.objects.filter(is_active=True).count(),
-                    'total_organizations': self.org_service.get_organization_statistics(request.user)['total_organizations']
+                    'status': db_health['status'],
+                    'total_users': db_health.get('total_users', 0),
+                    'active_users': db_health.get('active_users', 0),
+                    'total_organizations': db_health.get('total_organizations', 0)
                 },
                 'authentication': {
-                    'active_sessions': self._get_active_sessions_count(),
-                    'failed_logins_24h': self._get_failed_logins_count(),
-                    'locked_accounts': self._get_locked_accounts_count(),
-                    'average_session_duration': self._get_average_session_duration()
+                    'status': auth_health['status'],
+                    'active_sessions': auth_health.get('active_sessions', 0),
+                    'failed_logins_24h': auth_health.get('failed_logins_24h', 0),
+                    'locked_accounts': auth_health.get('locked_accounts', 0),
+                    'average_session_duration': auth_health.get('average_session_duration', 0)
                 },
                 'trust_system': {
-                    'total_relationships': self._get_total_trust_relationships(),
-                    'active_relationships': self._get_active_trust_relationships(),
-                    'pending_approvals': self._get_pending_trust_approvals()
+                    'status': trust_health['status'],
+                    'total_relationships': trust_health.get('total_relationships', 0),
+                    'active_relationships': trust_health.get('active_relationships', 0),
+                    'pending_approvals': trust_health.get('pending_approvals', 0)
                 }
             }
             
@@ -705,3 +712,97 @@ class AdminViewSet(GenericViewSet):
         else:
             ip = request.META.get('REMOTE_ADDR', '127.0.0.1')
         return ip
+    
+    def _check_database_health(self):
+        """Check database component health"""
+        try:
+            total_users = CustomUser.objects.count()
+            active_users = CustomUser.objects.filter(is_active=True).count()
+            
+            # Get organization count safely
+            try:
+                if self.org_service:
+                    # Create a dummy request with admin user for org stats
+                    from django.contrib.auth import get_user_model
+                    User = get_user_model()
+                    admin_user = User.objects.filter(is_bluevision_admin=True).first()
+                    if admin_user:
+                        total_organizations = self.org_service.get_organization_statistics(admin_user)['total_organizations']
+                    else:
+                        # Fallback: count organizations directly
+                        from ..models.user_models import Organization
+                        total_organizations = Organization.objects.count()
+                else:
+                    from ..models.user_models import Organization
+                    total_organizations = Organization.objects.count()
+            except:
+                from ..models.user_models import Organization
+                total_organizations = Organization.objects.count()
+            
+            # Database health criteria - adjust for your populated data
+            if total_users == 0:
+                status = 'warning'  # No users in system
+            elif active_users < total_users * 0.1:
+                status = 'warning'  # Less than 10% users active
+            else:
+                status = 'healthy'
+                
+            return {
+                'status': status,
+                'total_users': total_users,
+                'active_users': active_users,
+                'total_organizations': total_organizations
+            }
+        except Exception as e:
+            logger.error(f"Database health check failed: {str(e)}")
+            return {'status': 'offline'}
+    
+    def _check_authentication_health(self):
+        """Check authentication system health"""
+        try:
+            active_sessions = self._get_active_sessions_count()
+            failed_logins = self._get_failed_logins_count()
+            locked_accounts = self._get_locked_accounts_count()
+            avg_session = self._get_average_session_duration()
+            
+            # Authentication health criteria
+            if locked_accounts > 10:
+                status = 'warning'  # Too many locked accounts
+            elif failed_logins > 50:
+                status = 'warning'  # High failed login attempts
+            else:
+                status = 'healthy'
+                
+            return {
+                'status': status,
+                'active_sessions': active_sessions,
+                'failed_logins_24h': failed_logins,
+                'locked_accounts': locked_accounts,
+                'average_session_duration': avg_session
+            }
+        except Exception:
+            return {'status': 'offline'}
+    
+    def _check_trust_system_health(self):
+        """Check trust system health"""
+        try:
+            total_relationships = self._get_total_trust_relationships()
+            active_relationships = self._get_active_trust_relationships()
+            pending_approvals = self._get_pending_trust_approvals()
+            
+            # Trust system health criteria
+            if pending_approvals > 100:
+                status = 'warning'  # Too many pending approvals
+            elif active_relationships == 0 and total_relationships > 0:
+                status = 'warning'  # All relationships inactive
+            else:
+                status = 'healthy'
+                
+            return {
+                'status': status,
+                'total_relationships': total_relationships,
+                'active_relationships': active_relationships,
+                'pending_approvals': pending_approvals
+            }
+        except Exception:
+            return {'status': 'offline'}
