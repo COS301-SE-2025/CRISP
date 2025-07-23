@@ -9,6 +9,7 @@ import UserManagement from './components/UserManagement.jsx';
 import OrganisationManagement from './components/OrganisationManagement.jsx';
 import TrustManagement from './components/TrustManagement.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
+import PhoneNumberInput from './components/PhoneNumberInput.jsx';
 
 
 function AppRegister({ user, onLogout }) {
@@ -2425,6 +2426,11 @@ function Profile({ active, user }) {
       setProfileData(updatedData);
       setIsEditing(false);
       setSuccess('Profile updated successfully!');
+      
+      // Refresh the page after a short delay to show updated data
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (error) {
       console.error('Failed to update profile:', error);
       setError('Failed to update profile: ' + error);
@@ -2619,11 +2625,11 @@ function Profile({ active, user }) {
                       </div>
                       <div className="form-group">
                         <label>Phone</label>
-                        <input 
-                          type="tel" 
+                        <PhoneNumberInput
                           value={isEditing ? editFormData.phone : (profileData?.phone || '')}
-                          onChange={(e) => handleFormChange('phone', e.target.value)}
+                          onChange={(value) => handleFormChange('phone', value)}
                           disabled={!isEditing}
+                          placeholder="Enter phone number"
                         />
                       </div>
                     </div>
@@ -2771,7 +2777,7 @@ function AccountSettings({ active, user }) {
       // Refresh the page after a short delay to show updated data
       setTimeout(() => {
         window.location.reload();
-      }, 1500);
+      }, 1000);
     } catch (error) {
       setMessage(`Error updating profile: ${error}`);
     } finally {

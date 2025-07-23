@@ -7,6 +7,7 @@ import * as api from './api.js';
 import UserManagementComponent from './components/UserManagement';
 import TrustManagement from './components/TrustManagement';
 import LoadingSpinner from './components/LoadingSpinner';
+import PhoneNumberInput from './components/PhoneNumberInput.jsx';
 
 
 function App({ user, onLogout, isAdmin }) { // Updated props to match what AuthWrapper passes
@@ -2254,12 +2255,11 @@ function UserProfile({ active, user, userRole, userOrganization, notifications, 
                       </div>
                       <div className="form-group">
                         <label>Phone</label>
-                        <input 
-                          type="tel" 
-                          value={formData.phone} 
+                        <PhoneNumberInput
+                          value={formData.phone}
+                          onChange={(value) => setFormData({...formData, phone: value})}
                           disabled={!editing}
                           placeholder="Enter phone number"
-                          onChange={(e) => setFormData({...formData, phone: e.target.value})}
                         />
                       </div>
                     </div>
