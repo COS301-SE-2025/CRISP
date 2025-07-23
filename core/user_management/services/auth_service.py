@@ -129,10 +129,13 @@ class AuthenticationService:
             # Get trust context
             trust_context = self._get_user_trust_context(user)
             
-            # Reset failed login attempts on successful authentication
+            # Update last_login and reset failed login attempts on successful authentication
+            user.last_login = timezone.now()
             if user.failed_login_attempts > 0:
                 user.failed_login_attempts = 0
-                user.save(update_fields=['failed_login_attempts'])
+                user.save(update_fields=['failed_login_attempts', 'last_login'])
+            else:
+                user.save(update_fields=['last_login'])
             
             # Log successful authentication
             self._log_successful_authentication(user, ip_address, user_agent, session.id, is_trusted_device)

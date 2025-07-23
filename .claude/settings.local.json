@@ -8,7 +8,9 @@
       "Bash(pip install:*)",
       "Bash(ls:*)",
       "Bash(source:*)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(grep:*)",
+      "Bash(python3:*)"
     ],
     "deny": []
   }

@@ -2646,7 +2646,15 @@ function UserProfileDetailed({ active, user }) {
                   <div className="stat-label">Total Logins</div>
                 </div>
                 <div className="stat-item">
-                  <div className="stat-value">{profileData?.last_login || 'Never'}</div>
+                  <div className="stat-value">
+                    {profileData?.last_login ? new Date(profileData.last_login).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    }) : 'Never'}
+                  </div>
                   <div className="stat-label">Last Login</div>
                 </div>
                 <div className="stat-item">
