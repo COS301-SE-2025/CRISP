@@ -40,3 +40,145 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Import Modal Styles */
+.import-modal .modal-content {
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.import-step {
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.file-upload-area {
+  border: 2px dashed #ddd;
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #fafafa;
+  margin-bottom: 1rem;
+}
+
+.file-upload-area:hover {
+  border-color: #007bff;
+  background: #f0f8ff;
+}
+
+.file-upload-area.dragover {
+  border-color: #007bff;
+  background: #e3f2fd;
+  transform: scale(1.02);
+}
+
+.file-upload-icon {
+  font-size: 3rem;
+  color: #ccc;
+  margin-bottom: 1rem;
+}
+
+.file-upload-text {
+  font-size: 1.1rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.file-upload-hint {
+  font-size: 0.9rem;
+  color: #999;
+}
+
+.file-upload-area input[type="file"] {
+  display: none;
+}
+
+.format-selector {
+  margin-bottom: 1rem;
+}
+
+.format-selector label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.format-selector select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.import-preview {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin: 1rem 0;
+}
+
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.preview-table th,
+.preview-table td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+}
+
+.preview-table th {
+  background: #f8f9fa;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.preview-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.preview-summary {
+  background: #e3f2fd;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.preview-summary h4 {
+  margin: 0 0 0.5rem 0;
+  color: #1976d2;
+}
+
+.preview-summary p {
+  margin: 0;
+  color: #666;
+}
+
+.preview-more {
+  text-align: center;
+  padding: 1rem;
+  color: #666;
+  font-style: italic;
+  background: #f8f9fa;
+}
+
+.step-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+}

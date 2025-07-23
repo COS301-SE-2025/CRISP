@@ -1162,6 +1162,12 @@ function IoCManagement({ active }) {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState('csv');
   const [exporting, setExporting] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importFormat, setImportFormat] = useState('auto');
+  const [importing, setImporting] = useState(false);
+  const [importPreview, setImportPreview] = useState([]);
+  const [showPreview, setShowPreview] = useState(false);
   
   // Fetch indicators from backend
   useEffect(() => {
@@ -1217,7 +1223,7 @@ function IoCManagement({ active }) {
         </div>
         <div className="action-buttons">
           <button className="btn btn-outline" onClick={() => setShowExportModal(true)}><i className="fas fa-file-export"></i> Export IoCs</button>
-          <button className="btn btn-outline"><i className="fas fa-file-import"></i> Import IoCs</button>
+          <button className="btn btn-outline" onClick={() => setShowImportModal(true)}><i className="fas fa-file-import"></i> Import IoCs</button>
           <button className="btn btn-primary" onClick={() => setShowAddModal(true)}><i className="fas fa-plus"></i> Add New IoC</button>
         </div>
       </div>
@@ -1582,6 +1588,146 @@ function IoCManagement({ active }) {
           </div>
         </div>
       )}
+
+      {/* Import IoCs Modal */}
+      {showImportModal && (
+        <div className="modal-overlay" onClick={closeImportModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2><i className="fas fa-file-import"></i> Import IoCs</h2>
+              <button className="modal-close" onClick={closeImportModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="modal-body">
+              {!showPreview ? (
+                <>
+                  <div className="form-group">
+                    <label className="form-label">Import Format</label>
+                    <select 
+                      value={importFormat} 
+                      onChange={(e) => setImportFormat(e.target.value)}
+                      className="form-control"
+                    >
+                      <option value="auto">Auto-detect from file</option>
+                      <option value="csv">CSV (Comma Separated Values)</option>
+                      <option value="json">JSON (JavaScript Object Notation)</option>
+                      <option value="stix">STIX 2.1 (Structured Threat Information)</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Select File</label>
+                    <div className="file-upload-area" onDrop={handleFileDrop} onDragOver={handleDragOver}>
+                      <input 
+                        type="file" 
+                        accept=".csv,.json" 
+                        onChange={handleFileSelect}
+                        className="file-input"
+                        id="import-file"
+                      />
+                      <label htmlFor="import-file" className="file-upload-label">
+                        <i className="fas fa-cloud-upload-alt"></i>
+                        <span>
+                          {importFile ? importFile.name : 'Drop file here or click to browse'}
+                        </span>
+                        <small>Supported formats: CSV, JSON, STIX (.json)</small>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="import-info">
+                    <div className="info-card">
+                      <i className="fas fa-info-circle"></i>
+                      <div>
+                        <strong>Import Guidelines:</strong>
+                        <ul>
+                          <li><strong>CSV:</strong> Must include headers: Type, Value, Severity, Source, Status</li>
+                          <li><strong>JSON:</strong> Should match the export format structure</li>
+                          <li><strong>STIX:</strong> Must be valid STIX 2.1 bundle format</li>
+                          <li>Duplicate indicators will be skipped automatically</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="modal-actions">
+                    <button type="button" className="btn btn-outline" onClick={closeImportModal} disabled={importing}>
+                      Cancel
+                    </button>
+                    <button 
+                      type="button" 
+                      className="btn btn-primary" 
+                      onClick={handleFilePreview} 
+                      disabled={!importFile || importing}
+                    >
+                      {importing ? (
+                        <><i className="fas fa-spinner fa-spin"></i> Processing...</>
+                      ) : (
+                        <><i className="fas fa-eye"></i> Preview Import</>
+                      )}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="preview-header">
+                    <h3>Import Preview</h3>
+                    <p>Review {importPreview.length} indicators before importing:</p>
+                  </div>
+
+                  <div className="preview-table-container">
+                    <table className="preview-table">
+                      <thead>
+                        <tr>
+                          <th>Type</th>
+                          <th>Value</th>
+                          <th>Severity</th>
+                          <th>Source</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {importPreview.slice(0, 10).map((indicator, index) => (
+                          <tr key={index}>
+                            <td>{indicator.type}</td>
+                            <td className="truncate">{indicator.value}</td>
+                            <td>
+                              <span className={`badge badge-${indicator.severity?.toLowerCase()}`}>
+                                {indicator.severity}
+                              </span>
+                            </td>
+                            <td>{indicator.source}</td>
+                            <td>{indicator.status}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {importPreview.length > 10 && (
+                      <p className="preview-note">
+                        ... and {importPreview.length - 10} more indicators
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="modal-actions">
+                    <button type="button" className="btn btn-outline" onClick={goBackToUpload} disabled={importing}>
+                      <i className="fas fa-arrow-left"></i> Back
+                    </button>
+                    <button type="button" className="btn btn-primary" onClick={handleImport} disabled={importing}>
+                      {importing ? (
+                        <><i className="fas fa-spinner fa-spin"></i> Importing...</>
+                      ) : (
+                        <><i className="fas fa-upload"></i> Import {importPreview.length} IoCs</>
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 
@@ -1756,6 +1902,224 @@ function IoCManagement({ active }) {
       case 'low': return 30;
       default: return 50;
     }
+  }
+
+  // Import functions
+  function closeImportModal() {
+    setShowImportModal(false);
+    setImportFile(null);
+    setImportFormat('auto');
+    setImportPreview([]);
+    setShowPreview(false);
+  }
+
+  function handleFileSelect(event) {
+    const file = event.target.files[0];
+    setImportFile(file);
+  }
+
+  function handleFileDrop(event) {
+    event.preventDefault();
+    const file = event.dataTransfer.files[0];
+    if (file && (file.type === 'text/csv' || file.type === 'application/json' || file.name.endsWith('.csv') || file.name.endsWith('.json'))) {
+      setImportFile(file);
+    }
+  }
+
+  function handleDragOver(event) {
+    event.preventDefault();
+  }
+
+  async function handleFilePreview() {
+    if (!importFile) return;
+
+    setImporting(true);
+    try {
+      const fileContent = await readFileContent(importFile);
+      const detectedFormat = importFormat === 'auto' ? detectFileFormat(importFile.name, fileContent) : importFormat;
+      const parsedData = await parseFileContent(fileContent, detectedFormat);
+      
+      setImportPreview(parsedData);
+      setShowPreview(true);
+    } catch (error) {
+      console.error('Error previewing file:', error);
+      alert('Error reading file. Please check the format and try again.');
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  function goBackToUpload() {
+    setShowPreview(false);
+    setImportPreview([]);
+  }
+
+  async function handleImport() {
+    if (importPreview.length === 0) return;
+
+    setImporting(true);
+    try {
+      // Filter out duplicates
+      const existingValues = new Set(indicators.map(ind => ind.value.toLowerCase()));
+      const newIndicators = importPreview.filter(ind => !existingValues.has(ind.value.toLowerCase()));
+      
+      // Add new indicators to the list
+      const processedIndicators = newIndicators.map(indicator => ({
+        ...indicator,
+        id: Date.now() + Math.random(), // Temporary ID
+        created: new Date().toISOString().split('T')[0]
+      }));
+
+      setIndicators(prev => [...processedIndicators, ...prev]);
+      
+      // Close modal
+      closeImportModal();
+      
+      console.log(`Successfully imported ${processedIndicators.length} new IoCs (${importPreview.length - processedIndicators.length} duplicates skipped)`);
+      alert(`Import successful! Added ${processedIndicators.length} new indicators${importPreview.length - processedIndicators.length > 0 ? ` (${importPreview.length - processedIndicators.length} duplicates skipped)` : ''}.`);
+      
+    } catch (error) {
+      console.error('Import failed:', error);
+      alert('Import failed. Please try again.');
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  function readFileContent(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsText(file);
+    });
+  }
+
+  function detectFileFormat(filename, content) {
+    if (filename.endsWith('.csv')) return 'csv';
+    if (filename.endsWith('.json')) {
+      try {
+        const parsed = JSON.parse(content);
+        if (parsed.type === 'bundle' && parsed.objects) return 'stix';
+        return 'json';
+      } catch {
+        return 'json';
+      }
+    }
+    return 'csv';
+  }
+
+  async function parseFileContent(content, format) {
+    switch (format) {
+      case 'csv':
+        return parseCSV(content);
+      case 'json':
+        return parseJSON(content);
+      case 'stix':
+        return parseSTIX(content);
+      default:
+        throw new Error('Unsupported file format');
+    }
+  }
+
+  function parseCSV(content) {
+    const lines = content.trim().split('\n');
+    if (lines.length < 2) throw new Error('CSV file must have headers and at least one data row');
+    
+    const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim().toLowerCase());
+    const data = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
+      
+      const indicator = {
+        type: getColumnValue(headers, values, ['type', 'ioc_type', 'indicator_type']) || 'Unknown',
+        value: getColumnValue(headers, values, ['value', 'ioc_value', 'indicator']) || '',
+        severity: getColumnValue(headers, values, ['severity', 'priority', 'threat_level']) || 'Medium',
+        source: getColumnValue(headers, values, ['source', 'origin', 'feed']) || 'Import',
+        status: getColumnValue(headers, values, ['status', 'state']) || 'Active'
+      };
+      
+      if (indicator.value) {
+        data.push(indicator);
+      }
+    }
+    
+    return data;
+  }
+
+  function parseJSON(content) {
+    const data = JSON.parse(content);
+    
+    if (data.indicators && Array.isArray(data.indicators)) {
+      return data.indicators.map(ind => ({
+        type: ind.type || 'Unknown',
+        value: ind.value || '',
+        severity: ind.severity || 'Medium',
+        source: ind.source || 'Import',
+        status: ind.status || 'Active'
+      }));
+    }
+    
+    if (Array.isArray(data)) {
+      return data.map(ind => ({
+        type: ind.type || 'Unknown',
+        value: ind.value || '',
+        severity: ind.severity || 'Medium',
+        source: ind.source || 'Import',
+        status: ind.status || 'Active'
+      }));
+    }
+    
+    throw new Error('Invalid JSON format. Expected array or object with indicators property.');
+  }
+
+  function parseSTIX(content) {
+    const bundle = JSON.parse(content);
+    
+    if (bundle.type !== 'bundle' || !bundle.objects) {
+      throw new Error('Invalid STIX format. Expected bundle with objects.');
+    }
+    
+    const indicators = bundle.objects.filter(obj => obj.type === 'indicator');
+    
+    return indicators.map(ind => ({
+      type: extractTypeFromPattern(ind.pattern),
+      value: extractValueFromPattern(ind.pattern),
+      severity: mapConfidenceToSeverity(ind.confidence || 50),
+      source: ind.x_crisp_source || 'STIX Import',
+      status: ind.x_crisp_status || 'Active'
+    }));
+  }
+
+  function getColumnValue(headers, values, possibleNames) {
+    for (const name of possibleNames) {
+      const index = headers.indexOf(name);
+      if (index !== -1 && values[index]) {
+        return values[index];
+      }
+    }
+    return null;
+  }
+
+  function extractTypeFromPattern(pattern) {
+    if (pattern.includes('ipv4-addr')) return 'IP Address';
+    if (pattern.includes('domain-name')) return 'Domain';
+    if (pattern.includes('url')) return 'URL';
+    if (pattern.includes('file:hashes')) return 'File Hash';
+    if (pattern.includes('email-addr')) return 'Email';
+    return 'Unknown';
+  }
+
+  function extractValueFromPattern(pattern) {
+    const match = pattern.match(/'([^']+)'/);
+    return match ? match[1] : '';
+  }
+
+  function mapConfidenceToSeverity(confidence) {
+    if (confidence >= 75) return 'High';
+    if (confidence >= 45) return 'Medium';
+    return 'Low';
   }
 
 
