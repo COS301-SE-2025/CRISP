@@ -618,3 +618,354 @@ This is an automated message from CRISP (Cyber Risk Information Sharing Platform
                 'message': f'Gmail SMTP connection error: {str(e)}',
                 'status': 'error'
             }
+    
+    def send_password_reset_email(self, user, reset_token: str) -> Dict[str, Any]:
+        """
+        Send password reset email (SRS R1.1.3)
+        
+        Args:
+            user: CustomUser instance
+            reset_token: Secure reset token
+            
+        Returns:
+            Dictionary with send result
+        """
+        from django.conf import settings
+        
+        reset_link = f"{getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')}/reset-password/{reset_token}"
+        
+        subject = "CRISP - Password Reset Request"
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9f9f9;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+                <h1 style="color: white; margin: 0; font-size: 28px;">CRISP Password Reset</h1>
+                <p style="color: #e8f4fd; margin: 10px 0 0 0;">Cyber Risk Information Sharing Platform</p>
+            </div>
+            
+            <div style="background: white; padding: 40px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <p style="font-size: 18px; color: #2c3e50; margin-bottom: 20px;">Hello {user.get_full_name() or user.username},</p>
+                
+                <p style="color: #555; line-height: 1.6; margin-bottom: 25px;">
+                    You requested a password reset for your CRISP account at <strong>{getattr(user, 'organization', {}).get('name', 'your organization') if hasattr(user, 'organization') else 'your organization'}</strong>.
+                </p>
+                
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{reset_link}" style="background: #3498db; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold; display: inline-block; box-shadow: 0 2px 4px rgba(52,152,219,0.3);">
+                        Reset Password
+                    </a>
+                </div>
+                
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 25px 0;">
+                    <p style="margin: 0; color: #856404; font-size: 14px;">
+                        <strong>Security Notice:</strong> This link expires in 24 hours for security reasons. 
+                        If you didn't request this reset, please ignore this email.
+                    </p>
+                </div>
+                
+                <p style="color: #777; font-size: 14px; margin-top: 30px;">
+                    For security reasons, please do not share this link with anyone.
+                </p>
+            </div>
+            
+            <div style="text-align: center; padding: 20px; color: #888; font-size: 12px;">
+                <p>CRISP - Cyber Risk Information Sharing Platform</p>
+                <p>This is an automated message. Please do not reply to this email.</p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+        CRISP Password Reset Request
+        
+        Hello {user.get_full_name() or user.username},
+        
+        You requested a password reset for your CRISP account.
+        
+        Please click the following link to reset your password:
+        {reset_link}
+        
+        This link expires in 24 hours for security reasons.
+        
+        If you didn't request this reset, please ignore this email.
+        
+        CRISP - Cyber Risk Information Sharing Platform
+        """
+        
+        return self.send_email(
+            to_emails=[user.email],
+            subject=subject,
+            html_content=html_content,
+            text_content=text_content,
+            email_type='password_reset',
+            user=user
+        )
+    
+    def send_user_invitation_email(self, email: str, organization, inviter, invitation_token: str) -> Dict[str, Any]:
+        """
+        Send user invitation email (SRS R1.2.2)
+        
+        Args:
+            email: Recipient email address
+            organization: Organization instance
+            inviter: User who sent the invitation
+            invitation_token: Secure invitation token
+            
+        Returns:
+            Dictionary with send result
+        """
+        from django.conf import settings
+        
+        invite_link = f"{getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')}/accept-invitation/{invitation_token}"
+        
+        subject = f"Invitation to join {organization.name} on CRISP"
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9f9f9;">
+            <div style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+                <h1 style="color: white; margin: 0; font-size: 28px;">🛡️ You're Invited to CRISP</h1>
+                <p style="color: #d5f4e6; margin: 10px 0 0 0;">Cyber Risk Information Sharing Platform</p>
+            </div>
+            
+            <div style="background: white; padding: 40px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <p style="font-size: 18px; color: #2c3e50; margin-bottom: 20px;">Hello,</p>
+                
+                <p style="color: #555; line-height: 1.6; margin-bottom: 25px;">
+                    <strong>{inviter.get_full_name() or inviter.username}</strong> from <strong>{organization.name}</strong> has invited you to join the CRISP Threat Intelligence Platform.
+                </p>
+                
+                <div style="background: #e8f8f5; border-left: 4px solid #27ae60; padding: 20px; margin: 25px 0;">
+                    <h3 style="margin: 0 0 10px 0; color: #27ae60;">About CRISP</h3>
+                    <p style="margin: 0; color: #555; font-size: 14px;">
+                        CRISP enables educational institutions to share cyber threat intelligence securely, 
+                        helping protect against emerging threats through collaborative defense.
+                    </p>
+                </div>
+                
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{invite_link}" style="background: #27ae60; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold; display: inline-block; box-shadow: 0 2px 4px rgba(39,174,96,0.3);">
+                        Accept Invitation
+                    </a>
+                </div>
+                
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 25px 0;">
+                    <p style="margin: 0; color: #856404; font-size: 14px;">
+                        <strong>Note:</strong> This invitation expires in 7 days. 
+                        You'll be able to create your account and set up your password after accepting.
+                    </p>
+                </div>
+                
+                <p style="color: #777; font-size: 14px; margin-top: 30px;">
+                    If you have any questions, please contact {inviter.email}.
+                </p>
+            </div>
+            
+            <div style="text-align: center; padding: 20px; color: #888; font-size: 12px;">
+                <p>CRISP - Cyber Risk Information Sharing Platform</p>
+                <p>This is an automated message. Please do not reply to this email.</p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+        You're Invited to Join CRISP
+        
+        Hello,
+        
+        {inviter.get_full_name() or inviter.username} from {organization.name} has invited you to join the CRISP Threat Intelligence Platform.
+        
+        CRISP enables educational institutions to share cyber threat intelligence securely, helping protect against emerging threats through collaborative defense.
+        
+        Please click the following link to accept your invitation:
+        {invite_link}
+        
+        This invitation expires in 7 days.
+        
+        If you have any questions, please contact {inviter.email}.
+        
+        CRISP - Cyber Risk Information Sharing Platform
+        """
+        
+        return self.send_email(
+            to_emails=[email],
+            subject=subject,
+            html_content=html_content,
+            text_content=text_content,
+            email_type='user_invitation'
+        )
+    
+    def send_account_locked_email(self, user) -> Dict[str, Any]:
+        """
+        Send account lockout notification email (SRS R1.1.4)
+        
+        Args:
+            user: CustomUser instance
+            
+        Returns:
+            Dictionary with send result
+        """
+        from django.conf import settings
+        
+        subject = "CRISP - Account Temporarily Locked"
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9f9f9;">
+            <div style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+                <h1 style="color: white; margin: 0; font-size: 28px;">🔒 Account Locked</h1>
+                <p style="color: #fce4ec; margin: 10px 0 0 0;">Security Alert</p>
+            </div>
+            
+            <div style="background: white; padding: 40px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <p style="font-size: 18px; color: #2c3e50; margin-bottom: 20px;">Hello {user.get_full_name() or user.username},</p>
+                
+                <p style="color: #555; line-height: 1.6; margin-bottom: 25px;">
+                    Your CRISP account has been temporarily locked due to multiple failed login attempts.
+                </p>
+                
+                <div style="background: #ffebee; border-left: 4px solid #e74c3c; padding: 20px; margin: 25px 0;">
+                    <h3 style="margin: 0 0 10px 0; color: #e74c3c;">Security Information</h3>
+                    <p style="margin: 0 0 10px 0; color: #555; font-size: 14px;">
+                        <strong>Lockout Duration:</strong> 30 minutes
+                    </p>
+                    <p style="margin: 0; color: #555; font-size: 14px;">
+                        <strong>Account Status:</strong> Temporarily restricted
+                    </p>
+                </div>
+                
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 25px 0;">
+                    <p style="margin: 0; color: #856404; font-size: 14px;">
+                        <strong>What to do:</strong> Please wait 30 minutes before attempting to log in again. 
+                        If you suspect unauthorized access, contact your organization administrator immediately.
+                    </p>
+                </div>
+                
+                <p style="color: #777; font-size: 14px; margin-top: 30px;">
+                    If this wasn't you, please contact your organization's IT security team.
+                </p>
+            </div>
+            
+            <div style="text-align: center; padding: 20px; color: #888; font-size: 12px;">
+                <p>CRISP - Cyber Risk Information Sharing Platform</p>
+                <p>This is an automated security notification.</p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+        CRISP Account Temporarily Locked
+        
+        Hello {user.get_full_name() or user.username},
+        
+        Your CRISP account has been temporarily locked due to multiple failed login attempts.
+        
+        Security Information:
+        - Lockout Duration: 30 minutes
+        - Account Status: Temporarily restricted
+        
+        Please wait 30 minutes before attempting to log in again.
+        
+        If you suspect unauthorized access or if this wasn't you, please contact your organization administrator immediately.
+        
+        CRISP - Cyber Risk Information Sharing Platform
+        """
+        
+        return self.send_email(
+            to_emails=[user.email],
+            subject=subject,
+            html_content=html_content,
+            text_content=text_content,
+            email_type='security_alert',
+            user=user
+        )
+    
+    def send_feed_subscription_confirmation(self, user, feed_name: str) -> Dict[str, Any]:
+        """
+        Send feed subscription confirmation email (User Story 1)
+        
+        Args:
+            user: CustomUser instance
+            feed_name: Name of the threat feed
+            
+        Returns:
+            Dictionary with send result
+        """
+        from django.conf import settings
+        
+        dashboard_link = f"{getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')}/dashboard"
+        
+        subject = f"CRISP - Subscription Confirmed: {feed_name}"
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9f9f9;">
+            <div style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+                <h1 style="color: white; margin: 0; font-size: 28px;">✅ Subscription Confirmed</h1>
+                <p style="color: #dbeafe; margin: 10px 0 0 0;">Threat Intelligence Feed</p>
+            </div>
+            
+            <div style="background: white; padding: 40px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <p style="font-size: 18px; color: #2c3e50; margin-bottom: 20px;">Hello {user.get_full_name() or user.username},</p>
+                
+                <p style="color: #555; line-height: 1.6; margin-bottom: 25px;">
+                    You have successfully subscribed to the <strong>{feed_name}</strong> threat intelligence feed.
+                </p>
+                
+                <div style="background: #e8f4fd; border-left: 4px solid #3498db; padding: 20px; margin: 25px 0;">
+                    <h3 style="margin: 0 0 10px 0; color: #3498db;">What happens next?</h3>
+                    <ul style="margin: 0; color: #555; font-size: 14px; padding-left: 20px;">
+                        <li>You'll receive threat intelligence updates from this feed</li>
+                        <li>Critical threats will be sent immediately via email</li>
+                        <li>Regular updates will be batched based on your preferences</li>
+                        <li>You can manage your subscriptions in your dashboard</li>
+                    </ul>
+                </div>
+                
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{dashboard_link}" style="background: #3498db; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold; display: inline-block; box-shadow: 0 2px 4px rgba(52,152,219,0.3);">
+                        View Dashboard
+                    </a>
+                </div>
+                
+                <p style="color: #777; font-size: 14px; margin-top: 30px;">
+                    You can unsubscribe from this feed at any time through your dashboard settings.
+                </p>
+            </div>
+            
+            <div style="text-align: center; padding: 20px; color: #888; font-size: 12px;">
+                <p>CRISP - Cyber Risk Information Sharing Platform</p>
+                <p>This is an automated confirmation message.</p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+        CRISP Subscription Confirmed
+        
+        Hello {user.get_full_name() or user.username},
+        
+        You have successfully subscribed to the {feed_name} threat intelligence feed.
+        
+        What happens next?
+        - You'll receive threat intelligence updates from this feed
+        - Critical threats will be sent immediately via email
+        - Regular updates will be batched based on your preferences
+        - You can manage your subscriptions in your dashboard
+        
+        View your dashboard: {dashboard_link}
+        
+        You can unsubscribe from this feed at any time through your dashboard settings.
+        
+        CRISP - Cyber Risk Information Sharing Platform
+        """
+        
+        return self.send_email(
+            to_emails=[user.email],
+            subject=subject,
+            html_content=html_content,
+            text_content=text_content,
+            email_type='feed_subscription_confirmation',
+            user=user
+        )

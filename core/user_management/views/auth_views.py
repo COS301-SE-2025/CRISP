@@ -9,6 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from ..services.auth_service import AuthenticationService
 from ..services.user_service import UserService
 from ..services.trust_aware_service import TrustAwareService
+from ..services.invitation_service import PasswordResetService
 from ..models import CustomUser, AuthenticationLog
 import logging
 import json
@@ -46,6 +47,7 @@ class AuthenticationViewSet(viewsets.ViewSet):
         self.auth_service = AuthenticationService()
         self.user_service = UserService()
         self.trust_service = TrustAwareService()
+        self.password_reset_service = PasswordResetService()
     
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def login(self, request):

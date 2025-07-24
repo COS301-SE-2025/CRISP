@@ -6,6 +6,7 @@ from ..models import Organization
 from ..serializers import OrganizationSerializer, OrganizationDetailSerializer
 from ..services.organization_service import OrganizationService
 from ..services.access_control_service import AccessControlService
+from ..services.invitation_service import UserInvitationService
 from ...audit.services.audit_service import AuditService
 import logging
 
@@ -33,6 +34,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         super().__init__(*args, **kwargs)
         self.org_service = OrganizationService()
         self.access_control = AccessControlService()
+        self.invitation_service = UserInvitationService()
     
     @action(detail=False, methods=['post'])
     def create_organization(self, request):
@@ -833,4 +835,168 @@ class OrganizationViewSet(viewsets.ModelViewSet):
             return Response({
                 'success': False,
                 'message': 'Failed to create trust group'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=True, methods=['post'])
+    def invite_user(self, request, pk=None):
+        """
+        Invite a user to join the organization (SRS R1.2.2)
+        
+        Expected payload:
+        {
+            "email": "user@example.com",
+            "role": "viewer",  // Optional, defaults to "viewer"
+            "message": "Optional invitation message"
+        }
+        """
+        try:
+            organization = self.get_object()
+            email = request.data.get('email')
+            role = request.data.get('role', 'viewer')
+            message = request.data.get('message', '')
+            
+            # Validate required fields
+            if not email:
+                return Response({
+                    'success': False,
+                    'message': 'Email address is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Validate role
+            if role not in ['viewer', 'publisher']:
+                return Response({
+                    'success': False,
+                    'message': 'Role must be either "viewer" or "publisher"'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Send invitation
+            result = self.invitation_service.send_invitation(
+                inviter=request.user,
+                organization=organization,
+                email=email,
+                role=role,
+                message=message
+            )
+            
+            if result.get('success'):
+                return Response(result, status=status.HTTP_201_CREATED)
+            else:
+                return Response(result, status=status.HTTP_400_BAD_REQUEST)
+                
+        except Exception as e:
+            logger.error(f"Invite user error: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Failed to send invitation'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=True, methods=['get'])
+    def invitations(self, request, pk=None):
+        """
+        List invitations for the organization
+        
+        Query parameters:
+        - status: Filter by invitation status (pending, accepted, expired, cancelled)
+        """
+        try:
+            organization = self.get_object()
+            
+            # Check permissions
+            if not self.access_control.can_manage_organization(request.user, organization):
+                return Response({
+                    'success': False,
+                    'message': 'You do not have permission to view invitations for this organization'
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            status_filter = request.query_params.get('status')
+            invitations = self.invitation_service.list_invitations(
+                organization=organization,
+                status=status_filter
+            )
+            
+            return Response({
+                'success': True,
+                'data': {
+                    'invitations': invitations,
+                    'total_count': len(invitations)
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"List invitations error: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Failed to retrieve invitations'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=False, methods=['post'])
+    def cancel_invitation(self, request):
+        """
+        Cancel a pending invitation
+        
+        Expected payload:
+        {
+            "invitation_id": "uuid"
+        }
+        """
+        try:
+            invitation_id = request.data.get('invitation_id')
+            
+            if not invitation_id:
+                return Response({
+                    'success': False,
+                    'message': 'Invitation ID is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            result = self.invitation_service.cancel_invitation(
+                invitation_id=invitation_id,
+                cancelling_user=request.user
+            )
+            
+            if result.get('success'):
+                return Response(result, status=status.HTTP_200_OK)
+            else:
+                return Response(result, status=status.HTTP_400_BAD_REQUEST)
+                
+        except Exception as e:
+            logger.error(f"Cancel invitation error: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Failed to cancel invitation'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=False, methods=['post'])
+    def accept_invitation(self, request):
+        """
+        Accept a user invitation
+        
+        Expected payload:
+        {
+            "invitation_token": "secure_token"
+        }
+        """
+        try:
+            invitation_token = request.data.get('invitation_token')
+            
+            if not invitation_token:
+                return Response({
+                    'success': False,
+                    'message': 'Invitation token is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            result = self.invitation_service.accept_invitation(
+                invitation_token=invitation_token,
+                user=request.user
+            )
+            
+            if result.get('success'):
+                return Response(result, status=status.HTTP_200_OK)
+            else:
+                return Response(result, status=status.HTTP_400_BAD_REQUEST)
+                
+        except Exception as e:
+            logger.error(f"Accept invitation error: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Failed to accept invitation'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
