@@ -580,6 +580,17 @@ class AuthenticationViewSet(viewsets.ViewSet):
                     'message': 'Email address is required'
                 }, status=status.HTTP_400_BAD_REQUEST)
             
+            # Validate email format
+            from django.core.validators import validate_email
+            from django.core.exceptions import ValidationError
+            try:
+                validate_email(email)
+            except ValidationError:
+                return Response({
+                    'success': False,
+                    'message': 'Invalid email format'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
             # Use the password reset service
             password_service = PasswordResetService()
             result = password_service.request_password_reset(
@@ -588,7 +599,14 @@ class AuthenticationViewSet(viewsets.ViewSet):
                 user_agent=request.META.get('HTTP_USER_AGENT', '')
             )
             
-            # Always return success to prevent email enumeration
+            # Check for service-level failures (not email enumeration related)
+            if not result.get('success') and 'Failed to send password reset email' in result.get('message', ''):
+                return Response({
+                    'success': False,
+                    'message': result.get('message', 'Failed to process password reset request')
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            # Always return success to prevent email enumeration for other cases
             return Response({
                 'success': True,
                 'message': result.get('message', 'If an account with this email exists, password reset instructions have been sent.')

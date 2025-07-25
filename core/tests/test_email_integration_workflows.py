@@ -12,7 +12,7 @@ from core.user_management.models.invitation_models import UserInvitation, Passwo
 from core.user_management.models.user_models import CustomUser, Organization
 from core.user_management.services.invitation_service import UserInvitationService, PasswordResetService
 from core.notifications.services.gmail_smtp_service import GmailSMTPService
-from core.tests.factories import CustomUserFactory, OrganizationFactory
+from core.tests.factories import CustomUserFactory, OrganizationFactory, CustomUserWithoutOrgFactory
 import uuid
 
 
@@ -67,7 +67,7 @@ class EmailWorkflowIntegrationTestCase(TransactionTestCase):
         mock_audit_service.log_user_action.assert_called()
         
         # Step 2: Accept invitation
-        new_user = CustomUserFactory(email=invitee_email)
+        new_user = CustomUserWithoutOrgFactory(email=invitee_email)
         accept_result = invitation_service.accept_invitation(invitation.token, new_user)
         
         # Verify acceptance
@@ -341,7 +341,7 @@ class EmailWorkflowIntegrationTestCase(TransactionTestCase):
         self.assertEqual(invitation.inviter, self.admin)
         
         # Accept invitation
-        new_user = CustomUserFactory(email=invitee_email)
+        new_user = CustomUserWithoutOrgFactory(email=invitee_email)
         accept_result = invitation_service.accept_invitation(invitation.token, new_user)
         
         self.assertTrue(accept_result['success'])
@@ -393,7 +393,7 @@ class EmailWorkflowIntegrationTestCase(TransactionTestCase):
         self.assertEqual(invitation.status, 'cancelled')
         
         # Attempt to accept cancelled invitation should fail
-        new_user = CustomUserFactory(email=invitee_email)
+        new_user = CustomUserWithoutOrgFactory(email=invitee_email)
         accept_result = invitation_service.accept_invitation(invitation.token, new_user)
         
         self.assertFalse(accept_result['success'])
@@ -490,7 +490,7 @@ class EmailWorkflowIntegrationTestCase(TransactionTestCase):
         self.assertEqual(invitation.status, 'pending')
         
         # Accept invitation
-        new_user = CustomUserFactory(email=invitee_email)
+        new_user = CustomUserWithoutOrgFactory(email=invitee_email)
         accept_result = invitation_service.accept_invitation(invitation.token, new_user)
         self.assertTrue(accept_result['success'])
         

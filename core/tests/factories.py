@@ -48,6 +48,26 @@ class CustomUserFactory(DjangoModelFactory):
     trusted_devices = factory.LazyFunction(lambda: [])
     preferences = factory.LazyFunction(lambda: {})
     metadata = factory.LazyFunction(lambda: {})
+
+
+class CustomUserWithoutOrgFactory(DjangoModelFactory):
+    """Factory for creating users without organization for invitation tests"""
+    class Meta:
+        model = 'user_management.CustomUser'
+    
+    id = factory.LazyFunction(uuid.uuid4)
+    username = factory.Sequence(lambda n: f"user{n}")
+    organization = None  # No organization initially
+    email = factory.Sequence(lambda n: f"user{n}@example.com")
+    password = factory.LazyFunction(lambda: make_password('testpass123'))
+    role = 'viewer'
+    is_active = True
+    is_verified = True
+    
+    # Provide default JSON field values
+    trusted_devices = factory.LazyFunction(lambda: [])
+    preferences = factory.LazyFunction(lambda: {})
+    metadata = factory.LazyFunction(lambda: {})
     
     @factory.post_generation
     def set_password(self, create, extracted, **kwargs):

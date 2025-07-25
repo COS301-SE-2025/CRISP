@@ -13,7 +13,7 @@ from django.utils import timezone
 from datetime import timedelta
 from core.user_management.models.invitation_models import UserInvitation
 from core.user_management.models.user_models import CustomUser, Organization
-from core.tests.factories import CustomUserFactory, OrganizationFactory
+from core.tests.factories import CustomUserFactory, OrganizationFactory, CustomUserWithoutOrgFactory
 import uuid
 
 
@@ -54,7 +54,7 @@ class OrganizationInvitationViewsTestCase(TestCase):
         
         self._authenticate_user(self.publisher)
         
-        url = reverse('organization-invite-user', kwargs={'pk': str(self.organization.id)})
+        url = reverse('organizations-invite-user', kwargs={'pk': str(self.organization.id)})
         response = self.client.post(url, self.invitation_data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -83,7 +83,7 @@ class OrganizationInvitationViewsTestCase(TestCase):
         
         self._authenticate_user(self.admin)
         
-        url = reverse('organization-invite-user', kwargs={'pk': str(self.organization.id)})
+        url = reverse('organizations-invite-user', kwargs={'pk': str(self.organization.id)})
         response = self.client.post(url, self.invitation_data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -96,24 +96,24 @@ class OrganizationInvitationViewsTestCase(TestCase):
         """Test invitation denied for viewer role"""
         self._authenticate_user(self.viewer)
         
-        url = reverse('organization-invite-user', kwargs={'pk': str(self.organization.id)})
+        url = reverse('organizations-invite-user', kwargs={'pk': str(self.organization.id)})
         response = self.client.post(url, self.invitation_data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertIn('do not have permission', response.data['detail'])
+        self.assertIn('do not have permission', response.data['message'])
     
     def test_invite_user_permission_denied_other_org(self):
         """Test invitation denied for publisher from different organization"""
         self._authenticate_user(self.other_org_publisher)
         
-        url = reverse('organization-invite-user', kwargs={'pk': str(self.organization.id)})
+        url = reverse('organizations-invite-user', kwargs={'pk': str(self.organization.id)})
         response = self.client.post(url, self.invitation_data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
     
     def test_invite_user_unauthenticated(self):
         """Test invitation requires authentication"""
-        url = reverse('organization-invite-user', kwargs={'pk': str(self.organization.id)})
+        url = reverse('organizations-invite-user', kwargs={'pk': str(self.organization.id)})
         response = self.client.post(url, self.invitation_data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -125,7 +125,7 @@ class OrganizationInvitationViewsTestCase(TestCase):
         invalid_data = self.invitation_data.copy()
         invalid_data['email'] = 'invalid-email'
         
-        url = reverse('organization-invite-user', kwargs={'pk': str(self.organization.id)})
+        url = reverse('organizations-invite-user', kwargs={'pk': str(self.organization.id)})
         response = self.client.post(url, invalid_data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -138,7 +138,7 @@ class OrganizationInvitationViewsTestCase(TestCase):
         invalid_data = self.invitation_data.copy()
         del invalid_data['email']
         
-        url = reverse('organization-invite-user', kwargs={'pk': str(self.organization.id)})
+        url = reverse('organizations-invite-user', kwargs={'pk': str(self.organization.id)})
         response = self.client.post(url, invalid_data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -150,7 +150,7 @@ class OrganizationInvitationViewsTestCase(TestCase):
         invalid_data = self.invitation_data.copy()
         invalid_data['role'] = 'invalid_role'
         
-        url = reverse('organization-invite-user', kwargs={'pk': str(self.organization.id)})
+        url = reverse('organizations-invite-user', kwargs={'pk': str(self.organization.id)})
         response = self.client.post(url, invalid_data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -160,7 +160,7 @@ class OrganizationInvitationViewsTestCase(TestCase):
         self._authenticate_user(self.admin)
         
         fake_org_id = str(uuid.uuid4())
-        url = reverse('organization-invite-user', kwargs={'pk': fake_org_id})
+        url = reverse('organizations-invite-user', kwargs={'pk': fake_org_id})
         response = self.client.post(url, self.invitation_data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -175,7 +175,7 @@ class OrganizationInvitationViewsTestCase(TestCase):
         
         self._authenticate_user(self.publisher)
         
-        url = reverse('organization-invite-user', kwargs={'pk': str(self.organization.id)})
+        url = reverse('organizations-invite-user', kwargs={'pk': str(self.organization.id)})
         response = self.client.post(url, self.invitation_data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -209,7 +209,7 @@ class OrganizationInvitationViewsTestCase(TestCase):
         
         self._authenticate_user(self.publisher)
         
-        url = reverse('organization-invitations', kwargs={'pk': str(self.organization.id)})
+        url = reverse('organizations-invitations', kwargs={'pk': str(self.organization.id)})
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -226,7 +226,7 @@ class OrganizationInvitationViewsTestCase(TestCase):
         
         self._authenticate_user(self.publisher)
         
-        url = reverse('organization-invitations', kwargs={'pk': str(self.organization.id)})
+        url = reverse('organizations-invitations', kwargs={'pk': str(self.organization.id)})
         response = self.client.get(url, {'status': 'pending'})
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -238,7 +238,7 @@ class OrganizationInvitationViewsTestCase(TestCase):
         """Test invitation listing permission denied"""
         self._authenticate_user(self.viewer)
         
-        url = reverse('organization-invitations', kwargs={'pk': str(self.organization.id)})
+        url = reverse('organizations-invitations', kwargs={'pk': str(self.organization.id)})
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -254,18 +254,20 @@ class OrganizationInvitationViewsTestCase(TestCase):
         
         self._authenticate_user(self.publisher)
         
-        url = reverse('organization-cancel-invitation', kwargs={
-            'pk': str(self.organization.id),
-            'invitation_id': invitation_id
+        url = reverse('organizations-cancel-invitation', kwargs={
+            'pk': str(self.organization.id)
         })
-        response = self.client.delete(url)
+        response = self.client.post(url, {'invitation_id': invitation_id}, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data['success'])
         self.assertIn('cancelled successfully', response.data['message'])
         
         # Verify service was called with correct parameters
-        mock_cancel_invitation.assert_called_once_with(invitation_id, self.publisher)
+        mock_cancel_invitation.assert_called_once_with(
+            invitation_id=invitation_id,
+            cancelling_user=self.publisher
+        )
     
     @patch('core.user_management.services.invitation_service.UserInvitationService.cancel_invitation')
     def test_cancel_invitation_not_found(self, mock_cancel_invitation):
@@ -278,11 +280,10 @@ class OrganizationInvitationViewsTestCase(TestCase):
         
         self._authenticate_user(self.publisher)
         
-        url = reverse('organization-cancel-invitation', kwargs={
-            'pk': str(self.organization.id),
-            'invitation_id': invitation_id
+        url = reverse('organizations-cancel-invitation', kwargs={
+            'pk': str(self.organization.id)
         })
-        response = self.client.delete(url)
+        response = self.client.post(url, {'invitation_id': invitation_id}, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertFalse(response.data['success'])
@@ -298,11 +299,10 @@ class OrganizationInvitationViewsTestCase(TestCase):
         
         self._authenticate_user(self.viewer)
         
-        url = reverse('organization-cancel-invitation', kwargs={
-            'pk': str(self.organization.id),
-            'invitation_id': invitation_id
+        url = reverse('organizations-cancel-invitation', kwargs={
+            'pk': str(self.organization.id)
         })
-        response = self.client.delete(url)
+        response = self.client.post(url, {'invitation_id': invitation_id}, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
     
@@ -319,10 +319,10 @@ class OrganizationInvitationViewsTestCase(TestCase):
             }
         }
         
-        new_user = CustomUserFactory(email='newuser@example.com')
+        new_user = CustomUserWithoutOrgFactory(email='newuser@example.com')
         self._authenticate_user(new_user)
         
-        url = reverse('accept-invitation')
+        url = reverse('organizations-accept-invitation')
         response = self.client.post(url, {'token': invitation_token}, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -331,7 +331,10 @@ class OrganizationInvitationViewsTestCase(TestCase):
         self.assertIn('organization', response.data)
         
         # Verify service was called with correct parameters
-        mock_accept_invitation.assert_called_once_with(invitation_token, new_user)
+        mock_accept_invitation.assert_called_once_with(
+            invitation_token=invitation_token,
+            user=new_user
+        )
     
     @patch('core.user_management.services.invitation_service.UserInvitationService.accept_invitation')
     def test_accept_invitation_invalid_token(self, mock_accept_invitation):
@@ -341,10 +344,10 @@ class OrganizationInvitationViewsTestCase(TestCase):
             'message': 'Invalid invitation token'
         }
         
-        new_user = CustomUserFactory()
+        new_user = CustomUserWithoutOrgFactory()
         self._authenticate_user(new_user)
         
-        url = reverse('accept-invitation')
+        url = reverse('organizations-accept-invitation')
         response = self.client.post(url, {'token': 'invalid_token'}, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -353,10 +356,10 @@ class OrganizationInvitationViewsTestCase(TestCase):
     
     def test_accept_invitation_missing_token(self):
         """Test invitation acceptance with missing token"""
-        new_user = CustomUserFactory()
+        new_user = CustomUserWithoutOrgFactory()
         self._authenticate_user(new_user)
         
-        url = reverse('accept-invitation')
+        url = reverse('organizations-accept-invitation')
         response = self.client.post(url, {}, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -364,7 +367,7 @@ class OrganizationInvitationViewsTestCase(TestCase):
     
     def test_accept_invitation_unauthenticated(self):
         """Test invitation acceptance requires authentication"""
-        url = reverse('accept-invitation')
+        url = reverse('organizations-accept-invitation')
         response = self.client.post(url, {'token': 'test_token'}, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -377,10 +380,10 @@ class OrganizationInvitationViewsTestCase(TestCase):
             'message': 'Invitation has expired'
         }
         
-        new_user = CustomUserFactory()
+        new_user = CustomUserWithoutOrgFactory()
         self._authenticate_user(new_user)
         
-        url = reverse('accept-invitation')
+        url = reverse('organizations-accept-invitation')
         response = self.client.post(url, {'token': 'expired_token'}, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -398,7 +401,7 @@ class OrganizationInvitationViewsTestCase(TestCase):
         with patch('core.user_management.services.invitation_service.UserInvitationService.send_invitation') as mock_send:
             mock_send.return_value = {'success': True, 'message': 'Sent'}
             
-            url = reverse('organization-invite-user', kwargs={'pk': str(self.organization.id)})
+            url = reverse('organizations-invite-user', kwargs={'pk': str(self.organization.id)})
             response = self.client.post(url, data_without_message, format='json')
             
             self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -422,7 +425,7 @@ class OrganizationInvitationViewsTestCase(TestCase):
                 with patch('core.user_management.services.invitation_service.UserInvitationService.send_invitation') as mock_send:
                     mock_send.return_value = {'success': True, 'message': 'Sent'}
                     
-                    url = reverse('organization-invite-user', kwargs={'pk': str(self.organization.id)})
+                    url = reverse('organizations-invite-user', kwargs={'pk': str(self.organization.id)})
                     response = self.client.post(url, data, format='json')
                     
                     self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -433,21 +436,14 @@ class OrganizationInvitationViewsTestCase(TestCase):
         self._authenticate_user(self.publisher)  # Publisher of different org
         
         endpoints = [
-            ('organization-invite-user', 'post', self.invitation_data),
-            ('organization-invitations', 'get', None),
-            ('organization-cancel-invitation', 'delete', None, str(uuid.uuid4())),
+            ('organizations-invite-user', 'post', self.invitation_data),
+            ('organizations-invitations', 'get', None),
+            ('organizations-cancel-invitation', 'post', {'invitation_id': str(uuid.uuid4())}),
         ]
         
         for endpoint_data in endpoints:
             with self.subTest(endpoint=endpoint_data[0]):
-                if len(endpoint_data) == 4:
-                    url = reverse(endpoint_data[0], kwargs={
-                        'pk': str(other_organization.id),
-                        'invitation_id': endpoint_data[3]
-                    })
-                else:
-                    url = reverse(endpoint_data[0], kwargs={'pk': str(other_organization.id)})
-                
+                url = reverse(endpoint_data[0], kwargs={'pk': str(other_organization.id)})
                 method = getattr(self.client, endpoint_data[1])
                 
                 if endpoint_data[2]:
@@ -474,7 +470,7 @@ class OrganizationInvitationViewsTestCase(TestCase):
                 })
             mock_list.return_value = mock_invitations
             
-            url = reverse('organization-invitations', kwargs={'pk': str(self.organization.id)})
+            url = reverse('organizations-invitations', kwargs={'pk': str(self.organization.id)})
             response = self.client.get(url, {'limit': 10, 'offset': 20})
             
             self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -488,7 +484,7 @@ class OrganizationInvitationViewsTestCase(TestCase):
         
         for invalid_id in invalid_ids:
             with self.subTest(invalid_id=invalid_id):
-                url = reverse('organization-invite-user', kwargs={'pk': invalid_id})
+                url = reverse('organizations-invite-user', kwargs={'pk': invalid_id})
                 response = self.client.post(url, self.invitation_data, format='json')
                 
                 # Should return 404 for invalid UUID format
@@ -520,7 +516,7 @@ class OrganizationInvitationViewsIntegrationTestCase(TestCase):
             mock_email_service.send_user_invitation_email.return_value = {'success': True}
             mock_email.return_value = mock_email_service
             
-            url = reverse('organization-invite-user', kwargs={'pk': str(self.organization.id)})
+            url = reverse('organizations-invite-user', kwargs={'pk': str(self.organization.id)})
             response = self.client.post(url, invitation_data, format='json')
             
             self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -531,10 +527,10 @@ class OrganizationInvitationViewsIntegrationTestCase(TestCase):
         self.assertEqual(invitation.invited_role, 'viewer')
         
         # Step 3: Accept invitation
-        new_user = CustomUserFactory(email='newuser@example.com')
+        new_user = CustomUserWithoutOrgFactory(email='newuser@example.com')
         self._authenticate_user(new_user)
         
-        accept_url = reverse('accept-invitation')
+        accept_url = reverse('organizations-accept-invitation')
         accept_response = self.client.post(
             accept_url, 
             {'token': invitation.token}, 

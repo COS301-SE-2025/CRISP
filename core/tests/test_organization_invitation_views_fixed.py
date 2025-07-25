@@ -13,7 +13,7 @@ from django.utils import timezone
 from datetime import timedelta
 from core.user_management.models.invitation_models import UserInvitation
 from core.user_management.models.user_models import CustomUser, Organization
-from core.tests.factories import CustomUserFactory, OrganizationFactory
+from core.tests.factories import CustomUserFactory, OrganizationFactory, CustomUserWithoutOrgFactory
 import uuid
 
 
@@ -158,7 +158,7 @@ class OrganizationInvitationViewsTestCase(APITestCase):
             }
         }
         
-        new_user = CustomUserFactory(email='newuser@example.com')
+        new_user = CustomUserWithoutOrgFactory(email='newuser@example.com')
         self._authenticate_user(new_user)
         
         result = mock_accept_invitation.return_value
@@ -268,7 +268,7 @@ class OrganizationInvitationViewsIntegrationTestCase(APITestCase):
         self.assertEqual(invitation.invited_role, 'viewer')
         
         # Step 3: Accept invitation (simulated)
-        new_user = CustomUserFactory(email='newuser@example.com')
+        new_user = CustomUserWithoutOrgFactory(email='newuser@example.com')
         self._authenticate_user(new_user)
         
         accept_result = {

@@ -10,7 +10,7 @@ from datetime import timedelta
 from core.user_management.services.invitation_service import UserInvitationService, PasswordResetService
 from core.user_management.models.invitation_models import UserInvitation, PasswordResetToken
 from core.user_management.models.user_models import CustomUser, Organization
-from core.tests.factories import CustomUserFactory, OrganizationFactory
+from core.tests.factories import CustomUserFactory, OrganizationFactory, CustomUserWithoutOrgFactory
 import secrets
 
 
@@ -112,8 +112,8 @@ class UserInvitationServiceTestCase(TestCase):
     
     def test_accept_invitation_success(self):
         """Test successful invitation acceptance"""
-        # Create user with matching email
-        accepter = CustomUserFactory(email=self.invitee_email)
+        # Create user with matching email but no organization
+        accepter = CustomUserWithoutOrgFactory(email=self.invitee_email)
         
         # Create invitation
         invitation = UserInvitation.objects.create(
@@ -152,7 +152,7 @@ class UserInvitationServiceTestCase(TestCase):
     
     def test_accept_invitation_expired(self):
         """Test invitation acceptance when expired"""
-        accepter = CustomUserFactory(email=self.invitee_email)
+        accepter = CustomUserWithoutOrgFactory(email=self.invitee_email)
         
         # Create expired invitation
         invitation = UserInvitation.objects.create(

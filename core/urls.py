@@ -8,7 +8,7 @@ from .user_management.views.user_views import UserViewSet
 router = DefaultRouter()
 router.register(r'auth', AuthenticationViewSet, basename='auth')
 router.register(r'admin', AdminViewSet, basename='admin')
-router.register(r'organizations', OrganizationViewSet, basename='organization')
+router.register(r'organizations', OrganizationViewSet, basename='organizations')
 router.register(r'users', UserViewSet, basename='user')
 
 # Main URL configuration for the core application

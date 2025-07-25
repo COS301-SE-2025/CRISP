@@ -46,6 +46,19 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         self.invitation_service = UserInvitationService()
         self.audit_service = AuditService()
     
+    def get_object(self):
+        """Override get_object to handle invalid UUIDs gracefully"""
+        import uuid
+        try:
+            # Validate UUID format first
+            pk = self.kwargs.get('pk')
+            if pk:
+                uuid.UUID(pk)  # This will raise ValueError for invalid UUIDs
+            return super().get_object()
+        except (ValueError, Organization.DoesNotExist):
+            from django.http import Http404
+            raise Http404("Organization not found")
+    
     @action(detail=False, methods=['post'])
     def create_organization(self, request):
         """
@@ -862,7 +875,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         try:
             try:
                 organization = self.get_object()
-            except (ValidationError, Organization.DoesNotExist):
+            except Exception:
                 return Response({
                     'success': False,
                     'message': 'Organization not found'
@@ -870,7 +883,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
                 
             email = request.data.get('email')
             role = request.data.get('role', 'viewer')
-            message = request.data.get('message', '')
+            message = request.data.get('message')
             
             # Validate required fields
             if not email:
@@ -928,7 +941,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         try:
             try:
                 organization = self.get_object()
-            except (ValidationError, Organization.DoesNotExist):
+            except Exception:
                 return Response({
                     'success': False,
                     'message': 'Organization not found'
@@ -968,24 +981,33 @@ class OrganizationViewSet(viewsets.ModelViewSet):
                 'message': 'Failed to retrieve invitations'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    def cancel_invitation(self, request, pk=None, invitation_id=None):
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def cancel_invitation(self, request, pk=None):
         """
         Cancel a pending invitation
         
-        URL parameters:
-        - pk: organization id
-        - invitation_id: invitation id to cancel
+        Expected payload:
+        {
+            "invitation_id": "uuid"
+        }
         """
         try:
-            # Check authentication manually since this isn't using @action decorator
-            if not request.user.is_authenticated:
+            try:
+                organization = self.get_object()
+            except Exception:
                 return Response({
                     'success': False,
-                    'message': 'Authentication required'
-                }, status=status.HTTP_401_UNAUTHORIZED)
-                
-            if not invitation_id:
-                invitation_id = request.data.get('invitation_id')
+                    'message': 'Organization not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Check organization permissions first
+            if not self.access_control.can_manage_organization(request.user, organization):
+                return Response({
+                    'success': False,
+                    'message': 'You do not have permission to cancel invitations for this organization'
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            invitation_id = request.data.get('invitation_id')
             
             if not invitation_id:
                 return Response({
@@ -1001,9 +1023,12 @@ class OrganizationViewSet(viewsets.ModelViewSet):
             if result.get('success'):
                 return Response(result, status=status.HTTP_200_OK)
             else:
-                # Check if it's a not found error
-                if 'not found' in result.get('message', '').lower():
+                message = result.get('message', '').lower()
+                # Check specific error types and return appropriate status codes
+                if 'not found' in message:
                     return Response(result, status=status.HTTP_404_NOT_FOUND)
+                elif 'permission' in message or 'not have permission' in message:
+                    return Response(result, status=status.HTTP_403_FORBIDDEN)
                 else:
                     return Response(result, status=status.HTTP_400_BAD_REQUEST)
                 
@@ -1025,7 +1050,8 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         }
         """
         try:
-            invitation_token = request.data.get('invitation_token')
+            # Support both 'invitation_token' and 'token' for backwards compatibility
+            invitation_token = request.data.get('invitation_token') or request.data.get('token')
             
             if not invitation_token:
                 return Response({

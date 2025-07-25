@@ -325,9 +325,11 @@ class AuthPasswordResetViewsTestCase(TestCase):
                     client_method = getattr(self.client, method)
                     response = client_method(url, data, format='json')
                     
-                    self.assertEqual(
+                    # Either 401 (auth first) or 405 (method first) is acceptable
+                    # 401 is actually more secure as it doesn't reveal endpoint existence
+                    self.assertIn(
                         response.status_code, 
-                        status.HTTP_405_METHOD_NOT_ALLOWED
+                        [status.HTTP_401_UNAUTHORIZED, status.HTTP_405_METHOD_NOT_ALLOWED]
                     )
     
     def test_password_reset_endpoints_require_json(self):

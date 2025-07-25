@@ -10,10 +10,9 @@ from .views import (
 # Create router for API endpoints
 router = DefaultRouter()
 
-# Register viewsets with router
+# Register viewsets with router - but NOT organizations (handled in core/urls.py)
 router.register(r'auth', AuthenticationViewSet, basename='auth')
 router.register(r'users', UserViewSet, basename='users')
-router.register(r'organizations', OrganizationViewSet, basename='organizations')
 router.register(r'admin', AdminViewSet, basename='admin')
 
 # URL patterns
@@ -43,26 +42,11 @@ urlpatterns = [
     path('api/v1/users/<uuid:pk>/deactivate/', UserViewSet.as_view({'post': 'deactivate_user'}), name='users-deactivate'),
     path('api/v1/users/<uuid:pk>/reactivate/', UserViewSet.as_view({'post': 'reactivate_user'}), name='users-reactivate'),
     
-    # Organization management endpoints
-    path('api/v1/organizations/create/', OrganizationViewSet.as_view({'post': 'create_organization'}), name='organizations-create'),
-    path('api/v1/organizations/create_organization/', OrganizationViewSet.as_view({'post': 'create_organization'}), name='organizations-create-alt'),
-    path('api/v1/organizations/list/', OrganizationViewSet.as_view({'get': 'list_organizations'}), name='organizations-list'),
-    path('api/v1/organizations/statistics/', OrganizationViewSet.as_view({'get': 'statistics'}), name='organizations-statistics'),
-    path('api/v1/organizations/types/', OrganizationViewSet.as_view({'get': 'organization_types'}), name='organizations-types'),
-    path('api/v1/organizations/trust-metrics/', OrganizationViewSet.as_view({'get': 'trust_metrics'}), name='organizations-trust-metrics'),
-    path('api/v1/organizations/<uuid:pk>/', OrganizationViewSet.as_view({'get': 'get_organization', 'put': 'update_organization', 'patch': 'update_organization'}), name='organizations-detail'),
-    path('api/v1/organizations/<uuid:pk>/deactivate/', OrganizationViewSet.as_view({'post': 'deactivate_organization'}), name='organizations-deactivate'),
-    path('api/v1/organizations/<uuid:pk>/reactivate/', OrganizationViewSet.as_view({'post': 'reactivate_organization'}), name='organizations-reactivate'),
-    path('api/v1/organizations/<uuid:pk>/trust-relationship/', OrganizationViewSet.as_view({'post': 'create_trust_relationship'}), name='organizations-trust-relationship'),
-    path('api/v1/organizations/trust-relationships/', OrganizationViewSet.as_view({'get': 'list_trust_relationships'}), name='organizations-trust-relationships'),
-    path('api/v1/organizations/trust-relationships/<uuid:pk>/', OrganizationViewSet.as_view({'put': 'update_trust_relationship', 'delete': 'delete_trust_relationship'}), name='organizations-trust-relationship-detail'),
-    path('api/v1/organizations/trust-groups/', OrganizationViewSet.as_view({'get': 'list_trust_groups', 'post': 'create_trust_group'}), name='organizations-trust-groups'),
+    # Organization management endpoints - now handled by router in core/urls.py
+    # These explicit patterns are removed to avoid conflicts with router-generated URLs
     
-    # Organization invitation endpoints
-    path('api/v1/organizations/<uuid:pk>/invite/', OrganizationViewSet.as_view({'post': 'invite_user'}), name='organization-invite-user'),
-    path('api/v1/organizations/<uuid:pk>/invitations/', OrganizationViewSet.as_view({'get': 'invitations'}), name='organization-invitations'),
-    path('api/v1/organizations/<uuid:pk>/invitations/<uuid:invitation_id>/cancel/', OrganizationViewSet.as_view({'post': 'cancel_invitation', 'delete': 'cancel_invitation'}), name='organization-cancel-invitation'),
-    path('api/v1/accept-invitation/', OrganizationViewSet.as_view({'post': 'accept_invitation'}), name='accept-invitation'),
+    # Organization invitation endpoints are now handled by the router in core/urls.py
+    # These explicit patterns are removed to avoid conflicts
     
     # Admin endpoints
     path('api/v1/admin/dashboard/', AdminViewSet.as_view({'get': 'dashboard'}), name='admin-dashboard'),

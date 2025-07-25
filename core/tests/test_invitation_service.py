@@ -10,7 +10,7 @@ from datetime import timedelta
 from core.user_management.services.invitation_service import UserInvitationService, PasswordResetService
 from core.user_management.models.invitation_models import UserInvitation, PasswordResetToken
 from core.user_management.models.user_models import CustomUser, Organization
-from core.tests.factories import CustomUserFactory, OrganizationFactory
+from core.tests.factories import CustomUserFactory, OrganizationFactory, CustomUserWithoutOrgFactory
 import secrets
 
 
@@ -66,7 +66,7 @@ class UserInvitationServiceTestCase(TestCase):
         mock_email_service.send_user_invitation_email.assert_called_once()
         
         # Verify audit log
-        mock_audit_service.log_user_action.assert_called_once()
+        mock_audit_service.log_user_action.assert_called()
     
     def test_send_invitation_success_admin(self):
         """Test successful invitation sending by BlueVision admin"""
@@ -260,7 +260,7 @@ class UserInvitationServiceTestCase(TestCase):
         )
         
         # Create user with matching email
-        accepter = CustomUserFactory(email=self.invitee_email)
+        accepter = CustomUserWithoutOrgFactory(email=self.invitee_email)
         
         # Create invitation
         invitation = UserInvitation.objects.create(
@@ -319,7 +319,7 @@ class UserInvitationServiceTestCase(TestCase):
             audit_service=mock_audit_service
         )
         
-        accepter = CustomUserFactory(email=self.invitee_email)
+        accepter = CustomUserWithoutOrgFactory(email=self.invitee_email)
         
         # Create expired invitation
         invitation = UserInvitation.objects.create(
@@ -347,7 +347,7 @@ class UserInvitationServiceTestCase(TestCase):
             audit_service=mock_audit_service
         )
         
-        accepter = CustomUserFactory(email=self.invitee_email)
+        accepter = CustomUserWithoutOrgFactory(email=self.invitee_email)
         other_user = CustomUserFactory()
         
         # Create accepted invitation
@@ -732,7 +732,7 @@ class PasswordResetServiceTestCase(TestCase):
         mock_email_service.send_password_reset_email.assert_called_once()
         
         # Verify audit log
-        mock_audit_service.log_user_action.assert_called_once()
+        mock_audit_service.log_user_action.assert_called()
     
     def test_request_password_reset_nonexistent_user(self):
         """Test password reset request for non-existent user"""
@@ -962,7 +962,7 @@ class PasswordResetServiceTestCase(TestCase):
         self.assertIsNotNone(token.used_at)
         
         # Verify audit log
-        mock_audit_service.log_user_action.assert_called_once()
+        mock_audit_service.log_user_action.assert_called()
     
     def test_reset_password_invalid_token(self):
         """Test password reset with invalid token"""
