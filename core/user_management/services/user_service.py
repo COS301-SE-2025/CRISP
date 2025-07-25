@@ -1,5 +1,5 @@
 from typing import Dict, List, Optional, Any, Tuple
-from django.db import transaction
+from django.db import transaction, models
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.contrib.auth.password_validation import validate_password
 from django.utils import timezone
@@ -665,26 +665,61 @@ class UserService:
                     }
                 )
                 
-                # Clear admin log entries and delete user using raw SQL to avoid ORM cascade issues
-                from django.db import connection
-                with connection.cursor() as cursor:
-                    # Delete all admin log entries first
-                    cursor.execute("DELETE FROM django_admin_log")
-                    
-                    # Delete user sessions
-                    cursor.execute("DELETE FROM user_management_usersession WHERE user_id = %s", [user_id])
-                    
-                    # Delete authentication logs for this user
-                    cursor.execute("DELETE FROM user_management_authenticationlog WHERE user_id = %s", [user_id])
-                    
-                    # Delete the user profile if it exists
-                    cursor.execute("DELETE FROM user_management_userprofile WHERE user_id = %s", [user_id])
-                    
-                    # Delete trusted devices
-                    cursor.execute("DELETE FROM user_management_trusteddevice WHERE user_id = %s", [user_id])
-                    
-                    # Finally delete the user
-                    cursor.execute("DELETE FROM user_management_customuser WHERE id = %s", [user_id])
+                # Delete all related objects using Django ORM to properly handle foreign keys
+                from django.contrib.admin.models import LogEntry
+                from core.trust.models import TrustLog, TrustRelationship
+                from core.alerts.models import EmailLog
+                
+                # Delete Django admin log entries for this user
+                LogEntry.objects.filter(user_id=target_user.id).delete()
+                
+                # Delete trust-related records
+                TrustLog.objects.filter(user=target_user).delete()
+                TrustRelationship.objects.filter(
+                    models.Q(created_by=target_user) |
+                    models.Q(approved_by_source_user=target_user) |
+                    models.Q(approved_by_target_user=target_user) |
+                    models.Q(last_modified_by=target_user) |
+                    models.Q(revoked_by=target_user)
+                ).delete()
+                
+                # Delete email logs sent by this user
+                try:
+                    EmailLog.objects.filter(sent_by=target_user).delete()
+                except:
+                    pass  # EmailLog table might not exist
+                
+                # Delete user invitations
+                try:
+                    from core.user_management.models import UserInvitation
+                    UserInvitation.objects.filter(
+                        models.Q(inviter=target_user) | models.Q(accepted_by=target_user)
+                    ).delete()
+                except:
+                    pass  # UserInvitation might not exist
+                
+                # Delete password reset tokens
+                try:
+                    from core.user_management.models import PasswordResetToken
+                    PasswordResetToken.objects.filter(user=target_user).delete()
+                except:
+                    pass  # PasswordResetToken might not exist
+                
+                # Delete user sessions, auth logs, profile, and trusted devices (using correct relationship names)
+                target_user.sessions.all().delete()
+                target_user.authentication_logs.all().delete()
+                target_user.devices.all().delete()
+                
+                # Handle UserProfile (OneToOne relationship)
+                if hasattr(target_user, 'profile'):
+                    target_user.profile.delete()
+                
+                # Clear user groups and permissions
+                target_user.groups.clear()
+                target_user.user_permissions.clear()
+                
+                # Finally delete the user
+                target_user.delete()
                 
                 logger.warning(
                     f"User {username} permanently deleted by {deleting_user.username}. "
