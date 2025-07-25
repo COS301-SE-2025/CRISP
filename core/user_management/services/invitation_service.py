@@ -26,9 +26,9 @@ class UserInvitationService:
     Service for managing user invitations with email integration (SRS R1.2.2)
     """
     
-    def __init__(self):
-        self.email_service = GmailSMTPService()
-        self.audit_service = AuditService()
+    def __init__(self, email_service=None, audit_service=None):
+        self.email_service = email_service or GmailSMTPService()
+        self.audit_service = audit_service or AuditService()
     
     def send_invitation(self, inviter: CustomUser, organization: Organization, 
                        email: str, role: str = 'viewer', message: str = '') -> Dict[str, Any]:
@@ -155,10 +155,16 @@ class UserInvitationService:
                     'message': 'Invalid invitation token'
                 }
             
+            # Check if invitation is expired first
+            if invitation.is_expired:
+                return {
+                    'success': False,
+                    'message': 'This invitation has expired'
+                }
+            
             if not invitation.is_pending:
                 status_messages = {
                     'accepted': 'This invitation has already been accepted',
-                    'expired': 'This invitation has expired',
                     'cancelled': 'This invitation has been cancelled'
                 }
                 return {
@@ -395,9 +401,9 @@ class PasswordResetService:
     Service for managing password reset functionality (SRS R1.1.3)
     """
     
-    def __init__(self):
-        self.email_service = GmailSMTPService()
-        self.audit_service = AuditService()
+    def __init__(self, email_service=None, audit_service=None):
+        self.email_service = email_service or GmailSMTPService()
+        self.audit_service = audit_service or AuditService()
     
     def request_password_reset(self, email: str, ip_address: str = None, 
                               user_agent: str = None) -> Dict[str, Any]:
@@ -536,6 +542,19 @@ class PasswordResetService:
             Dictionary with reset result
         """
         try:
+            # Validate password
+            if not new_password:
+                return {
+                    'success': False,
+                    'message': 'Password is required'
+                }
+            
+            if len(new_password) < 8:
+                return {
+                    'success': False,
+                    'message': 'Password must be at least 8 characters long'
+                }
+            
             token_obj = PasswordResetToken.objects.filter(token=token).first()
             
             if not token_obj or not token_obj.is_valid:

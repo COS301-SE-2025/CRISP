@@ -58,6 +58,12 @@ urlpatterns = [
     path('api/v1/organizations/trust-relationships/<uuid:pk>/', OrganizationViewSet.as_view({'put': 'update_trust_relationship', 'delete': 'delete_trust_relationship'}), name='organizations-trust-relationship-detail'),
     path('api/v1/organizations/trust-groups/', OrganizationViewSet.as_view({'get': 'list_trust_groups', 'post': 'create_trust_group'}), name='organizations-trust-groups'),
     
+    # Organization invitation endpoints
+    path('api/v1/organizations/<uuid:pk>/invite/', OrganizationViewSet.as_view({'post': 'invite_user'}), name='organization-invite-user'),
+    path('api/v1/organizations/<uuid:pk>/invitations/', OrganizationViewSet.as_view({'get': 'invitations'}), name='organization-invitations'),
+    path('api/v1/organizations/<uuid:pk>/invitations/<uuid:invitation_id>/cancel/', OrganizationViewSet.as_view({'post': 'cancel_invitation', 'delete': 'cancel_invitation'}), name='organization-cancel-invitation'),
+    path('api/v1/accept-invitation/', OrganizationViewSet.as_view({'post': 'accept_invitation'}), name='accept-invitation'),
+    
     # Admin endpoints
     path('api/v1/admin/dashboard/', AdminViewSet.as_view({'get': 'dashboard'}), name='admin-dashboard'),
     path('api/v1/admin/system-health/', AdminViewSet.as_view({'get': 'system_health'}), name='admin-system-health'),

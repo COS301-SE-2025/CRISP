@@ -87,6 +87,10 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'crisp' / 'db.sqlite3',
+        'OPTIONS': {
+            'timeout': 30,  # 30 second timeout for database locks
+        },
+        'CONN_MAX_AGE': 0,  # Close connections immediately to prevent locking
     }
 }
 

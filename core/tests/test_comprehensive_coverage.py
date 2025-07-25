@@ -16,10 +16,13 @@ from core.user_management.models import (
     CustomUser, Organization, AuthenticationLog, UserSession, 
     UserProfile, TrustedDevice
 )
+from core.user_management.models.invitation_models import UserInvitation, PasswordResetToken
 from core.trust.models import (
     TrustLevel, TrustRelationship, TrustGroup, TrustGroupMembership, 
     TrustLog, SharingPolicy
 )
+from core.notifications.services.gmail_smtp_service import GmailSMTPService
+from core.user_management.services.invitation_service import UserInvitationService, PasswordResetService
 from core.tests.test_fixtures import BaseTestCase
 
 
@@ -660,3 +663,309 @@ class EdgeCaseCoverageTest(BaseTestCase):
             except (ValidationError, UnicodeError):
                 # Some special characters might not be allowed
                 pass
+
+
+class EmailNotificationCoverageTest(BaseTestCase):
+    """Test email notification system for maximum coverage"""
+    
+    def setUp(self):
+        super().setUp()
+        self.email_service = GmailSMTPService()
+        self.invitation_service = UserInvitationService()
+        self.password_service = PasswordResetService()
+    
+    @patch('core.notifications.services.gmail_smtp_service.smtplib.SMTP')
+    def test_email_service_coverage(self, mock_smtp):
+        """Test email service methods for coverage"""
+        mock_server = MagicMock()
+        mock_smtp.return_value = mock_server
+        
+        # Test all email methods
+        test_user = CustomUser.objects.create_user(
+            username='emailtest',
+            email='emailtest@example.com',
+            organization=self.source_org,
+            password='testpass123'
+        )
+        
+        # Test password reset email
+        result = self.email_service.send_password_reset_email(test_user, 'test_token')
+        self.assertIsInstance(result, dict)
+        
+        # Test user invitation email
+        result = self.email_service.send_user_invitation_email(
+            email='newuser@example.com',
+            organization=self.source_org,
+            inviter=test_user,
+            invitation_token='test_invitation_token'
+        )
+        self.assertIsInstance(result, dict)
+        
+        # Test account locked email
+        result = self.email_service.send_account_locked_email(test_user)
+        self.assertIsInstance(result, dict)
+        
+        # Test feed subscription confirmation
+        result = self.email_service.send_feed_subscription_confirmation(
+            test_user, 'Test Feed'
+        )
+        self.assertIsInstance(result, dict)
+    
+    def test_invitation_model_coverage(self):
+        """Test invitation model methods for coverage"""
+        inviter = CustomUser.objects.create_user(
+            username='inviter',
+            email='inviter@example.com',
+            organization=self.source_org,
+            password='testpass123',
+            role='publisher'
+        )
+        
+        # Test invitation model
+        invitation = UserInvitation.objects.create(
+            email='invitee@example.com',
+            organization=self.source_org,
+            inviter=inviter,
+            invited_role='viewer',
+            token='test_token_123'
+        )
+        
+        # Test model methods
+        self.assertIsInstance(str(invitation), str)
+        self.assertIsInstance(invitation.is_expired, bool)
+        self.assertIsInstance(invitation.is_pending, bool)
+        
+        # Test methods
+        accepter = CustomUser.objects.create_user(
+            username='accepter',
+            email='invitee@example.com',
+            password='testpass123'
+        )
+        
+        invitation.accept(accepter)
+        self.assertEqual(invitation.status, 'accepted')
+    
+    def test_password_reset_model_coverage(self):
+        """Test password reset model methods for coverage"""
+        test_user = CustomUser.objects.create_user(
+            username='resettest',
+            email='resettest@example.com',
+            organization=self.source_org,
+            password='testpass123'
+        )
+        
+        # Test password reset token model
+        token = PasswordResetToken.objects.create(
+            user=test_user,
+            token='test_reset_token_123',
+            ip_address='192.168.1.1',
+            user_agent='Test Browser'
+        )
+        
+        # Test model methods
+        self.assertIsInstance(str(token), str)
+        self.assertIsInstance(token.is_expired, bool)
+        self.assertIsInstance(token.is_used, bool)
+        self.assertIsInstance(token.is_valid, bool)
+        
+        # Test mark as used
+        token.mark_as_used()
+        self.assertIsNotNone(token.used_at)
+    
+    @patch('core.user_management.services.invitation_service.GmailSMTPService')
+    @patch('core.user_management.services.invitation_service.AuditService')
+    def test_invitation_service_coverage(self, mock_audit, mock_email):
+        """Test invitation service methods for coverage"""
+        mock_email_service = MagicMock()
+        mock_email_service.send_user_invitation_email.return_value = {'success': True}
+        mock_email.return_value = mock_email_service
+        
+        mock_audit_service = MagicMock()
+        mock_audit.return_value = mock_audit_service
+        
+        inviter = CustomUser.objects.create_user(
+            username='serviceinviter',
+            email='serviceinviter@example.com',
+            organization=self.source_org,
+            password='testpass123',
+            role='publisher'
+        )
+        
+        # Test service methods
+        result = self.invitation_service.send_invitation(
+            inviter=inviter,
+            organization=self.source_org,
+            email='serviceinvitee@example.com',
+            role='viewer',
+            message='Test invitation'
+        )
+        self.assertIsInstance(result, dict)
+        self.assertIn('success', result)
+        
+        # Test list invitations
+        invitations = self.invitation_service.list_invitations(self.source_org)
+        self.assertIsInstance(invitations, list)
+    
+    @patch('core.user_management.services.invitation_service.GmailSMTPService')
+    @patch('core.user_management.services.invitation_service.AuditService')
+    def test_password_reset_service_coverage(self, mock_audit, mock_email):
+        """Test password reset service methods for coverage"""
+        mock_email_service = MagicMock()
+        mock_email_service.send_password_reset_email.return_value = {'success': True}
+        mock_email.return_value = mock_email_service
+        
+        mock_audit_service = MagicMock()
+        mock_audit.return_value = mock_audit_service
+        
+        test_user = CustomUser.objects.create_user(
+            username='passwordtest',
+            email='passwordtest@example.com',
+            organization=self.source_org,
+            password='testpass123'
+        )
+        
+        # Test service methods
+        result = self.password_service.request_password_reset(
+            email=test_user.email,
+            ip_address='192.168.1.1',
+            user_agent='Test Browser'
+        )
+        self.assertIsInstance(result, dict)
+        self.assertIn('success', result)
+        
+        # Test token validation
+        if result['success']:
+            token = PasswordResetToken.objects.filter(user=test_user).first()
+            if token:
+                validation_result = self.password_service.validate_reset_token(token.token)
+                self.assertIsInstance(validation_result, dict)
+    
+    def test_email_template_coverage(self):
+        """Test email template generation for coverage"""
+        test_user = CustomUser.objects.create_user(
+            username='templatetest',
+            email='templatetest@example.com',
+            organization=self.source_org,
+            password='testpass123',
+            first_name='Template',
+            last_name='User'
+        )
+        
+        # Test all template methods exist and return strings
+        with patch.object(self.email_service, 'send_email', return_value={'success': True}) as mock_send:
+            # Password reset
+            self.email_service.send_password_reset_email(test_user, 'test_token')
+            self.assertTrue(mock_send.called)
+            
+            # User invitation
+            self.email_service.send_user_invitation_email(
+                email='test@example.com',
+                organization=self.source_org,
+                inviter=test_user,
+                invitation_token='test_token'
+            )
+            
+            # Account locked
+            self.email_service.send_account_locked_email(test_user)
+            
+            # Feed subscription
+            self.email_service.send_feed_subscription_confirmation(test_user, 'Test Feed')
+            
+            # Verify all calls contained proper content
+            for call in mock_send.call_args_list:
+                args, kwargs = call
+                self.assertIn('html_content', kwargs)
+                self.assertIn('text_content', kwargs)
+                self.assertIsInstance(kwargs['html_content'], str)
+                self.assertIsInstance(kwargs['text_content'], str)
+    
+    def test_email_service_error_handling(self):
+        """Test email service error handling for coverage"""
+        # Test with invalid parameters
+        result = self.email_service.send_email(
+            to_emails=[],
+            subject='Test',
+            html_content='<h1>Test</h1>'
+        )
+        self.assertFalse(result['success'])
+        
+        # Test with missing content
+        result = self.email_service.send_email(
+            to_emails=['test@example.com'],
+            subject='Test',
+            html_content='',
+            text_content=''
+        )
+        self.assertFalse(result['success'])
+    
+    def test_invitation_edge_cases(self):
+        """Test invitation system edge cases for coverage"""
+        inviter = CustomUser.objects.create_user(
+            username='edgeinviter',
+            email='edgeinviter@example.com',
+            organization=self.source_org,
+            password='testpass123',
+            role='publisher'
+        )
+        
+        # Test permission checking
+        viewer = CustomUser.objects.create_user(
+            username='viewer',
+            email='viewer@example.com',
+            organization=self.source_org,
+            password='testpass123',
+            role='viewer'
+        )
+        
+        # Viewer should not be able to invite
+        result = self.invitation_service.send_invitation(
+            inviter=viewer,
+            organization=self.source_org,
+            email='test@example.com',
+            role='viewer'
+        )
+        self.assertFalse(result['success'])
+        
+        # Test existing user detection
+        existing_user = CustomUser.objects.create_user(
+            username='existing',
+            email='existing@example.com',
+            organization=self.source_org,
+            password='testpass123'
+        )
+        
+        result = self.invitation_service.send_invitation(
+            inviter=inviter,
+            organization=self.source_org,
+            email=existing_user.email,
+            role='viewer'
+        )
+        self.assertFalse(result['success'])
+    
+    def test_password_reset_security_features(self):
+        """Test password reset security features for coverage"""
+        # Test with non-existent user
+        result = self.password_service.request_password_reset('nonexistent@example.com')
+        self.assertTrue(result['success'])  # Should return success for security
+        
+        # Test with inactive user
+        inactive_user = CustomUser.objects.create_user(
+            username='inactive',
+            email='inactive@example.com',
+            organization=self.source_org,
+            password='testpass123',
+            is_active=False
+        )
+        
+        result = self.password_service.request_password_reset(inactive_user.email)
+        self.assertTrue(result['success'])  # Should return success for security
+        
+        # Test token validation edge cases
+        result = self.password_service.validate_reset_token('invalid_token')
+        self.assertFalse(result['success'])
+        
+        result = self.password_service.validate_reset_token('')
+        self.assertFalse(result['success'])
+        
+        result = self.password_service.validate_reset_token(None)
+        self.assertFalse(result['success'])

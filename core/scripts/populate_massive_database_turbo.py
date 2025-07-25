@@ -548,7 +548,10 @@ class TurboMassiveDatabasePopulator:
         print(f"\n✅ Created {len(self.trust_groups)} trust groups")
 
     def create_user_session_batch(self, batch_size):
-        """Create a batch of user sessions"""
+        """Create a batch of user sessions with retry logic for database locks"""
+        import time
+        from django.db import OperationalError
+        
         created_sessions = []
         
         # Check if we have users available
@@ -557,31 +560,50 @@ class TurboMassiveDatabasePopulator:
             return 0
         
         for i in range(batch_size):
-            try:
-                user = random.choice(self.users)
-                session_start = fake.date_time_between(start_date='-30d', end_date='now', tzinfo=timezone.get_current_timezone())
-                session_duration = timedelta(minutes=random.randint(5, 480))
-                
-                with transaction.atomic():
-                    session = UserSession.objects.create(
-                        user=user,
-                        session_token=fake.sha256(),
-                        refresh_token=fake.sha256(),
-                        device_info={
-                            'user_agent': fake.user_agent(), 
-                            'browser': fake.random_element(['Chrome', 'Firefox', 'Safari', 'Edge', 'Opera']),
-                            'os': fake.random_element(['Windows', 'macOS', 'Linux', 'iOS', 'Android'])
-                        },
-                        ip_address=fake.ipv4(),
-                        is_active=random.choice([True, False]),
-                        expires_at=session_start + session_duration,
-                        is_trusted_device=random.choice([True, False])
-                    )
-                    created_sessions.append(session)
+            max_retries = 5
+            retry_count = 0
+            
+            while retry_count < max_retries:
+                try:
+                    user = random.choice(self.users)
+                    session_start = fake.date_time_between(start_date='-30d', end_date='now', tzinfo=timezone.get_current_timezone())
+                    session_duration = timedelta(minutes=random.randint(5, 480))
                     
-            except Exception as e:
-                print(f"Error creating user session: {e}")
-                continue
+                    with transaction.atomic():
+                        session = UserSession.objects.create(
+                            user=user,
+                            session_token=fake.sha256(),
+                            refresh_token=fake.sha256(),
+                            device_info={
+                                'user_agent': fake.user_agent(), 
+                                'browser': fake.random_element(['Chrome', 'Firefox', 'Safari', 'Edge', 'Opera']),
+                                'os': fake.random_element(['Windows', 'macOS', 'Linux', 'iOS', 'Android'])
+                            },
+                            ip_address=fake.ipv4(),
+                            is_active=random.choice([True, False]),
+                            expires_at=session_start + session_duration,
+                            is_trusted_device=random.choice([True, False])
+                        )
+                        created_sessions.append(session)
+                        break  # Success, exit retry loop
+                        
+                except OperationalError as e:
+                    if "database is locked" in str(e).lower():
+                        retry_count += 1
+                        if retry_count < max_retries:
+                            # Exponential backoff with jitter
+                            sleep_time = (2 ** retry_count) * 0.1 + random.uniform(0, 0.1)
+                            time.sleep(sleep_time)
+                            continue
+                        else:
+                            print(f"Error creating user session after {max_retries} retries: {e}")
+                            break
+                    else:
+                        print(f"Error creating user session: {e}")
+                        break
+                except Exception as e:
+                    print(f"Error creating user session: {e}")
+                    break
                 
         return len(created_sessions)
 
@@ -618,7 +640,10 @@ class TurboMassiveDatabasePopulator:
         print(f"\n✅ Created {total_created} user sessions")
 
     def create_audit_log_batch(self, batch_size):
-        """Create a batch of audit logs"""
+        """Create a batch of audit logs with improved error handling and database locking mitigation"""
+        import time
+        from django.db import OperationalError
+        
         actions = [
             'login_success', 'login_failed', 'logout', 'profile_update', 'password_change', 
             'trust_relationship_created', 'trust_relationship_modified', 'trust_relationship_deleted',
@@ -635,54 +660,83 @@ class TurboMassiveDatabasePopulator:
         created_logs = 0
         
         for i in range(batch_size):
-            try:
-                user = random.choice(self.users)
-                action = random.choice(actions)
-                timestamp = fake.date_time_between(start_date='-90d', end_date='now', tzinfo=timezone.get_current_timezone())
-                
-                # Create realistic additional data
-                additional_data = {}
-                if 'trust_relationship' in action:
-                    additional_data['target_organization'] = random.choice(self.organizations).name
-                elif 'user' in action:
-                    additional_data['target_user'] = random.choice(self.users).username
-                elif action in ['data_export', 'report_generated']:
-                    additional_data['file_size'] = random.randint(1024, 10485760)
-                    additional_data['format'] = random.choice(['CSV', 'PDF', 'JSON', 'XML'])
-                
-                success = random.choice([True, True, True, False])
-                failure_reason = None if success else random.choice([
-                    'Invalid credentials', 'Access denied', 'Network timeout', 
-                    'Invalid input', 'System error', 'Rate limit exceeded'
-                ])
-                
-                # Use audit service (which handles DB operations)
-                self.audit_service.log_user_event(
-                    user=user,
-                    action=action,
-                    ip_address=fake.ipv4(),
-                    user_agent=fake.user_agent(),
-                    success=success,
-                    failure_reason=failure_reason,
-                    additional_data=additional_data
-                )
-                created_logs += 1
-                
-            except Exception as e:
-                continue
+            max_retries = 5
+            retry_count = 0
+            
+            while retry_count < max_retries:
+                try:
+                    user = random.choice(self.users)
+                    action = random.choice(actions)
+                    timestamp = fake.date_time_between(start_date='-90d', end_date='now', tzinfo=timezone.get_current_timezone())
+                    
+                    # Create realistic additional data
+                    additional_data = {}
+                    if 'trust_relationship' in action:
+                        additional_data['target_organization'] = random.choice(self.organizations).name
+                    elif 'user' in action:
+                        additional_data['target_user'] = random.choice(self.users).username
+                    elif action in ['data_export', 'report_generated']:
+                        additional_data['file_size'] = random.randint(1024, 10485760)
+                        additional_data['format'] = random.choice(['CSV', 'PDF', 'JSON', 'XML'])
+                    
+                    success = random.choice([True, True, True, False])
+                    failure_reason = None if success else random.choice([
+                        'Invalid credentials', 'Access denied', 'Network timeout', 
+                        'Invalid input', 'System error', 'Rate limit exceeded'
+                    ])
+                    
+                    # Use audit service (which handles DB operations)
+                    result = self.audit_service.log_user_event(
+                        user=user,
+                        action=action,
+                        ip_address=fake.ipv4(),
+                        user_agent=fake.user_agent(),
+                        success=success,
+                        failure_reason=failure_reason,
+                        additional_data=additional_data
+                    )
+                    
+                    if result:
+                        created_logs += 1
+                        break  # Success, exit retry loop
+                    else:
+                        # log_user_event returned False, try again
+                        retry_count += 1
+                        if retry_count < max_retries:
+                            time.sleep(random.uniform(0.01, 0.1))  # Small random delay
+                        
+                except OperationalError as e:
+                    if "database is locked" in str(e).lower():
+                        retry_count += 1
+                        if retry_count < max_retries:
+                            # Exponential backoff with jitter
+                            sleep_time = (2 ** retry_count) * 0.1 + random.uniform(0, 0.1)
+                            time.sleep(sleep_time)
+                            continue
+                        else:
+                            print(f"Failed to log user event after {max_retries} retries: {e}")
+                            break
+                    else:
+                        print(f"Failed to log user event: {e}")
+                        break
+                except Exception as e:
+                    print(f"Failed to log user event: {e}")
+                    break
                 
         return created_logs
 
     def create_audit_logs(self):
-        """Create MASSIVE number of audit logs with parallel processing"""
+        """Create MASSIVE number of audit logs with optimized parallel processing"""
         print(f"📝 Creating {self.NUM_AUDIT_LOGS} audit logs with {self.MAX_WORKERS} workers...")
         
-        batch_size = self.NUM_AUDIT_LOGS // self.MAX_WORKERS
+        # Reduce workers for audit logs to minimize database locking
+        audit_workers = min(self.MAX_WORKERS, 4)  # Cap at 4 workers for audit logs
+        batch_size = self.NUM_AUDIT_LOGS // audit_workers
         
-        with ThreadPoolExecutor(max_workers=self.MAX_WORKERS) as executor:
+        with ThreadPoolExecutor(max_workers=audit_workers) as executor:
             with tqdm(total=self.NUM_AUDIT_LOGS, desc="Creating audit logs", unit="log", 
                       position=0, leave=True, file=sys.stdout, dynamic_ncols=True) as pbar:
-                futures = [executor.submit(self.create_audit_log_batch, batch_size) for _ in range(self.MAX_WORKERS)]
+                futures = [executor.submit(self.create_audit_log_batch, batch_size) for _ in range(audit_workers)]
                 
                 total_created = 0
                 for future in as_completed(futures):

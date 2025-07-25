@@ -424,13 +424,17 @@ def trust_relationship_saved(sender, instance, created, **kwargs):
 @receiver(post_save, sender=TrustGroupMembership)
 def trust_group_membership_saved(sender, instance, created, **kwargs):
     """Handle trust group membership events."""
-    if created:
-        trust_event_manager.notify_observers('group_joined', {
-            'membership': instance,
-            'organization': instance.organization,
-            'trust_group': instance.trust_group,
-            'user': 'system'  # Would be actual user in real implementation
-        })
+    if created and not kwargs.get('raw', False):
+        # Prevent duplicate notifications by checking if we already processed this
+        if not hasattr(instance, '_notification_sent'):
+            trust_event_manager.notify_observers('group_joined', {
+                'membership': instance,
+                'organization': instance.organization,
+                'trust_group': instance.trust_group,
+                'user': 'system'  # Would be actual user in real implementation
+            })
+            # Mark as processed to prevent duplicates
+            instance._notification_sent = True
 
 
 @receiver(pre_save, sender=TrustGroupMembership)

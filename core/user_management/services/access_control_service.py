@@ -11,6 +11,22 @@ import time
 class AccessControlService:
     """Service for managing access control and permissions"""
     
+    def can_manage_organization(self, user, organization):
+        """Check if user can manage organization invitations"""
+        if not user or not user.is_authenticated:
+            return False
+        
+        # BlueVision admins can manage any organization
+        if hasattr(user, 'role') and user.role == 'BlueVisionAdmin':
+            return True
+        
+        # Publishers can manage their own organization
+        if (hasattr(user, 'organization') and user.organization == organization 
+            and hasattr(user, 'role') and user.role in ['publisher', 'admin']):
+            return True
+        
+        return False
+    
     ROLE_PERMISSIONS = {
         'viewer': ['view_organization', 'view_user'],
         'publisher': ['view_organization', 'view_user', 'create_trust_relationship', 'view_trust_relationship'],

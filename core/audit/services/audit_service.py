@@ -3,8 +3,10 @@ from typing import Dict, List, Optional, Any
 from django.db.models import Q
 from django.core.exceptions import ValidationError
 from django.conf import settings
+from django.db import transaction
 import logging
 import json
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +53,7 @@ class AuditService:
                       failure_reason: str = None, additional_data: Dict = None, 
                       target_user=None, target_organization=None):
         """
-        Log user management events.
+        Log user management events with improved database transaction handling.
         
         Args:
             user: User performing the action
@@ -64,62 +66,87 @@ class AuditService:
             target_user: Target user for the action (if applicable)
             target_organization: Target organization for the action (if applicable)
         """
-        try:
-            # Skip logging in test environment to avoid integrity issues
-            if self._is_test_environment():
-                self.logger.debug("Skipping audit log in test environment")
-                return True
+        import time
+        from django.db import OperationalError, IntegrityError
+        
+        max_retries = 3
+        retry_count = 0
+        
+        while retry_count < max_retries:
+            try:
+                # Skip logging in test environment to avoid integrity issues
+                if self._is_test_environment():
+                    self.logger.debug("Skipping audit log in test environment")
+                    return True
+                    
+                from ...user_management.models import AuthenticationLog
                 
-            from ...user_management.models import AuthenticationLog
-            
-            # Skip logging if user doesn't exist in database
-            if user and hasattr(user, 'pk') and not user.pk:
-                self.logger.warning("Skipping log for user without primary key")
+                # Skip logging if user doesn't exist in database
+                if user and hasattr(user, 'pk') and not user.pk:
+                    self.logger.warning("Skipping log for user without primary key")
+                    return False
+                    
+                # Verify user exists in database
+                if user and hasattr(user, 'pk') and user.pk:
+                    try:
+                        # Check if user actually exists in database
+                        from ...user_management.models import CustomUser
+                        CustomUser.objects.get(pk=user.pk)
+                    except CustomUser.DoesNotExist:
+                        self.logger.warning(f"Skipping log for non-existent user: {user.pk}")
+                        return False
+                    
+                # Ensure additional_data is serializable
+                if additional_data:
+                    additional_data = self._sanitize_data(additional_data)
+                
+                # Add target user/org info to additional_data since model doesn't have these fields
+                enhanced_data = additional_data or {}
+                if target_user:
+                    enhanced_data['target_user_id'] = str(target_user.id) if hasattr(target_user, 'id') else str(target_user)
+                    enhanced_data['target_username'] = target_user.username if hasattr(target_user, 'username') else str(target_user)
+                if target_organization:
+                    enhanced_data['target_organization_id'] = str(target_organization.id) if hasattr(target_organization, 'id') else str(target_organization)
+                    enhanced_data['target_organization_name'] = target_organization.name if hasattr(target_organization, 'name') else str(target_organization)
+                
+                # Use atomic transaction with shorter timeout
+                with transaction.atomic():
+                    log_entry = AuthenticationLog.objects.create(
+                        user=user,
+                        action=action,
+                        ip_address=ip_address or '127.0.0.1',
+                        user_agent=user_agent or 'Unknown',
+                        success=success,
+                        failure_reason=failure_reason,
+                        additional_data=enhanced_data
+                    )
+                
+                self.logger.info(
+                    f"User event logged: {action} by {user.username if user else 'System'} "
+                    f"- Success: {success}"
+                )
+                
+                return log_entry
+                
+            except (OperationalError, IntegrityError) as e:
+                retry_count += 1
+                if "database is locked" in str(e).lower() or "locked" in str(e).lower():
+                    if retry_count < max_retries:
+                        # Exponential backoff with jitter
+                        sleep_time = (2 ** retry_count) * 0.05 + random.uniform(0, 0.05)
+                        time.sleep(sleep_time)
+                        continue
+                    else:
+                        self.logger.error(f"Failed to log user event after {max_retries} retries due to database lock: {str(e)}")
+                        return False
+                else:
+                    self.logger.error(f"Failed to log user event: {str(e)}")
+                    return False
+            except Exception as e:
+                self.logger.error(f"Failed to log user event: {str(e)}")
                 return False
                 
-            # Verify user exists in database
-            if user and hasattr(user, 'pk') and user.pk:
-                try:
-                    # Check if user actually exists in database
-                    from ...user_management.models import CustomUser
-                    CustomUser.objects.get(pk=user.pk)
-                except CustomUser.DoesNotExist:
-                    self.logger.warning(f"Skipping log for non-existent user: {user.pk}")
-                    return False
-                
-            # Ensure additional_data is serializable
-            if additional_data:
-                additional_data = self._sanitize_data(additional_data)
-            
-            # Add target user/org info to additional_data since model doesn't have these fields
-            enhanced_data = additional_data or {}
-            if target_user:
-                enhanced_data['target_user_id'] = str(target_user.id) if hasattr(target_user, 'id') else str(target_user)
-                enhanced_data['target_username'] = target_user.username if hasattr(target_user, 'username') else str(target_user)
-            if target_organization:
-                enhanced_data['target_organization_id'] = str(target_organization.id) if hasattr(target_organization, 'id') else str(target_organization)
-                enhanced_data['target_organization_name'] = target_organization.name if hasattr(target_organization, 'name') else str(target_organization)
-            
-            log_entry = AuthenticationLog.objects.create(
-                user=user,
-                action=action,
-                ip_address=ip_address or '127.0.0.1',
-                user_agent=user_agent or 'Unknown',
-                success=success,
-                failure_reason=failure_reason,
-                additional_data=enhanced_data
-            )
-            
-            self.logger.info(
-                f"User event logged: {action} by {user.username if user else 'System'} "
-                f"- Success: {success}"
-            )
-            
-            return log_entry
-            
-        except Exception as e:
-            self.logger.error(f"Failed to log user event: {str(e)}")
-            return False
+        return False
     
     def log_trust_event(self, user, action: str, source_organization=None,
                        target_organization=None, success: bool = True, 

@@ -85,6 +85,42 @@ class GmailSMTPService:
             pass
         
         try:
+            # Validate recipients
+            if not to_emails or not any(email.strip() for email in to_emails):
+                # Update email log on failure
+                if email_log:
+                    try:
+                        email_log.status = 'failed'
+                        email_log.error_message = 'No recipients provided'
+                        email_log.save()
+                    except:
+                        pass
+                        
+                logger.error("No recipients provided")
+                return {
+                    'success': False,
+                    'message': 'No recipients provided',
+                    'error_type': 'validation'
+                }
+            
+            # Validate content
+            if not html_content and not text_content:
+                # Update email log on failure
+                if email_log:
+                    try:
+                        email_log.status = 'failed'
+                        email_log.error_message = 'No content provided'
+                        email_log.save()
+                    except:
+                        pass
+                        
+                logger.error("No content provided")
+                return {
+                    'success': False,
+                    'message': 'No content provided',
+                    'error_type': 'validation'
+                }
+            
             # Create message
             msg = MIMEMultipart('alternative')
             msg['Subject'] = subject
@@ -647,7 +683,7 @@ This is an automated message from CRISP (Cyber Risk Information Sharing Platform
                 <p style="font-size: 18px; color: #2c3e50; margin-bottom: 20px;">Hello {user.get_full_name() or user.username},</p>
                 
                 <p style="color: #555; line-height: 1.6; margin-bottom: 25px;">
-                    You requested a password reset for your CRISP account at <strong>{getattr(user, 'organization', {}).get('name', 'your organization') if hasattr(user, 'organization') else 'your organization'}</strong>.
+                    You requested a password reset for your CRISP account at <strong>{user.organization.name if hasattr(user, 'organization') and user.organization else 'your organization'}</strong>.
                 </p>
                 
                 <div style="text-align: center; margin: 30px 0;">

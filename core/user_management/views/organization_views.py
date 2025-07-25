@@ -16,10 +16,19 @@ class IsAdminOrReadOnly(permissions.BasePermission):
     """
     Custom permission to only allow admins to edit organizations.
     Read is allowed for any authenticated user.
+    Special handling for invitation-related endpoints.
     """
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True
+            
+        # Allow invitation-related actions for authenticated users
+        # The service layer will handle the actual permission checks
+        if hasattr(view, 'action') and view.action in [
+            'invite_user', 'invitations', 'accept_invitation', 'cancel_invitation'
+        ]:
+            return request.user and request.user.is_authenticated
+            
         return request.user and request.user.is_staff
 
 class OrganizationViewSet(viewsets.ModelViewSet):
@@ -35,6 +44,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         self.org_service = OrganizationService()
         self.access_control = AccessControlService()
         self.invitation_service = UserInvitationService()
+        self.audit_service = AuditService()
     
     @action(detail=False, methods=['post'])
     def create_organization(self, request):
@@ -837,7 +847,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
                 'message': 'Failed to create trust group'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def invite_user(self, request, pk=None):
         """
         Invite a user to join the organization (SRS R1.2.2)
@@ -850,7 +860,14 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         }
         """
         try:
-            organization = self.get_object()
+            try:
+                organization = self.get_object()
+            except (ValidationError, Organization.DoesNotExist):
+                return Response({
+                    'success': False,
+                    'message': 'Organization not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+                
             email = request.data.get('email')
             role = request.data.get('role', 'viewer')
             message = request.data.get('message', '')
@@ -881,7 +898,17 @@ class OrganizationViewSet(viewsets.ModelViewSet):
             if result.get('success'):
                 return Response(result, status=status.HTTP_201_CREATED)
             else:
-                return Response(result, status=status.HTTP_400_BAD_REQUEST)
+                # Check if it's a permission error
+                if 'permission' in result.get('message', '').lower():
+                    return Response(result, status=status.HTTP_403_FORBIDDEN)
+                else:
+                    return Response(result, status=status.HTTP_400_BAD_REQUEST)
+                
+        except (ValidationError, PermissionDenied) as e:
+            return Response({
+                'success': False,
+                'message': str(e)
+            }, status=status.HTTP_403_FORBIDDEN)
                 
         except Exception as e:
             logger.error(f"Invite user error: {str(e)}")
@@ -890,7 +917,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
                 'message': 'Failed to send invitation'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def invitations(self, request, pk=None):
         """
         List invitations for the organization
@@ -899,7 +926,13 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         - status: Filter by invitation status (pending, accepted, expired, cancelled)
         """
         try:
-            organization = self.get_object()
+            try:
+                organization = self.get_object()
+            except (ValidationError, Organization.DoesNotExist):
+                return Response({
+                    'success': False,
+                    'message': 'Organization not found'
+                }, status=status.HTTP_404_NOT_FOUND)
             
             # Check permissions
             if not self.access_control.can_manage_organization(request.user, organization):
@@ -922,6 +955,12 @@ class OrganizationViewSet(viewsets.ModelViewSet):
                 }
             }, status=status.HTTP_200_OK)
             
+        except (ValidationError, PermissionDenied) as e:
+            return Response({
+                'success': False,
+                'message': str(e)
+            }, status=status.HTTP_403_FORBIDDEN)
+            
         except Exception as e:
             logger.error(f"List invitations error: {str(e)}")
             return Response({
@@ -929,18 +968,24 @@ class OrganizationViewSet(viewsets.ModelViewSet):
                 'message': 'Failed to retrieve invitations'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    @action(detail=False, methods=['post'])
-    def cancel_invitation(self, request):
+    def cancel_invitation(self, request, pk=None, invitation_id=None):
         """
         Cancel a pending invitation
         
-        Expected payload:
-        {
-            "invitation_id": "uuid"
-        }
+        URL parameters:
+        - pk: organization id
+        - invitation_id: invitation id to cancel
         """
         try:
-            invitation_id = request.data.get('invitation_id')
+            # Check authentication manually since this isn't using @action decorator
+            if not request.user.is_authenticated:
+                return Response({
+                    'success': False,
+                    'message': 'Authentication required'
+                }, status=status.HTTP_401_UNAUTHORIZED)
+                
+            if not invitation_id:
+                invitation_id = request.data.get('invitation_id')
             
             if not invitation_id:
                 return Response({
@@ -956,7 +1001,11 @@ class OrganizationViewSet(viewsets.ModelViewSet):
             if result.get('success'):
                 return Response(result, status=status.HTTP_200_OK)
             else:
-                return Response(result, status=status.HTTP_400_BAD_REQUEST)
+                # Check if it's a not found error
+                if 'not found' in result.get('message', '').lower():
+                    return Response(result, status=status.HTTP_404_NOT_FOUND)
+                else:
+                    return Response(result, status=status.HTTP_400_BAD_REQUEST)
                 
         except Exception as e:
             logger.error(f"Cancel invitation error: {str(e)}")
@@ -965,7 +1014,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
                 'message': 'Failed to cancel invitation'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def accept_invitation(self, request):
         """
         Accept a user invitation
