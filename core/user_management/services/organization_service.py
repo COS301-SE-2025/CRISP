@@ -190,11 +190,13 @@ class OrganizationService:
         except Organization.DoesNotExist:
             raise ValidationError("Organization not found")
         
-        # Check permissions
+        # Check permissions - allow admins and publishers to update organizations
         can_update = (
-            updating_user.role == 'BlueVisionAdmin' or
+            updating_user.role in ['BlueVisionAdmin', 'admin'] or
             (updating_user.role == 'publisher' and 
-             updating_user.organization.id == organization.id)
+             updating_user.organization.id == organization.id) or
+            # Allow admins from any organization to update organizations
+            (updating_user.role == 'admin')
         )
         
         if not can_update:
@@ -205,20 +207,32 @@ class OrganizationService:
             'description', 'contact_email', 'website', 'organization_type'
         }
         
-        # BlueVision admins can update additional fields
-        if updating_user.role == 'BlueVisionAdmin':
+        # BlueVision admins and regular admins can update additional fields
+        if updating_user.role in ['BlueVisionAdmin', 'admin']:
             updatable_fields.update({
                 'name', 'domain', 'is_publisher', 'is_verified', 'is_active'
             })
         
         # Apply updates
         updated_fields = []
+        logger.info(f"Update data received: {update_data}")
+        logger.info(f"Updatable fields for user {updating_user.role}: {updatable_fields}")
+        
         for field, value in update_data.items():
+            logger.info(f"Processing field '{field}' with value '{value}'")
             if field in updatable_fields and hasattr(organization, field):
                 old_value = getattr(organization, field)
+                logger.info(f"Field '{field}': old='{old_value}', new='{value}'")
                 if old_value != value:
                     setattr(organization, field, value)
                     updated_fields.append(field)
+                    logger.info(f"Updated field '{field}' from '{old_value}' to '{value}'")
+                else:
+                    logger.info(f"Field '{field}' unchanged")
+            elif field not in updatable_fields:
+                logger.warning(f"Field '{field}' not in updatable_fields: {updatable_fields}")
+            elif not hasattr(organization, field):
+                logger.warning(f"Organization does not have field '{field}'")
         
         if updated_fields:
             organization.save(update_fields=updated_fields + ['updated_at'])
