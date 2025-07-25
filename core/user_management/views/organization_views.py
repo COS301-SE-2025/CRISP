@@ -144,6 +144,10 @@ class OrganizationViewSet(viewsets.ModelViewSet):
                 'message': 'Failed to retrieve organization'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
+    def update(self, request, pk=None):
+        """Override default update method to use our custom organization update logic."""
+        return self.update_organization(request, pk)
+    
     @action(detail=True, methods=['put', 'patch'])
     def update_organization(self, request, pk=None):
         """
@@ -158,15 +162,20 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         }
         """
         try:
+            logger.info(f"Update organization view called for org {pk} by user {request.user.username} (role: {request.user.role})")
+            logger.info(f"Request data: {request.data}")
+            
             update_data = request.data.copy()
             update_data['updated_from_ip'] = self._get_client_ip(request)
             update_data['user_agent'] = request.META.get('HTTP_USER_AGENT', 'API')
             
+            logger.info(f"Calling org_service.update_organization with data: {update_data}")
             updated_org = self.org_service.update_organization(
                 updating_user=request.user,
                 organization_id=pk,
                 update_data=update_data
             )
+            logger.info(f"Organization update completed: {updated_org.id}")
             
             org_details = self.org_service.get_organization_details(
                 requesting_user=request.user,
