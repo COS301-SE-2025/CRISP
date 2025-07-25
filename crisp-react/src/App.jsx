@@ -1535,8 +1535,8 @@ function IoCManagement({ active }) {
         <div className="card-header">
           <h2 className="card-title"><i className="fas fa-search card-icon"></i> Indicators of Compromise</h2>
           <div className="card-actions">
-            <div className="items-per-page-selector">
-              <label htmlFor="itemsPerPage">Show:</label>
+            <div className="items-per-page-selector" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginRight: '1rem' }}>
+              <label htmlFor="itemsPerPage" style={{ fontSize: '0.75rem', color: '#666', whiteSpace: 'nowrap' }}>Show:</label>
               <select 
                 id="itemsPerPage"
                 value={itemsPerPage} 
@@ -1545,6 +1545,14 @@ function IoCManagement({ active }) {
                   setCurrentPage(1);
                 }}
                 className="form-control form-control-sm"
+                style={{
+                  height: '32px',
+                  fontSize: '0.875rem',
+                  padding: '0.25rem 0.5rem',
+                  minWidth: '100px',
+                  borderRadius: '4px',
+                  border: '1px solid #ccc'
+                }}
               >
                 <option value={10}>10 per page</option>
                 <option value={20}>20 per page</option>
@@ -1552,7 +1560,23 @@ function IoCManagement({ active }) {
                 <option value={100}>100 per page</option>
               </select>
             </div>
-            <button className="btn btn-outline btn-sm" onClick={handleRefresh} disabled={loading}>
+            <button 
+              className="btn btn-outline btn-sm" 
+              onClick={handleRefresh} 
+              disabled={loading}
+              style={{
+                height: '32px',
+                fontSize: '0.875rem',
+                padding: '0.25rem 0.75rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                borderRadius: '4px',
+                lineHeight: '1',
+                minHeight: '32px',
+                maxHeight: '32px'
+              }}
+            >
               <i className={`fas fa-sync-alt ${loading ? 'fa-spin' : ''}`}></i> 
               {loading ? 'Refreshing...' : 'Refresh'}
             </button>
@@ -1642,7 +1666,22 @@ function IoCManagement({ active }) {
       </div>
 
       {/* Enhanced Pagination */}
-      <div className="pagination-wrapper">
+      <div 
+        className="pagination-wrapper"
+        style={{
+          margin: '2rem auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1rem',
+          padding: '1.5rem',
+          background: '#f8f9fa',
+          borderRadius: '8px',
+          border: '1px solid #dee2e6',
+          maxWidth: 'fit-content',
+          width: 'auto',
+          textAlign: 'center'
+        }}
+      >
         <div className="pagination-info-detailed">
           <span className="pagination-summary">
             Showing <strong>{Math.min((currentPage - 1) * itemsPerPage + 1, filteredIndicators.length)}</strong> to <strong>{Math.min(currentPage * itemsPerPage, filteredIndicators.length)}</strong> of <strong>{filteredIndicators.length}</strong> 
@@ -1651,99 +1690,110 @@ function IoCManagement({ active }) {
         </div>
         
         {totalPages > 1 && (
-          <div className="pagination-controls-enhanced">
-            {/* First and Previous buttons */}
-            <div className="pagination-nav">
-              <button 
-                className="btn btn-outline btn-sm"
-                onClick={() => handlePageChange(1)}
-                disabled={currentPage === 1}
-                title="First page"
-              >
-                <i className="fas fa-angle-double-left"></i>
-              </button>
-              <button 
-                className="btn btn-outline btn-sm"
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                title="Previous page"
-              >
-                <i className="fas fa-angle-left"></i> Previous
-              </button>
-            </div>
+          <div 
+            className="pagination-controls-enhanced"
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '0.5rem',
+              flexWrap: 'nowrap',
+              overflowX: 'auto',
+              padding: '0.5rem',
+              margin: '0 auto',
+              width: 'fit-content'
+            }}
+          >
+            {/* First button */}
+            <button 
+              className="btn btn-outline btn-sm"
+              onClick={() => handlePageChange(1)}
+              disabled={currentPage === 1}
+              title="First page"
+            >
+              <i className="fas fa-angle-double-left"></i>
+            </button>
+            
+            {/* Previous button */}
+            <button 
+              className="btn btn-outline btn-sm"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              title="Previous page"
+            >
+              <i className="fas fa-angle-left"></i>
+            </button>
 
-            {/* Page numbers */}
-            <div className="pagination-pages">
-              {(() => {
-                const pages = [];
-                const startPage = Math.max(1, currentPage - 2);
-                const endPage = Math.min(totalPages, currentPage + 2);
-                
-                if (startPage > 1) {
-                  pages.push(
-                    <button 
-                      key={1}
-                      className="btn btn-outline btn-sm"
-                      onClick={() => handlePageChange(1)}
-                    >
-                      1
-                    </button>
-                  );
-                  if (startPage > 2) {
-                    pages.push(<span key="ellipsis1" className="pagination-ellipsis">...</span>);
-                  }
+            {/* Page numbers - all inline */}
+            {(() => {
+              const pages = [];
+              const startPage = Math.max(1, currentPage - 2);
+              const endPage = Math.min(totalPages, currentPage + 2);
+              
+              if (startPage > 1) {
+                pages.push(
+                  <button 
+                    key={1}
+                    className="btn btn-outline btn-sm"
+                    onClick={() => handlePageChange(1)}
+                  >
+                    1
+                  </button>
+                );
+                if (startPage > 2) {
+                  pages.push(<span key="ellipsis1" className="pagination-ellipsis">...</span>);
                 }
-                
-                for (let i = startPage; i <= endPage; i++) {
-                  pages.push(
-                    <button 
-                      key={i}
-                      className={`btn btn-sm ${i === currentPage ? 'btn-primary' : 'btn-outline'}`}
-                      onClick={() => handlePageChange(i)}
-                    >
-                      {i}
-                    </button>
-                  );
+              }
+              
+              for (let i = startPage; i <= endPage; i++) {
+                pages.push(
+                  <button 
+                    key={i}
+                    className={`btn btn-sm ${i === currentPage ? 'btn-primary' : 'btn-outline'}`}
+                    onClick={() => handlePageChange(i)}
+                  >
+                    {i}
+                  </button>
+                );
+              }
+              
+              if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                  pages.push(<span key="ellipsis2" className="pagination-ellipsis">...</span>);
                 }
-                
-                if (endPage < totalPages) {
-                  if (endPage < totalPages - 1) {
-                    pages.push(<span key="ellipsis2" className="pagination-ellipsis">...</span>);
-                  }
-                  pages.push(
-                    <button 
-                      key={totalPages}
-                      className="btn btn-outline btn-sm"
-                      onClick={() => handlePageChange(totalPages)}
-                    >
-                      {totalPages}
-                    </button>
-                  );
-                }
-                
-                return pages;
-              })()}
-            </div>
+                pages.push(
+                  <button 
+                    key={totalPages}
+                    className="btn btn-outline btn-sm"
+                    onClick={() => handlePageChange(totalPages)}
+                  >
+                    {totalPages}
+                  </button>
+                );
+              }
+              
+              return pages;
+            })()}
 
-            {/* Next and Last buttons */}
-            <div className="pagination-nav">
-              <button 
-                className="btn btn-outline btn-sm"
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                title="Next page"
-              >
-                Next <i className="fas fa-angle-right"></i>
-              </button>
-              <button 
-                className="btn btn-outline btn-sm"
-                onClick={() => handlePageChange(totalPages)}
-                disabled={currentPage === totalPages}
-                title="Last page"
-              >
-                <i className="fas fa-angle-double-right"></i>
-              </button>
-            </div>
+            {/* Next button */}
+            <button 
+              className="btn btn-outline btn-sm"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              title="Next page"
+            >
+              <i className="fas fa-angle-right"></i>
+            </button>
+            
+            {/* Last button */}
+            <button 
+              className="btn btn-outline btn-sm"
+              onClick={() => handlePageChange(totalPages)}
+              disabled={currentPage === totalPages}
+              title="Last page"
+            >
+              <i className="fas fa-angle-double-right"></i>
+            </button>
           </div>
         )}
       </div>
