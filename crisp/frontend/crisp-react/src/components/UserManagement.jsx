@@ -278,18 +278,18 @@ const UserManagement = ({ active = true, initialSection = null }) => {
 
   const handlePermanentDeleteUser = async (userId, username) => {
     if (window.confirm(`Are you sure you want to PERMANENTLY DELETE user "${username}"? This action cannot be undone.`)) {
-      const reason = prompt('Please provide a reason for deletion:');
-      if (reason !== null) {
-        try {
-          setOperationLoading(true);
-          await new Promise(resolve => setTimeout(resolve, 800));
-          await api.deleteUser(userId, reason);
-          loadUsers();
-        } catch (err) {
-          setError('Failed to delete user: ' + err.message);
-        } finally {
-          setOperationLoading(false);
-        }
+      try {
+        setOperationLoading(true);
+        await new Promise(resolve => setTimeout(resolve, 800));
+        await api.deleteUser(userId, 'Deleted by admin');
+        loadUsers();
+        // Ensure actions popup is closed after successful deletion
+        setShowActionsPopup(false);
+        setSelectedUserForActions(null);
+      } catch (err) {
+        setError('Failed to delete user: ' + err.message);
+      } finally {
+        setOperationLoading(false);
       }
     }
   };
