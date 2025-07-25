@@ -273,40 +273,126 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
             )
         return response
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 def indicators_list(request):
-    """Get all indicators across all feeds for dashboard summary."""
-    try:
-        # Get pagination parameters
-        page = int(request.GET.get('page', 1))
-        page_size = int(request.GET.get('page_size', 20))
-        
-        # Get all indicators
-        indicators = Indicator.objects.all().order_by('-created_at')
-        
-        # Calculate pagination
-        start = (page - 1) * page_size
-        end = start + page_size
-        total_count = indicators.count()
-        
-        indicators_page = indicators[start:end]
-        
-        # Format the response
-        results = []
-        for indicator in indicators_page:
-            # Get the feed name
-            feed_name = 'Unknown'
-            if hasattr(indicator, 'threat_feed') and indicator.threat_feed:
-                feed_name = indicator.threat_feed.name
-            elif hasattr(indicator, 'threat_feed_id') and indicator.threat_feed_id:
-                try:
-                    feed = ThreatFeed.objects.get(id=indicator.threat_feed_id)
-                    feed_name = feed.name
-                except ThreatFeed.DoesNotExist:
-                    pass
+    """Get all indicators across all feeds for dashboard summary or create new indicator."""
+    if request.method == 'GET':
+        try:
+            # Get pagination parameters
+            page = int(request.GET.get('page', 1))
+            page_size = int(request.GET.get('page_size', 20))
             
-            results.append({
+            # Get all indicators
+            indicators = Indicator.objects.all().order_by('-created_at')
+            
+            # Calculate pagination
+            start = (page - 1) * page_size
+            end = start + page_size
+            total_count = indicators.count()
+            
+            indicators_page = indicators[start:end]
+            
+            # Format the response
+            results = []
+            for indicator in indicators_page:
+                # Get the feed name
+                feed_name = 'Unknown'
+                if hasattr(indicator, 'threat_feed') and indicator.threat_feed:
+                    feed_name = indicator.threat_feed.name
+                elif hasattr(indicator, 'threat_feed_id') and indicator.threat_feed_id:
+                    try:
+                        feed = ThreatFeed.objects.get(id=indicator.threat_feed_id)
+                        feed_name = feed.name
+                    except ThreatFeed.DoesNotExist:
+                        pass
+                
+                results.append({
+                    'id': indicator.id,
+                    'type': indicator.type,
+                    'value': indicator.value,
+                    'stix_id': indicator.stix_id,
+                    'description': indicator.description,
+                    'confidence': indicator.confidence,
+                    'first_seen': indicator.first_seen,
+                    'last_seen': indicator.last_seen,
+                    'created_at': indicator.created_at,
+                    'is_anonymized': indicator.is_anonymized,
+                    'source': feed_name
+                })
+            
+            return Response({
+                'count': total_count,
+                'next': f'/api/indicators/?page={page + 1}&page_size={page_size}' if end < total_count else None,
+                'previous': f'/api/indicators/?page={page - 1}&page_size={page_size}' if page > 1 else None,
+                'results': results
+            })
+        except Exception as e:
+            logger.error(f"Error fetching indicators: {str(e)}")
+            return Response(
+                {"error": "Failed to fetch indicators", "details": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    elif request.method == 'POST':
+        try:
+            from core.repositories.indicator_repository import IndicatorRepository
+            from core.services.indicator_service import IndicatorService
+            from core.models.models import Organization
+            import uuid
+            
+            data = request.data
+            
+            # Validate required fields
+            required_fields = ['type', 'value']
+            for field in required_fields:
+                if field not in data:
+                    return Response(
+                        {"error": f"Missing required field: {field}"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
+            # Get or create default threat feed for manual entries
+            default_org, created = Organization.objects.get_or_create(
+                name="Manual Entry",
+                defaults={'description': 'Default organization for manually created indicators'}
+            )
+            
+            default_feed, created = ThreatFeed.objects.get_or_create(
+                name="Manual Entry Feed",
+                defaults={
+                    'description': 'Default feed for manually created indicators',
+                    'is_external': False,
+                    'is_active': True,
+                    'owner': default_org
+                }
+            )
+            
+            # Prepare indicator data with correct fields
+            from django.utils import timezone
+            now = timezone.now()
+            
+            indicator_data = {
+                'value': data['value'].strip(),
+                'type': data['type'],
+                'description': data.get('description', ''),
+                'confidence': int(data.get('confidence', 50)),
+                'stix_id': f'indicator--{uuid.uuid4()}',
+                'threat_feed': data.get('threat_feed_id') and ThreatFeed.objects.get(id=data['threat_feed_id']) or default_feed,
+                'first_seen': now,
+                'last_seen': now,
+            }
+            
+            # Create the indicator directly using the repository
+            from core.repositories.indicator_repository import IndicatorRepository
+            indicator = IndicatorRepository.create(indicator_data)
+            
+            # Format response
+            feed_name = 'Manual Entry'
+            if indicator.threat_feed:
+                feed_name = indicator.threat_feed.name
+            
+            result = {
                 'id': indicator.id,
                 'type': indicator.type,
                 'value': indicator.value,
@@ -318,17 +404,134 @@ def indicators_list(request):
                 'created_at': indicator.created_at,
                 'is_anonymized': indicator.is_anonymized,
                 'source': feed_name
-            })
+            }
+            
+            return Response(result, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            logger.error(f"Error creating indicator: {str(e)}")
+            return Response(
+                {"error": "Failed to create indicator", "details": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def indicators_bulk_import(request):
+    """Bulk import indicators from a list."""
+    try:
+        from core.services.indicator_service import IndicatorService
+        from core.models.models import Organization
+        import uuid
+        
+        data = request.data
+        
+        # Validate that indicators list is provided
+        if 'indicators' not in data or not isinstance(data['indicators'], list):
+            return Response(
+                {"error": "Missing or invalid 'indicators' field. Expected a list."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        indicators_data = data['indicators']
+        
+        if not indicators_data:
+            return Response(
+                {"error": "Empty indicators list provided"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get or create default threat feed for manual entries
+        default_org, created = Organization.objects.get_or_create(
+            name="Manual Entry",
+            defaults={'description': 'Default organization for manually created indicators'}
+        )
+        
+        default_feed, created = ThreatFeed.objects.get_or_create(
+            name="Manual Entry Feed",
+            defaults={
+                'description': 'Default feed for manually created indicators',
+                'is_external': False,
+                'is_active': True,
+                'owner': default_org
+            }
+        )
+        
+        from core.repositories.indicator_repository import IndicatorRepository
+        from django.utils import timezone
+        created_indicators = []
+        errors = []
+        
+        # Process each indicator
+        for idx, indicator_data in enumerate(indicators_data):
+            try:
+                # Validate required fields
+                required_fields = ['type', 'value']
+                for field in required_fields:
+                    if field not in indicator_data:
+                        errors.append(f"Indicator {idx + 1}: Missing required field '{field}'")
+                        continue
+                
+                # Check for duplicates (optional - can be modified based on business logic)
+                existing = Indicator.objects.filter(
+                    value=indicator_data['value'].strip(),
+                    type=indicator_data['type']
+                ).first()
+                
+                if existing:
+                    # Skip duplicate
+                    continue
+                
+                # Prepare indicator data with correct fields
+                now = timezone.now()
+                indicator_create_data = {
+                    'value': indicator_data['value'].strip(),
+                    'type': indicator_data['type'],
+                    'description': indicator_data.get('description', ''),
+                    'confidence': int(indicator_data.get('confidence', 50)),
+                    'stix_id': f'indicator--{uuid.uuid4()}',
+                    'threat_feed': indicator_data.get('threat_feed_id') and ThreatFeed.objects.get(id=indicator_data['threat_feed_id']) or default_feed,
+                    'first_seen': now,
+                    'last_seen': now,
+                }
+                
+                # Create the indicator
+                indicator = IndicatorRepository.create(indicator_create_data)
+                
+                # Format for response
+                feed_name = 'Manual Entry'
+                if indicator.threat_feed:
+                    feed_name = indicator.threat_feed.name
+                
+                created_indicators.append({
+                    'id': indicator.id,
+                    'type': indicator.type,
+                    'value': indicator.value,
+                    'stix_id': indicator.stix_id,
+                    'description': indicator.description,
+                    'confidence': indicator.confidence,
+                    'first_seen': indicator.first_seen,
+                    'last_seen': indicator.last_seen,
+                    'created_at': indicator.created_at,
+                    'is_anonymized': indicator.is_anonymized,
+                    'source': feed_name
+                })
+                
+            except Exception as e:
+                errors.append(f"Indicator {idx + 1}: {str(e)}")
+                continue
         
         return Response({
-            'count': total_count,
-            'next': f'/api/indicators/?page={page + 1}&page_size={page_size}' if end < total_count else None,
-            'previous': f'/api/indicators/?page={page - 1}&page_size={page_size}' if page > 1 else None,
-            'results': results
-        })
+            'success': True,
+            'created_count': len(created_indicators),
+            'error_count': len(errors),
+            'created_indicators': created_indicators,
+            'errors': errors
+        }, status=status.HTTP_201_CREATED)
+        
     except Exception as e:
-        logger.error(f"Error fetching indicators: {str(e)}")
+        logger.error(f"Error in bulk import: {str(e)}")
         return Response(
-            {"error": "Failed to fetch indicators", "details": str(e)},
+            {"error": "Failed to bulk import indicators", "details": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

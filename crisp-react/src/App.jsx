@@ -2404,24 +2404,48 @@ function IoCManagement({ active }) {
 
     setImporting(true);
     try {
-      // Filter out duplicates
-      const existingValues = new Set(indicators.map(ind => ind.value.toLowerCase()));
-      const newIndicators = importPreview.filter(ind => !existingValues.has(ind.value.toLowerCase()));
-      
-      // Add new indicators to the list
-      const processedIndicators = newIndicators.map(indicator => ({
-        ...indicator,
-        id: Date.now() + Math.random(), // Temporary ID
-        created: new Date().toISOString().split('T')[0]
+      // Prepare indicators for bulk import
+      const indicatorsToImport = importPreview.map(indicator => ({
+        type: indicator.rawType || indicator.type.toLowerCase().replace(' ', '_'),
+        value: indicator.value.trim(),
+        description: indicator.description || '',
+        confidence: parseInt(indicator.confidence) || 50
       }));
-
-      setIndicators(prev => [...processedIndicators, ...prev]);
       
-      // Close modal
-      closeImportModal();
+      // Call bulk import API
+      const response = await api.post('/api/indicators/bulk-import/', {
+        indicators: indicatorsToImport
+      });
       
-      console.log(`Successfully imported ${processedIndicators.length} new IoCs (${importPreview.length - processedIndicators.length} duplicates skipped)`);
-      alert(`Import successful! Added ${processedIndicators.length} new indicators${importPreview.length - processedIndicators.length > 0 ? ` (${importPreview.length - processedIndicators.length} duplicates skipped)` : ''}.`);
+      if (response && response.success) {
+        // Add successfully created indicators to local state
+        const formattedIndicators = response.created_indicators.map(indicator => ({
+          ...indicator,
+          rawType: indicator.type,
+          type: indicator.type === 'ip' ? 'IP Address' : 
+                indicator.type === 'domain' ? 'Domain' :
+                indicator.type === 'url' ? 'URL' :
+                indicator.type === 'file_hash' ? 'File Hash' :
+                indicator.type === 'email' ? 'Email' : indicator.type,
+          severity: 'Medium', // Default severity for imported items
+          status: 'Active',
+          created: indicator.created_at ? indicator.created_at.split('T')[0] : new Date().toISOString().split('T')[0]
+        }));
+        
+        setIndicators(prev => [...formattedIndicators, ...prev]);
+        
+        // Close modal
+        closeImportModal();
+        
+        // Show results
+        const message = `Import completed! Added ${response.created_count} new indicators.`;
+        const errorMessage = response.error_count > 0 ? ` ${response.error_count} errors occurred.` : '';
+        console.log(`${message}${errorMessage}`, response.errors);
+        alert(`${message}${errorMessage}`);
+        
+      } else {
+        throw new Error('Bulk import failed');
+      }
       
     } catch (error) {
       console.error('Import failed:', error);
@@ -2631,30 +2655,42 @@ function IoCManagement({ active }) {
     setFormErrors({});
     
     try {
-      // For now, we'll simulate API call and add to local state
-      // TODO: Replace with actual API call when backend endpoint is ready
-      const newIndicator = {
-        id: Date.now(), // Temporary ID
-        type: newIoC.type === 'ip' ? 'IP Address' : 
-              newIoC.type === 'domain' ? 'Domain' :
-              newIoC.type === 'url' ? 'URL' :
-              newIoC.type === 'file_hash' ? 'File Hash' :
-              newIoC.type === 'email' ? 'Email' : newIoC.type,
+      // Create indicator via API
+      const indicatorData = {
+        type: newIoC.type,
         value: newIoC.value.trim(),
-        severity: newIoC.severity,
-        source: newIoC.source || 'Manual Entry',
-        created: new Date().toISOString().split('T')[0],
-        status: 'Active'
+        description: newIoC.description || '',
+        confidence: parseInt(newIoC.confidence) || 50
       };
       
-      // Add to indicators list
-      setIndicators(prev => [newIndicator, ...prev]);
+      const response = await api.post('/api/indicators/', indicatorData);
       
-      // Close modal
-      closeAddModal();
-      
-      // Show success message (you can implement a toast notification here)
-      console.log('IoC added successfully:', newIndicator);
+      if (response) {
+        // Add the new indicator to the local state
+        const formattedIndicator = {
+          ...response,
+          rawType: response.type,
+          type: response.type === 'ip' ? 'IP Address' : 
+                response.type === 'domain' ? 'Domain' :
+                response.type === 'url' ? 'URL' :
+                response.type === 'file_hash' ? 'File Hash' :
+                response.type === 'email' ? 'Email' : response.type,
+          severity: newIoC.severity || 'Medium',
+          status: 'Active',
+          created: response.created_at ? response.created_at.split('T')[0] : new Date().toISOString().split('T')[0]
+        };
+        
+        setIndicators(prev => [formattedIndicator, ...prev]);
+        
+        // Close modal and reset form
+        closeAddModal();
+        
+        // Show success message
+        console.log('IoC added successfully:', response);
+        alert('IoC added successfully!');
+      } else {
+        throw new Error('Failed to create indicator');
+      }
       
     } catch (error) {
       console.error('Error adding IoC:', error);

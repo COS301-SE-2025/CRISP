@@ -5,7 +5,7 @@ from django.shortcuts import redirect
 from rest_framework import routers
 from core.api.threat_feed_views import ThreatFeedViewSet
 from core.viewing.home import home
-from core.api.threat_feed_views import indicators_list
+from core.api.threat_feed_views import indicators_list, indicators_bulk_import
 
 # Set up REST API router
 router = routers.DefaultRouter()
@@ -20,6 +20,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
     path('api/indicators/', indicators_list, name='indicators-list'),
+    path('api/indicators/bulk-import/', indicators_bulk_import, name='indicators-bulk-import'),
     path('api/status/', include('core.urls')),
     path('taxii2/', include('core.taxii.urls')),
 ]
