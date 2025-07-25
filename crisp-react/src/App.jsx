@@ -1182,8 +1182,10 @@ function IoCManagement({ active }) {
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   
   // Fetch indicators from backend
   useEffect(() => {
@@ -1192,10 +1194,10 @@ function IoCManagement({ active }) {
     }
   }, [active]);
 
-  // Apply filters when indicators or filters change
+  // Apply filters when indicators, filters, or pagination settings change
   useEffect(() => {
     applyFilters();
-  }, [indicators, filters, currentPage]);
+  }, [indicators, filters, currentPage, itemsPerPage]);
 
   const fetchIndicators = async () => {
     setLoading(true);
@@ -1204,37 +1206,62 @@ function IoCManagement({ active }) {
       const feedData = await api.get('/api/threat-feeds/');
       if (feedData && feedData.results) {
         let allIndicators = [];
+        let totalIndicatorCount = 0;
         
         for (const feed of feedData.results) {
           const feedStatus = await api.get(`/api/threat-feeds/${feed.id}/status/`);
           if (feedStatus && feedStatus.indicator_count > 0) {
-            // Get real indicators from this feed
-            const indicatorsData = await api.get(`/api/threat-feeds/${feed.id}/indicators/?page_size=50`);
-            if (indicatorsData && indicatorsData.results) {
-              const realIndicators = indicatorsData.results.map(indicator => ({
-                id: indicator.id,
-                type: indicator.type === 'ip' ? 'IP Address' : 
-                      indicator.type === 'domain' ? 'Domain' :
-                      indicator.type === 'url' ? 'URL' :
-                      indicator.type === 'file_hash' ? 'File Hash' :
-                      indicator.type === 'email' ? 'Email' : indicator.type,
-                rawType: indicator.type,
-                value: indicator.value,
-                severity: indicator.confidence >= 75 ? 'High' : 
-                         indicator.confidence >= 50 ? 'Medium' : 'Low',
-                confidence: indicator.confidence,
-                source: indicator.source || 'Unknown',
-                description: indicator.description || '',
-                created: new Date(indicator.created_at).toISOString().split('T')[0],
-                createdDate: new Date(indicator.created_at),
-                status: indicator.is_anonymized ? 'Anonymized' : 'Active'
-              }));
-              allIndicators.push(...realIndicators);
+            totalIndicatorCount += feedStatus.indicator_count;
+            
+            // Fetch ALL indicators from this feed, not just 50
+            let page = 1;
+            let hasMore = true;
+            
+            while (hasMore) {
+              const indicatorsData = await api.get(`/api/threat-feeds/${feed.id}/indicators/?page=${page}&page_size=100`);
+              if (indicatorsData && indicatorsData.results && indicatorsData.results.length > 0) {
+                const realIndicators = indicatorsData.results.map(indicator => ({
+                  id: indicator.id,
+                  type: indicator.type === 'ip' ? 'IP Address' : 
+                        indicator.type === 'domain' ? 'Domain' :
+                        indicator.type === 'url' ? 'URL' :
+                        indicator.type === 'file_hash' ? 'File Hash' :
+                        indicator.type === 'email' ? 'Email' : 
+                        indicator.type === 'user_agent' ? 'User Agent' :
+                        indicator.type === 'registry' ? 'Registry Key' :
+                        indicator.type === 'mutex' ? 'Mutex' :
+                        indicator.type === 'process' ? 'Process' : indicator.type,
+                  rawType: indicator.type,
+                  value: indicator.value,
+                  severity: indicator.confidence >= 75 ? 'High' : 
+                           indicator.confidence >= 50 ? 'Medium' : 'Low',
+                  confidence: indicator.confidence,
+                  source: indicator.source || feed.name || 'Unknown',
+                  description: indicator.description || '',
+                  created: new Date(indicator.created_at).toISOString().split('T')[0],
+                  createdDate: new Date(indicator.created_at),
+                  status: indicator.is_anonymized ? 'Anonymized' : 'Active',
+                  feedId: feed.id,
+                  feedName: feed.name
+                }));
+                allIndicators.push(...realIndicators);
+                
+                // Check if there are more pages
+                hasMore = indicatorsData.next !== null;
+                page++;
+              } else {
+                hasMore = false;
+              }
             }
           }
         }
         
+        // Sort indicators by creation date (newest first)
+        allIndicators.sort((a, b) => b.createdDate - a.createdDate);
+        
         setIndicators(allIndicators);
+        setTotalItems(allIndicators.length);
+        console.log(`Loaded ${allIndicators.length} indicators from ${feedData.results.length} feeds`);
       }
     } catch (error) {
       console.error('Error fetching indicators:', error);
@@ -1378,18 +1405,28 @@ function IoCManagement({ active }) {
 
       <div className="filters-section">
         <div className="filters-header">
-          <h3><i className="fas fa-filter"></i> Filter IoCs</h3>
+          <h3><i className="fas fa-filter"></i> Filter & Search IoCs</h3>
           <div className="filter-actions">
-            <button 
-              className="btn btn-outline btn-sm" 
-              onClick={resetFilters}
-              disabled={Object.values(filters).every(value => value === '')}
-            >
-              <i className="fas fa-times"></i> Reset Filters
-            </button>
-            <span className="results-count">
-              {filteredIndicators.length} of {indicators.length} indicators
-            </span>
+            {Object.values(filters).some(value => value !== '') && (
+              <button 
+                className="btn btn-secondary btn-sm" 
+                onClick={resetFilters}
+                title="Clear all active filters"
+              >
+                <i className="fas fa-times"></i> Clear Filters
+              </button>
+            )}
+            <div className="results-summary">
+              {Object.values(filters).some(value => value !== '') ? (
+                <span className="filtered-count">
+                  <strong>{filteredIndicators.length}</strong> of <strong>{indicators.length}</strong> indicators match
+                </span>
+              ) : (
+                <span className="total-count">
+                  <strong>{indicators.length}</strong> total indicators
+                </span>
+              )}
+            </div>
           </div>
         </div>
         
@@ -1498,6 +1535,23 @@ function IoCManagement({ active }) {
         <div className="card-header">
           <h2 className="card-title"><i className="fas fa-search card-icon"></i> Indicators of Compromise</h2>
           <div className="card-actions">
+            <div className="items-per-page-selector">
+              <label htmlFor="itemsPerPage">Show:</label>
+              <select 
+                id="itemsPerPage"
+                value={itemsPerPage} 
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="form-control form-control-sm"
+              >
+                <option value={10}>10 per page</option>
+                <option value={20}>20 per page</option>
+                <option value={50}>50 per page</option>
+                <option value={100}>100 per page</option>
+              </select>
+            </div>
             <button className="btn btn-outline btn-sm" onClick={handleRefresh} disabled={loading}>
               <i className={`fas fa-sync-alt ${loading ? 'fa-spin' : ''}`}></i> 
               {loading ? 'Refreshing...' : 'Refresh'}
@@ -1505,7 +1559,8 @@ function IoCManagement({ active }) {
           </div>
         </div>
         <div className="card-content">
-          <table className="data-table">
+          <div className="table-responsive">
+            <table className="data-table">
             <thead>
               <tr>
                 <th><input type="checkbox" /></th>
@@ -1581,84 +1636,117 @@ function IoCManagement({ active }) {
                 </tr>
               )}
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
       </div>
 
-      {totalPages > 1 && (
-        <div className="pagination">
-          <div className="pagination-info">
-            Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredIndicators.length)} to {Math.min(currentPage * itemsPerPage, filteredIndicators.length)} of {filteredIndicators.length} indicators
-          </div>
-          <div className="pagination-controls">
-            <button 
-              className="page-item"
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              <i className="fas fa-chevron-left"></i>
-            </button>
-            
-            {(() => {
-              const pages = [];
-              const startPage = Math.max(1, currentPage - 2);
-              const endPage = Math.min(totalPages, currentPage + 2);
-              
-              if (startPage > 1) {
-                pages.push(
-                  <button 
-                    key={1}
-                    className="page-item"
-                    onClick={() => handlePageChange(1)}
-                  >
-                    1
-                  </button>
-                );
-                if (startPage > 2) {
-                  pages.push(<span key="ellipsis1" className="page-ellipsis">...</span>);
-                }
-              }
-              
-              for (let i = startPage; i <= endPage; i++) {
-                pages.push(
-                  <button 
-                    key={i}
-                    className={`page-item ${i === currentPage ? 'active' : ''}`}
-                    onClick={() => handlePageChange(i)}
-                  >
-                    {i}
-                  </button>
-                );
-              }
-              
-              if (endPage < totalPages) {
-                if (endPage < totalPages - 1) {
-                  pages.push(<span key="ellipsis2" className="page-ellipsis">...</span>);
-                }
-                pages.push(
-                  <button 
-                    key={totalPages}
-                    className="page-item"
-                    onClick={() => handlePageChange(totalPages)}
-                  >
-                    {totalPages}
-                  </button>
-                );
-              }
-              
-              return pages;
-            })()}
-            
-            <button 
-              className="page-item"
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-            >
-              <i className="fas fa-chevron-right"></i>
-            </button>
-          </div>
+      {/* Enhanced Pagination */}
+      <div className="pagination-wrapper">
+        <div className="pagination-info-detailed">
+          <span className="pagination-summary">
+            Showing <strong>{Math.min((currentPage - 1) * itemsPerPage + 1, filteredIndicators.length)}</strong> to <strong>{Math.min(currentPage * itemsPerPage, filteredIndicators.length)}</strong> of <strong>{filteredIndicators.length}</strong> 
+            {Object.values(filters).some(value => value !== '') ? ' filtered' : ''} indicators
+          </span>
         </div>
-      )}
+        
+        {totalPages > 1 && (
+          <div className="pagination-controls-enhanced">
+            {/* First and Previous buttons */}
+            <div className="pagination-nav">
+              <button 
+                className="btn btn-outline btn-sm"
+                onClick={() => handlePageChange(1)}
+                disabled={currentPage === 1}
+                title="First page"
+              >
+                <i className="fas fa-angle-double-left"></i>
+              </button>
+              <button 
+                className="btn btn-outline btn-sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                title="Previous page"
+              >
+                <i className="fas fa-angle-left"></i> Previous
+              </button>
+            </div>
+
+            {/* Page numbers */}
+            <div className="pagination-pages">
+              {(() => {
+                const pages = [];
+                const startPage = Math.max(1, currentPage - 2);
+                const endPage = Math.min(totalPages, currentPage + 2);
+                
+                if (startPage > 1) {
+                  pages.push(
+                    <button 
+                      key={1}
+                      className="btn btn-outline btn-sm"
+                      onClick={() => handlePageChange(1)}
+                    >
+                      1
+                    </button>
+                  );
+                  if (startPage > 2) {
+                    pages.push(<span key="ellipsis1" className="pagination-ellipsis">...</span>);
+                  }
+                }
+                
+                for (let i = startPage; i <= endPage; i++) {
+                  pages.push(
+                    <button 
+                      key={i}
+                      className={`btn btn-sm ${i === currentPage ? 'btn-primary' : 'btn-outline'}`}
+                      onClick={() => handlePageChange(i)}
+                    >
+                      {i}
+                    </button>
+                  );
+                }
+                
+                if (endPage < totalPages) {
+                  if (endPage < totalPages - 1) {
+                    pages.push(<span key="ellipsis2" className="pagination-ellipsis">...</span>);
+                  }
+                  pages.push(
+                    <button 
+                      key={totalPages}
+                      className="btn btn-outline btn-sm"
+                      onClick={() => handlePageChange(totalPages)}
+                    >
+                      {totalPages}
+                    </button>
+                  );
+                }
+                
+                return pages;
+              })()}
+            </div>
+
+            {/* Next and Last buttons */}
+            <div className="pagination-nav">
+              <button 
+                className="btn btn-outline btn-sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                title="Next page"
+              >
+                Next <i className="fas fa-angle-right"></i>
+              </button>
+              <button 
+                className="btn btn-outline btn-sm"
+                onClick={() => handlePageChange(totalPages)}
+                disabled={currentPage === totalPages}
+                title="Last page"
+              >
+                <i className="fas fa-angle-double-right"></i>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="card mt-4">
         <div className="card-header">
