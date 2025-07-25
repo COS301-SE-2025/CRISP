@@ -1147,6 +1147,7 @@ function ThreatFeeds({ active }) {
 // IoC Management Component
 function IoCManagement({ active }) {
   const [indicators, setIndicators] = useState([]);
+  const [filteredIndicators, setFilteredIndicators] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newIoC, setNewIoC] = useState({
@@ -1169,6 +1170,21 @@ function IoCManagement({ active }) {
   const [importPreview, setImportPreview] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
   
+  // Filter state management
+  const [filters, setFilters] = useState({
+    type: '',
+    severity: '',
+    status: '',
+    source: '',
+    dateRange: '',
+    searchTerm: ''
+  });
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  
   // Fetch indicators from backend
   useEffect(() => {
     if (active) {
@@ -1176,42 +1192,174 @@ function IoCManagement({ active }) {
     }
   }, [active]);
 
-  
+  // Apply filters when indicators or filters change
+  useEffect(() => {
+    applyFilters();
+  }, [indicators, filters, currentPage]);
+
   const fetchIndicators = async () => {
     setLoading(true);
-    // Get real indicator data from feeds
-    const feedData = await api.get('/api/threat-feeds/');
-    if (feedData && feedData.results) {
-      let allIndicators = [];
-      
-      for (const feed of feedData.results) {
-        const feedStatus = await api.get(`/api/threat-feeds/${feed.id}/status/`);
-        if (feedStatus && feedStatus.indicator_count > 0) {
-          // Get real indicators from this feed
-          const indicatorsData = await api.get(`/api/threat-feeds/${feed.id}/indicators/?page_size=20`);
-          if (indicatorsData && indicatorsData.results) {
-            const realIndicators = indicatorsData.results.map(indicator => ({
-              id: indicator.id,
-              type: indicator.type === 'ip' ? 'IP Address' : 
-                    indicator.type === 'domain' ? 'Domain' :
-                    indicator.type === 'url' ? 'URL' :
-                    indicator.type === 'file_hash' ? 'File Hash' :
-                    indicator.type === 'email' ? 'Email' : indicator.type,
-              value: indicator.value,
-              severity: indicator.confidence >= 75 ? 'High' : 
-                       indicator.confidence >= 50 ? 'Medium' : 'Low',
-              source: indicator.source || 'Unknown',
-              created: new Date(indicator.created_at).toISOString().split('T')[0],
-              status: indicator.is_anonymized ? 'Anonymized' : 'Active'
-            }));
-            allIndicators.push(...realIndicators);
+    try {
+      // Get real indicator data from feeds
+      const feedData = await api.get('/api/threat-feeds/');
+      if (feedData && feedData.results) {
+        let allIndicators = [];
+        
+        for (const feed of feedData.results) {
+          const feedStatus = await api.get(`/api/threat-feeds/${feed.id}/status/`);
+          if (feedStatus && feedStatus.indicator_count > 0) {
+            // Get real indicators from this feed
+            const indicatorsData = await api.get(`/api/threat-feeds/${feed.id}/indicators/?page_size=50`);
+            if (indicatorsData && indicatorsData.results) {
+              const realIndicators = indicatorsData.results.map(indicator => ({
+                id: indicator.id,
+                type: indicator.type === 'ip' ? 'IP Address' : 
+                      indicator.type === 'domain' ? 'Domain' :
+                      indicator.type === 'url' ? 'URL' :
+                      indicator.type === 'file_hash' ? 'File Hash' :
+                      indicator.type === 'email' ? 'Email' : indicator.type,
+                rawType: indicator.type,
+                value: indicator.value,
+                severity: indicator.confidence >= 75 ? 'High' : 
+                         indicator.confidence >= 50 ? 'Medium' : 'Low',
+                confidence: indicator.confidence,
+                source: indicator.source || 'Unknown',
+                description: indicator.description || '',
+                created: new Date(indicator.created_at).toISOString().split('T')[0],
+                createdDate: new Date(indicator.created_at),
+                status: indicator.is_anonymized ? 'Anonymized' : 'Active'
+              }));
+              allIndicators.push(...realIndicators);
+            }
           }
         }
+        
+        setIndicators(allIndicators);
       }
-      
-      setIndicators(allIndicators);
+    } catch (error) {
+      console.error('Error fetching indicators:', error);
     }
     setLoading(false);
+  };
+
+  // Filter application logic
+  const applyFilters = () => {
+    let filtered = [...indicators];
+
+    // Filter by type
+    if (filters.type) {
+      filtered = filtered.filter(indicator => 
+        indicator.rawType === filters.type
+      );
+    }
+
+    // Filter by severity
+    if (filters.severity) {
+      filtered = filtered.filter(indicator => 
+        indicator.severity.toLowerCase() === filters.severity.toLowerCase()
+      );
+    }
+
+    // Filter by status
+    if (filters.status) {
+      filtered = filtered.filter(indicator => 
+        indicator.status.toLowerCase() === filters.status.toLowerCase()
+      );
+    }
+
+    // Filter by source
+    if (filters.source) {
+      filtered = filtered.filter(indicator => 
+        indicator.source.toLowerCase().includes(filters.source.toLowerCase())
+      );
+    }
+
+    // Filter by search term (searches in value and description)
+    if (filters.searchTerm) {
+      const searchTerm = filters.searchTerm.toLowerCase();
+      filtered = filtered.filter(indicator => 
+        indicator.value.toLowerCase().includes(searchTerm) ||
+        indicator.description.toLowerCase().includes(searchTerm)
+      );
+    }
+
+    // Filter by date range
+    if (filters.dateRange) {
+      const now = new Date();
+      let cutoffDate;
+      
+      switch (filters.dateRange) {
+        case 'today':
+          cutoffDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          break;
+        case 'week':
+          cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case 'quarter':
+          cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          cutoffDate = null;
+      }
+      
+      if (cutoffDate) {
+        filtered = filtered.filter(indicator => 
+          indicator.createdDate >= cutoffDate
+        );
+      }
+    }
+
+    setFilteredIndicators(filtered);
+    setTotalPages(Math.ceil(filtered.length / itemsPerPage));
+    
+    // Reset to first page if current page is beyond available pages
+    if (currentPage > Math.ceil(filtered.length / itemsPerPage)) {
+      setCurrentPage(1);
+    }
+  };
+
+  // Handle filter changes
+  const handleFilterChange = (filterType, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterType]: value
+    }));
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
+  // Reset all filters
+  const resetFilters = () => {
+    setFilters({
+      type: '',
+      severity: '',
+      status: '',
+      source: '',
+      dateRange: '',
+      searchTerm: ''
+    });
+    setCurrentPage(1);
+  };
+
+  // Get paginated indicators
+  const getPaginatedIndicators = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredIndicators.slice(startIndex, endIndex);
+  };
+
+  // Handle page changes
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  // Handle refresh
+  const handleRefresh = () => {
+    fetchIndicators();
   };
   
   return (
@@ -1229,24 +1377,66 @@ function IoCManagement({ active }) {
       </div>
 
       <div className="filters-section">
+        <div className="filters-header">
+          <h3><i className="fas fa-filter"></i> Filter IoCs</h3>
+          <div className="filter-actions">
+            <button 
+              className="btn btn-outline btn-sm" 
+              onClick={resetFilters}
+              disabled={Object.values(filters).every(value => value === '')}
+            >
+              <i className="fas fa-times"></i> Reset Filters
+            </button>
+            <span className="results-count">
+              {filteredIndicators.length} of {indicators.length} indicators
+            </span>
+          </div>
+        </div>
+        
         <div className="filters-grid">
+          <div className="filter-group">
+            <label className="filter-label">Search</label>
+            <div className="filter-control">
+              <input
+                type="text"
+                placeholder="Search by value or description..."
+                value={filters.searchTerm}
+                onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
+                className="form-control"
+              />
+            </div>
+          </div>
+          
           <div className="filter-group">
             <label className="filter-label">IoC Type</label>
             <div className="filter-control">
-              <select>
+              <select 
+                value={filters.type}
+                onChange={(e) => handleFilterChange('type', e.target.value)}
+                className="form-control"
+              >
                 <option value="">All Types</option>
                 <option value="ip">IP Address</option>
                 <option value="domain">Domain</option>
                 <option value="url">URL</option>
-                <option value="hash">File Hash</option>
+                <option value="file_hash">File Hash</option>
                 <option value="email">Email</option>
+                <option value="user_agent">User Agent</option>
+                <option value="registry">Registry Key</option>
+                <option value="mutex">Mutex</option>
+                <option value="process">Process</option>
               </select>
             </div>
           </div>
+          
           <div className="filter-group">
             <label className="filter-label">Severity</label>
             <div className="filter-control">
-              <select>
+              <select 
+                value={filters.severity}
+                onChange={(e) => handleFilterChange('severity', e.target.value)}
+                className="form-control"
+              >
                 <option value="">All Severities</option>
                 <option value="high">High</option>
                 <option value="medium">Medium</option>
@@ -1254,26 +1444,50 @@ function IoCManagement({ active }) {
               </select>
             </div>
           </div>
+          
           <div className="filter-group">
             <label className="filter-label">Status</label>
             <div className="filter-control">
-              <select>
+              <select 
+                value={filters.status}
+                onChange={(e) => handleFilterChange('status', e.target.value)}
+                className="form-control"
+              >
                 <option value="">All Statuses</option>
                 <option value="active">Active</option>
+                <option value="anonymized">Anonymized</option>
                 <option value="inactive">Inactive</option>
                 <option value="review">Under Review</option>
               </select>
             </div>
           </div>
+          
           <div className="filter-group">
             <label className="filter-label">Source</label>
             <div className="filter-control">
-              <select>
-                <option value="">All Sources</option>
-                <option value="circl">CIRCL MISP</option>
-                <option value="sanren">SANReN CSIRT</option>
-                <option value="sabric">SABRIC</option>
-                <option value="internal">Internal</option>
+              <input
+                type="text"
+                placeholder="Filter by source..."
+                value={filters.source}
+                onChange={(e) => handleFilterChange('source', e.target.value)}
+                className="form-control"
+              />
+            </div>
+          </div>
+          
+          <div className="filter-group">
+            <label className="filter-label">Date Range</label>
+            <div className="filter-control">
+              <select 
+                value={filters.dateRange}
+                onChange={(e) => handleFilterChange('dateRange', e.target.value)}
+                className="form-control"
+              >
+                <option value="">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">Last Week</option>
+                <option value="month">Last Month</option>
+                <option value="quarter">Last Quarter</option>
               </select>
             </div>
           </div>
@@ -1311,12 +1525,21 @@ function IoCManagement({ active }) {
                     <i className="fas fa-spinner fa-spin"></i> Loading indicators...
                   </td>
                 </tr>
-              ) : indicators.length > 0 ? (
-                indicators.map((indicator) => (
+              ) : getPaginatedIndicators().length > 0 ? (
+                getPaginatedIndicators().map((indicator) => (
                   <tr key={indicator.id}>
                     <td><input type="checkbox" /></td>
-                    <td>{indicator.type}</td>
-                    <td>{indicator.value}</td>
+                    <td>
+                      <span className={`type-badge type-${indicator.rawType}`}>
+                        {indicator.type}
+                      </span>
+                    </td>
+                    <td className="indicator-value" title={indicator.value}>
+                      {indicator.value.length > 50 ? 
+                        `${indicator.value.substring(0, 50)}...` : 
+                        indicator.value
+                      }
+                    </td>
                     <td>
                       <span className={`badge badge-${indicator.severity.toLowerCase()}`}>
                         {indicator.severity}
@@ -1330,15 +1553,30 @@ function IoCManagement({ active }) {
                       </span>
                     </td>
                     <td>
-                      <button className="btn btn-outline btn-sm"><i className="fas fa-edit"></i></button>
-                      <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i></button>
+                      <button className="btn btn-outline btn-sm" title="Edit Indicator">
+                        <i className="fas fa-edit"></i>
+                      </button>
+                      <button className="btn btn-outline btn-sm" title="Share Indicator">
+                        <i className="fas fa-share-alt"></i>
+                      </button>
                     </td>
                   </tr>
                 ))
+              ) : filteredIndicators.length === 0 && indicators.length > 0 ? (
+                <tr>
+                  <td colSpan="8" style={{textAlign: 'center', padding: '2rem'}}>
+                    <i className="fas fa-filter"></i> No indicators match the current filters.
+                    <br />
+                    <button className="btn btn-outline btn-sm mt-2" onClick={resetFilters}>
+                      <i className="fas fa-times"></i> Clear Filters
+                    </button>
+                  </td>
+                </tr>
               ) : (
                 <tr>
                   <td colSpan="8" style={{textAlign: 'center', padding: '2rem'}}>
-                    No indicators found
+                    <i className="fas fa-info-circle"></i> No indicators found. 
+                    Try consuming threat feeds to populate data.
                   </td>
                 </tr>
               )}
@@ -1347,15 +1585,80 @@ function IoCManagement({ active }) {
         </div>
       </div>
 
-      <div className="pagination">
-        <div className="page-item"><i className="fas fa-chevron-left"></i></div>
-        <div className="page-item active">1</div>
-        <div className="page-item">2</div>
-        <div className="page-item">3</div>
-        <div className="page-item">4</div>
-        <div className="page-item">5</div>
-        <div className="page-item"><i className="fas fa-chevron-right"></i></div>
-      </div>
+      {totalPages > 1 && (
+        <div className="pagination">
+          <div className="pagination-info">
+            Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredIndicators.length)} to {Math.min(currentPage * itemsPerPage, filteredIndicators.length)} of {filteredIndicators.length} indicators
+          </div>
+          <div className="pagination-controls">
+            <button 
+              className="page-item"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              <i className="fas fa-chevron-left"></i>
+            </button>
+            
+            {(() => {
+              const pages = [];
+              const startPage = Math.max(1, currentPage - 2);
+              const endPage = Math.min(totalPages, currentPage + 2);
+              
+              if (startPage > 1) {
+                pages.push(
+                  <button 
+                    key={1}
+                    className="page-item"
+                    onClick={() => handlePageChange(1)}
+                  >
+                    1
+                  </button>
+                );
+                if (startPage > 2) {
+                  pages.push(<span key="ellipsis1" className="page-ellipsis">...</span>);
+                }
+              }
+              
+              for (let i = startPage; i <= endPage; i++) {
+                pages.push(
+                  <button 
+                    key={i}
+                    className={`page-item ${i === currentPage ? 'active' : ''}`}
+                    onClick={() => handlePageChange(i)}
+                  >
+                    {i}
+                  </button>
+                );
+              }
+              
+              if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                  pages.push(<span key="ellipsis2" className="page-ellipsis">...</span>);
+                }
+                pages.push(
+                  <button 
+                    key={totalPages}
+                    className="page-item"
+                    onClick={() => handlePageChange(totalPages)}
+                  >
+                    {totalPages}
+                  </button>
+                );
+              }
+              
+              return pages;
+            })()}
+            
+            <button 
+              className="page-item"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              <i className="fas fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="card mt-4">
         <div className="card-header">
@@ -1366,12 +1669,14 @@ function IoCManagement({ active }) {
             <div className="stat-card">
               <div className="stat-title">
                 <div className="stat-icon"><i className="fas fa-search"></i></div>
-                <span>Total IoCs</span>
+                <span>Total IoCs{Object.values(filters).some(f => f !== '') ? ' (Filtered)' : ''}</span>
               </div>
-              <div className="stat-value">1,286</div>
-              <div className="stat-change increase">
-                <span><i className="fas fa-arrow-up"></i></span>
-                <span>24% from last week</span>
+              <div className="stat-value">{Object.values(filters).some(f => f !== '') ? filteredIndicators.length : indicators.length}</div>
+              <div className="stat-description">
+                {Object.values(filters).some(f => f !== '') ? 
+                  `${filteredIndicators.length} of ${indicators.length} match filters` :
+                  'All indicators in system'
+                }
               </div>
             </div>
             <div className="stat-card">
@@ -1379,32 +1684,38 @@ function IoCManagement({ active }) {
                 <div className="stat-icon"><i className="fas fa-exclamation-triangle"></i></div>
                 <span>High Severity</span>
               </div>
-              <div className="stat-value">412</div>
-              <div className="stat-change increase">
-                <span><i className="fas fa-arrow-up"></i></span>
-                <span>18% from last week</span>
+              <div className="stat-value">
+                {(Object.values(filters).some(f => f !== '') ? filteredIndicators : indicators)
+                  .filter(ind => ind.severity.toLowerCase() === 'high').length}
+              </div>
+              <div className="stat-description">
+                Critical threat indicators
               </div>
             </div>
             <div className="stat-card">
               <div className="stat-title">
-                <div className="stat-icon"><i className="fas fa-share-alt"></i></div>
-                <span>Shared IoCs</span>
+                <div className="stat-icon"><i className="fas fa-user-secret"></i></div>
+                <span>Anonymized</span>
               </div>
-              <div className="stat-value">854</div>
-              <div className="stat-change increase">
-                <span><i className="fas fa-arrow-up"></i></span>
-                <span>32% from last week</span>
+              <div className="stat-value">
+                {(Object.values(filters).some(f => f !== '') ? filteredIndicators : indicators)
+                  .filter(ind => ind.status.toLowerCase() === 'anonymized').length}
+              </div>
+              <div className="stat-description">
+                Privacy-protected IoCs
               </div>
             </div>
             <div className="stat-card">
               <div className="stat-title">
-                <div className="stat-icon"><i className="fas fa-check-circle"></i></div>
-                <span>Verified IoCs</span>
+                <div className="stat-icon"><i className="fas fa-chart-line"></i></div>
+                <span>Active</span>
               </div>
-              <div className="stat-value">593</div>
-              <div className="stat-change increase">
-                <span><i className="fas fa-arrow-up"></i></span>
-                <span>12% from last week</span>
+              <div className="stat-value">
+                {(Object.values(filters).some(f => f !== '') ? filteredIndicators : indicators)
+                  .filter(ind => ind.status.toLowerCase() === 'active').length}
+              </div>
+              <div className="stat-description">
+                Currently monitored IoCs
               </div>
             </div>
           </div>
@@ -1743,10 +2054,6 @@ function IoCManagement({ active }) {
       confidence: 50
     });
     setFormErrors({});
-  }
-
-  function handleRefresh() {
-    fetchIndicators();
   }
 
   function closeExportModal() {
