@@ -9,9 +9,9 @@ const ConfirmationModal = ({
   confirmText = 'Confirm', 
   cancelText = 'Cancel',
   confirmButtonClass = 'confirm-btn',
-  isDestructive = false 
+  isDestructive = false,
+  actionType = 'default' // 'activate', 'deactivate', 'delete', 'default'
 }) => {
-  if (!isOpen) return null;
 
   const handleConfirm = () => {
     onConfirm();
@@ -22,25 +22,44 @@ const ConfirmationModal = ({
     onClose();
   };
 
+  // Memoize the button class calculation
+  const getButtonClass = React.useCallback(() => {
+    const baseClass = 'btn';
+    
+    if (actionType === 'activate' || actionType === 'reactivate') {
+      return `${baseClass} btn-success confirmation-btn-green`;
+    }
+    
+    if (actionType === 'deactivate' || actionType === 'delete') {
+      return `${baseClass} btn-danger confirmation-btn-red`;
+    }
+    
+    return `${baseClass} ${isDestructive ? 'btn-danger' : 'btn-primary'}`;
+  }, [actionType, isDestructive]);
+
   // Handle escape key
   React.useEffect(() => {
+    if (!isOpen) return;
+
     const handleEscape = (e) => {
       if (e.key === 'Escape') {
         onClose();
       }
     };
 
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      // Prevent body scroll
-      document.body.style.overflow = 'hidden';
-    }
+    document.addEventListener('keydown', handleEscape);
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
 
     return () => {
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = 'unset';
     };
   }, [isOpen, onClose]);
+
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <div className="confirmation-modal-overlay" onClick={handleCancel}>
@@ -68,7 +87,7 @@ const ConfirmationModal = ({
             {cancelText}
           </button>
           <button 
-            className={`btn ${isDestructive ? 'btn-danger' : 'btn-primary'}`}
+            className={getButtonClass()}
             onClick={handleConfirm}
           >
             {confirmText}

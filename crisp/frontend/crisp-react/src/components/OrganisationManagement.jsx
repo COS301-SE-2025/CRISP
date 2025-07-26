@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { getOrganizations, createOrganization, updateOrganization, deactivateOrganization, reactivateOrganization, getOrganizationDetails, getOrganizationTypes } from '../api.js';
+import React, { useState, useEffect, useMemo } from 'react';
+import { getOrganizations, createOrganization, updateOrganization, deactivateOrganization, reactivateOrganization, deleteOrganization, getOrganizationDetails, getOrganizationTypes } from '../api.js';
 import LoadingSpinner from './LoadingSpinner.jsx';
 import ConfirmationModal from './ConfirmationModal.jsx';
 import Pagination from './Pagination.jsx';
@@ -140,8 +140,8 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
     }
   };
 
-  // Filter and paginate organizations
-  const filterAndPaginateOrganizations = () => {
+  // Memoized filtered organizations
+  const filteredOrganizations = useMemo(() => {
     let filtered = [...allOrganizations];
 
     // Apply search filter
@@ -158,20 +158,20 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
       filtered = filtered.filter(org => org.organization_type === typeFilter);
     }
 
-    // Calculate pagination
-    const totalItems = filtered.length;
+    return filtered;
+  }, [allOrganizations, searchTerm, typeFilter]);
+
+  // Memoized paginated organizations
+  const paginatedOrganizations = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const paginatedOrgs = filtered.slice(startIndex, endIndex);
+    return filteredOrganizations.slice(startIndex, endIndex);
+  }, [filteredOrganizations, currentPage, itemsPerPage]);
 
-    setOrganizations(paginatedOrgs);
-    return { totalItems, filteredOrganizations: filtered };
-  };
-
-  // Effect to filter and paginate when dependencies change
+  // Update organizations state when pagination changes
   useEffect(() => {
-    filterAndPaginateOrganizations();
-  }, [allOrganizations, searchTerm, typeFilter, currentPage, itemsPerPage]);
+    setOrganizations(paginatedOrganizations);
+  }, [paginatedOrganizations]);
 
   // Handle page change
   const handlePageChange = (page) => {
@@ -309,6 +309,7 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
       message: `Are you sure you want to deactivate organisation "${organizationName}"?`,
       confirmText: 'Deactivate',
       isDestructive: true,
+      actionType: 'deactivate',
       action: async () => {
         try {
           setOperationLoading(true);
@@ -331,6 +332,7 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
       message: `Are you sure you want to reactivate organisation "${organizationName}"?`,
       confirmText: 'Reactivate',
       isDestructive: false,
+      actionType: 'reactivate',
       action: async () => {
         try {
           setOperationLoading(true);
@@ -339,6 +341,32 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
           loadOrganizations();
         } catch (err) {
           setError('Failed to reactivate organization: ' + err.message);
+        } finally {
+          setOperationLoading(false);
+        }
+      }
+    });
+    setShowConfirmation(true);
+  };
+
+  const handlePermanentDeleteOrganization = (organizationId, organizationName) => {
+    setConfirmationData({
+      title: 'Permanently Delete Organization',
+      message: `Are you sure you want to PERMANENTLY DELETE organization "${organizationName}"? This action cannot be undone.`,
+      confirmText: 'Delete Permanently',
+      isDestructive: true,
+      actionType: 'delete',
+      action: async () => {
+        try {
+          setOperationLoading(true);
+          await new Promise(resolve => setTimeout(resolve, 800));
+          await deleteOrganization(organizationId, 'Deleted by admin');
+          loadOrganizations();
+          // Ensure actions popup is closed after successful deletion
+          setShowActionsPopup(false);
+          setSelectedOrganizationForActions(null);
+        } catch (err) {
+          setError('Failed to delete organization: ' + err.message);
         } finally {
           setOperationLoading(false);
         }
@@ -359,6 +387,7 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
       message: `Are you sure you want to ${actionText} organization "${orgName}"?`,
       confirmText: modalMode === 'add' ? 'Create Organization' : 'Update Organization',
       isDestructive: false,
+      actionType: modalMode === 'add' ? 'default' : 'default',
       action: async () => {
         try {
           setSubmitting(true);
@@ -416,7 +445,7 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
   };
 
   // Get total items for pagination
-  const { totalItems } = filterAndPaginateOrganizations();
+  const totalItems = filteredOrganizations.length;
 
   const handleOrganizationClick = (organization) => {
     setSelectedOrganizationForActions(organization);
@@ -1145,6 +1174,29 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
                   Reactivate Organisation
                 </button>
               )}
+              
+              <button
+                onClick={() => {
+                  closeActionsPopup();
+                  handlePermanentDeleteOrganization(selectedOrganizationForActions.id, selectedOrganizationForActions.name);
+                }}
+                style={{
+                  padding: '0.75rem 1rem',
+                  backgroundColor: '#5D8AA8',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  transition: 'all 0.2s ease',
+                  textAlign: 'left'
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#4A7088'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#5D8AA8'}
+              >
+                Permanently Delete
+              </button>
             </div>
             
             <div style={{ 
@@ -1180,6 +1232,7 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
         message={confirmationData?.message}
         confirmText={confirmationData?.confirmText}
         isDestructive={confirmationData?.isDestructive}
+        actionType={confirmationData?.actionType}
       />
     </div>
   );

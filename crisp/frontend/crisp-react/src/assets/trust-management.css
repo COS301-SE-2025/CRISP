@@ -98,6 +98,35 @@
   min-width: 80px;
 }
 
+/* Action-specific button styles with colored borders */
+.confirmation-btn-green {
+  border: 3px solid #28a745 !important;
+  background-color: #ffffff !important;
+  color: #28a745 !important;
+  box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2) !important;
+}
+
+.confirmation-btn-green:hover {
+  border-color: #218838 !important;
+  background-color: #f8f9fa !important;
+  color: #218838 !important;
+  box-shadow: 0 0 0 2px rgba(33, 136, 56, 0.3) !important;
+}
+
+.confirmation-btn-red {
+  border: 3px solid #dc3545 !important;
+  background-color: #ffffff !important;
+  color: #dc3545 !important;
+  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2) !important;
+}
+
+.confirmation-btn-red:hover {
+  border-color: #c82333 !important;
+  background-color: #f8f9fa !important;
+  color: #c82333 !important;
+  box-shadow: 0 0 0 2px rgba(200, 35, 51, 0.3) !important;
+}
+
 /* Pagination Styles */
 .pagination-container {
   display: flex;

@@ -5,7 +5,20 @@ const API_URL = 'http://localhost:8000/api/v1/';
 
 // Helper function to handle API responses
 const handleResponse = async (response) => {
-  const data = await response.json();
+  let data = {};
+  
+  // Check if response has content to parse
+  const contentLength = response.headers.get('content-length');
+  const contentType = response.headers.get('content-type');
+  
+  if (contentLength !== '0' && contentType && contentType.includes('application/json')) {
+    try {
+      data = await response.json();
+    } catch (error) {
+      // If JSON parsing fails, create a default response object
+      data = {};
+    }
+  }
   
   console.log('API Response Status:', response.status);
   console.log('API Response Data:', data);
@@ -39,6 +52,14 @@ const handleResponse = async (response) => {
     
     console.error('API Error:', error);
     return Promise.reject(error);
+  }
+  
+  // Handle 204 No Content responses (successful deletion)
+  if (response.status === 204) {
+    return {
+      success: true,
+      message: 'Operation completed successfully'
+    };
   }
   
   // Check for UserTrust success field
@@ -320,6 +341,16 @@ export const deactivateOrganization = async (organizationId, reason = '') => {
 export const reactivateOrganization = async (organizationId, reason = '') => {
   const response = await fetch(`${API_URL}organizations/${organizationId}/reactivate_organization/`, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify({ reason })
+  });
+  
+  return await handleResponse(response);
+};
+
+export const deleteOrganization = async (organizationId, reason = '') => {
+  const response = await fetch(`${API_URL}organizations/${organizationId}/`, {
+    method: 'DELETE',
     headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify({ reason })
   });

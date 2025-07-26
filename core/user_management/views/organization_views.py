@@ -216,6 +216,70 @@ class OrganizationViewSet(viewsets.ModelViewSet):
                 'message': 'Failed to update organization'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
+    def destroy(self, request, pk=None):
+        """
+        Delete an organization permanently.
+        
+        Expected payload:
+        {
+            "reason": "string (optional)"
+        }
+        """
+        try:
+            logger.info(f"Delete organization view called for org {pk} by user {request.user.username} (role: {request.user.role})")
+            
+            organization = self.get_object()
+            reason = request.data.get('reason', '') if request.data else ''
+            
+            # Check permissions - only BlueVisionAdmin can delete organizations
+            if not (hasattr(request.user, 'role') and request.user.role == 'BlueVisionAdmin'):
+                return Response({
+                    'success': False,
+                    'message': 'User does not have permission to delete organizations'
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            # Audit logging before deletion
+            self.audit_service.log_user_action(
+                user=request.user,
+                action='DELETE_ORGANIZATION',
+                ip_address=self._get_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', 'API'),
+                success=True,
+                target_organization=organization,
+                additional_data={
+                    'reason': reason,
+                    'organization_name': organization.name,
+                    'organization_id': str(organization.id)
+                }
+            )
+            
+            # Store org name for response message
+            org_name = organization.name
+            org_id = str(organization.id)
+            
+            # Perform deletion (cascade deletes will handle related objects)
+            organization.delete()
+            
+            logger.info(f"Organization deleted: {org_name} (ID: {org_id})")
+            
+            return Response({
+                'success': True,
+                'message': f'Organization {org_name} deleted successfully'
+            }, status=status.HTTP_204_NO_CONTENT)
+        
+        except PermissionDenied as e:
+            return Response({
+                'success': False,
+                'message': str(e)
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        except Exception as e:
+            logger.error(f"Delete organization error: {str(e)}", exc_info=True)
+            return Response({
+                'success': False,
+                'message': 'Failed to delete organization'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
     @action(detail=False, methods=['get'])
     def list_organizations(self, request):
         """

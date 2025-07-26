@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { getUsersList, createUser, updateUser, deactivateUser, reactivateUser, deleteUser, changeUsername, getUserDetails, getOrganizations } from '../api.js';
 import LoadingSpinner from './LoadingSpinner.jsx';
 import ConfirmationModal from './ConfirmationModal.jsx';
@@ -145,8 +145,8 @@ const UserManagement = ({ active = true, initialSection = null }) => {
     }
   };
 
-  // Filter and paginate users
-  const filterAndPaginateUsers = () => {
+  // Memoized filtered users
+  const filteredUsers = useMemo(() => {
     let filtered = [...allUsers];
 
     // Apply search filter
@@ -164,20 +164,20 @@ const UserManagement = ({ active = true, initialSection = null }) => {
       filtered = filtered.filter(user => user.role === roleFilter);
     }
 
-    // Calculate pagination
-    const totalItems = filtered.length;
+    return filtered;
+  }, [allUsers, searchTerm, roleFilter]);
+
+  // Memoized paginated users
+  const paginatedUsers = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const paginatedUsers = filtered.slice(startIndex, endIndex);
+    return filteredUsers.slice(startIndex, endIndex);
+  }, [filteredUsers, currentPage, itemsPerPage]);
 
-    setUsers(paginatedUsers);
-    return { totalItems, filteredUsers: filtered };
-  };
-
-  // Effect to filter and paginate when dependencies change
+  // Update users state when pagination changes
   useEffect(() => {
-    filterAndPaginateUsers();
-  }, [allUsers, searchTerm, roleFilter, currentPage, itemsPerPage]);
+    setUsers(paginatedUsers);
+  }, [paginatedUsers]);
 
   // Handle page change
   const handlePageChange = (page) => {
@@ -307,6 +307,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
       message: `Are you sure you want to deactivate user "${username}"?`,
       confirmText: 'Deactivate',
       isDestructive: true,
+      actionType: 'deactivate',
       action: async () => {
         try {
           setOperationLoading(true);
@@ -329,6 +330,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
       message: `Are you sure you want to reactivate user "${username}"?`,
       confirmText: 'Reactivate',
       isDestructive: false,
+      actionType: 'reactivate',
       action: async () => {
         try {
           setOperationLoading(true);
@@ -351,6 +353,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
       message: `Are you sure you want to PERMANENTLY DELETE user "${username}"? This action cannot be undone.`,
       confirmText: 'Delete Permanently',
       isDestructive: true,
+      actionType: 'delete',
       action: async () => {
         try {
           setOperationLoading(true);
@@ -400,6 +403,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
       message: `Are you sure you want to ${actionText} user "${userName}"?`,
       confirmText: modalMode === 'add' ? 'Create User' : 'Update User',
       isDestructive: false,
+      actionType: modalMode === 'add' ? 'default' : 'default',
       action: async () => {
         try {
           setSubmitting(true);
@@ -464,7 +468,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
   };
 
   // Get total items for pagination
-  const { totalItems } = filterAndPaginateUsers();
+  const totalItems = filteredUsers.length;
 
   const getOrganizationName = (orgId) => {
     const org = organizations.find(o => o.id === orgId);
@@ -1217,6 +1221,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
         message={confirmationData?.message}
         confirmText={confirmationData?.confirmText}
         isDestructive={confirmationData?.isDestructive}
+        actionType={confirmationData?.actionType}
       />
     </div>
   );
