@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { getOrganizations, createOrganization, updateOrganization, deactivateOrganization, reactivateOrganization, getOrganizationDetails, getOrganizationTypes } from '../api.js';
 import LoadingSpinner from './LoadingSpinner.jsx';
+import ConfirmationModal from './ConfirmationModal.jsx';
+import Pagination from './Pagination.jsx';
 
 import * as api from '../api.js';
 
 const OrganisationManagement = ({ active = true, initialSection = null }) => {
   console.log('OrganisationManagement rendered with props:', { active, initialSection });
-  const [organizations, setOrganizations] = useState([]);
+  const [organizations, setOrganizations] = useState([]); // This will be filtered/paginated organizations
   const [organizationTypes, setOrganizationTypes] = useState(['educational', 'government', 'private']);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -30,6 +32,12 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
   const [operationLoading, setOperationLoading] = useState(false);
   const [showActionsPopup, setShowActionsPopup] = useState(false);
   const [selectedOrganizationForActions, setSelectedOrganizationForActions] = useState(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [confirmationData, setConfirmationData] = useState(null);
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [allOrganizations, setAllOrganizations] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
     domain: '',
@@ -120,7 +128,9 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
       
       console.log('Extracted organizations data:', organizationsData);
       console.log('Organizations data length:', organizationsData.length);
-      setOrganizations(Array.isArray(organizationsData) ? organizationsData : []);
+      const orgsList = Array.isArray(organizationsData) ? organizationsData : [];
+      setAllOrganizations(orgsList);
+      setOrganizations(orgsList); // Initially show all organizations
     } catch (err) {
       console.error('Failed to load organizations:', err);
       setError('Failed to load organizations: ' + err.message);
@@ -128,6 +138,50 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Filter and paginate organizations
+  const filterAndPaginateOrganizations = () => {
+    let filtered = [...allOrganizations];
+
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(org =>
+        org.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        org.domain?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        org.contact_email?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply type filter
+    if (typeFilter) {
+      filtered = filtered.filter(org => org.organization_type === typeFilter);
+    }
+
+    // Calculate pagination
+    const totalItems = filtered.length;
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedOrgs = filtered.slice(startIndex, endIndex);
+
+    setOrganizations(paginatedOrgs);
+    return { totalItems, filteredOrganizations: filtered };
+  };
+
+  // Effect to filter and paginate when dependencies change
+  useEffect(() => {
+    filterAndPaginateOrganizations();
+  }, [allOrganizations, searchTerm, typeFilter, currentPage, itemsPerPage]);
+
+  // Handle page change
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  // Handle items per page change
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page
   };
 
   const handleAddOrganization = () => {
@@ -249,67 +303,95 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
     }
   };
 
-  const handleDeleteOrganization = async (organizationId, organizationName) => {
-    if (window.confirm(`Are you sure you want to deactivate organisation "${organizationName}"?`)) {
-      try {
-        setOperationLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
-        await api.deactivateOrganization(organizationId, 'Deactivated by admin');
-        loadOrganizations();
-      } catch (err) {
-        setError('Failed to deactivate organization: ' + err.message);
-      } finally {
-        setOperationLoading(false);
+  const handleDeleteOrganization = (organizationId, organizationName) => {
+    setConfirmationData({
+      title: 'Deactivate Organization',
+      message: `Are you sure you want to deactivate organisation "${organizationName}"?`,
+      confirmText: 'Deactivate',
+      isDestructive: true,
+      action: async () => {
+        try {
+          setOperationLoading(true);
+          await new Promise(resolve => setTimeout(resolve, 800));
+          await api.deactivateOrganization(organizationId, 'Deactivated by admin');
+          loadOrganizations();
+        } catch (err) {
+          setError('Failed to deactivate organization: ' + err.message);
+        } finally {
+          setOperationLoading(false);
+        }
       }
-    }
+    });
+    setShowConfirmation(true);
   };
 
-  const handleReactivateOrganization = async (organizationId, organizationName) => {
-    if (window.confirm(`Are you sure you want to reactivate organisation "${organizationName}"?`)) {
-      try {
-        setOperationLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
-        await api.reactivateOrganization(organizationId, 'Reactivated by admin');
-        loadOrganizations();
-      } catch (err) {
-        setError('Failed to reactivate organization: ' + err.message);
-      } finally {
-        setOperationLoading(false);
+  const handleReactivateOrganization = (organizationId, organizationName) => {
+    setConfirmationData({
+      title: 'Reactivate Organization',
+      message: `Are you sure you want to reactivate organisation "${organizationName}"?`,
+      confirmText: 'Reactivate',
+      isDestructive: false,
+      action: async () => {
+        try {
+          setOperationLoading(true);
+          await new Promise(resolve => setTimeout(resolve, 800));
+          await api.reactivateOrganization(organizationId, 'Reactivated by admin');
+          loadOrganizations();
+        } catch (err) {
+          setError('Failed to reactivate organization: ' + err.message);
+        } finally {
+          setOperationLoading(false);
+        }
       }
-    }
+    });
+    setShowConfirmation(true);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    try {
-      setSubmitting(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (modalMode === 'add') {
-        console.log('Creating organization with data:', formData);
-        await api.createOrganization(formData);
-      } else if (modalMode === 'edit') {
-        const updateData = { ...formData };
-        delete updateData.primary_user;
-        console.log('Updating organization with data:', updateData);
-        console.log('Selected organization ID:', selectedOrganization.id);
-        await api.updateOrganization(selectedOrganization.id, updateData);
+    
+    // Show confirmation dialog
+    const actionText = modalMode === 'add' ? 'create' : 'update';
+    const orgName = modalMode === 'add' ? formData.name : selectedOrganization?.name;
+    
+    setConfirmationData({
+      title: `${modalMode === 'add' ? 'Create' : 'Update'} Organization`,
+      message: `Are you sure you want to ${actionText} organization "${orgName}"?`,
+      confirmText: modalMode === 'add' ? 'Create Organization' : 'Update Organization',
+      isDestructive: false,
+      action: async () => {
+        try {
+          setSubmitting(true);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          if (modalMode === 'add') {
+            console.log('Creating organization with data:', formData);
+            await api.createOrganization(formData);
+          } else if (modalMode === 'edit') {
+            const updateData = { ...formData };
+            delete updateData.primary_user;
+            console.log('Updating organization with data:', updateData);
+            console.log('Selected organization ID:', selectedOrganization.id);
+            await api.updateOrganization(selectedOrganization.id, updateData);
+          }
+          setShowModal(false);
+          setError(null);
+          loadOrganizations();
+        } catch (err) {
+          console.error('Error in handleSubmit:', err);
+          if (Array.isArray(err)) {
+            setError(err.join(', '));
+          } else if (typeof err === 'string') {
+            setError(err);
+          } else {
+            setError('Failed to save organization: ' + (err.message || 'Unknown error'));
+          }
+        } finally {
+          setSubmitting(false);
+        }
       }
-      setShowModal(false);
-      setError(null);
-      loadOrganizations();
-    } catch (err) {
-      console.error('Error in handleSubmit:', err);
-      if (Array.isArray(err)) {
-        setError(err.join(', '));
-      } else if (typeof err === 'string') {
-        setError(err);
-      } else {
-        setError('Failed to save organization: ' + (err.message || 'Unknown error'));
-      }
-    } finally {
-      setSubmitting(false);
-    }
+    });
+    setShowConfirmation(true);
   };
 
   const handleInputChange = (e) => {
@@ -333,16 +415,8 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
     }
   };
 
-  const filteredOrganizations = Array.isArray(organizations) ? organizations.filter(organization => {
-    const matchesSearch = !searchTerm || 
-      organization.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      organization.domain?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      organization.contact_email?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesType = !typeFilter || organization.organization_type === typeFilter;
-    
-    return matchesSearch && matchesType;
-  }) : [];
+  // Get total items for pagination
+  const { totalItems } = filterAndPaginateOrganizations();
 
   const handleOrganizationClick = (organization) => {
     setSelectedOrganizationForActions(organization);
@@ -416,6 +490,22 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
         >
           Add Organisation
         </button>
+
+        <div className="items-per-page">
+          <label>
+            Show:
+            <select 
+              value={itemsPerPage} 
+              onChange={(e) => handleItemsPerPageChange(parseInt(e.target.value))}
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </select>
+            items per page
+          </label>
+        </div>
       </div>
 
       {/* Hint Text */}
@@ -435,7 +525,7 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
         boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
         border: '1px solid #e9ecef'
       }}>
-        {filteredOrganizations.map(organization => (
+        {organizations.map(organization => (
           <div 
             key={organization.id} 
             onClick={(e) => {
@@ -530,10 +620,28 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
         ))}
       </div>
 
-      {filteredOrganizations.length === 0 && (
+      {organizations.length === 0 && allOrganizations.length > 0 && (
         <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
           No organisations found matching your criteria.
         </div>
+      )}
+
+      {allOrganizations.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+          No organisations available. Click "Add Organisation" to create the first organization.
+        </div>
+      )}
+
+      {/* Pagination */}
+      {allOrganizations.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          onPageChange={handlePageChange}
+          showInfo={true}
+          showJumpToPage={true}
+        />
       )}
 
       {/* Modal */}
@@ -1063,6 +1171,16 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={showConfirmation}
+        onClose={() => setShowConfirmation(false)}
+        onConfirm={confirmationData?.action}
+        title={confirmationData?.title}
+        message={confirmationData?.message}
+        confirmText={confirmationData?.confirmText}
+        isDestructive={confirmationData?.isDestructive}
+      />
     </div>
   );
 };

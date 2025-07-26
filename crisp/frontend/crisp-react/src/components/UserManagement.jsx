@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { getUsersList, createUser, updateUser, deactivateUser, reactivateUser, deleteUser, changeUsername, getUserDetails, getOrganizations } from '../api.js';
 import LoadingSpinner from './LoadingSpinner.jsx';
+import ConfirmationModal from './ConfirmationModal.jsx';
+import Pagination from './Pagination.jsx';
 
 // Import alias for the API to avoid conflicts
 import * as api from '../api.js';
 
 const UserManagement = ({ active = true, initialSection = null }) => {
   console.log('UserManagement rendered with props:', { active, initialSection });
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState([]); // This will be filtered/paginated users
   const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -33,6 +35,12 @@ const UserManagement = ({ active = true, initialSection = null }) => {
   const [operationLoading, setOperationLoading] = useState(false);
   const [showActionsPopup, setShowActionsPopup] = useState(false);
   const [selectedUserForActions, setSelectedUserForActions] = useState(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [confirmationData, setConfirmationData] = useState(null);
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [allUsers, setAllUsers] = useState([]);
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -113,7 +121,9 @@ const UserManagement = ({ active = true, initialSection = null }) => {
       
       console.log('Extracted users data:', usersData);
       console.log('Users data length:', usersData.length);
-      setUsers(Array.isArray(usersData) ? usersData : []);
+      const usersList = Array.isArray(usersData) ? usersData : [];
+      setAllUsers(usersList);
+      setUsers(usersList); // Initially show all users
     } catch (err) {
       console.error('Failed to load users:', err);
       setError('Failed to load users: ' + err.message);
@@ -133,6 +143,51 @@ const UserManagement = ({ active = true, initialSection = null }) => {
       console.error('Failed to load organizations:', err);
       setOrganizations([]); // Ensure organizations is always an array
     }
+  };
+
+  // Filter and paginate users
+  const filterAndPaginateUsers = () => {
+    let filtered = [...allUsers];
+
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(user =>
+        user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply role filter
+    if (roleFilter) {
+      filtered = filtered.filter(user => user.role === roleFilter);
+    }
+
+    // Calculate pagination
+    const totalItems = filtered.length;
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedUsers = filtered.slice(startIndex, endIndex);
+
+    setUsers(paginatedUsers);
+    return { totalItems, filteredUsers: filtered };
+  };
+
+  // Effect to filter and paginate when dependencies change
+  useEffect(() => {
+    filterAndPaginateUsers();
+  }, [allUsers, searchTerm, roleFilter, currentPage, itemsPerPage]);
+
+  // Handle page change
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  // Handle items per page change
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page
   };
 
   const handleAddUser = () => {
@@ -246,56 +301,77 @@ const UserManagement = ({ active = true, initialSection = null }) => {
     }
   };
 
-  const handleDeleteUser = async (userId, username) => {
-    if (window.confirm(`Are you sure you want to deactivate user "${username}"?`)) {
-      try {
-        setOperationLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
-        await api.deactivateUser(userId, 'Deactivated by admin');
-        loadUsers();
-      } catch (err) {
-        setError('Failed to deactivate user: ' + err.message);
-      } finally {
-        setOperationLoading(false);
+  const handleDeleteUser = (userId, username) => {
+    setConfirmationData({
+      title: 'Deactivate User',
+      message: `Are you sure you want to deactivate user "${username}"?`,
+      confirmText: 'Deactivate',
+      isDestructive: true,
+      action: async () => {
+        try {
+          setOperationLoading(true);
+          await new Promise(resolve => setTimeout(resolve, 800));
+          await api.deactivateUser(userId, 'Deactivated by admin');
+          loadUsers();
+        } catch (err) {
+          setError('Failed to deactivate user: ' + err.message);
+        } finally {
+          setOperationLoading(false);
+        }
       }
-    }
+    });
+    setShowConfirmation(true);
   };
 
-  const handleReactivateUser = async (userId, username) => {
-    if (window.confirm(`Are you sure you want to reactivate user "${username}"?`)) {
-      try {
-        setOperationLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
-        await api.reactivateUser(userId, 'Reactivated by admin');
-        loadUsers();
-      } catch (err) {
-        setError('Failed to reactivate user: ' + err.message);
-      } finally {
-        setOperationLoading(false);
+  const handleReactivateUser = (userId, username) => {
+    setConfirmationData({
+      title: 'Reactivate User',
+      message: `Are you sure you want to reactivate user "${username}"?`,
+      confirmText: 'Reactivate',
+      isDestructive: false,
+      action: async () => {
+        try {
+          setOperationLoading(true);
+          await new Promise(resolve => setTimeout(resolve, 800));
+          await api.reactivateUser(userId, 'Reactivated by admin');
+          loadUsers();
+        } catch (err) {
+          setError('Failed to reactivate user: ' + err.message);
+        } finally {
+          setOperationLoading(false);
+        }
       }
-    }
+    });
+    setShowConfirmation(true);
   };
 
-  const handlePermanentDeleteUser = async (userId, username) => {
-    if (window.confirm(`Are you sure you want to PERMANENTLY DELETE user "${username}"? This action cannot be undone.`)) {
-      try {
-        setOperationLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
-        await api.deleteUser(userId, 'Deleted by admin');
-        loadUsers();
-        // Ensure actions popup is closed after successful deletion
-        setShowActionsPopup(false);
-        setSelectedUserForActions(null);
-      } catch (err) {
-        setError('Failed to delete user: ' + err.message);
-      } finally {
-        setOperationLoading(false);
+  const handlePermanentDeleteUser = (userId, username) => {
+    setConfirmationData({
+      title: 'Permanently Delete User',
+      message: `Are you sure you want to PERMANENTLY DELETE user "${username}"? This action cannot be undone.`,
+      confirmText: 'Delete Permanently',
+      isDestructive: true,
+      action: async () => {
+        try {
+          setOperationLoading(true);
+          await new Promise(resolve => setTimeout(resolve, 800));
+          await api.deleteUser(userId, 'Deleted by admin');
+          loadUsers();
+          // Ensure actions popup is closed after successful deletion
+          setShowActionsPopup(false);
+          setSelectedUserForActions(null);
+        } catch (err) {
+          setError('Failed to delete user: ' + err.message);
+        } finally {
+          setOperationLoading(false);
+        }
       }
-    }
+    });
+    setShowConfirmation(true);
   };
 
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     
     // Client-side validation for username in edit mode
@@ -314,51 +390,64 @@ const UserManagement = ({ active = true, initialSection = null }) => {
         return;
       }
     }
+
+    // Show confirmation dialog
+    const actionText = modalMode === 'add' ? 'create' : 'update';
+    const userName = modalMode === 'add' ? formData.username : selectedUser?.username;
     
-    try {
-      setSubmitting(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (modalMode === 'add') {
-        console.log('Creating user with data:', formData);
-        await api.createUser(formData);
-      } else if (modalMode === 'edit') {
-        const updateData = { ...formData };
-        if (!updateData.password) {
-          delete updateData.password; // Don't send empty password
-        }
-        
-        // Handle username change separately if it's different
-        if (updateData.username !== selectedUser.username) {
-          console.log('Username changed, updating via changeUsername API');
-          await api.changeUsername(selectedUser.id, updateData.username);
-          // Remove username from updateData to avoid duplicate update
-          delete updateData.username;
-        }
-        
-        // Update other fields if there are any remaining
-        if (Object.keys(updateData).length > 0) {
-          console.log('Updating user with data:', updateData);
-          console.log('Selected user ID:', selectedUser.id);
-          await api.updateUser(selectedUser.id, updateData);
+    setConfirmationData({
+      title: `${modalMode === 'add' ? 'Create' : 'Update'} User`,
+      message: `Are you sure you want to ${actionText} user "${userName}"?`,
+      confirmText: modalMode === 'add' ? 'Create User' : 'Update User',
+      isDestructive: false,
+      action: async () => {
+        try {
+          setSubmitting(true);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          if (modalMode === 'add') {
+            console.log('Creating user with data:', formData);
+            await api.createUser(formData);
+          } else if (modalMode === 'edit') {
+            const updateData = { ...formData };
+            if (!updateData.password) {
+              delete updateData.password; // Don't send empty password
+            }
+            
+            // Handle username change separately if it's different
+            if (updateData.username !== selectedUser.username) {
+              console.log('Username changed, updating via changeUsername API');
+              await api.changeUsername(selectedUser.id, updateData.username);
+              // Remove username from updateData to avoid duplicate update
+              delete updateData.username;
+            }
+            
+            // Update other fields if there are any remaining
+            if (Object.keys(updateData).length > 0) {
+              console.log('Updating user with data:', updateData);
+              console.log('Selected user ID:', selectedUser.id);
+              await api.updateUser(selectedUser.id, updateData);
+            }
+          }
+          setShowModal(false);
+          setError(null); // Clear any previous errors
+          loadUsers();
+        } catch (err) {
+          console.error('Error in handleSubmit:', err);
+          // Handle different error types
+          if (Array.isArray(err)) {
+            setError(err.join(', '));
+          } else if (typeof err === 'string') {
+            setError(err);
+          } else {
+            setError('Failed to save user: ' + (err.message || 'Unknown error'));
+          }
+        } finally {
+          setSubmitting(false);
         }
       }
-      setShowModal(false);
-      setError(null); // Clear any previous errors
-      loadUsers();
-    } catch (err) {
-      console.error('Error in handleSubmit:', err);
-      // Handle different error types
-      if (Array.isArray(err)) {
-        setError(err.join(', '));
-      } else if (typeof err === 'string') {
-        setError(err);
-      } else {
-        setError('Failed to save user: ' + (err.message || 'Unknown error'));
-      }
-    } finally {
-      setSubmitting(false);
-    }
+    });
+    setShowConfirmation(true);
   };
 
   const handleInputChange = (e) => {
@@ -374,17 +463,8 @@ const UserManagement = ({ active = true, initialSection = null }) => {
     });
   };
 
-  const filteredUsers = Array.isArray(users) ? users.filter(user => {
-    const matchesSearch = !searchTerm || 
-      user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.last_name?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesRole = !roleFilter || user.role === roleFilter;
-    
-    return matchesSearch && matchesRole;
-  }) : [];
+  // Get total items for pagination
+  const { totalItems } = filterAndPaginateUsers();
 
   const getOrganizationName = (orgId) => {
     const org = organizations.find(o => o.id === orgId);
@@ -463,6 +543,22 @@ const UserManagement = ({ active = true, initialSection = null }) => {
         >
           Add User
         </button>
+
+        <div className="items-per-page">
+          <label>
+            Show:
+            <select 
+              value={itemsPerPage} 
+              onChange={(e) => handleItemsPerPageChange(parseInt(e.target.value))}
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </select>
+            items per page
+          </label>
+        </div>
       </div>
 
       {/* Hint Text */}
@@ -482,7 +578,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
         boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
         border: '1px solid #e9ecef'
       }}>
-        {filteredUsers.map(user => (
+        {users.map(user => (
           <div 
             key={user.id} 
             onClick={(e) => {
@@ -575,10 +671,28 @@ const UserManagement = ({ active = true, initialSection = null }) => {
         ))}
       </div>
 
-      {filteredUsers.length === 0 && (
+      {users.length === 0 && allUsers.length > 0 && (
         <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
           No users found matching your criteria.
         </div>
+      )}
+
+      {allUsers.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+          No users available. Click "Add User" to create the first user.
+        </div>
+      )}
+
+      {/* Pagination */}
+      {allUsers.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          onPageChange={handlePageChange}
+          showInfo={true}
+          showJumpToPage={true}
+        />
       )}
 
       {/* Modal */}
@@ -1094,6 +1208,16 @@ const UserManagement = ({ active = true, initialSection = null }) => {
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={showConfirmation}
+        onClose={() => setShowConfirmation(false)}
+        onConfirm={confirmationData?.action}
+        title={confirmationData?.title}
+        message={confirmationData?.message}
+        confirmText={confirmationData?.confirmText}
+        isDestructive={confirmationData?.isDestructive}
+      />
     </div>
   );
 };
