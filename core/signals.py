@@ -174,7 +174,8 @@ def log_successful_login(sender, request, user, **kwargs):
             additional_data={
                 'login_method': 'django_auth',
                 'session_key': session_key
-            }
+            },
+            request=request
         )
         
     except Exception as e:
@@ -201,7 +202,8 @@ def log_failed_login(sender, credentials, request, **kwargs):
             additional_data={
                 'attempted_username': credentials.get('username', 'Unknown'),
                 'login_method': 'django_auth'
-            }
+            },
+            request=request
         )
         
     except Exception as e:

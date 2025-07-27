@@ -2801,6 +2801,253 @@ function CSSStyles() {
         .loading-spinner p {
             margin: 0;
         }
+
+        /* Enhanced Logs Styles */
+        .logs-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 0 20px;
+        }
+
+        .enhanced-logs-table {
+            font-size: 11px;
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .enhanced-logs-table th {
+            background: var(--dark-blue);
+            color: white;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 10px;
+            border-bottom: 1px solid var(--medium-gray);
+        }
+
+        .enhanced-logs-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid var(--light-gray);
+            vertical-align: top;
+        }
+
+        .log-row:hover {
+            background-color: var(--light-blue);
+        }
+
+        .log-success {
+            border-left: 3px solid var(--success);
+        }
+
+        .log-failure {
+            border-left: 3px solid var(--danger);
+            background-color: rgba(229, 62, 62, 0.05);
+        }
+
+        .high-security {
+            border-left-color: #f44336 !important;
+            border-left-width: 4px !important;
+        }
+
+        .medium-security {
+            border-left-color: #ff9800 !important;
+            border-left-width: 3px !important;
+        }
+
+        .low-security {
+            border-left-color: #4caf50 !important;
+            border-left-width: 2px !important;
+        }
+
+        .timestamp-display {
+            font-size: 10px;
+        }
+
+        .timestamp-display .date {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .timestamp-display .time {
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .user-info .username {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .user-info .user-alias {
+            font-size: 9px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .action-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 600;
+            text-transform: uppercase;
+            background: var(--light-gray);
+            color: var(--text-dark);
+        }
+
+        .category-badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 8px;
+            font-weight: 500;
+            background: var(--medium-gray);
+            color: var(--text-muted);
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-success {
+            background: rgba(56, 161, 105, 0.1);
+            color: var(--success);
+        }
+
+        .status-failure {
+            background: rgba(229, 62, 62, 0.1);
+            color: var(--danger);
+        }
+
+        .security-level-badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: white;
+        }
+
+        .security-level-badge.high {
+            background: #f44336;
+        }
+
+        .security-level-badge.medium {
+            background: #ff9800;
+        }
+
+        .security-level-badge.low {
+            background: #4caf50;
+        }
+
+        .risk-score {
+            font-size: 8px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .client-info .browser-info {
+            font-size: 9px;
+            color: var(--text-dark);
+        }
+
+        .client-info .target-info {
+            font-size: 8px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .ip-info .primary-ip {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .ip-info .real-ip {
+            font-size: 8px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .log-details-enhanced .primary-details {
+            font-size: 10px;
+            color: var(--text-dark);
+        }
+
+        .log-details-enhanced .request-details {
+            font-size: 8px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .log-details-enhanced .error-details {
+            font-size: 8px;
+            color: var(--danger);
+            margin-top: 2px;
+            font-weight: 500;
+        }
+
+        .compliance-flag {
+            font-size: 8px;
+            color: var(--primary-blue);
+            margin-top: 2px;
+            font-weight: 500;
+        }
+
+        .compliance-flag i {
+            margin-right: 2px;
+        }
+
+        .raw-data-disclosure {
+            font-size: 8px;
+        }
+
+        .raw-data-disclosure summary {
+            cursor: pointer;
+            color: var(--primary-blue);
+            font-weight: 500;
+        }
+
+        .raw-data-content {
+            background: var(--light-gray);
+            padding: 8px;
+            margin-top: 5px;
+            border-radius: 4px;
+            font-size: 7px;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .logs-modal-content {
+            max-width: 95vw;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logs-modal-content .modal-body {
+            overflow-y: auto;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .logs-table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 8px;
+            border: 1px solid var(--medium-gray);
+            margin-top: 10px;
+        }
         }
       `}
     </style>

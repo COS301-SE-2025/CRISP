@@ -7,6 +7,14 @@ from django.db import transaction
 import logging
 import json
 import random
+import platform
+import psutil
+import socket
+import os
+import subprocess
+import hashlib
+import datetime
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -33,18 +41,18 @@ class AuditService:
                        resource_type: str = None, resource_id: str = None, **kwargs):
         """Alias for log_user_event for backward compatibility."""
         # Add resource_type and resource_id to additional_data if provided
-        enhanced_data = additional_data or {}
+        comprehensive_data = additional_data or {}
         if resource_type:
-            enhanced_data['resource_type'] = resource_type
+            comprehensive_data['resource_type'] = resource_type
         if resource_id:
-            enhanced_data['resource_id'] = resource_id
+            comprehensive_data['resource_id'] = resource_id
         # Add any other kwargs to additional_data
-        enhanced_data.update(kwargs)
+        comprehensive_data.update(kwargs)
         
         return self.log_user_event(
             user=user, action=action, ip_address=ip_address,
             user_agent=user_agent, success=success, 
-            failure_reason=failure_reason, additional_data=enhanced_data,
+            failure_reason=failure_reason, additional_data=comprehensive_data,
             target_user=target_user, target_organization=target_organization
         )
     
@@ -101,13 +109,13 @@ class AuditService:
                     additional_data = self._sanitize_data(additional_data)
                 
                 # Add target user/org info to additional_data since model doesn't have these fields
-                enhanced_data = additional_data or {}
+                comprehensive_data = additional_data or {}
                 if target_user:
-                    enhanced_data['target_user_id'] = str(target_user.id) if hasattr(target_user, 'id') else str(target_user)
-                    enhanced_data['target_username'] = target_user.username if hasattr(target_user, 'username') else str(target_user)
+                    comprehensive_data['target_user_id'] = str(target_user.id) if hasattr(target_user, 'id') else str(target_user)
+                    comprehensive_data['target_username'] = target_user.username if hasattr(target_user, 'username') else str(target_user)
                 if target_organization:
-                    enhanced_data['target_organization_id'] = str(target_organization.id) if hasattr(target_organization, 'id') else str(target_organization)
-                    enhanced_data['target_organization_name'] = target_organization.name if hasattr(target_organization, 'name') else str(target_organization)
+                    comprehensive_data['target_organization_id'] = str(target_organization.id) if hasattr(target_organization, 'id') else str(target_organization)
+                    comprehensive_data['target_organization_name'] = target_organization.name if hasattr(target_organization, 'name') else str(target_organization)
                 
                 # Use atomic transaction with shorter timeout
                 with transaction.atomic():
@@ -118,7 +126,7 @@ class AuditService:
                         user_agent=user_agent or 'Unknown',
                         success=success,
                         failure_reason=failure_reason,
-                        additional_data=enhanced_data
+                        additional_data=comprehensive_data
                     )
                 
                 self.logger.info(
@@ -244,22 +252,22 @@ class AuditService:
                 action = 'system_event'
             
             # Use trust event logging for system events
-            enhanced_data = additional_data or details or {}
+            comprehensive_data = additional_data or details or {}
             if component:
-                enhanced_data['component'] = component
+                comprehensive_data['component'] = component
             if event_type:
-                enhanced_data['event_type'] = event_type
+                comprehensive_data['event_type'] = event_type
             if severity:
-                enhanced_data['severity'] = severity
+                comprehensive_data['severity'] = severity
             if details:
-                enhanced_data.update(details)
+                comprehensive_data.update(details)
             
             return self.log_trust_event(
                 user=user,
                 action=action,
                 success=success,
                 failure_reason=failure_reason,
-                additional_data=enhanced_data
+                additional_data=comprehensive_data
             )
             
         except Exception as e:
@@ -284,10 +292,10 @@ class AuditService:
         """
         try:
             # Use user event logging for security events
-            enhanced_data = additional_data or details or {}
-            enhanced_data['event_type'] = event_type or 'security'
+            comprehensive_data = additional_data or details or {}
+            comprehensive_data['event_type'] = event_type or 'security'
             if severity:
-                enhanced_data['severity'] = severity
+                comprehensive_data['severity'] = severity
             
             # Use event_type as action if action is not provided
             effective_action = action or event_type or 'security_event'
@@ -308,7 +316,7 @@ class AuditService:
                 user_agent=user_agent,
                 success=success,
                 failure_reason=failure_reason,
-                additional_data=enhanced_data
+                additional_data=comprehensive_data
             )
             
         except Exception as e:
@@ -720,7 +728,80 @@ class AuditService:
             return []
     
     def _format_user_log(self, log) -> Dict:
-        """Format user log for API response."""
+        """Format user log for API response with comprehensive details."""
+        # Extract additional data for better display
+        additional_data = log.additional_data or {}
+        
+        # Create comprehensive details string
+        details_parts = []
+        
+        # Add basic information
+        if log.failure_reason:
+            details_parts.append(f"Error: {log.failure_reason}")
+        
+        # Add user details
+        actor_name = additional_data.get('actor_full_name', additional_data.get('actor_username', 'Unknown'))
+        if actor_name != 'Unknown':
+            details_parts.append(f"Actor: {actor_name}")
+        
+        # Add target information
+        target_username = additional_data.get('target_username')
+        target_org_name = additional_data.get('target_organization_name')
+        if target_username:
+            details_parts.append(f"Target User: {target_username}")
+        if target_org_name:
+            details_parts.append(f"Target Org: {target_org_name}")
+        
+        # Add security information - calculate if not available in comprehensive data
+        security_level = additional_data.get('security_level') or self._determine_security_level(log.action, log.success, log.failure_reason)
+        risk_score = additional_data.get('risk_score') or self._calculate_risk_score(log.action, log.success, log.ip_address, log.user)
+        if security_level:
+            details_parts.append(f"Security Level: {security_level}")
+        if risk_score:
+            details_parts.append(f"Risk Score: {risk_score}")
+        
+        # Add browser/OS information
+        user_agent_parsed = additional_data.get('client_user_agent_parsed', {})
+        if isinstance(user_agent_parsed, dict):
+            browser = user_agent_parsed.get('browser', 'unknown')
+            os = user_agent_parsed.get('os', 'unknown')
+            if browser != 'unknown' or os != 'unknown':
+                details_parts.append(f"Client: {browser} on {os}")
+        
+        # Add request information
+        request_method = additional_data.get('request_method')
+        request_path = additional_data.get('request_path')
+        if request_method and request_path:
+            details_parts.append(f"Request: {request_method} {request_path}")
+        
+        # Add geolocation info
+        client_real_ip = additional_data.get('client_real_ip')
+        if client_real_ip and client_real_ip != log.ip_address:
+            details_parts.append(f"Real IP: {client_real_ip}")
+        
+        # Add compliance flag
+        compliance_relevant = additional_data.get('compliance_relevant', False)
+        if compliance_relevant:
+            details_parts.append("Compliance Relevant")
+        
+        # Create formatted details string - provide more context even for basic logs
+        if not details_parts:
+            # For basic logs without comprehensive data, provide meaningful default details
+            if log.action == 'login_success' or log.action == 'login success':
+                formatted_details = f"Successful login from {log.ip_address}"
+            elif log.action == 'login_failure' or log.action == 'login failure':
+                formatted_details = f"Failed login attempt from {log.ip_address}" + (f" - {log.failure_reason}" if log.failure_reason else "")
+            elif 'delete' in log.action.lower():
+                formatted_details = f"Deletion operation performed"
+            elif 'create' in log.action.lower():
+                formatted_details = f"Creation operation performed"
+            elif 'update' in log.action.lower() or 'modify' in log.action.lower():
+                formatted_details = f"Modification operation performed"
+            else:
+                formatted_details = "Standard operation"
+        else:
+            formatted_details = " | ".join(details_parts)
+        
         return {
             'id': str(log.id),
             'type': 'user',
@@ -732,24 +813,72 @@ class AuditService:
             'success': log.success,
             'failure_reason': log.failure_reason,
             'timestamp': log.timestamp.isoformat(),
-            'additional_data': log.additional_data,
-            # Remove these fields since they don't exist in the model
-            # 'target_user': log.target_user.username if log.target_user else None,
-            # 'target_organization': log.target_organization.name if log.target_organization else None
+            'additional_data': additional_data,
+            'details': formatted_details,
+            'action_category': additional_data.get('action_category', self._categorize_action(log.action)),
+            'security_level': security_level,
+            'risk_score': risk_score,
+            'actor_full_name': additional_data.get('actor_full_name'),
+            'target_info': f"{target_username} ({target_org_name})" if target_username and target_org_name else target_username or target_org_name,
+            'client_info': f"{user_agent_parsed.get('browser', 'Unknown')} on {user_agent_parsed.get('os', 'Unknown')}" if user_agent_parsed else None,
+            'request_info': f"{request_method} {request_path}" if request_method and request_path else None,
         }
     
     def _format_trust_log(self, log) -> Dict:
-        """Format trust log for API response."""
+        """Format trust log for API response with comprehensive details."""
+        # Extract details data for better display (TrustLog uses 'details' field, not 'additional_data')
+        details_data = log.details or {}
+        
+        # Create comprehensive details string for trust logs
+        details_parts = []
+        
+        # Add basic information
+        if log.failure_reason:
+            details_parts.append(f"Error: {log.failure_reason}")
+        
+        # Add trust-specific information
+        if log.source_organization:
+            details_parts.append(f"Source: {log.source_organization.name}")
+        if log.target_organization:
+            details_parts.append(f"Target: {log.target_organization.name}")
+        if log.trust_relationship:
+            details_parts.append(f"Relationship: {log.trust_relationship.id}")
+        if log.trust_group:
+            details_parts.append(f"Group: {log.trust_group.name}")
+        
+        # Add security information - calculate if not available in details
+        security_level = details_data.get('security_level') or self._determine_security_level(log.action, log.success, log.failure_reason)
+        risk_score = details_data.get('risk_score') or self._calculate_risk_score(log.action, log.success, log.ip_address, log.user)
+        
+        # Create formatted details string
+        if not details_parts:
+            if 'delete' in log.action.lower():
+                formatted_details = f"Trust operation: deletion performed"
+            elif 'create' in log.action.lower():
+                formatted_details = f"Trust operation: creation performed"
+            elif 'modify' in log.action.lower() or 'update' in log.action.lower():
+                formatted_details = f"Trust operation: modification performed"
+            else:
+                formatted_details = "Trust operation performed"
+        else:
+            formatted_details = " | ".join(details_parts)
+        
         return {
             'id': str(log.id),
             'type': 'trust',
             'action': log.action,
             'user': log.user.username if log.user else 'System',
             'user_id': str(log.user.id) if log.user else None,
+            'ip_address': getattr(log, 'ip_address', None),
+            'user_agent': getattr(log, 'user_agent', None),
             'success': log.success,
-            'details': log.details,
+            'failure_reason': log.failure_reason,
+            'details': formatted_details,
             'timestamp': log.timestamp.isoformat(),
-            'additional_data': log.additional_data,
+            'additional_data': details_data,  # Use details field as additional_data
+            'action_category': details_data.get('action_category', self._categorize_action(log.action)),
+            'security_level': security_level,
+            'risk_score': risk_score,
             'trust_relationship': {
                 'id': str(log.trust_relationship.id),
                 'source': log.trust_relationship.source_organization.name,
@@ -1129,3 +1258,176 @@ class AuditService:
             'critical': 'CRITICAL'
         }
         return severity_mapping.get(severity, 'INFO')
+    
+    def _categorize_action(self, action):
+        """Categorize the action for better organization with comprehensive action mapping."""
+        if not action:
+            return 'Unknown'
+            
+        action_upper = action.upper()
+        
+        # Authentication & Session Management
+        auth_actions = [
+            'LOGIN_SUCCESS', 'LOGIN_FAILED', 'LOGIN', 'LOGOUT', 'PASSWORD_CHANGE', 
+            'PASSWORD_RESET', 'TOKEN_REFRESH', 'TOKEN_EXPIRED', 'SESSION_CREATED',
+            'SESSION_EXPIRED', 'MFA_ENABLED', 'MFA_DISABLED', 'MFA_CHALLENGE',
+            'ACCOUNT_LOCKED', 'ACCOUNT_UNLOCKED', 'LOGIN_ATTEMPT', 'INVALID_CREDENTIALS',
+            'LOGIN SUCCESS', 'LOGIN FAILURE'  # Handle space-separated versions
+        ]
+        
+        # User Management Operations
+        user_mgmt_actions = [
+            'USER_CREATED', 'USER_UPDATED', 'USER_DELETED', 'USER_ACTIVATED', 
+            'USER_DEACTIVATED', 'USER_SUSPENDED', 'USER_RESTORED', 'PROFILE_UPDATED',
+            'EMAIL_CHANGED', 'USERNAME_CHANGED', 'USER_INVITED', 'INVITATION_ACCEPTED',
+            'INVITATION_DECLINED', 'USER_REGISTERED', 'ACCOUNT_VERIFICATION',
+            'USER CREATED', 'USER UPDATED', 'USER DELETED',  # Handle space-separated versions
+            'PROFILE UPDATE', 'PASSWORD CHANGE'
+        ]
+        
+        # Organization Management
+        org_actions = [
+            'ORGANIZATION_CREATED', 'ORGANIZATION_UPDATED', 'ORGANIZATION_DELETED',
+            'ORGANIZATION_ACTIVATED', 'ORGANIZATION_DEACTIVATED', 'ORGANIZATION_SUSPENDED',
+            'ORG_SETTINGS_CHANGED', 'ORG_MEMBER_ADDED', 'ORG_MEMBER_REMOVED',
+            'DELETE_ORGANIZATION', 'DELETE ORGANIZATION',  # Handle space-separated versions
+            'ORGANIZATION CREATED', 'ORGANIZATION UPDATED', 'ORGANIZATION DELETED'
+        ]
+        
+        # Trust & Relationship Management
+        trust_actions = [
+            'TRUST_RELATIONSHIP_CREATED', 'TRUST_RELATIONSHIP_MODIFIED', 'TRUST_RELATIONSHIP_DELETED',
+            'TRUST_RELATIONSHIP_APPROVED', 'TRUST_RELATIONSHIP_REJECTED', 'TRUST_RELATIONSHIP_SUSPENDED',
+            'TRUST_GROUP_CREATED', 'TRUST_GROUP_UPDATED', 'TRUST_GROUP_DELETED',
+            'TRUST_GROUP_JOINED', 'TRUST_GROUP_LEFT', 'TRUST_SCORE_UPDATED',
+            'TRUST RELATIONSHIP_CREATED', 'TRUST RELATIONSHIP_MODIFIED', 'TRUST RELATIONSHIP_DELETED',  # Handle space versions
+            'TRUST GROUP_CREATED', 'TRUST GROUP_UPDATED', 'TRUST GROUP_DELETED',
+            'TRUST GROUP_JOINED', 'TRUST GROUP_LEFT'
+        ]
+        
+        # Permission & Access Control
+        permission_actions = [
+            'PERMISSION_GRANTED', 'PERMISSION_REVOKED', 'ROLE_CHANGED', 'ROLE_ASSIGNED',
+            'ROLE_REMOVED', 'ACCESS_GRANTED', 'ACCESS_DENIED', 'PRIVILEGE_ESCALATION',
+            'ADMIN_ACCESS', 'SUPERUSER_ACCESS', 'RESOURCE_ACCESSED',
+            'PERMISSION GRANTED', 'PERMISSION REVOKED', 'API ACCESS'  # Handle space versions
+        ]
+        
+        # Data Operations
+        data_actions = [
+            'DATA_EXPORT', 'DATA_IMPORT', 'DATA_BACKUP', 'DATA_RESTORE',
+            'FILE_UPLOAD', 'FILE_DOWNLOAD', 'FILE_DELETED', 'BULK_OPERATION',
+            'DATABASE_QUERY', 'DATABASE_UPDATE', 'DATABASE_DELETE',
+            'FILE UPLOAD', 'FILE DOWNLOAD', 'BACKUP CREATED', 'REPORT GENERATED'  # Handle space versions
+        ]
+        
+        # API & Integration
+        api_actions = [
+            'API_ACCESS', 'API_KEY_CREATED', 'API_KEY_REVOKED', 'WEBHOOK_TRIGGERED',
+            'EXTERNAL_AUTH', 'THIRD_PARTY_LOGIN', 'SSO_LOGIN', 'OAUTH_LOGIN',
+            'INTEGRATION_ENABLED', 'INTEGRATION_DISABLED'
+        ]
+        
+        # System Operations
+        system_actions = [
+            'SYSTEM_STARTUP', 'SYSTEM_SHUTDOWN', 'SERVICE_RESTART', 'CONFIGURATION_CHANGED',
+            'LOG_ROTATION', 'CACHE_CLEARED', 'MAINTENANCE_MODE', 'HEALTH_CHECK',
+            'BACKUP_CREATED', 'BACKUP_RESTORED', 'UPDATE_INSTALLED', 'SECURITY_SCAN'
+        ]
+        
+        # Security Events
+        security_actions = [
+            'SECURITY_ALERT', 'INTRUSION_DETECTED', 'SUSPICIOUS_ACTIVITY', 'BRUTE_FORCE_ATTEMPT',
+            'SECURITY SCAN', 'SECURITY ALERT',  # Handle space versions
+            'SQL_INJECTION_ATTEMPT', 'XSS_ATTEMPT', 'CSRF_ATTEMPT', 'RATE_LIMIT_EXCEEDED',
+            'IP_BLOCKED', 'IP_UNBLOCKED', 'FIREWALL_RULE_ADDED', 'ENCRYPTION_KEY_ROTATED'
+        ]
+        
+        # Communication & Notifications
+        communication_actions = [
+            'EMAIL_SENT', 'SMS_SENT', 'NOTIFICATION_SENT', 'ALERT_TRIGGERED',
+            'REPORT_GENERATED', 'REPORT_SENT', 'MESSAGE_SENT', 'BROADCAST_SENT'
+        ]
+        
+        # Audit & Compliance
+        audit_actions = [
+            'AUDIT_LOG_ACCESSED', 'COMPLIANCE_REPORT', 'POLICY_VIOLATION',
+            'GDPR_REQUEST', 'DATA_RETENTION_APPLIED', 'LEGAL_HOLD_APPLIED',
+            'FORENSIC_INVESTIGATION', 'INCIDENT_REPORTED',
+            'INCIDENT REPORTED', 'COMPLIANCE REPORT'  # Handle space versions
+        ]
+        
+        # Check each category
+        if any(auth_action in action_upper for auth_action in auth_actions):
+            return 'Authentication & Session'
+        elif any(user_action in action_upper for user_action in user_mgmt_actions):
+            return 'User Management'
+        elif any(org_action in action_upper for org_action in org_actions):
+            return 'Organization Management'
+        elif any(trust_action in action_upper for trust_action in trust_actions):
+            return 'Trust & Relationship Management'
+        elif any(perm_action in action_upper for perm_action in permission_actions):
+            return 'Permission & Access Control'
+        elif any(data_action in action_upper for data_action in data_actions):
+            return 'Data Operations'
+        elif any(api_action in action_upper for api_action in api_actions):
+            return 'API & Integration'
+        elif any(sys_action in action_upper for sys_action in system_actions):
+            return 'System Operations'
+        elif any(sec_action in action_upper for sec_action in security_actions):
+            return 'Security Events'
+        elif any(comm_action in action_upper for comm_action in communication_actions):
+            return 'Communication & Notifications'
+        elif any(audit_action in action_upper for audit_action in audit_actions):
+            return 'Audit & Compliance'
+        else:
+            return 'General Operations'
+    
+    def _determine_security_level(self, action, success, failure_reason):
+        """Determine security level based on action context."""
+        if not action:
+            return 'low'
+        
+        action_lower = action.lower()
+        
+        # High security events
+        if any(keyword in action_lower for keyword in ['failure', 'failed', 'error', 'denied', 'locked', 'suspended', 'revoked']):
+            return 'high'
+        elif any(keyword in action_lower for keyword in ['delete', 'remove', 'disable', 'admin', 'privilege']):
+            return 'medium'
+        elif any(keyword in action_lower for keyword in ['login', 'password', 'token', 'key']):
+            return 'medium' if not success else 'low'
+        else:
+            return 'low'
+    
+    def _calculate_risk_score(self, action, success, ip_address, user):
+        """Calculate basic risk score for the action."""
+        if not action:
+            return 0
+        
+        score = 0
+        action_lower = action.lower()
+        
+        # Base score from action type
+        if any(keyword in action_lower for keyword in ['failure', 'failed', 'error', 'denied']):
+            score += 30
+        elif any(keyword in action_lower for keyword in ['delete', 'remove', 'admin']):
+            score += 20
+        elif any(keyword in action_lower for keyword in ['create', 'modify', 'update']):
+            score += 10
+        else:
+            score += 5
+        
+        # Adjust for success/failure
+        if not success:
+            score += 20
+        
+        # Basic IP analysis
+        if ip_address and ip_address != '127.0.0.1':
+            score += 5
+        
+        # User context
+        if not user:
+            score += 10  # System actions can be riskier
+        
+        return min(score, 100)  # Cap at 100

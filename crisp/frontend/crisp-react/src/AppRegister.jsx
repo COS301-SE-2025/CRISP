@@ -3166,6 +3166,7 @@ function AdminSettings({ active, onNavigate }) {
     start_date: '',
     end_date: ''
   });
+  const [showDetailedView, setShowDetailedView] = useState(false);
 
   useEffect(() => {
     if (active) {
@@ -3221,6 +3222,183 @@ function AdminSettings({ active, onNavigate }) {
   const handleViewLogs = () => {
     setShowLogsModal(true);
     fetchLogs();
+  };
+
+  const exportLogsToPDF = () => {
+    // Generate comprehensive PDF content
+    const htmlContent = generateLogsPDFContent();
+    
+    // Open in new window for printing
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    
+    // Focus and print
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
+  };
+
+  const generateLogsPDFContent = () => {
+    const currentDate = new Date().toLocaleString();
+    const totalLogs = logs.length;
+    const successfulLogs = logs.filter(log => log.success).length;
+    const failedLogs = totalLogs - successfulLogs;
+    
+    // Generate detailed log table
+    const logRows = logs.map(log => {
+      const timestamp = new Date(log.timestamp).toLocaleString();
+      const actor = log.actor_full_name || log.user || 'System';
+      const action = log.action?.replace('_', ' ') || 'UNKNOWN';
+      const category = log.action_category || 'Unknown';
+      const status = log.success ? 'SUCCESS' : 'FAILED';
+      const securityLevel = log.security_level || 'LOW';
+      const riskScore = log.risk_score || 'N/A';
+      const ipAddress = log.ip_address || 'N/A';
+      const clientInfo = log.client_info || 'Unknown';
+      const details = log.details || 'Standard operation';
+      
+      return `
+        <tr style="border-bottom: 1px solid #ddd; ${!log.success ? 'background-color: #ffebee;' : ''}">
+          <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px;">${timestamp}</td>
+          <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px;">${actor}</td>
+          <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px;">${action}</td>
+          <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px;">${category}</td>
+          <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px; color: ${log.success ? 'green' : 'red'}; font-weight: bold;">${status}</td>
+          <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px;">
+            <span style="background-color: ${securityLevel === 'HIGH' ? '#f44336' : securityLevel === 'MEDIUM' ? '#ff9800' : '#4caf50'}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 9px;">${securityLevel}</span>
+            <br><small>Risk: ${riskScore}</small>
+          </td>
+          <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px;">${clientInfo}</td>
+          <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px;">${ipAddress}</td>
+          <td style="padding: 8px; border: 1px solid #ddd; font-size: 9px; max-width: 200px; word-wrap: break-word;">${details}</td>
+        </tr>
+      `;
+    }).join('');
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>CRISP Audit Logs Report</title>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 20px; 
+              line-height: 1.4;
+            }
+            .header { 
+              text-align: center; 
+              margin-bottom: 30px; 
+              border-bottom: 2px solid #333; 
+              padding-bottom: 20px;
+            }
+            .summary { 
+              background-color: #f5f5f5; 
+              padding: 15px; 
+              margin-bottom: 20px; 
+              border-radius: 5px;
+              display: flex;
+              justify-content: space-around;
+              flex-wrap: wrap;
+            }
+            .summary-item {
+              text-align: center;
+              margin: 10px;
+            }
+            .summary-item h3 {
+              margin: 0;
+              color: #333;
+            }
+            .summary-item p {
+              margin: 5px 0 0 0;
+              font-size: 14px;
+              color: #666;
+            }
+            table { 
+              width: 100%; 
+              border-collapse: collapse; 
+              margin-top: 20px;
+              font-size: 11px;
+            }
+            th { 
+              background-color: #333; 
+              color: white; 
+              padding: 10px 8px; 
+              text-align: left;
+              font-weight: bold;
+              font-size: 10px;
+            }
+            .footer {
+              margin-top: 30px;
+              text-align: center;
+              font-size: 12px;
+              color: #666;
+              border-top: 1px solid #ddd;
+              padding-top: 20px;
+            }
+            @media print {
+              body { margin: 10px; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>CRISP System Audit Logs Report</h1>
+            <p><strong>Generated:</strong> ${currentDate}</p>
+            <p><strong>Report Period:</strong> ${logsFilter.start_date || 'All Time'} to ${logsFilter.end_date || 'Present'}</p>
+          </div>
+          
+          <div class="summary">
+            <div class="summary-item">
+              <h3>${totalLogs}</h3>
+              <p>Total Events</p>
+            </div>
+            <div class="summary-item">
+              <h3 style="color: #4caf50;">${successfulLogs}</h3>
+              <p>Successful Operations</p>
+            </div>
+            <div class="summary-item">
+              <h3 style="color: #f44336;">${failedLogs}</h3>
+              <p>Failed Operations</p>
+            </div>
+            <div class="summary-item">
+              <h3>${((successfulLogs / totalLogs) * 100).toFixed(1)}%</h3>
+              <p>Success Rate</p>
+            </div>
+          </div>
+
+          <h2>Detailed Log Entries</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>User</th>
+                <th>Action</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th>Security</th>
+                <th>Client</th>
+                <th>IP Address</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${logRows}
+            </tbody>
+          </table>
+
+          <div class="footer">
+            <p><strong>CRISP (Cyber Resilience Information Sharing Platform)</strong></p>
+            <p>This report contains sensitive security information. Handle according to your organization's data classification policies.</p>
+            <p>Generated by CRISP v2.0 Comprehensive Audit System</p>
+          </div>
+        </body>
+      </html>
+    `;
   };
 
   const handleTestEmail = async () => {
@@ -3533,7 +3711,7 @@ function AdminSettings({ active, onNavigate }) {
       {/* Logs Modal */}
       {showLogsModal && (
         <div className="modal-overlay" onClick={() => setShowLogsModal(false)}>
-          <div className="modal-content logs-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content logs-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2><i className="fas fa-file-alt"></i> System Audit Logs</h2>
               <button className="modal-close" onClick={() => setShowLogsModal(false)}>
@@ -3601,40 +3779,132 @@ function AdminSettings({ active, onNavigate }) {
                     <p>Loading logs...</p>
                   </div>
                 ) : logs.length > 0 ? (
-                  <div className="logs-table-container">
-                    <table className="logs-table">
+                  <>
+                    <div className="logs-actions">
+                      <button 
+                        className="btn btn-primary" 
+                        onClick={exportLogsToPDF}
+                        disabled={logs.length === 0}
+                      >
+                        <i className="fas fa-file-pdf"></i> Export to PDF
+                      </button>
+                      <button 
+                        className="btn btn-outline" 
+                        onClick={() => setShowDetailedView(!showDetailedView)}
+                      >
+                        <i className={`fas ${showDetailedView ? 'fa-eye-slash' : 'fa-eye'}`}></i> 
+                        {showDetailedView ? 'Simple View' : 'Detailed View'}
+                      </button>
+                    </div>
+                    
+                    <div className="logs-table-container">
+                    <table className="logs-table enhanced-logs-table">
                       <thead>
                         <tr>
                           <th>Timestamp</th>
                           <th>User</th>
                           <th>Action</th>
+                          <th>Category</th>
                           <th>Status</th>
+                          <th>Security</th>
+                          <th>Client Info</th>
                           <th>IP Address</th>
-                          <th>Details</th>
+                          <th>Comprehensive Details</th>
+                          {showDetailedView && <th>Raw Data</th>}
                         </tr>
                       </thead>
                       <tbody>
                         {logs.map((log, index) => (
-                          <tr key={index} className={log.success ? 'log-success' : 'log-failure'}>
-                            <td>{new Date(log.timestamp).toLocaleString()}</td>
-                            <td>{log.user || 'Unknown'}</td>
-                            <td>
-                              <span className={`action-badge action-${log.action?.replace('_', '-')}`}>
-                                {log.action?.replace('_', ' ').toUpperCase() || 'UNKNOWN'}
+                          <tr key={index} className={`log-row ${log.success ? 'log-success' : 'log-failure'} ${log.security_level?.toLowerCase()}-security`}>
+                            <td className="timestamp-cell">
+                              <div className="timestamp-display">
+                                <div className="date">{new Date(log.timestamp).toLocaleDateString()}</div>
+                                <div className="time">{new Date(log.timestamp).toLocaleTimeString()}</div>
+                              </div>
+                            </td>
+                            <td className="user-cell">
+                              <div className="user-info">
+                                <div className="username">{log.actor_full_name || log.user || 'System'}</div>
+                                {log.actor_full_name && log.user && log.actor_full_name !== log.user && (
+                                  <div className="user-alias">({log.user})</div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="action-cell">
+                              <span className={`action-badge action-${log.action?.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`}>
+                                {log.action?.replace('_', ' ') || 'UNKNOWN'}
                               </span>
                             </td>
-                            <td>
+                            <td className="category-cell">
+                              <span className="category-badge">
+                                {log.action_category || 'Unknown'}
+                              </span>
+                            </td>
+                            <td className="status-cell">
                               <span className={`status-badge ${log.success ? 'status-success' : 'status-failure'}`}>
                                 {log.success ? 'SUCCESS' : 'FAILED'}
                               </span>
                             </td>
-                            <td>{log.ip_address || 'N/A'}</td>
-                            <td className="log-details">{log.details || 'No details'}</td>
+                            <td className="security-cell">
+                              <div className="security-info">
+                                <span className={`security-level-badge ${log.security_level?.toLowerCase()}`}>
+                                  {log.security_level || 'LOW'}
+                                </span>
+                                {log.risk_score && (
+                                  <div className="risk-score">Risk: {log.risk_score}</div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="client-cell">
+                              <div className="client-info">
+                                {log.client_info && (
+                                  <div className="browser-info">{log.client_info}</div>
+                                )}
+                                {log.target_info && (
+                                  <div className="target-info">Target: {log.target_info}</div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="ip-cell">
+                              <div className="ip-info">
+                                <div className="primary-ip">{log.ip_address || 'N/A'}</div>
+                                {log.additional_data?.client_real_ip && log.additional_data.client_real_ip !== log.ip_address && (
+                                  <div className="real-ip">Real: {log.additional_data.client_real_ip}</div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="details-cell">
+                              <div className="log-details-enhanced">
+                                <div className="primary-details">{log.details || 'Standard operation'}</div>
+                                {log.request_info && (
+                                  <div className="request-details">Request: {log.request_info}</div>
+                                )}
+                                {log.failure_reason && (
+                                  <div className="error-details">Error: {log.failure_reason}</div>
+                                )}
+                                {log.additional_data?.compliance_relevant && (
+                                  <div className="compliance-flag">
+                                    <i className="fas fa-shield-alt"></i> Compliance Relevant
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            {showDetailedView && (
+                              <td className="raw-data-cell">
+                                <details className="raw-data-disclosure">
+                                  <summary>Show Raw Data</summary>
+                                  <pre className="raw-data-content">
+                                    {JSON.stringify(log.additional_data || {}, null, 2)}
+                                  </pre>
+                                </details>
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>
                     </table>
-                  </div>
+                    </div>
+                  </>
                 ) : (
                   <div className="no-logs">
                     <i className="fas fa-file-alt"></i>
