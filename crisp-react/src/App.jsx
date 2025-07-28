@@ -49,13 +49,65 @@ const api = {
 };
 
 function App() {
-  // State to manage the active page
+  // State to manage the active page and navigation parameters
   const [activePage, setActivePage] = useState('dashboard');
+  const [navigationState, setNavigationState] = useState({
+    triggerModal: null,
+    modalParams: {}
+  });
 
-  // Function to switch between pages
-  const showPage = (pageId) => {
+  // Function to switch between pages with optional modal triggers
+  const showPage = (pageId, modalTrigger = null, modalParams = {}) => {
     setActivePage(pageId);
+    setNavigationState({
+      triggerModal: modalTrigger,
+      modalParams: modalParams
+    });
+    
+    // Update URL with parameters if modal trigger is provided
+    if (modalTrigger) {
+      const url = new URL(window.location);
+      url.searchParams.set('modal', modalTrigger);
+      if (Object.keys(modalParams).length > 0) {
+        url.searchParams.set('params', JSON.stringify(modalParams));
+      }
+      window.history.pushState({}, '', url);
+    } else {
+      // Clear URL parameters when no modal trigger
+      const url = new URL(window.location);
+      url.searchParams.delete('modal');
+      url.searchParams.delete('params');
+      window.history.pushState({}, '', url);
+    }
   };
+
+  // Handle browser back/forward navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const modalTrigger = urlParams.get('modal');
+      const modalParams = urlParams.get('params');
+      
+      if (modalTrigger) {
+        setNavigationState({
+          triggerModal: modalTrigger,
+          modalParams: modalParams ? JSON.parse(modalParams) : {}
+        });
+      } else {
+        setNavigationState({
+          triggerModal: null,
+          modalParams: {}
+        });
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    
+    // Check for initial URL parameters on page load
+    handlePopState();
+    
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   return (
     <div className="App">
@@ -72,7 +124,7 @@ function App() {
           <Dashboard active={activePage === 'dashboard'} showPage={showPage} />
 
           {/* Threat Feeds */}
-          <ThreatFeeds active={activePage === 'threat-feeds'} />
+          <ThreatFeeds active={activePage === 'threat-feeds'} navigationState={navigationState} setNavigationState={setNavigationState} />
 
           {/* IoC Management */}
           <IoCManagement active={activePage === 'ioc-management'} />
@@ -403,7 +455,7 @@ function Dashboard({ active, showPage }) {
         </div>
         <div className="action-buttons">
           <button className="btn btn-outline"><i className="fas fa-download"></i> Export Data</button>
-          <button className="btn btn-primary" onClick={() => showPage('threat-feeds')}><i className="fas fa-plus"></i> Add New Feed</button>
+          <button className="btn btn-primary" onClick={() => showPage('threat-feeds', 'addFeed')}><i className="fas fa-plus"></i> Add New Feed</button>
         </div>
       </div>
 
@@ -707,7 +759,7 @@ function Dashboard({ active, showPage }) {
 }
 
 // Threat Feeds Component
-function ThreatFeeds({ active }) {
+function ThreatFeeds({ active, navigationState, setNavigationState }) {
   const [threatFeeds, setThreatFeeds] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -738,6 +790,18 @@ function ThreatFeeds({ active }) {
       fetchThreatFeeds();
     }
   }, [active]);
+
+  // Handle navigation state for modal triggers
+  useEffect(() => {
+    if (active && navigationState?.triggerModal === 'addFeed') {
+      setShowAddModal(true);
+      // Clear navigation state after handling
+      setNavigationState({
+        triggerModal: null,
+        modalParams: {}
+      });
+    }
+  }, [active, navigationState, setNavigationState]);
   
   const fetchThreatFeeds = async () => {
     setLoading(true);
