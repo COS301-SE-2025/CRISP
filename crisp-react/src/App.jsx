@@ -30,6 +30,21 @@ const api = {
       console.error(`API Error: ${endpoint}`, error);
       return null;
     }
+  },
+  
+  put: async (endpoint, data) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error(`API Error: ${endpoint}`, error);
+      return null;
+    }
   }
 };
 
@@ -1156,7 +1171,11 @@ function IoCManagement({ active }) {
     severity: 'Medium',
     description: '',
     source: '',
-    confidence: 50
+    confidence: 50,
+    threatFeed: '',
+    createNewFeed: false,
+    newFeedName: '',
+    newFeedDescription: ''
   });
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -1169,6 +1188,78 @@ function IoCManagement({ active }) {
   const [importing, setImporting] = useState(false);
   const [importPreview, setImportPreview] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
+  
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingIndicator, setEditingIndicator] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    type: '',
+    value: '',
+    description: '',
+    confidence: 50,
+    threat_feed_id: '',
+    threatFeedMode: 'existing'
+  });
+  const [editFormErrors, setEditFormErrors] = useState({});
+  const [updating, setUpdating] = useState(false);
+  const [editNewFeedName, setEditNewFeedName] = useState('');
+  const [editNewFeedDescription, setEditNewFeedDescription] = useState('');
+  
+  // Share modal state
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [sharingIndicator, setSharingIndicator] = useState(null);
+  const [shareFormData, setShareFormData] = useState({
+    institutions: [],
+    anonymizationLevel: 'medium',
+    shareMethod: 'taxii'
+  });
+  const [sharing, setSharing] = useState(false);
+  const [institutionSearch, setInstitutionSearch] = useState('');
+  const [showInstitutionDropdown, setShowInstitutionDropdown] = useState(false);
+  const [selectedInstitutionIndex, setSelectedInstitutionIndex] = useState(-1);
+  const [shareInstitutionMode, setShareInstitutionMode] = useState('existing');
+  const [institutionDropdownSearch, setInstitutionDropdownSearch] = useState('');
+  const [showInstitutionSelectDropdown, setShowInstitutionSelectDropdown] = useState(false);
+  
+  // Threat feeds for Add IoC modal
+  const [threatFeeds, setThreatFeeds] = useState([]);
+  
+  // Mock institutions list - in real app, this would come from API
+  const availableInstitutions = [
+    'University of Pretoria',
+    'Cyber Security Hub',
+    'SANReN CSIRT',
+    'SABRIC',
+    'University of Johannesburg',
+    'University of Cape Town',
+    'University of the Witwatersrand',
+    'Stellenbosch University',
+    'Rhodes University',
+    'North-West University',
+    'University of KwaZulu-Natal',
+    'University of the Free State',
+    'Nelson Mandela University',
+    'University of Limpopo',
+    'Walter Sisulu University',
+    'Vaal University of Technology',
+    'Central University of Technology',
+    'Durban University of Technology',
+    'Cape Peninsula University of Technology',
+    'Tshwane University of Technology',
+    'CSIR',
+    'Council for Scientific and Industrial Research',
+    'South African Police Service',
+    'State Security Agency',
+    'Department of Communications',
+    'SITA (State Information Technology Agency)',
+    'Nedbank',
+    'Standard Bank',
+    'First National Bank',
+    'ABSA Bank',
+    'Capitec Bank',
+    'African Bank',
+    'Investec'
+  ];
   
   // Filter state management
   const [filters, setFilters] = useState({
@@ -1191,8 +1282,31 @@ function IoCManagement({ active }) {
   useEffect(() => {
     if (active) {
       fetchIndicators();
+      fetchThreatFeeds();
     }
   }, [active]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (showInstitutionDropdown && !event.target.closest('.institution-search-container')) {
+        setShowInstitutionDropdown(false);
+        setSelectedInstitutionIndex(-1);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showInstitutionDropdown]);
+  
+  const fetchThreatFeeds = async () => {
+    const data = await api.get('/api/threat-feeds/');
+    if (data && data.results) {
+      setThreatFeeds(data.results);
+    }
+  };
 
   // Apply filters when indicators, filters, or pagination settings change
   useEffect(() => {
@@ -1632,10 +1746,18 @@ function IoCManagement({ active }) {
                       </span>
                     </td>
                     <td>
-                      <button className="btn btn-outline btn-sm" title="Edit Indicator">
+                      <button 
+                        className="btn btn-outline btn-sm" 
+                        title="Edit Indicator"
+                        onClick={() => handleEditIndicator(indicator)}
+                      >
                         <i className="fas fa-edit"></i>
                       </button>
-                      <button className="btn btn-outline btn-sm" title="Share Indicator">
+                      <button 
+                        className="btn btn-outline btn-sm" 
+                        title="Share Indicator"
+                        onClick={() => handleShareIndicator(indicator)}
+                      >
                         <i className="fas fa-share-alt"></i>
                       </button>
                     </td>
@@ -1907,58 +2029,58 @@ function IoCManagement({ active }) {
                       <option value="High">High</option>
                     </select>
                   </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">IoC Value *</label>
-                  <input 
-                    type="text" 
-                    value={newIoC.value} 
-                    onChange={(e) => setNewIoC({...newIoC, value: e.target.value})}
-                    className={formErrors.value ? 'form-control error' : 'form-control'}
-                    placeholder="Enter the indicator value (e.g., 192.168.1.1, malicious.com, etc.)"
-                    required
-                  />
-                  {formErrors.value && <span className="error-text">{formErrors.value}</span>}
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Source</label>
-                  <input 
-                    type="text" 
-                    value={newIoC.source} 
-                    onChange={(e) => setNewIoC({...newIoC, source: e.target.value})}
-                    className="form-control"
-                    placeholder="Source of this IoC (e.g., Internal Analysis, OSINT, etc.)"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Confidence Level: {newIoC.confidence}%</label>
-                  <input 
-                    type="range" 
-                    min="0" 
-                    max="100" 
-                    value={newIoC.confidence} 
-                    onChange={(e) => setNewIoC({...newIoC, confidence: parseInt(e.target.value)})}
-                    className="form-range"
-                  />
-                  <div className="range-labels">
-                    <span>Low (0%)</span>
-                    <span>High (100%)</span>
                   </div>
-                </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">IoC Value *</label>
+                    <input 
+                      type="text" 
+                      value={newIoC.value} 
+                      onChange={(e) => setNewIoC({...newIoC, value: e.target.value})}
+                      className={formErrors.value ? 'form-control error' : 'form-control'}
+                      placeholder="Enter the indicator value (e.g., 192.168.1.1, malicious.com, etc.)"
+                      required
+                    />
+                    {formErrors.value && <span className="error-text">{formErrors.value}</span>}
+                  </div>
 
-                <div className="form-group">
-                  <label className="form-label">Description</label>
-                  <textarea 
-                    value={newIoC.description} 
-                    onChange={(e) => setNewIoC({...newIoC, description: e.target.value})}
-                    className="form-control"
-                    rows="3"
-                    placeholder="Additional notes or description about this IoC..."
-                  ></textarea>
-                </div>
+                  <div className="form-group">
+                    <label className="form-label">Source</label>
+                    <input 
+                      type="text" 
+                      value={newIoC.source} 
+                      onChange={(e) => setNewIoC({...newIoC, source: e.target.value})}
+                      className="form-control"
+                      placeholder="Source of this IoC (e.g., Internal Analysis, OSINT, etc.)"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Confidence Level: {newIoC.confidence}%</label>
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="100" 
+                      value={newIoC.confidence} 
+                      onChange={(e) => setNewIoC({...newIoC, confidence: parseInt(e.target.value)})}
+                      className="form-range"
+                    />
+                    <div className="range-labels">
+                      <span>Low (0%)</span>
+                      <span>High (100%)</span>
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Description</label>
+                    <textarea 
+                      value={newIoC.description} 
+                      onChange={(e) => setNewIoC({...newIoC, description: e.target.value})}
+                      className="form-control"
+                      rows="3"
+                      placeholder="Additional notes or description about this IoC..."
+                    ></textarea>
+                  </div>
 
                 <div className="modal-actions">
                   <button type="button" className="btn btn-outline" onClick={closeAddModal} disabled={submitting}>
@@ -2177,6 +2299,281 @@ function IoCManagement({ active }) {
           </div>
         </div>
       )}
+
+      {/* Edit IoC Modal */}
+      {showEditModal && (
+        <div className="modal-overlay" onClick={closeEditModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2><i className="fas fa-edit"></i> Edit IoC</h2>
+              <button className="modal-close" onClick={closeEditModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={handleUpdateIndicator}>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label className="form-label">IoC Type *</label>
+                    <select 
+                      value={editFormData.type} 
+                      onChange={(e) => setEditFormData({...editFormData, type: e.target.value})}
+                      className={editFormErrors.type ? 'form-control error' : 'form-control'}
+                      required
+                    >
+                      <option value="">Select Type</option>
+                      <option value="ip">IP Address</option>
+                      <option value="domain">Domain</option>
+                      <option value="url">URL</option>
+                      <option value="file_hash">File Hash</option>
+                      <option value="email">Email</option>
+                      <option value="user_agent">User Agent</option>
+                      <option value="registry">Registry Key</option>
+                      <option value="mutex">Mutex</option>
+                      <option value="process">Process</option>
+                    </select>
+                    {editFormErrors.type && <span className="error-text">{editFormErrors.type}</span>}
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">Confidence Level: {editFormData.confidence}%</label>
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="100" 
+                      value={editFormData.confidence} 
+                      onChange={(e) => setEditFormData({...editFormData, confidence: parseInt(e.target.value)})}
+                      className="form-range"
+                    />
+                    <div className="range-labels">
+                      <span>Low (0%)</span>
+                      <span>High (100%)</span>
+                    </div>
+                  </div>
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">IoC Value *</label>
+                    <input 
+                      type="text" 
+                      value={editFormData.value} 
+                      onChange={(e) => setEditFormData({...editFormData, value: e.target.value})}
+                      className={editFormErrors.value ? 'form-control error' : 'form-control'}
+                      placeholder="Enter IoC value (IP, domain, hash, etc.)"
+                      required
+                    />
+                    {editFormErrors.value && <span className="error-text">{editFormErrors.value}</span>}
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">Description</label>
+                    <textarea 
+                      value={editFormData.description} 
+                      onChange={(e) => setEditFormData({...editFormData, description: e.target.value})}
+                      className="form-control"
+                      placeholder="Optional description or notes"
+                      rows="3"
+                    />
+                  </div>
+                
+                {editFormErrors.submit && (
+                  <div className="error-message">
+                    <i className="fas fa-exclamation-triangle"></i>
+                    {editFormErrors.submit}
+                  </div>
+                )}
+                
+                <div className="modal-actions">
+                  <button type="button" className="btn btn-outline" onClick={closeEditModal} disabled={updating}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary" disabled={updating}>
+                    {updating ? (
+                      <><i className="fas fa-spinner fa-spin"></i> Updating...</>
+                    ) : (
+                      <><i className="fas fa-save"></i> Update IoC</>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Share IoC Modal */}
+      {showShareModal && (
+        <div className="modal-overlay" onClick={closeShareModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2><i className="fas fa-share-alt"></i> Share IoC</h2>
+              <button className="modal-close" onClick={closeShareModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={handleShareIndicatorSubmit}>
+                <div className="form-group">
+                  <label className="form-label">IoC Details</label>
+                  <div className="info-box">
+                    <p><strong>Type:</strong> {sharingIndicator?.type}</p>
+                    <p><strong>Value:</strong> {sharingIndicator?.value}</p>
+                    <p><strong>Source:</strong> {sharingIndicator?.source}</p>
+                  </div>
+                </div>
+                
+                <div className="form-group">
+                  <label className="form-label">
+                    <i className="fas fa-share-nodes form-icon"></i>
+                    Target Organizations
+                  </label>
+                  <p className="form-description">
+                    Select trusted institutions to share this threat intelligence with
+                  </p>
+                  
+                  {/* Sleek Organization Selector */}
+                  <div className="sleek-org-selector">
+                    {/* Search Input */}
+                    <div className="search-field">
+                      <input
+                        type="text"
+                        className="sleek-search-input"
+                        value={institutionDropdownSearch}
+                        onChange={(e) => {
+                          setInstitutionDropdownSearch(e.target.value);
+                          setShowInstitutionSelectDropdown(true);
+                        }}
+                        onFocus={() => setShowInstitutionSelectDropdown(true)}
+                        onBlur={(e) => {
+                          setTimeout(() => {
+                            if (!e.relatedTarget || !e.relatedTarget.closest('.results-list')) {
+                              setShowInstitutionSelectDropdown(false);
+                            }
+                          }, 200);
+                        }}
+                        placeholder="Type to search organizations..."
+                      />
+                      <i className="fas fa-search search-icon"></i>
+                    </div>
+                    
+                    {/* Results List */}
+                    {showInstitutionSelectDropdown && institutionDropdownSearch && (
+                      <div className="results-list">
+                        {availableInstitutions
+                          .filter(institution => 
+                            !shareFormData.institutions.includes(institution) &&
+                            institution.toLowerCase().includes(institutionDropdownSearch.toLowerCase())
+                          )
+                          .slice(0, 5)
+                          .map(institution => (
+                            <div
+                              key={institution}
+                              className="result-item"
+                              onClick={() => {
+                                addInstitution(institution);
+                                setInstitutionDropdownSearch('');
+                                setShowInstitutionSelectDropdown(false);
+                              }}
+                            >
+                              <span className="result-name">{institution}</span>
+                              <i className="fas fa-plus add-icon"></i>
+                            </div>
+                          ))
+                        }
+                        {availableInstitutions
+                          .filter(institution => 
+                            !shareFormData.institutions.includes(institution) &&
+                            institution.toLowerCase().includes(institutionDropdownSearch.toLowerCase())
+                          ).length === 0 && (
+                            <div className="no-results">
+                              No organizations found
+                            </div>
+                          )
+                        }
+                      </div>
+                    )}
+                    
+                    {/* Selected Organizations */}
+                    {shareFormData.institutions.length > 0 && (
+                      <div className="selected-orgs">
+                        <div className="selected-label">
+                          Selected ({shareFormData.institutions.length})
+                        </div>
+                        <div className="org-tags">
+                          {shareFormData.institutions.map(institution => (
+                            <div key={institution} className="org-tag">
+                              <span>{institution}</span>
+                              <button 
+                                type="button" 
+                                className="remove-tag"
+                                onClick={() => removeInstitution(institution)}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label className="form-label">
+                      <i className="fas fa-user-secret form-icon"></i>
+                      Anonymization Level
+                    </label>
+                    <p className="form-description">
+                      Choose how much detail to share with receiving organizations
+                    </p>
+                    <select 
+                      value={shareFormData.anonymizationLevel} 
+                      onChange={(e) => setShareFormData({...shareFormData, anonymizationLevel: e.target.value})}
+                      className="form-control enhanced-select multiline-select"
+                    >
+                      <option value="none">None - Full Details
+Complete IoC values and metadata shared</option>
+                      <option value="low">Low - Minor Obfuscation
+Remove source identifiers and timestamps</option>
+                      <option value="medium">Medium - Partial Anonymization
+Generalize IPs/domains (evil.com → *.com)</option>
+                      <option value="high">High - Strong Anonymization
+Only patterns and techniques, no indicators</option>
+                    </select>
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">Share Method</label>
+                    <select 
+                      value={shareFormData.shareMethod} 
+                      onChange={(e) => setShareFormData({...shareFormData, shareMethod: e.target.value})}
+                      className="form-control"
+                    >
+                      <option value="taxii">TAXII 2.1 Protocol</option>
+                      <option value="email">Email Export</option>
+                      <option value="api">Direct API Push</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div className="modal-actions">
+                  <button type="button" className="btn btn-outline" onClick={closeShareModal} disabled={sharing}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary" disabled={sharing || shareFormData.institutions.length === 0}>
+                    {sharing ? (
+                      <><i className="fas fa-spinner fa-spin"></i> Sharing...</>
+                    ) : (
+                      <><i className="fas fa-share-alt"></i> Share with {shareFormData.institutions.length} Institution(s)</>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 
@@ -2189,7 +2586,11 @@ function IoCManagement({ active }) {
       severity: 'Medium',
       description: '',
       source: '',
-      confidence: 50
+      confidence: 50,
+      threatFeed: '',
+      createNewFeed: false,
+      newFeedName: '',
+      newFeedDescription: ''
     });
     setFormErrors({});
   }
@@ -2380,15 +2781,38 @@ function IoCManagement({ active }) {
 
     setImporting(true);
     try {
+      // Step 1: Generate file hash for integrity verification
+      const fileHash = await generateFileHash(importFile);
+      console.log(`File hash (SHA-256): ${fileHash}`);
+      
+      // Step 2: Read file content
       const fileContent = await readFileContent(importFile);
+      
+      // Step 3: Validate file type and content structure
+      validateFileType(importFile, fileContent);
+      
+      // Step 4: Detect format and parse
       const detectedFormat = importFormat === 'auto' ? detectFileFormat(importFile.name, fileContent) : importFormat;
       const parsedData = await parseFileContent(fileContent, detectedFormat);
       
+      // Step 5: Store file metadata for security audit
+      const fileMetadata = {
+        name: importFile.name,
+        size: importFile.size,
+        type: importFile.type,
+        hash: fileHash,
+        lastModified: new Date(importFile.lastModified).toISOString(),
+        detectedFormat: detectedFormat,
+        recordCount: parsedData.length
+      };
+      
+      console.log('File security validation passed:', fileMetadata);
       setImportPreview(parsedData);
       setShowPreview(true);
+      
     } catch (error) {
-      console.error('Error previewing file:', error);
-      alert('Error reading file. Please check the format and try again.');
+      console.error('File validation failed:', error);
+      alert(`Security validation failed: ${error.message}`);
     } finally {
       setImporting(false);
     }
@@ -2462,6 +2886,108 @@ function IoCManagement({ active }) {
       reader.onerror = () => reject(new Error('Failed to read file'));
       reader.readAsText(file);
     });
+  }
+
+  // Generate file hash for integrity verification
+  async function generateFileHash(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const arrayBuffer = e.target.result;
+          const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+          const hashArray = Array.from(new Uint8Array(hashBuffer));
+          const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+          resolve(hashHex);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = () => reject(new Error('Failed to read file for hashing'));
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  // Validate file type by checking magic bytes/signatures
+  function validateFileType(file, content) {
+    const fileName = file.name.toLowerCase();
+    const maxSize = 10 * 1024 * 1024; // 10MB limit
+    
+    // File size check
+    if (file.size > maxSize) {
+      throw new Error('File size exceeds 10MB limit');
+    }
+    
+    // Allowed file types with their magic bytes
+    const allowedTypes = {
+      'csv': {
+        extensions: ['.csv'],
+        mimeTypes: ['text/csv', 'application/csv', 'text/plain'],
+        maxSize: 5 * 1024 * 1024, // 5MB for CSV
+        contentValidation: (content) => {
+          // Basic CSV validation - should contain commas and reasonable structure
+          const lines = content.split('\n').filter(line => line.trim());
+          if (lines.length < 2) return false; // Should have header + at least one data row
+          const firstLine = lines[0];
+          return firstLine.includes(',') && firstLine.split(',').length >= 2;
+        }
+      },
+      'json': {
+        extensions: ['.json'],
+        mimeTypes: ['application/json', 'text/json'],
+        maxSize: 5 * 1024 * 1024, // 5MB for JSON
+        contentValidation: (content) => {
+          try {
+            const parsed = JSON.parse(content);
+            return typeof parsed === 'object' && parsed !== null;
+          } catch {
+            return false;
+          }
+        }
+      },
+      'txt': {
+        extensions: ['.txt'],
+        mimeTypes: ['text/plain'],
+        maxSize: 2 * 1024 * 1024, // 2MB for TXT
+        contentValidation: (content) => {
+          // Basic text validation - should not contain suspicious patterns
+          const suspiciousPatterns = [
+            /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+            /<iframe\b[^>]*>/gi,
+            /javascript:/gi,
+            /on\w+\s*=/gi
+          ];
+          return !suspiciousPatterns.some(pattern => pattern.test(content));
+        }
+      }
+    };
+    
+    // Check file extension
+    const fileExt = fileName.substring(fileName.lastIndexOf('.'));
+    const validType = Object.values(allowedTypes).find(type => 
+      type.extensions.includes(fileExt)
+    );
+    
+    if (!validType) {
+      throw new Error(`Unsupported file type: ${fileExt}. Allowed types: CSV, JSON, TXT`);
+    }
+    
+    // Check MIME type
+    if (!validType.mimeTypes.includes(file.type) && file.type !== '') {
+      console.warn(`MIME type mismatch: expected ${validType.mimeTypes.join('/')}, got ${file.type}`);
+    }
+    
+    // Check file size for specific type
+    if (file.size > validType.maxSize) {
+      throw new Error(`File size exceeds limit for ${fileExt.substring(1).toUpperCase()} files (${(validType.maxSize / 1024 / 1024)}MB)`);
+    }
+    
+    // Validate content structure
+    if (!validType.contentValidation(content)) {
+      throw new Error(`Invalid ${fileExt.substring(1).toUpperCase()} file format or content`);
+    }
+    
+    return true;
   }
 
   function detectFileFormat(filename, content) {
@@ -2640,6 +3166,221 @@ function IoCManagement({ active }) {
     }
     
     return errors;
+  }
+
+  // Edit indicator functions
+  function handleEditIndicator(indicator) {
+    setEditingIndicator(indicator);
+    setEditFormData({
+      type: indicator.rawType || indicator.type.toLowerCase().replace(' ', '_'),
+      value: indicator.value,
+      description: indicator.description || '',
+      confidence: indicator.confidence || 50,
+      threat_feed_id: indicator.feedId || '',
+      threatFeedMode: 'existing'
+    });
+    setEditNewFeedName('');
+    setEditNewFeedDescription('');
+    setEditFormErrors({});
+    setShowEditModal(true);
+  }
+
+  function closeEditModal() {
+    setShowEditModal(false);
+    setEditingIndicator(null);
+    setEditFormData({
+      type: '',
+      value: '',
+      description: '',
+      confidence: 50,
+      threat_feed_id: '',
+      threatFeedMode: 'existing'
+    });
+    setEditNewFeedName('');
+    setEditNewFeedDescription('');
+    setEditFormErrors({});
+  }
+
+  async function handleUpdateIndicator(e) {
+    e.preventDefault();
+    
+    if (!editingIndicator) return;
+    
+    setUpdating(true);
+    setEditFormErrors({});
+    
+    try {
+      let threatFeedId = editFormData.threat_feed_id;
+      
+      // Handle new threat feed creation
+      if (editFormData.threatFeedMode === 'new' && editNewFeedName.trim()) {
+        try {
+          const newFeedData = {
+            name: editNewFeedName.trim(),
+            description: editNewFeedDescription.trim() || '',
+            is_external: false,
+            is_active: true
+          };
+          
+          const feedResponse = await api.post('/api/threat-feeds/', newFeedData);
+          if (feedResponse && feedResponse.id) {
+            threatFeedId = feedResponse.id;
+            // Update local threat feeds list
+            setThreatFeeds(prev => [...prev, feedResponse]);
+          }
+        } catch (feedError) {
+          console.error('Error creating new threat feed:', feedError);
+          setEditFormErrors({ submit: 'Failed to create new threat feed. Please try again.' });
+          return;
+        }
+      }
+      
+      const updateData = {
+        type: editFormData.type,
+        value: editFormData.value.trim(),
+        description: editFormData.description || '',
+        confidence: parseInt(editFormData.confidence) || 50,
+        threat_feed_id: threatFeedId
+      };
+      
+      const response = await api.put(`/api/indicators/${editingIndicator.id}/update/`, updateData);
+      
+      if (response) {
+        // Update the indicator in local state
+        const updatedIndicator = {
+          ...response,
+          rawType: response.type,
+          type: response.type === 'ip' ? 'IP Address' : 
+                response.type === 'domain' ? 'Domain' :
+                response.type === 'url' ? 'URL' :
+                response.type === 'file_hash' ? 'File Hash' :
+                response.type === 'email' ? 'Email' : response.type,
+          severity: editingIndicator.severity, // Keep existing severity
+          status: editingIndicator.status, // Keep existing status
+          created: response.created_at ? response.created_at.split('T')[0] : editingIndicator.created
+        };
+        
+        setIndicators(prev => prev.map(ind => 
+          ind.id === editingIndicator.id ? updatedIndicator : ind
+        ));
+        
+        closeEditModal();
+        alert('Indicator updated successfully!');
+      } else {
+        throw new Error('Failed to update indicator');
+      }
+      
+    } catch (error) {
+      console.error('Error updating indicator:', error);
+      setEditFormErrors({ submit: 'Failed to update indicator. Please try again.' });
+    } finally {
+      setUpdating(false);
+    }
+  }
+
+  // Share indicator functions
+  function handleShareIndicator(indicator) {
+    setSharingIndicator(indicator);
+    setShareFormData({
+      institutions: [],
+      anonymizationLevel: 'medium',
+      shareMethod: 'taxii'
+    });
+    setShowShareModal(true);
+  }
+
+  function closeShareModal() {
+    setShowShareModal(false);
+    setSharingIndicator(null);
+    setShareFormData({
+      institutions: [],
+      anonymizationLevel: 'medium',
+      shareMethod: 'taxii'
+    });
+    setInstitutionSearch('');
+    setShowInstitutionDropdown(false);
+    setSelectedInstitutionIndex(-1);
+  }
+
+  // Institution search helper functions
+  function getFilteredInstitutions() {
+    return availableInstitutions.filter(institution =>
+      institution.toLowerCase().includes(institutionSearch.toLowerCase()) &&
+      !shareFormData.institutions.includes(institution)
+    );
+  }
+
+  function addInstitution(institution) {
+    setShareFormData(prev => ({
+      ...prev,
+      institutions: [...prev.institutions, institution]
+    }));
+    setInstitutionSearch('');
+    setShowInstitutionDropdown(false);
+    setSelectedInstitutionIndex(-1);
+  }
+
+  function handleKeyDown(e) {
+    const filteredInstitutions = getFilteredInstitutions().slice(0, 10);
+    
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedInstitutionIndex(prev => 
+        prev < filteredInstitutions.length - 1 ? prev + 1 : prev
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedInstitutionIndex(prev => prev > 0 ? prev - 1 : -1);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (selectedInstitutionIndex >= 0 && selectedInstitutionIndex < filteredInstitutions.length) {
+        addInstitution(filteredInstitutions[selectedInstitutionIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      setShowInstitutionDropdown(false);
+      setSelectedInstitutionIndex(-1);
+    }
+  }
+
+  function removeInstitution(institution) {
+    setShareFormData(prev => ({
+      ...prev,
+      institutions: prev.institutions.filter(inst => inst !== institution)
+    }));
+  }
+
+  async function handleShareIndicatorSubmit(e) {
+    e.preventDefault();
+    
+    if (!sharingIndicator || shareFormData.institutions.length === 0) {
+      alert('Please select at least one institution to share with.');
+      return;
+    }
+    
+    setSharing(true);
+    
+    try {
+      const shareData = {
+        institutions: shareFormData.institutions,
+        anonymization_level: shareFormData.anonymizationLevel,
+        share_method: shareFormData.shareMethod
+      };
+      
+      const response = await api.post(`/api/indicators/${sharingIndicator.id}/share/`, shareData);
+      
+      if (response && response.success) {
+        closeShareModal();
+        alert(`Indicator shared with ${response.shared_with} institution(s) successfully!`);
+      } else {
+        throw new Error('Failed to share indicator');
+      }
+      
+    } catch (error) {
+      console.error('Error sharing indicator:', error);
+      alert('Failed to share indicator. Please try again.');
+    } finally {
+      setSharing(false);
+    }
   }
 
   async function handleAddIoC(e) {

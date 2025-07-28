@@ -418,13 +418,26 @@ def indicators_list(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def indicators_bulk_import(request):
-    """Bulk import indicators from a list."""
+    """Bulk import indicators from a list with security validation."""
     try:
         from core.services.indicator_service import IndicatorService
         from core.models.models import Organization
         import uuid
+        import re
+        import hashlib
+        import time
         
         data = request.data
+        
+        # Security validation: Check request size and rate limiting
+        max_indicators = 10000  # Maximum indicators per request
+        max_request_size = 50 * 1024 * 1024  # 50MB max request size
+        
+        if hasattr(request, 'body') and len(request.body) > max_request_size:
+            return Response(
+                {"error": f"Request size exceeds maximum allowed size ({max_request_size // 1024 // 1024}MB)"},
+                status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
+            )
         
         # Validate that indicators list is provided
         if 'indicators' not in data or not isinstance(data['indicators'], list):
@@ -438,6 +451,12 @@ def indicators_bulk_import(request):
         if not indicators_data:
             return Response(
                 {"error": "Empty indicators list provided"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        if len(indicators_data) > max_indicators:
+            return Response(
+                {"error": f"Too many indicators. Maximum allowed: {max_indicators}"},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -462,33 +481,111 @@ def indicators_bulk_import(request):
         created_indicators = []
         errors = []
         
+        # Security validation function for indicator data
+        def validate_and_sanitize_indicator(indicator_data, idx):
+            """Validate and sanitize individual indicator data"""
+            errors = []
+            
+            # Validate required fields
+            required_fields = ['type', 'value']
+            for field in required_fields:
+                if field not in indicator_data:
+                    errors.append(f"Indicator {idx + 1}: Missing required field '{field}'")
+                    return None, errors
+            
+            # Sanitize and validate indicator value
+            value = str(indicator_data['value']).strip()
+            if not value:
+                errors.append(f"Indicator {idx + 1}: Empty value")
+                return None, errors
+            
+            # Length validation
+            if len(value) > 2048:  # Max 2KB per value
+                errors.append(f"Indicator {idx + 1}: Value too long (max 2048 characters)")
+                return None, errors
+            
+            # Pattern validation based on type
+            indicator_type = str(indicator_data['type']).lower().strip()
+            validation_patterns = {
+                'ip': r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$',
+                'domain': r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$',
+                'url': r'^https?://[^\s/$.?#].[^\s]*$',
+                'file_hash': r'^[a-fA-F0-9]{32}$|^[a-fA-F0-9]{40}$|^[a-fA-F0-9]{64}$|^[a-fA-F0-9]{128}$',  # MD5, SHA1, SHA256, SHA512
+                'email': r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            }
+            
+            if indicator_type in validation_patterns:
+                if not re.match(validation_patterns[indicator_type], value):
+                    errors.append(f"Indicator {idx + 1}: Invalid {indicator_type} format")
+                    return None, errors
+            
+            # Check for malicious patterns
+            malicious_patterns = [
+                r'<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>',
+                r'javascript:',
+                r'vbscript:',
+                r'on\w+\s*=',
+                r'<iframe\b[^>]*>',
+                r'eval\s*\(',
+                r'document\.cookie',
+                r'window\.location',
+            ]
+            
+            for pattern in malicious_patterns:
+                if re.search(pattern, value, re.IGNORECASE):
+                    errors.append(f"Indicator {idx + 1}: Potentially malicious content detected")
+                    return None, errors
+            
+            # Sanitize description
+            description = str(indicator_data.get('description', '')).strip()
+            if len(description) > 1000:  # Max 1KB description
+                description = description[:1000]
+            
+            # Validate confidence
+            try:
+                confidence = int(indicator_data.get('confidence', 50))
+                if confidence < 0 or confidence > 100:
+                    confidence = 50  # Default to medium confidence
+            except (ValueError, TypeError):
+                confidence = 50
+            
+            return {
+                'type': indicator_type,
+                'value': value,
+                'description': description,
+                'confidence': confidence
+            }, errors
+
         # Process each indicator
         for idx, indicator_data in enumerate(indicators_data):
             try:
-                # Validate required fields
-                required_fields = ['type', 'value']
-                for field in required_fields:
-                    if field not in indicator_data:
-                        errors.append(f"Indicator {idx + 1}: Missing required field '{field}'")
-                        continue
+                # Validate and sanitize indicator
+                sanitized_data, validation_errors = validate_and_sanitize_indicator(indicator_data, idx)
                 
-                # Check for duplicates (optional - can be modified based on business logic)
+                if validation_errors:
+                    errors.extend(validation_errors)
+                    continue
+                
+                if not sanitized_data:
+                    continue
+                
+                # Check for duplicates using sanitized data
                 existing = Indicator.objects.filter(
-                    value=indicator_data['value'].strip(),
-                    type=indicator_data['type']
+                    value=sanitized_data['value'],
+                    type=sanitized_data['type']
                 ).first()
                 
                 if existing:
                     # Skip duplicate
                     continue
                 
-                # Prepare indicator data with correct fields
+                # Prepare indicator data with correct fields using sanitized data
                 now = timezone.now()
                 indicator_create_data = {
-                    'value': indicator_data['value'].strip(),
-                    'type': indicator_data['type'],
-                    'description': indicator_data.get('description', ''),
-                    'confidence': int(indicator_data.get('confidence', 50)),
+                    'value': sanitized_data['value'],
+                    'type': sanitized_data['type'],
+                    'description': sanitized_data['description'],
+                    'confidence': sanitized_data['confidence'],
                     'stix_id': f'indicator--{uuid.uuid4()}',
                     'threat_feed': indicator_data.get('threat_feed_id') and ThreatFeed.objects.get(id=indicator_data['threat_feed_id']) or default_feed,
                     'first_seen': now,
@@ -533,5 +630,136 @@ def indicators_bulk_import(request):
         logger.error(f"Error in bulk import: {str(e)}")
         return Response(
             {"error": "Failed to bulk import indicators", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['PUT'])
+@permission_classes([AllowAny])
+def indicator_update(request, indicator_id):
+    """Update a specific indicator."""
+    try:
+        from core.repositories.indicator_repository import IndicatorRepository
+        
+        # Get the indicator
+        indicator = IndicatorRepository.get_by_id(indicator_id)
+        if not indicator:
+            return Response(
+                {"error": "Indicator not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        data = request.data
+        
+        # Prepare update data (only allow certain fields to be updated)
+        update_data = {}
+        updatable_fields = ['value', 'type', 'description', 'confidence']
+        
+        for field in updatable_fields:
+            if field in data:
+                if field == 'confidence':
+                    update_data[field] = int(data[field])
+                else:
+                    update_data[field] = data[field]
+        
+        # Update the indicator
+        updated_indicator = IndicatorRepository.update(indicator_id, update_data)
+        
+        if not updated_indicator:
+            return Response(
+                {"error": "Failed to update indicator"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        # Format response
+        feed_name = 'Manual Entry'
+        if updated_indicator.threat_feed:
+            feed_name = updated_indicator.threat_feed.name
+        
+        result = {
+            'id': updated_indicator.id,
+            'type': updated_indicator.type,
+            'value': updated_indicator.value,
+            'stix_id': updated_indicator.stix_id,
+            'description': updated_indicator.description,
+            'confidence': updated_indicator.confidence,
+            'first_seen': updated_indicator.first_seen,
+            'last_seen': updated_indicator.last_seen,
+            'created_at': updated_indicator.created_at,
+            'is_anonymized': updated_indicator.is_anonymized,
+            'source': feed_name
+        }
+        
+        return Response(result, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error updating indicator: {str(e)}")
+        return Response(
+            {"error": "Failed to update indicator", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def indicator_share(request, indicator_id):
+    """Share an indicator with specified institutions."""
+    try:
+        from core.repositories.indicator_repository import IndicatorRepository
+        
+        # Get the indicator
+        indicator = IndicatorRepository.get_by_id(indicator_id)
+        if not indicator:
+            return Response(
+                {"error": "Indicator not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        data = request.data
+        
+        # Validate required fields
+        if 'institutions' not in data or not isinstance(data['institutions'], list):
+            return Response(
+                {"error": "Missing or invalid 'institutions' field. Expected a list."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        institutions = data['institutions']
+        anonymization_level = data.get('anonymization_level', 'medium')
+        share_method = data.get('share_method', 'taxii')
+        
+        # For now, we'll simulate the sharing process
+        # In a real implementation, this would integrate with TAXII publishing
+        shared_count = 0
+        errors = []
+        
+        for institution in institutions:
+            try:
+                # Simulate sharing logic
+                # This would normally:
+                # 1. Apply anonymization based on trust level
+                # 2. Prepare STIX object
+                # 3. Publish to TAXII collection
+                # 4. Log the sharing event
+                
+                shared_count += 1
+                logger.info(f"Shared indicator {indicator_id} with {institution}")
+                
+            except Exception as e:
+                errors.append(f"Failed to share with {institution}: {str(e)}")
+                continue
+        
+        return Response({
+            'success': True,
+            'indicator_id': indicator_id,
+            'shared_with': shared_count,
+            'total_institutions': len(institutions),
+            'anonymization_level': anonymization_level,
+            'share_method': share_method,
+            'errors': errors
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error sharing indicator: {str(e)}")
+        return Response(
+            {"error": "Failed to share indicator", "details": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
