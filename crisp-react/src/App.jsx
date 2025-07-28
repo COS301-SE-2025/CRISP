@@ -274,6 +274,11 @@ function Dashboard({ active, showPage }) {
     status: 'loading'
   });
   
+  // State for recent IoC data
+  const [recentIoCs, setRecentIoCs] = useState([]);
+  const [iocLoading, setIocLoading] = useState(false);
+  const [iocError, setIocError] = useState(null);
+  
   // D3 Chart References
   const chartRef = useRef(null);
   
@@ -281,6 +286,7 @@ function Dashboard({ active, showPage }) {
   useEffect(() => {
     if (active) {
       fetchDashboardData();
+      fetchRecentIoCs();
     }
   }, [active]);
   
@@ -308,6 +314,105 @@ function Dashboard({ active, showPage }) {
         status: 'active'
       });
     }
+  };
+
+  // Fetch recent IoCs for dashboard table
+  const fetchRecentIoCs = async () => {
+    setIocLoading(true);
+    setIocError(null);
+    
+    try {
+      const indicatorsData = await api.get('/api/indicators/');
+      if (indicatorsData && indicatorsData.results) {
+        // Transform and limit to most recent 6 IoCs
+        const transformedIoCs = indicatorsData.results
+          .slice(0, 6)
+          .map(indicator => transformIoCForDashboard(indicator));
+        
+        setRecentIoCs(transformedIoCs);
+      } else {
+        setRecentIoCs([]);
+      }
+    } catch (error) {
+      console.error('Error fetching recent IoCs:', error);
+      setIocError('Failed to load recent threat intelligence');
+      setRecentIoCs([]);
+    } finally {
+      setIocLoading(false);
+    }
+  };
+
+  // Transform IoC data for dashboard display
+  const transformIoCForDashboard = (indicator) => {
+    // Map indicator types to display names
+    const typeMapping = {
+      'ip': 'IP Address',
+      'domain': 'Domain',
+      'url': 'URL',
+      'file_hash': 'File Hash',
+      'email': 'Email Address',
+      'user_agent': 'User Agent'
+    };
+
+    // Determine severity based on confidence level
+    const getSeverity = (confidence) => {
+      if (confidence >= 80) return { level: 'high', label: 'High' };
+      if (confidence >= 50) return { level: 'medium', label: 'Medium' };
+      return { level: 'low', label: 'Low' };
+    };
+
+    // Format IoC value for display (truncate if too long)
+    const formatValue = (value, type) => {
+      if (type === 'file_hash' && value.length > 16) {
+        return value.substring(0, 16) + '...';
+      }
+      if (value.length > 30) {
+        return value.substring(0, 30) + '...';
+      }
+      return value;
+    };
+
+    const severity = getSeverity(indicator.confidence || 50);
+
+    // Type icons mapping
+    const typeIcons = {
+      'ip': 'fa-network-wired',
+      'domain': 'fa-globe',
+      'url': 'fa-link',
+      'file_hash': 'fa-file-signature',
+      'email': 'fa-envelope',
+      'user_agent': 'fa-browser'
+    };
+
+    // Age calculation
+    const getAge = (dateString) => {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffTime = Math.abs(now - date);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 1) return '1 day ago';
+      if (diffDays < 7) return `${diffDays} days ago`;
+      if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
+      return `${Math.ceil(diffDays / 30)} months ago`;
+    };
+    
+    return {
+      id: indicator.id,
+      displayType: typeMapping[indicator.type] || indicator.type.charAt(0).toUpperCase() + indicator.type.slice(1),
+      typeIcon: typeIcons[indicator.type] || 'fa-question-circle',
+      rawType: indicator.type,
+      value: indicator.value,
+      truncatedValue: formatValue(indicator.value, indicator.type),
+      source: indicator.threat_feed?.name || indicator.source || 'Internal',
+      severity: severity.label,
+      severityClass: severity.level,
+      confidence: indicator.confidence || 50,
+      status: indicator.is_active !== false ? 'active' : 'inactive',
+      isAnonymized: indicator.is_anonymized || false,
+      age: getAge(indicator.created_at || new Date().toISOString()),
+      created_at: indicator.created_at || new Date().toISOString()
+    };
   };
   
   // Set up D3 charts when component mounts
@@ -523,92 +628,104 @@ function Dashboard({ active, showPage }) {
             <div className="card-header">
               <h2 className="card-title"><i className="fas fa-shield-alt card-icon"></i> Recent Threat Intelligence</h2>
               <div className="card-actions">
-                <button className="btn btn-outline btn-sm"><i className="fas fa-sync-alt"></i> Refresh</button>
+                <button 
+                  className="btn btn-outline btn-sm" 
+                  onClick={fetchRecentIoCs}
+                  disabled={iocLoading}
+                >
+                  <i className={`fas fa-sync-alt ${iocLoading ? 'fa-spin' : ''}`}></i> 
+                  {iocLoading ? 'Refreshing...' : 'Refresh'}
+                </button>
               </div>
             </div>
             <div className="card-content">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Type</th>
-                    <th>Indicator</th>
-                    <th>Source</th>
-                    <th>Severity</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>IP Address</td>
-                    <td>192.168.144.32</td>
-                    <td>CIRCL MISP</td>
-                    <td><span className="badge badge-high">High</span></td>
-                    <td>
-                      <div className="badge-tags">
-                        <span className="badge badge-active">Active</span>
-                        <span className="badge badge-low">Verified</span>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Domain</td>
-                    <td>malicious-ransomware.net</td>
-                    <td>Internal</td>
-                    <td><span className="badge badge-high">High</span></td>
-                    <td>
-                      <div className="badge-tags">
-                        <span className="badge badge-active">Active</span>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>File Hash</td>
-                    <td>a45f3d9e7b12c04...</td>
-                    <td>SANReN CSIRT</td>
-                    <td><span className="badge badge-medium">Medium</span></td>
-                    <td>
-                      <div className="badge-tags">
-                        <span className="badge badge-active">Active</span>
-                        <span className="badge badge-low">Shared</span>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>URL</td>
-                    <td>https://download.malicious-file.com</td>
-                    <td>SABRIC</td>
-                    <td><span className="badge badge-medium">Medium</span></td>
-                    <td>
-                      <div className="badge-tags">
-                        <span className="badge badge-active">Active</span>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Email</td>
-                    <td>phishing@suspicious-mail.org</td>
-                    <td>Internal</td>
-                    <td><span className="badge badge-low">Low</span></td>
-                    <td>
-                      <div className="badge-tags">
-                        <span className="badge badge-medium">Under Review</span>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>TTP</td>
-                    <td>T1566 - Phishing</td>
-                    <td>Cyber Security Hub</td>
-                    <td><span className="badge badge-high">High</span></td>
-                    <td>
-                      <div className="badge-tags">
-                        <span className="badge badge-active">Active</span>
-                        <span className="badge badge-low">Verified</span>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              {iocLoading ? (
+                <div className="loading-state">
+                  <div className="loading-spinner"></div>
+                  <p>Loading recent threat intelligence...</p>
+                </div>
+              ) : iocError ? (
+                <div className="error-state">
+                  <i className="fas fa-exclamation-triangle"></i>
+                  <p>{iocError}</p>
+                  <button className="btn btn-primary btn-sm" onClick={fetchRecentIoCs}>
+                    <i className="fas fa-retry"></i> Retry
+                  </button>
+                </div>
+              ) : recentIoCs.length === 0 ? (
+                <div className="empty-state">
+                  <i className="fas fa-shield-alt"></i>
+                  <p>No threat intelligence available</p>
+                  <p className="text-muted">IoCs will appear here once feeds are consumed</p>
+                </div>
+              ) : (
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Type</th>
+                      <th>Indicator</th>
+                      <th>Source</th>
+                      <th>Severity</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentIoCs.map((ioc, index) => (
+                      <tr key={`${ioc.id || index}`}>
+                        <td>
+                          <div className="type-indicator">
+                            <i className={`fas ${ioc.typeIcon}`}></i>
+                            <span>{ioc.displayType}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="indicator-value">
+                            <span className="value" title={ioc.value}>{ioc.truncatedValue}</span>
+                            {ioc.isAnonymized && (
+                              <span className="badge badge-anonymized">
+                                <i className="fas fa-mask"></i> Anonymized
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="source-info">
+                            <span className="source-name">{ioc.source}</span>
+                            <div className="source-meta">
+                              <span className="age-indicator" title={`Created: ${ioc.created_at}`}>
+                                {ioc.age}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`badge badge-${ioc.severityClass}`}>
+                            {ioc.severity}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="badge-tags">
+                            <span className="badge badge-active">Active</span>
+                            {ioc.confidence >= 80 && (
+                              <span className="badge badge-verified">
+                                <i className="fas fa-check-circle"></i> High Confidence
+                              </span>
+                            )}
+                            {ioc.confidence < 50 && (
+                              <span className="badge badge-warning">
+                                <i className="fas fa-exclamation-triangle"></i> Low Confidence
+                              </span>
+                            )}
+                            <span className="badge badge-realtime" title="Real-time data">
+                              <i className="fas fa-broadcast-tower"></i> Live
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
 
