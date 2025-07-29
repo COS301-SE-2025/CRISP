@@ -1781,16 +1781,176 @@ def _format_ttp_response(ttp):
     }
 
 
-@api_view(['GET', 'PUT', 'PATCH'])
+def _delete_ttp(request, ttp_id):
+    """
+    Delete a TTP with safety checks and comprehensive logging.
+    
+    Performs the following operations:
+    1. Validates TTP exists
+    2. Checks for related data and dependencies
+    3. Creates backup of TTP data for audit trail
+    4. Performs deletion
+    5. Logs deletion activity
+    """
+    try:
+        from core.repositories.ttp_repository import TTPRepository
+        from core.services.ttp_service import TTPService
+        from django.db.models import Q
+        
+        # Get the existing TTP
+        ttp = TTPRepository.get_by_id(ttp_id)
+        if not ttp:
+            return Response(
+                {"error": "TTP not found", "ttp_id": ttp_id},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Store TTP data for logging before deletion
+        ttp_backup = {
+            'id': ttp.id,
+            'name': ttp.name,
+            'description': ttp.description,
+            'mitre_technique_id': ttp.mitre_technique_id,
+            'mitre_tactic': ttp.mitre_tactic,
+            'mitre_subtechnique': ttp.mitre_subtechnique,
+            'stix_id': ttp.stix_id,
+            'threat_feed_id': ttp.threat_feed.id if ttp.threat_feed else None,
+            'threat_feed_name': ttp.threat_feed.name if ttp.threat_feed else None,
+            'is_anonymized': ttp.is_anonymized,
+            'created_at': ttp.created_at.isoformat(),
+            'updated_at': ttp.updated_at.isoformat()
+        }
+        
+        # Safety checks - look for related data
+        warnings = []
+        related_data = {}
+        
+        # Check for related indicators that might reference this TTP
+        try:
+            related_indicators_count = Indicator.objects.filter(
+                Q(description__icontains=ttp.mitre_technique_id) |
+                Q(value__icontains=ttp.mitre_technique_id) |
+                Q(threat_feed=ttp.threat_feed)
+            ).count()
+            
+            if related_indicators_count > 0:
+                warnings.append(f"Found {related_indicators_count} indicators that may reference this TTP")
+                related_data['related_indicators_count'] = related_indicators_count
+        except Exception as e:
+            logger.warning(f"Could not check related indicators for TTP {ttp_id}: {str(e)}")
+        
+        # Check if this is the only TTP in the threat feed
+        try:
+            if ttp.threat_feed:
+                feed_ttp_count = TTPData.objects.filter(threat_feed=ttp.threat_feed).count()
+                if feed_ttp_count == 1:
+                    warnings.append(f"This is the only TTP in threat feed '{ttp.threat_feed.name}'")
+                    related_data['is_last_ttp_in_feed'] = True
+                else:
+                    related_data['remaining_ttps_in_feed'] = feed_ttp_count - 1
+        except Exception as e:
+            logger.warning(f"Could not check feed TTP count for TTP {ttp_id}: {str(e)}")
+        
+        # Check if this TTP is referenced in system activities
+        try:
+            activity_references = SystemActivity.objects.filter(
+                Q(description__icontains=ttp.mitre_technique_id) |
+                Q(details__contains=str(ttp.id))
+            ).count()
+            
+            if activity_references > 0:
+                related_data['activity_references'] = activity_references
+        except Exception as e:
+            logger.warning(f"Could not check activity references for TTP {ttp_id}: {str(e)}")
+        
+        # Perform the deletion
+        try:
+            # Use TTPService for deletion if available, otherwise use repository
+            try:
+                ttp_service = TTPService()
+                ttp_service.delete_ttp(ttp.id)
+                deletion_success = True  # Service doesn't return value, assume success if no exception
+            except:
+                # Fallback to repository method
+                deletion_success = TTPRepository.delete(ttp.id)
+            
+            if not deletion_success:
+                return Response(
+                    {"error": "Failed to delete TTP", "ttp_id": ttp_id},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        except Exception as e:
+            logger.error(f"Error during TTP deletion for ID {ttp_id}: {str(e)}")
+            return Response(
+                {"error": "Failed to delete TTP", "details": str(e), "ttp_id": ttp_id},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        # Log the deletion activity with comprehensive details
+        try:
+            SystemActivity.objects.create(
+                activity_type='ttp_deleted',
+                description=f'TTP deleted: {ttp_backup["name"]} ({ttp_backup["mitre_technique_id"]})',
+                details={
+                    'deleted_ttp': ttp_backup,
+                    'warnings': warnings,
+                    'related_data': related_data,
+                    'deletion_timestamp': timezone.now().isoformat(),
+                    'source': 'api_delete'
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Could not log TTP deletion activity: {str(e)}")
+        
+        # Build success response
+        response_data = {
+            'success': True,
+            'message': f'TTP "{ttp_backup["name"]}" ({ttp_backup["mitre_technique_id"]}) deleted successfully',
+            'deleted_ttp': {
+                'id': ttp_backup['id'],
+                'name': ttp_backup['name'],
+                'mitre_technique_id': ttp_backup['mitre_technique_id'],
+                'mitre_tactic': ttp_backup['mitre_tactic'],
+                'threat_feed_name': ttp_backup['threat_feed_name']
+            },
+            'deletion_timestamp': timezone.now().isoformat()
+        }
+        
+        # Include warnings if any
+        if warnings:
+            response_data['warnings'] = warnings
+            response_data['notice'] = 'TTP deleted successfully, but please review the warnings for potential impacts'
+        
+        # Include related data summary if any
+        if related_data:
+            response_data['impact_summary'] = related_data
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+        
+    except ValueError:
+        return Response(
+            {"error": "Invalid TTP ID format", "ttp_id": ttp_id},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        logger.error(f"Error deleting TTP {ttp_id}: {str(e)}")
+        return Response(
+            {"error": "Failed to delete TTP", "details": str(e), "ttp_id": ttp_id},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
 @permission_classes([AllowAny])
 def ttp_detail(request, ttp_id):
     """
     GET: Get detailed information about a specific TTP.
     PUT: Completely update a TTP (all fields required).
     PATCH: Partially update a TTP (only provided fields updated).
+    DELETE: Remove a TTP from the system.
     
     Path Parameters:
-    - ttp_id: The ID of the TTP to retrieve/update
+    - ttp_id: The ID of the TTP to retrieve/update/delete
     
     GET Returns detailed TTP information including:
     - All TTP fields and metadata
@@ -1807,10 +1967,17 @@ def ttp_detail(request, ttp_id):
     - mitre_subtechnique: MITRE subtechnique name (optional)
     - threat_feed_id: ID of associated threat feed (optional)
     - stix_id: STIX ID (optional, cannot be changed if already set)
+    
+    DELETE removes the TTP with:
+    - Safety checks for related data
+    - Activity logging for audit trail
+    - Confirmation of successful deletion
     """
     
     if request.method in ['PUT', 'PATCH']:
         return _update_ttp(request, ttp_id)
+    elif request.method == 'DELETE':
+        return _delete_ttp(request, ttp_id)
     
     # Handle GET request (existing detail functionality)
     try:
