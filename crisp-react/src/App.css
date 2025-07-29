@@ -37,6 +37,93 @@
   padding: 2em;
 }
 
+/* Chart Container Responsive Styles */
+.chart-container {
+  width: 100%;
+  height: auto;
+  min-height: 350px;
+  overflow: visible;
+}
+
+.chart-container svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Chart Status Bar */
+.card-status-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Chart Tooltip Styles */
+.chart-tooltip {
+  background: rgba(0, 0, 0, 0.9) !important;
+  color: white !important;
+  padding: 12px !important;
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  line-height: 1.4 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Chart Filter Controls */
+.chart-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.chart-filters select,
+.chart-filters button {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  background: white;
+  cursor: pointer;
+}
+
+.chart-filters select:hover,
+.chart-filters button:hover {
+  border-color: #0056b3;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .chart-container {
+    min-height: 300px;
+  }
+  
+  .card-status-bar {
+    font-size: 11px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .chart-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .chart-filters select,
+  .chart-filters button {
+    width: 100%;
+    margin-bottom: 5px;
+  }
+}
+
+@media (max-width: 480px) {
+  .chart-container {
+    min-height: 250px;
+  }
+}
+
 .read-the-docs {
   color: #888;
 }

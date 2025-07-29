@@ -763,3 +763,131 @@ def indicator_share(request, indicator_id):
             {"error": "Failed to share indicator", "details": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def threat_activity_chart_data(request):
+    """Get historical IoC data aggregated by date for the threat activity chart."""
+    try:
+        from django.db.models import Count
+        from django.utils import timezone
+        from datetime import timedelta
+        import json
+        
+        # Get date range parameters
+        days = int(request.GET.get('days', 30))  # Default to 30 days
+        indicator_type = request.GET.get('type', None)  # Optional filter by indicator type
+        feed_id = request.GET.get('feed_id', None)  # Optional filter by feed
+        
+        # Validate days parameter
+        if days < 1 or days > 365:
+            days = 30
+            
+        # Calculate date range
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=days-1)
+        
+        # Build base query
+        query = Indicator.objects.filter(
+            created_at__date__gte=start_date,
+            created_at__date__lte=end_date
+        )
+        
+        # Apply filters
+        if indicator_type:
+            query = query.filter(type=indicator_type)
+        if feed_id:
+            query = query.filter(threat_feed_id=feed_id)
+        
+        # Aggregate by date and type
+        daily_data = query.extra(
+            select={'date': 'DATE(created_at)'}
+        ).values('date', 'type').annotate(
+            count=Count('id')
+        ).order_by('date')
+        
+        # Also get overall daily totals
+        daily_totals = query.extra(
+            select={'date': 'DATE(created_at)'}
+        ).values('date').annotate(
+            total=Count('id')
+        ).order_by('date')
+        
+        # Process data for chart
+        chart_data = {}
+        type_data = {}
+        
+        # Initialize all dates in range with zero counts
+        current_date = start_date
+        while current_date <= end_date:
+            date_str = current_date.strftime('%Y-%m-%d')
+            chart_data[date_str] = 0
+            current_date += timedelta(days=1)
+        
+        # Fill in actual totals
+        for item in daily_totals:
+            date_str = item['date'].strftime('%Y-%m-%d')
+            chart_data[date_str] = item['total']
+        
+        # Process type breakdown
+        for item in daily_data:
+            date_str = item['date'].strftime('%Y-%m-%d')
+            ioc_type = item['type']
+            count = item['count']
+            
+            if date_str not in type_data:
+                type_data[date_str] = {}
+            type_data[date_str][ioc_type] = count
+        
+        # Convert to list format for D3
+        result_data = []
+        for date_str in sorted(chart_data.keys()):
+            result_data.append({
+                'date': date_str,
+                'count': chart_data[date_str],
+                'types': type_data.get(date_str, {})
+            })
+        
+        # Get summary statistics
+        total_indicators = sum(chart_data.values())
+        avg_daily = total_indicators / days if days > 0 else 0
+        
+        # Get type distribution for the period
+        type_summary = Indicator.objects.filter(
+            created_at__date__gte=start_date,
+            created_at__date__lte=end_date
+        )
+        
+        if indicator_type:
+            type_summary = type_summary.filter(type=indicator_type)
+        if feed_id:
+            type_summary = type_summary.filter(threat_feed_id=feed_id)
+            
+        type_counts = type_summary.values('type').annotate(
+            count=Count('id')
+        ).order_by('-count')
+        
+        return Response({
+            'success': True,
+            'data': result_data,
+            'summary': {
+                'total_indicators': total_indicators,
+                'avg_daily': round(avg_daily, 2),
+                'days': days,
+                'start_date': start_date.strftime('%Y-%m-%d'),
+                'end_date': end_date.strftime('%Y-%m-%d'),
+                'type_distribution': list(type_counts)
+            },
+            'filters': {
+                'type': indicator_type,
+                'feed_id': feed_id,
+                'days': days
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting threat activity chart data: {str(e)}")
+        return Response(
+            {"error": "Failed to get chart data", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

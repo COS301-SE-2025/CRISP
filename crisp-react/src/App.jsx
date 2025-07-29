@@ -1,6 +1,56 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 
+// Error Boundary for Chart Component
+class ChartErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Chart Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          padding: '20px',
+          textAlign: 'center',
+          background: '#fff5f5',
+          border: '1px solid #fed7d7',
+          borderRadius: '4px',
+          color: '#c53030'
+        }}>
+          <i className="fas fa-exclamation-triangle" style={{fontSize: '24px', marginBottom: '10px'}}></i>
+          <h3>Chart Error</h3>
+          <p>Something went wrong with the chart visualization.</p>
+          <button 
+            onClick={() => this.setState({ hasError: false, error: null })}
+            style={{
+              background: '#0056b3',
+              color: 'white',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 // API Configuration
 const API_BASE_URL = 'http://localhost:8000';
 
@@ -279,16 +329,39 @@ function Dashboard({ active, showPage }) {
   const [iocLoading, setIocLoading] = useState(false);
   const [iocError, setIocError] = useState(null);
   
-  // D3 Chart References
+  // D3 Chart References and State
   const chartRef = useRef(null);
+  const tooltipRef = useRef(null);
+  const cleanupRef = useRef(null);
+  const [chartData, setChartData] = useState([]);
+  const [chartLoading, setChartLoading] = useState(false);
+  const [chartError, setChartError] = useState(null);
+  const [chartFilters, setChartFilters] = useState({
+    days: 30,
+    type: null,
+    feed_id: null
+  });
+  const [chartSummary, setChartSummary] = useState({
+    total_indicators: 0,
+    avg_daily: 0,
+    type_distribution: []
+  });
   
   // Fetch dashboard data from backend
   useEffect(() => {
     if (active) {
       fetchDashboardData();
       fetchRecentIoCs();
+      fetchChartData();
     }
   }, [active]);
+
+  // Refetch chart data when filters change
+  useEffect(() => {
+    if (active) {
+      fetchChartData();
+    }
+  }, [chartFilters, active]);
   
   const fetchDashboardData = async () => {
     const feedsData = await api.get('/api/threat-feeds/');
@@ -339,6 +412,45 @@ function Dashboard({ active, showPage }) {
       setRecentIoCs([]);
     } finally {
       setIocLoading(false);
+    }
+  };
+
+  // Fetch chart data from API
+  const fetchChartData = async () => {
+    setChartLoading(true);
+    setChartError(null);
+    
+    try {
+      const queryParams = new URLSearchParams({
+        days: chartFilters.days.toString()
+      });
+      
+      if (chartFilters.type) {
+        queryParams.append('type', chartFilters.type);
+      }
+      if (chartFilters.feed_id) {
+        queryParams.append('feed_id', chartFilters.feed_id);
+      }
+      
+      const response = await api.get(`/api/threat-activity-chart/?${queryParams}`);
+      
+      if (response && response.success) {
+        setChartData(response.data);
+        setChartSummary(response.summary);
+        
+        // Redraw chart with new data
+        if (chartRef.current) {
+          createThreatActivityChart(response.data, response.summary);
+        }
+      } else {
+        throw new Error('Failed to fetch chart data');
+      }
+    } catch (error) {
+      console.error('Error fetching chart data:', error);
+      setChartError('Failed to load chart data');
+      setChartData([]);
+    } finally {
+      setChartLoading(false);
     }
   };
 
@@ -415,139 +527,350 @@ function Dashboard({ active, showPage }) {
     };
   };
   
-  // Set up D3 charts when component mounts
+  // Set up D3 charts when component mounts or data changes
   useEffect(() => {
-    if (active && chartRef.current) {
-      createThreatActivityChart();
+    if (active && chartRef.current && chartData.length > 0) {
+      createThreatActivityChart(chartData, chartSummary);
     }
-  }, [active]);
-
-  const createThreatActivityChart = () => {
-    // Clear previous chart if any
-    d3.select(chartRef.current).selectAll("*").remove();
     
-    // Sample data
-    const data = [
-      { date: "2025-04-20", count: 45 },
-      { date: "2025-04-21", count: 52 },
-      { date: "2025-04-22", count: 49 },
-      { date: "2025-04-23", count: 63 },
-      { date: "2025-04-24", count: 58 },
-      { date: "2025-04-25", count: 72 },
-      { date: "2025-04-26", count: 68 },
-      { date: "2025-04-27", count: 75 },
-      { date: "2025-04-28", count: 82 },
-      { date: "2025-04-29", count: 78 },
-      { date: "2025-04-30", count: 86 },
-      { date: "2025-05-01", count: 91 },
-      { date: "2025-05-02", count: 84 },
-      { date: "2025-05-03", count: 76 },
-      { date: "2025-05-04", count: 80 },
-      { date: "2025-05-05", count: 89 },
-      { date: "2025-05-06", count: 95 },
-      { date: "2025-05-07", count: 101 },
-      { date: "2025-05-08", count: 96 },
-      { date: "2025-05-09", count: 104 },
-      { date: "2025-05-10", count: 112 },
-      { date: "2025-05-11", count: 108 },
-      { date: "2025-05-12", count: 115 },
-      { date: "2025-05-13", count: 120 },
-      { date: "2025-05-14", count: 118 },
-      { date: "2025-05-15", count: 125 },
-      { date: "2025-05-16", count: 132 },
-      { date: "2025-05-17", count: 136 },
-      { date: "2025-05-18", count: 129 },
-      { date: "2025-05-19", count: 138 },
-    ];
+    // Cleanup function
+    return () => {
+      if (cleanupRef.current) {
+        cleanupRef.current();
+      }
+    };
+  }, [active, chartData, chartSummary]);
 
-    // Set dimensions and margins for the chart
-    const width = chartRef.current.clientWidth;
-    const height = 300;
-    const margin = { top: 30, right: 30, bottom: 40, left: 50 };
-    const innerWidth = width - margin.left - margin.right;
-    const innerHeight = height - margin.top - margin.bottom;
+  // Real-time updates - refresh chart data every 5 minutes
+  useEffect(() => {
+    if (!active) return;
 
-    // Create the SVG container
-    const svg = d3.select(chartRef.current)
-      .append("svg")
-      .attr("width", width)
-      .attr("height", height)
-      .append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`);
+    const interval = setInterval(() => {
+      console.log('Auto-refreshing chart data...');
+      fetchChartData();
+    }, 5 * 60 * 1000); // 5 minutes
 
-    // Parse dates
-    const parseDate = d3.timeParse("%Y-%m-%d");
-    const formattedData = data.map(d => ({
-      date: parseDate(d.date),
-      count: d.count
-    }));
+    return () => clearInterval(interval);
+  }, [active, chartFilters]);
 
-    // Set up scales
-    const x = d3.scaleTime()
-      .domain(d3.extent(formattedData, d => d.date))
-      .range([0, innerWidth]);
+  // Handle window resize for responsive chart
+  useEffect(() => {
+    const handleResize = () => {
+      if (active && chartRef.current && chartData.length > 0) {
+        // Debounce resize events
+        clearTimeout(window.chartResizeTimeout);
+        window.chartResizeTimeout = setTimeout(() => {
+          createThreatActivityChart(chartData, chartSummary);
+        }, 300);
+      }
+    };
 
-    const y = d3.scaleLinear()
-      .domain([0, d3.max(formattedData, d => d.count) * 1.1])
-      .range([innerHeight, 0]);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(window.chartResizeTimeout);
+    };
+  }, [active, chartData, chartSummary]);
 
-    // Add axes
-    svg.append("g")
-      .attr("transform", `translate(0,${innerHeight})`)
-      .call(d3.axisBottom(x).ticks(7).tickFormat(d3.timeFormat("%d %b")));
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      // Clean up chart elements
+      if (cleanupRef.current) {
+        cleanupRef.current();
+      }
+      
+      // Clean up any remaining tooltips
+      d3.selectAll('.chart-tooltip').remove();
+      
+      // Clear any remaining timeouts
+      clearTimeout(window.chartResizeTimeout);
+    };
+  }, []);
 
-    svg.append("g")
-      .call(d3.axisLeft(y));
+  const createThreatActivityChart = (data = [], summary = {}) => {
+    // Clean up previous chart and tooltip
+    if (cleanupRef.current) {
+      cleanupRef.current();
+    }
+    
+    // Clear the container safely
+    if (chartRef.current) {
+      // Use React-safe approach to clear D3 content
+      const container = d3.select(chartRef.current);
+      container.selectAll("*").remove();
+    }
+    
+    // Return early if no container or data
+    if (!chartRef.current || !data || data.length === 0) {
+      if (chartRef.current) {
+        const svg = d3.select(chartRef.current)
+          .append("svg")
+          .attr("width", "100%")
+          .attr("height", 300)
+          .attr("viewBox", `0 0 ${chartRef.current.clientWidth || 400} 300`);
+        
+        svg.append("text")
+          .attr("x", "50%")
+          .attr("y", "50%")
+          .attr("text-anchor", "middle")
+          .attr("dominant-baseline", "middle")
+          .style("font-size", "14px")
+          .style("fill", "#666")
+          .text(chartLoading ? "Loading chart data..." : "No data available");
+      }
+      return;
+    }
 
-    // Add gradient for area fill
-    const gradient = svg.append("defs")
-      .append("linearGradient")
-      .attr("id", "areaGradient")
-      .attr("x1", "0%")
-      .attr("y1", "0%")
-      .attr("x2", "0%")
-      .attr("y2", "100%");
+    try {
+      // Responsive dimensions
+      const containerWidth = chartRef.current.clientWidth || 400;
+      const width = Math.max(containerWidth, 400);
+      const height = 350;
+      const margin = { 
+        top: 40, 
+        right: 60, 
+        bottom: 60, 
+        left: 70 
+      };
+      const innerWidth = width - margin.left - margin.right;
+      const innerHeight = height - margin.top - margin.bottom;
 
-    gradient.append("stop")
-      .attr("offset", "0%")
-      .attr("stop-color", "rgba(0, 86, 179, 0.8)")
-      .attr("stop-opacity", 0.8);
+      // Create SVG with proper cleanup
+      const svg = d3.select(chartRef.current)
+        .append("svg")
+        .attr("width", "100%")
+        .attr("height", height)
+        .attr("viewBox", `0 0 ${width} ${height}`)
+        .style("max-width", "100%")
+        .style("height", "auto");
 
-    gradient.append("stop")
-      .attr("offset", "100%")
-      .attr("stop-color", "rgba(0, 160, 233, 0.2)")
-      .attr("stop-opacity", 0.2);
+      const g = svg.append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    // Add area chart
-    svg.append("path")
-      .datum(formattedData)
-      .attr("fill", "url(#areaGradient)")
-      .attr("d", d3.area()
+      // Parse dates and prepare data
+      const parseDate = d3.timeParse("%Y-%m-%d");
+      const formattedData = data.map(d => ({
+        date: parseDate(d.date),
+        count: d.count,
+        types: d.types || {},
+        originalDate: d.date
+      })).filter(d => d.date && !isNaN(d.count));
+
+      if (formattedData.length === 0) {
+        svg.append("text")
+          .attr("x", "50%")
+          .attr("y", "50%")
+          .attr("text-anchor", "middle")
+          .attr("dominant-baseline", "middle")
+          .style("font-size", "14px")
+          .style("fill", "#666")
+          .text("No valid data to display");
+        return;
+      }
+
+      // Dynamic scales
+      const x = d3.scaleTime()
+        .domain(d3.extent(formattedData, d => d.date))
+        .range([0, innerWidth]);
+
+      const maxCount = d3.max(formattedData, d => d.count) || 1;
+      const y = d3.scaleLinear()
+        .domain([0, maxCount * 1.1])
+        .range([innerHeight, 0])
+        .nice();
+
+      // Create tooltip - ensure it's properly tracked
+      let tooltip = tooltipRef.current;
+      if (!tooltip) {
+        tooltip = d3.select("body").append("div")
+          .attr("class", "chart-tooltip")
+          .style("opacity", 0)
+          .style("position", "absolute")
+          .style("background", "rgba(0, 0, 0, 0.9)")
+          .style("color", "white")
+          .style("padding", "12px")
+          .style("border-radius", "6px")
+          .style("font-size", "13px")
+          .style("pointer-events", "none")
+          .style("z-index", "1000")
+          .style("box-shadow", "0 4px 12px rgba(0, 0, 0, 0.3)");
+        
+        tooltipRef.current = tooltip;
+      }
+
+      // Add gradient
+      const defs = svg.append("defs");
+      const gradientId = `areaGradient-${Date.now()}`;
+      
+      const gradient = defs.append("linearGradient")
+        .attr("id", gradientId)
+        .attr("x1", "0%")
+        .attr("y1", "0%")
+        .attr("x2", "0%")
+        .attr("y2", "100%");
+
+      gradient.append("stop")
+        .attr("offset", "0%")
+        .attr("stop-color", "#0056b3")
+        .attr("stop-opacity", 0.8);
+
+      gradient.append("stop")
+        .attr("offset", "100%")
+        .attr("stop-color", "#00a0e9")
+        .attr("stop-opacity", 0.1);
+
+      // Add grid lines
+      g.append("g")
+        .attr("class", "grid")
+        .attr("transform", `translate(0,${innerHeight})`)
+        .call(d3.axisBottom(x)
+          .ticks(Math.min(7, formattedData.length))
+          .tickSize(-innerHeight)
+          .tickFormat("")
+        )
+        .style("stroke-dasharray", "3,3")
+        .style("opacity", 0.3);
+
+      g.append("g")
+        .attr("class", "grid")
+        .call(d3.axisLeft(y)
+          .ticks(6)
+          .tickSize(-innerWidth)
+          .tickFormat("")
+        )
+        .style("stroke-dasharray", "3,3")
+        .style("opacity", 0.3);
+
+      // Add area chart
+      const area = d3.area()
         .x(d => x(d.date))
         .y0(innerHeight)
         .y1(d => y(d.count))
-      );
+        .curve(d3.curveCardinal);
 
-    // Add line
-    svg.append("path")
-      .datum(formattedData)
-      .attr("fill", "none")
-      .attr("stroke", "#0056b3")
-      .attr("stroke-width", 2)
-      .attr("d", d3.line()
+      g.append("path")
+        .datum(formattedData)
+        .attr("fill", `url(#${gradientId})`)
+        .attr("d", area);
+
+      // Add line chart
+      const line = d3.line()
         .x(d => x(d.date))
         .y(d => y(d.count))
-      );
+        .curve(d3.curveCardinal);
 
-    // Add title
-    svg.append("text")
-      .attr("x", innerWidth / 2)
-      .attr("y", -10)
-      .attr("text-anchor", "middle")
-      .style("font-size", "16px")
-      .style("font-weight", "600")
-      .style("fill", "#2d3748")
-      .text("Threat Activity Trends");
+      g.append("path")
+        .datum(formattedData)
+        .attr("fill", "none")
+        .attr("stroke", "#0056b3")
+        .attr("stroke-width", 3)
+        .attr("d", line);
+
+      // Add interactive dots
+      g.selectAll(".dot")
+        .data(formattedData)
+        .enter().append("circle")
+        .attr("class", "dot")
+        .attr("cx", d => x(d.date))
+        .attr("cy", d => y(d.count))
+        .attr("r", 4)
+        .attr("fill", "#0056b3")
+        .attr("stroke", "white")
+        .attr("stroke-width", 2)
+        .style("cursor", "pointer")
+        .on("mouseover", function(event, d) {
+          d3.select(this)
+            .transition().duration(200)
+            .attr("r", 6)
+            .attr("fill", "#ff6b35");
+
+          const formatDate = d3.timeFormat("%B %d, %Y");
+          const typeBreakdown = Object.entries(d.types)
+            .map(([type, count]) => `${type}: ${count}`)
+            .join("<br>");
+
+          if (tooltip) {
+            tooltip.transition().duration(200).style("opacity", .9);
+            tooltip.html(`
+              <strong>${formatDate(d.date)}</strong><br/>
+              Total IoCs: <strong>${d.count}</strong><br/>
+              ${typeBreakdown ? `<br/><em>Breakdown:</em><br/>${typeBreakdown}` : ''}
+            `)
+              .style("left", (event.pageX + 10) + "px")
+              .style("top", (event.pageY - 28) + "px");
+          }
+        })
+        .on("mouseout", function(event, d) {
+          d3.select(this)
+            .transition().duration(200)
+            .attr("r", 4)
+            .attr("fill", "#0056b3");
+
+          if (tooltip) {
+            tooltip.transition().duration(500).style("opacity", 0);
+          }
+        });
+
+      // Add axes
+      const formatTick = d3.timeFormat("%m/%d");
+      g.append("g")
+        .attr("transform", `translate(0,${innerHeight})`)
+        .call(d3.axisBottom(x)
+          .ticks(Math.min(7, formattedData.length))
+          .tickFormat(formatTick)
+        )
+        .selectAll("text")
+        .style("text-anchor", "end")
+        .attr("dx", "-.8em")
+        .attr("dy", ".15em")
+        .attr("transform", "rotate(-45)");
+
+      g.append("g")
+        .call(d3.axisLeft(y).ticks(6))
+        .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", "0.71em")
+        .attr("text-anchor", "end")
+        .style("fill", "#666")
+        .text("IoC Count");
+
+      // Add title
+      g.append("text")
+        .attr("x", innerWidth / 2)
+        .attr("y", -15)
+        .attr("text-anchor", "middle")
+        .style("font-size", "18px")
+        .style("font-weight", "600")
+        .style("fill", "#2d3748")
+        .text("Threat Activity Trends");
+
+      // Add summary stats
+      const statsText = `Total: ${summary.total_indicators || 0} IoCs | Daily Avg: ${summary.avg_daily || 0}`;
+      g.append("text")
+        .attr("x", innerWidth / 2)
+        .attr("y", innerHeight + 50)
+        .attr("text-anchor", "middle")
+        .style("font-size", "12px")
+        .style("fill", "#666")
+        .text(statsText);
+
+      // Set up cleanup function
+      cleanupRef.current = () => {
+        if (tooltipRef.current) {
+          tooltipRef.current.remove();
+          tooltipRef.current = null;
+        }
+        if (chartRef.current) {
+          d3.select(chartRef.current).selectAll("*").remove();
+        }
+      };
+
+    } catch (error) {
+      console.error('Error creating chart:', error);
+      setChartError('Failed to create chart visualization');
+    }
   };
 
   return (
@@ -733,13 +1056,104 @@ function Dashboard({ active, showPage }) {
             <div className="card-header">
               <h2 className="card-title"><i className="fas fa-chart-area card-icon"></i> Threat Activity Trends</h2>
               <div className="card-actions">
-                <button className="btn btn-outline btn-sm"><i className="fas fa-calendar-alt"></i> Last 30 Days</button>
+                <select 
+                  className="btn btn-outline btn-sm"
+                  value={chartFilters.days}
+                  onChange={(e) => setChartFilters({...chartFilters, days: parseInt(e.target.value)})}
+                  style={{marginRight: '10px'}}
+                >
+                  <option value="7">Last 7 Days</option>
+                  <option value="14">Last 14 Days</option>
+                  <option value="30">Last 30 Days</option>
+                  <option value="60">Last 60 Days</option>
+                  <option value="90">Last 90 Days</option>
+                </select>
+                
+                <select 
+                  className="btn btn-outline btn-sm"
+                  value={chartFilters.type || ''}
+                  onChange={(e) => setChartFilters({...chartFilters, type: e.target.value || null})}
+                  style={{marginRight: '10px'}}
+                >
+                  <option value="">All Types</option>
+                  <option value="ip">IP Address</option>
+                  <option value="domain">Domain</option>
+                  <option value="url">URL</option>
+                  <option value="file_hash">File Hash</option>
+                  <option value="email">Email</option>
+                </select>
+                
+                <button 
+                  className="btn btn-outline btn-sm"
+                  onClick={fetchChartData}
+                  disabled={chartLoading}
+                  title="Refresh chart data"
+                >
+                  <i className={`fas fa-sync-alt ${chartLoading ? 'fa-spin' : ''}`}></i>
+                  {chartLoading ? ' Loading...' : ' Refresh'}
+                </button>
               </div>
             </div>
-            <div className="card-content">
-              <div className="chart-container" ref={chartRef}>
-                {/* D3.js Chart will be rendered here */}
+            
+            {/* Chart Status Bar */}
+            {chartSummary.total_indicators > 0 && (
+              <div className="card-status-bar" style={{
+                background: '#f8f9fa', 
+                padding: '8px 16px', 
+                fontSize: '12px', 
+                color: '#666',
+                borderBottom: '1px solid #e9ecef'
+              }}>
+                <span><strong>Total IoCs:</strong> {chartSummary.total_indicators}</span>
+                <span style={{margin: '0 15px'}}>|</span>
+                <span><strong>Daily Average:</strong> {chartSummary.avg_daily}</span>
+                <span style={{margin: '0 15px'}}>|</span>
+                <span><strong>Date Range:</strong> {chartSummary.start_date} to {chartSummary.end_date}</span>
               </div>
+            )}
+            
+            <div className="card-content">
+              {chartError && (
+                <div className="alert alert-error" style={{
+                  background: '#fff5f5',
+                  border: '1px solid #fed7d7',
+                  color: '#c53030',
+                  padding: '12px',
+                  borderRadius: '4px',
+                  marginBottom: '16px'
+                }}>
+                  <i className="fas fa-exclamation-triangle"></i> {chartError}
+                </div>
+              )}
+              
+              <ChartErrorBoundary>
+                <div style={{position: 'relative', minHeight: '350px'}}>
+                  {chartLoading && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      textAlign: 'center',
+                      zIndex: 10
+                    }}>
+                      <i className="fas fa-spinner fa-spin" style={{fontSize: '24px', color: '#0056b3'}}></i>
+                      <p style={{marginTop: '10px', color: '#666'}}>Loading chart data...</p>
+                    </div>
+                  )}
+                  <div 
+                    className="chart-container" 
+                    ref={chartRef} 
+                    style={{
+                      minHeight: '350px',
+                      width: '100%',
+                      overflow: 'visible'
+                    }}
+                  >
+                    {/* D3.js Chart will be rendered here */}
+                  </div>
+                </div>
+              </ChartErrorBoundary>
             </div>
           </div>
         </div>
