@@ -1332,3 +1332,131 @@ def ttps_list(request):
             {"error": "Failed to get TTPs list", "details": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def ttp_detail(request, ttp_id):
+    """
+    Get detailed information about a specific TTP.
+    
+    Path Parameters:
+    - ttp_id: The ID of the TTP to retrieve
+    
+    Returns detailed TTP information including:
+    - All TTP fields and metadata
+    - Related threat feed information
+    - STIX mapping details
+    - Creation and modification history
+    - Related indicators (if any)
+    """
+    try:
+        from core.repositories.ttp_repository import TTPRepository
+        
+        # Get the TTP by ID
+        ttp = TTPRepository.get_by_id(ttp_id)
+        if not ttp:
+            return Response(
+                {"error": "TTP not found", "ttp_id": ttp_id},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Get tactic display name
+        tactic_display = dict(TTPData.MITRE_TACTIC_CHOICES).get(ttp.mitre_tactic, ttp.mitre_tactic)
+        
+        # Get related indicators that reference this TTP (if any)
+        related_indicators = []
+        try:
+            # Look for indicators that might reference this TTP in their descriptions or metadata
+            from django.db.models import Q
+            indicators = Indicator.objects.filter(
+                Q(description__icontains=ttp.mitre_technique_id) |
+                Q(value__icontains=ttp.mitre_technique_id) |
+                Q(threat_feed=ttp.threat_feed)
+            ).select_related('threat_feed')[:5]  # Limit to 5 related indicators
+            
+            for indicator in indicators:
+                related_indicators.append({
+                    'id': indicator.id,
+                    'type': indicator.type,
+                    'value': indicator.value[:100] + '...' if len(indicator.value) > 100 else indicator.value,
+                    'confidence': getattr(indicator, 'confidence', None),
+                    'created_at': indicator.created_at.isoformat(),
+                    'threat_feed': {
+                        'id': indicator.threat_feed.id,
+                        'name': indicator.threat_feed.name
+                    } if indicator.threat_feed else None
+                })
+        except Exception as e:
+            logger.warning(f"Could not fetch related indicators for TTP {ttp_id}: {str(e)}")
+        
+        # Get MITRE ATT&CK framework context
+        mitre_context = {
+            'tactic': ttp.mitre_tactic,
+            'tactic_display': tactic_display,
+            'technique_id': ttp.mitre_technique_id,
+            'subtechnique': ttp.mitre_subtechnique,
+            'framework_url': f"https://attack.mitre.org/techniques/{ttp.mitre_technique_id.replace('.', '/')}/" if ttp.mitre_technique_id else None
+        }
+        
+        # Build detailed response
+        ttp_detail_data = {
+            'id': ttp.id,
+            'name': ttp.name,
+            'description': ttp.description,
+            'stix_id': ttp.stix_id,
+            
+            # MITRE ATT&CK Information
+            'mitre': mitre_context,
+            
+            # Threat Feed Information
+            'threat_feed': {
+                'id': ttp.threat_feed.id,
+                'name': ttp.threat_feed.name,
+                'description': ttp.threat_feed.description,
+                'is_external': ttp.threat_feed.is_external,
+                'is_active': ttp.threat_feed.is_active,
+                'source_type': getattr(ttp.threat_feed, 'source_type', 'unknown'),
+                'created_at': ttp.threat_feed.created_at.isoformat(),
+            } if ttp.threat_feed else None,
+            
+            # Anonymization Information
+            'anonymization': {
+                'is_anonymized': ttp.is_anonymized,
+                'has_original_data': bool(ttp.original_data),
+                'original_data_keys': list(ttp.original_data.keys()) if ttp.original_data else []
+            },
+            
+            # Timestamps
+            'created_at': ttp.created_at.isoformat(),
+            'updated_at': ttp.updated_at.isoformat(),
+            
+            # Related Data
+            'related_indicators': related_indicators,
+            'related_indicators_count': len(related_indicators),
+            
+            # Metadata
+            'metadata': {
+                'has_subtechnique': bool(ttp.mitre_subtechnique),
+                'tactic_category': ttp.mitre_tactic,
+                'data_source': 'threat_feed',
+                'stix_version': '2.1' if ttp.stix_id and 'attack-pattern' in ttp.stix_id else 'unknown'
+            }
+        }
+        
+        return Response({
+            'success': True,
+            'data': ttp_detail_data
+        }, status=status.HTTP_200_OK)
+        
+    except ValueError:
+        return Response(
+            {"error": "Invalid TTP ID format", "ttp_id": ttp_id},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        logger.error(f"Error getting TTP detail for ID {ttp_id}: {str(e)}")
+        return Response(
+            {"error": "Failed to get TTP details", "details": str(e), "ttp_id": ttp_id},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
