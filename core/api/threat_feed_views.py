@@ -1203,13 +1203,14 @@ def threat_activity_chart_data(request):
         )
 
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 def ttps_list(request):
     """
-    Get list of TTPs with filtering and pagination.
+    GET: Get list of TTPs with filtering and pagination.
+    POST: Create a new TTP with validation.
     
-    Query Parameters:
+    GET Query Parameters:
     - page: Page number (default: 1)
     - page_size: Items per page (default: 20, max: 100)
     - tactic: Filter by MITRE tactic
@@ -1217,7 +1218,21 @@ def ttps_list(request):
     - search: Search in name and description
     - feed_id: Filter by threat feed ID
     - ordering: Sort by field (default: -created_at)
+    
+    POST Body Parameters:
+    - name: TTP name (required)
+    - description: TTP description (required)
+    - mitre_technique_id: MITRE ATT&CK technique ID (required, e.g., T1566.001)
+    - mitre_tactic: MITRE tactic (required, from MITRE_TACTIC_CHOICES)
+    - mitre_subtechnique: MITRE subtechnique name (optional)
+    - threat_feed_id: ID of associated threat feed (optional, defaults to manual entry feed)
+    - stix_id: Custom STIX ID (optional, auto-generated if not provided)
     """
+    
+    if request.method == 'POST':
+        return _create_ttp(request)
+    
+    # Handle GET request (existing list functionality)
     try:
         from core.repositories.ttp_repository import TTPRepository
         from django.core.paginator import Paginator
@@ -1330,6 +1345,192 @@ def ttps_list(request):
         logger.error(f"Error getting TTPs list: {str(e)}")
         return Response(
             {"error": "Failed to get TTPs list", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+def _create_ttp(request):
+    """
+    Create a new TTP with comprehensive validation.
+    """
+    try:
+        from core.repositories.ttp_repository import TTPRepository
+        from core.services.ttp_service import TTPService
+        import uuid
+        import re
+        
+        data = request.data
+        errors = []
+        
+        # Validate required fields
+        required_fields = ['name', 'description', 'mitre_technique_id', 'mitre_tactic']
+        for field in required_fields:
+            if not data.get(field) or not str(data.get(field)).strip():
+                errors.append(f"Field '{field}' is required and cannot be empty")
+        
+        if errors:
+            return Response(
+                {"error": "Validation failed", "details": errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Extract and validate data
+        name = str(data['name']).strip()
+        description = str(data['description']).strip()
+        mitre_technique_id = str(data['mitre_technique_id']).strip().upper()
+        mitre_tactic = str(data['mitre_tactic']).strip().lower()
+        mitre_subtechnique = str(data.get('mitre_subtechnique', '')).strip() or None
+        threat_feed_id = data.get('threat_feed_id')
+        stix_id = str(data.get('stix_id', '')).strip() or None
+        
+        # Validate name length
+        if len(name) < 3:
+            errors.append("TTP name must be at least 3 characters long")
+        if len(name) > 255:
+            errors.append("TTP name cannot exceed 255 characters")
+            
+        # Validate description length
+        if len(description) < 10:
+            errors.append("TTP description must be at least 10 characters long")
+        if len(description) > 5000:
+            errors.append("TTP description cannot exceed 5000 characters")
+        
+        # Validate MITRE technique ID format
+        mitre_pattern = r'^T\d{4}(\.\d{3})?$'
+        if not re.match(mitre_pattern, mitre_technique_id):
+            errors.append("MITRE technique ID must follow format T1234 or T1234.001 (e.g., T1566.001)")
+        
+        # Validate MITRE tactic
+        valid_tactics = [choice[0] for choice in TTPData.MITRE_TACTIC_CHOICES]
+        if mitre_tactic not in valid_tactics:
+            errors.append(f"Invalid MITRE tactic. Must be one of: {', '.join(valid_tactics)}")
+        
+        # Validate subtechnique length if provided
+        if mitre_subtechnique and len(mitre_subtechnique) > 255:
+            errors.append("MITRE subtechnique name cannot exceed 255 characters")
+        
+        # Get or create default threat feed if not provided
+        if threat_feed_id:
+            try:
+                threat_feed_id = int(threat_feed_id)
+                threat_feed = ThreatFeed.objects.get(id=threat_feed_id)
+            except (ValueError, ThreatFeed.DoesNotExist):
+                errors.append(f"Invalid threat feed ID: {threat_feed_id}")
+                threat_feed = None
+        else:
+            # Get or create default manual entry feed
+            from core.models.models import Organization
+            default_org, created = Organization.objects.get_or_create(
+                name="Manual Entry",
+                defaults={'description': 'Default organization for manually created TTPs'}
+            )
+            
+            threat_feed, created = ThreatFeed.objects.get_or_create(
+                name="Manual TTP Feed",
+                defaults={
+                    'description': 'Default feed for manually created TTPs',
+                    'is_external': False,
+                    'is_active': True,
+                    'owner': default_org
+                }
+            )
+        
+        # Generate STIX ID if not provided
+        if not stix_id:
+            stix_id = f"attack-pattern--{str(uuid.uuid4())}"
+        else:
+            # Validate STIX ID format
+            stix_pattern = r'^attack-pattern--[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+            if not re.match(stix_pattern, stix_id):
+                errors.append("STIX ID must follow format: attack-pattern--xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
+        
+        # Check for duplicate MITRE technique ID within the same feed
+        existing_ttp = TTPData.objects.filter(
+            mitre_technique_id=mitre_technique_id,
+            threat_feed=threat_feed
+        ).first()
+        
+        if existing_ttp:
+            errors.append(f"TTP with MITRE technique ID '{mitre_technique_id}' already exists in this threat feed")
+        
+        # Check for duplicate STIX ID
+        if TTPData.objects.filter(stix_id=stix_id).exists():
+            errors.append(f"TTP with STIX ID '{stix_id}' already exists")
+        
+        if errors:
+            return Response(
+                {"error": "Validation failed", "details": errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Create the TTP
+        ttp_data = {
+            'name': name,
+            'description': description,
+            'mitre_technique_id': mitre_technique_id,
+            'mitre_tactic': mitre_tactic,
+            'mitre_subtechnique': mitre_subtechnique,
+            'threat_feed': threat_feed,
+            'stix_id': stix_id,
+            'is_anonymized': False
+        }
+        
+        # Use TTPService for creation if available, otherwise use repository
+        try:
+            ttp_service = TTPService()
+            ttp = ttp_service.create_ttp(ttp_data)
+        except:
+            # Fallback to repository method
+            ttp = TTPRepository.create(ttp_data)
+        
+        # Log the creation activity
+        try:
+            SystemActivity.objects.create(
+                activity_type='ttp_created',
+                description=f'New TTP created: {ttp.name} ({ttp.mitre_technique_id})',
+                details={
+                    'ttp_id': ttp.id,
+                    'mitre_technique_id': ttp.mitre_technique_id,
+                    'mitre_tactic': ttp.mitre_tactic,
+                    'threat_feed_id': ttp.threat_feed.id if ttp.threat_feed else None,
+                    'source': 'manual_creation'
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Could not log TTP creation activity: {str(e)}")
+        
+        # Format response data
+        tactic_display = dict(TTPData.MITRE_TACTIC_CHOICES).get(ttp.mitre_tactic, ttp.mitre_tactic)
+        
+        response_data = {
+            'success': True,
+            'message': 'TTP created successfully',
+            'data': {
+                'id': ttp.id,
+                'name': ttp.name,
+                'description': ttp.description,
+                'mitre_technique_id': ttp.mitre_technique_id,
+                'mitre_tactic': ttp.mitre_tactic,
+                'mitre_tactic_display': tactic_display,
+                'mitre_subtechnique': ttp.mitre_subtechnique,
+                'stix_id': ttp.stix_id,
+                'threat_feed': {
+                    'id': ttp.threat_feed.id,
+                    'name': ttp.threat_feed.name,
+                    'is_external': ttp.threat_feed.is_external
+                } if ttp.threat_feed else None,
+                'is_anonymized': ttp.is_anonymized,
+                'created_at': ttp.created_at.isoformat(),
+                'updated_at': ttp.updated_at.isoformat(),
+            }
+        }
+        
+        return Response(response_data, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        logger.error(f"Error creating TTP: {str(e)}")
+        return Response(
+            {"error": "Failed to create TTP", "details": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
