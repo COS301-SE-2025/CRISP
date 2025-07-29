@@ -177,8 +177,8 @@ class AccessControlService:
             return True
             
         if creating_user.role == 'publisher':
-            # Publishers can only create viewers and only in their own organization
-            if role == 'viewer' and organization == creating_user.organization:
+            # Publishers can create viewers and other publishers, but only in their own organization
+            if role in ['viewer', 'publisher'] and organization == creating_user.organization:
                 return True
             return False
             

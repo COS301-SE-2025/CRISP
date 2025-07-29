@@ -63,7 +63,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
   // Get allowed roles based on current user's permissions
   const getAllowedRoles = () => {
     if (isPublisher) {
-      return ['viewer']; // Publishers can only create viewers
+      return ['viewer', 'publisher']; // Publishers can create viewers and other publishers
     }
     return roles; // Admins can create any role
   };
@@ -209,7 +209,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
   const handleAddUser = () => {
     setModalMode('add');
     setSelectedUser(null);
-    const defaultRole = isPublisher ? 'viewer' : 'viewer'; // Publishers can only create viewers
+    const defaultRole = 'viewer'; // Default role for new users
     setFormData({
       username: '',
       email: '',
@@ -521,7 +521,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
             fontSize: '0.875rem',
             fontWeight: '500'
           }}>
-            <strong>Publisher Mode:</strong> You can view and manage users from your organization and organizations with trusted relationships. You can only create viewer users, and role changes are restricted.
+            <strong>Publisher Mode:</strong> You can view and manage users from your organization and organizations with trusted relationships. You can create viewer and publisher users, and role changes are restricted.
           </div>
         )}
       </div>
@@ -909,7 +909,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                   Role
                   {isPublisher && modalMode !== 'view' && (
                     <span style={{ fontSize: '0.75rem', color: '#856404', marginLeft: '0.5rem' }}>
-                      (Limited to viewer role)
+                      (Limited to viewer and publisher roles)
                     </span>
                   )}
                 </label>
