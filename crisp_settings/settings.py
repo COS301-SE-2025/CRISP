@@ -191,6 +191,10 @@ TAXII_SETTINGS = {
     'MAX_CONTENT_LENGTH': 104857600,  # 100MB
 }
 
+# File Upload Settings
+DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB for in-memory uploads
+FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB for file uploads
+
 # Celery Configuration
 CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://localhost:6379/0')

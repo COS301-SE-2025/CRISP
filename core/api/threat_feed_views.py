@@ -486,13 +486,8 @@ def indicators_bulk_import(request):
         
         # Security validation: Check request size and rate limiting
         max_indicators = 10000  # Maximum indicators per request
-        max_request_size = 50 * 1024 * 1024  # 50MB max request size
-        
-        if hasattr(request, 'body') and len(request.body) > max_request_size:
-            return Response(
-                {"error": f"Request size exceeds maximum allowed size ({max_request_size // 1024 // 1024}MB)"},
-                status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
-            )
+        # Note: Request size validation removed to avoid "body after reading" error
+        # DRF handles request size limits through DATA_UPLOAD_MAX_MEMORY_SIZE setting
         
         # Validate that indicators list is provided
         if 'indicators' not in data or not isinstance(data['indicators'], list):
@@ -1204,5 +1199,136 @@ def threat_activity_chart_data(request):
         logger.error(f"Error getting threat activity chart data: {str(e)}")
         return Response(
             {"error": "Failed to get chart data", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def ttps_list(request):
+    """
+    Get list of TTPs with filtering and pagination.
+    
+    Query Parameters:
+    - page: Page number (default: 1)
+    - page_size: Items per page (default: 20, max: 100)
+    - tactic: Filter by MITRE tactic
+    - technique_id: Filter by MITRE technique ID
+    - search: Search in name and description
+    - feed_id: Filter by threat feed ID
+    - ordering: Sort by field (default: -created_at)
+    """
+    try:
+        from core.repositories.ttp_repository import TTPRepository
+        from django.core.paginator import Paginator
+        from django.db.models import Q
+        
+        # Get query parameters
+        page = int(request.GET.get('page', 1))
+        page_size = min(int(request.GET.get('page_size', 20)), 100)  # Max 100 items per page
+        tactic = request.GET.get('tactic', '').strip()
+        technique_id = request.GET.get('technique_id', '').strip()
+        search = request.GET.get('search', '').strip()
+        feed_id = request.GET.get('feed_id', '').strip()
+        ordering = request.GET.get('ordering', '-created_at')
+        
+        # Start with all TTPs
+        queryset = TTPData.objects.select_related('threat_feed').all()
+        
+        # Apply filters
+        if tactic:
+            queryset = queryset.filter(mitre_tactic=tactic)
+            
+        if technique_id:
+            queryset = queryset.filter(mitre_technique_id__icontains=technique_id)
+            
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search) | 
+                Q(description__icontains=search) |
+                Q(mitre_technique_id__icontains=search)
+            )
+            
+        if feed_id:
+            try:
+                feed_id_int = int(feed_id)
+                queryset = queryset.filter(threat_feed_id=feed_id_int)
+            except ValueError:
+                pass  # Invalid feed_id, ignore filter
+        
+        # Apply ordering
+        valid_ordering_fields = [
+            'name', '-name', 'mitre_technique_id', '-mitre_technique_id',
+            'mitre_tactic', '-mitre_tactic', 'created_at', '-created_at',
+            'updated_at', '-updated_at'
+        ]
+        if ordering in valid_ordering_fields:
+            queryset = queryset.order_by(ordering)
+        else:
+            queryset = queryset.order_by('-created_at')  # Default ordering
+        
+        # Paginate results
+        paginator = Paginator(queryset, page_size)
+        
+        # Validate page number
+        if page < 1:
+            page = 1
+        elif page > paginator.num_pages and paginator.num_pages > 0:
+            page = paginator.num_pages
+            
+        page_obj = paginator.get_page(page)
+        
+        # Serialize TTP data
+        ttps_data = []
+        for ttp in page_obj:
+            # Get tactic display name
+            tactic_display = dict(TTPData.MITRE_TACTIC_CHOICES).get(ttp.mitre_tactic, ttp.mitre_tactic)
+            
+            ttps_data.append({
+                'id': ttp.id,
+                'name': ttp.name,
+                'description': ttp.description,
+                'mitre_technique_id': ttp.mitre_technique_id,
+                'mitre_tactic': ttp.mitre_tactic,
+                'mitre_tactic_display': tactic_display,
+                'mitre_subtechnique': ttp.mitre_subtechnique,
+                'stix_id': ttp.stix_id,
+                'threat_feed': {
+                    'id': ttp.threat_feed.id,
+                    'name': ttp.threat_feed.name,
+                    'is_external': ttp.threat_feed.is_external
+                } if ttp.threat_feed else None,
+                'is_anonymized': ttp.is_anonymized,
+                'created_at': ttp.created_at.isoformat(),
+                'updated_at': ttp.updated_at.isoformat(),
+            })
+        
+        # Build response
+        response_data = {
+            'success': True,
+            'count': paginator.count,
+            'num_pages': paginator.num_pages,
+            'current_page': page,
+            'page_size': page_size,
+            'has_next': page_obj.has_next(),
+            'has_previous': page_obj.has_previous(),
+            'next_page': page + 1 if page_obj.has_next() else None,
+            'previous_page': page - 1 if page_obj.has_previous() else None,
+            'results': ttps_data,
+            'filters': {
+                'tactic': tactic,
+                'technique_id': technique_id,
+                'search': search,
+                'feed_id': feed_id,
+                'ordering': ordering
+            }
+        }
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error getting TTPs list: {str(e)}")
+        return Response(
+            {"error": "Failed to get TTPs list", "details": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

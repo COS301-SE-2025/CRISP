@@ -5,7 +5,7 @@ from django.shortcuts import redirect
 from rest_framework import routers
 from core.api.threat_feed_views import ThreatFeedViewSet
 from core.viewing.home import home
-from core.api.threat_feed_views import indicators_list, indicators_bulk_import, indicator_update, indicator_share, threat_activity_chart_data, system_health, recent_activities
+from core.api.threat_feed_views import indicators_list, indicators_bulk_import, indicator_update, indicator_share, threat_activity_chart_data, system_health, recent_activities, ttps_list
 
 # Set up REST API router
 router = routers.DefaultRouter()
@@ -26,6 +26,7 @@ urlpatterns = [
     path('api/threat-activity-chart/', threat_activity_chart_data, name='threat-activity-chart'),
     path('api/system-health/', system_health, name='system-health'),
     path('api/recent-activities/', recent_activities, name='recent-activities'),
+    path('api/ttps/', ttps_list, name='ttps-list'),
     path('api/status/', include('core.urls')),
     path('taxii2/', include('core.taxii.urls')),
 ]
