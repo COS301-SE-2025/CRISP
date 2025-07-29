@@ -97,3 +97,16 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Settings Files
+settings.py
+local_settings.py
+*.settings
+settings.json
+settings.local.json
+config.json
+config.local.json
+.settings/
+settings/
+configuration.py
+configuration.json

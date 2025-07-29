@@ -176,8 +176,11 @@ class AccessControlService:
         if creating_user.role == 'admin':
             return True
             
-        if creating_user.role == 'publisher' and role in ['viewer', 'publisher']:
-            return True
+        if creating_user.role == 'publisher':
+            # Publishers can only create viewers and only in their own organization
+            if role == 'viewer' and organization == creating_user.organization:
+                return True
+            return False
             
         return False
 
@@ -198,7 +201,11 @@ class AccessControlService:
         if user.organization:
             accessible.append(user.organization)
             
-            # Get organizations through trust relationships
+            # Publishers can only access their own organization
+            if user.role == 'publisher':
+                return accessible
+            
+            # Other roles (admins) get organizations through trust relationships
             try:
                 relationships = TrustRelationship.objects.filter(
                     source_organization=user.organization,
