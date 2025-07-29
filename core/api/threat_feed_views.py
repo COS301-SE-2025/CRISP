@@ -9,7 +9,7 @@ from rest_framework.permissions import AllowAny
 from django.http import Http404
 from rest_framework.views import exception_handler
 
-from core.models.models import ThreatFeed
+from core.models.models import ThreatFeed, SystemActivity
 from core.services.otx_taxii_service import OTXTaxiiService
 from core.serializers.threat_feed_serializer import ThreatFeedSerializer
 from core.models.models import Indicator  
@@ -24,6 +24,25 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
     queryset = ThreatFeed.objects.all()
     serializer_class = ThreatFeedSerializer
     permission_classes = [AllowAny]
+    
+    def perform_create(self, serializer):
+        """Log activity when a new feed is created"""
+        feed = serializer.save()
+        
+        # Log activity
+        activity_title = f"New threat feed added: {feed.name}"
+        activity_description = f"{'External' if feed.is_external else 'Internal'} threat feed '{feed.name}' has been configured"
+        SystemActivity.log_activity(
+            activity_type='feed_added',
+            title=activity_title,
+            description=activity_description,
+            threat_feed=feed,
+            metadata={
+                'feed_type': 'external' if feed.is_external else 'internal',
+                'is_active': feed.is_active,
+                'taxii_url': feed.taxii_server_url if feed.is_external else None
+            }
+        )
     
     @action(detail=False, methods=['get'])
     def external(self, request):
@@ -134,6 +153,26 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
                         "batch_size": batch_size
                     }
                 }
+                
+                # Log activity
+                if indicator_count > 0 or ttp_count > 0:
+                    activity_title = f"Consumed {indicator_count} indicators from {feed.name}"
+                    activity_description = f"Feed consumption completed successfully. Added {indicator_count} indicators and {ttp_count} TTPs."
+                    SystemActivity.log_activity(
+                        activity_type='feed_consumed',
+                        title=activity_title,
+                        description=activity_description,
+                        threat_feed=feed,
+                        metadata={
+                            'indicator_count': indicator_count,
+                            'ttp_count': ttp_count,
+                            'parameters': {
+                                'limit': limit,
+                                'force_days': force_days,
+                                'batch_size': batch_size
+                            }
+                        }
+                    )
             else:
                 formatted_stats = stats
 
@@ -387,6 +426,22 @@ def indicators_list(request):
             from core.repositories.indicator_repository import IndicatorRepository
             indicator = IndicatorRepository.create(indicator_data)
             
+            # Log activity
+            activity_title = f"New {indicator.type} indicator added"
+            activity_description = f"Indicator '{indicator.value}' added to {indicator.threat_feed.name if indicator.threat_feed else 'Manual Entry Feed'}"
+            SystemActivity.log_activity(
+                activity_type='indicator_added',
+                title=activity_title,
+                description=activity_description,
+                indicator=indicator,
+                threat_feed=indicator.threat_feed,
+                metadata={
+                    'indicator_type': indicator.type,
+                    'confidence': indicator.confidence,
+                    'source': indicator.threat_feed.name if indicator.threat_feed else 'Manual Entry'
+                }
+            )
+            
             # Format response
             feed_name = 'Manual Entry'
             if indicator.threat_feed:
@@ -617,6 +672,21 @@ def indicators_bulk_import(request):
             except Exception as e:
                 errors.append(f"Indicator {idx + 1}: {str(e)}")
                 continue
+        
+        # Log bulk import activity
+        if len(created_indicators) > 0:
+            activity_title = f"Bulk imported {len(created_indicators)} indicators"
+            activity_description = f"Successfully imported {len(created_indicators)} indicators with {len(errors)} errors"
+            SystemActivity.log_activity(
+                activity_type='indicators_bulk_added',
+                title=activity_title,
+                description=activity_description,
+                metadata={
+                    'imported_count': len(created_indicators),
+                    'error_count': len(errors),
+                    'total_attempted': len(indicators_data)
+                }
+            )
         
         return Response({
             'success': True,
@@ -931,6 +1001,81 @@ def system_health(request):
             'status': 'error',
             'timestamp': timezone.now().isoformat(),
             'error': 'Failed to get system health',
+            'details': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def recent_activities(request):
+    """Get recent system activities for dashboard."""
+    try:
+        # Get limit parameter (default to 20)
+        limit = int(request.GET.get('limit', 20))
+        if limit > 100:  # Cap the limit
+            limit = 100
+        
+        # Fetch recent activities
+        activities = SystemActivity.objects.select_related(
+            'threat_feed', 'indicator', 'organization', 'user'
+        ).all()[:limit]
+        
+        # Format activities for frontend
+        activities_data = []
+        for activity in activities:
+            # Calculate time ago
+            time_diff = timezone.now() - activity.created_at
+            if time_diff.total_seconds() < 60:
+                time_ago = "Just now"
+            elif time_diff.total_seconds() < 3600:
+                minutes = int(time_diff.total_seconds() / 60)
+                time_ago = f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+            elif time_diff.total_seconds() < 86400:
+                hours = int(time_diff.total_seconds() / 3600)
+                time_ago = f"{hours} hour{'s' if hours != 1 else ''} ago"
+            else:
+                days = int(time_diff.total_seconds() / 86400)
+                time_ago = f"{days} day{'s' if days != 1 else ''} ago"
+            
+            activities_data.append({
+                'id': activity.id,
+                'type': activity.activity_type,
+                'category': activity.category,
+                'title': activity.title,
+                'description': activity.description,
+                'icon': activity.icon,
+                'badge_type': activity.badge_type,
+                'badge_text': activity.get_activity_type_display(),
+                'time_ago': time_ago,
+                'timestamp': activity.created_at.isoformat(),
+                'metadata': activity.metadata,
+                'related_objects': {
+                    'threat_feed': {
+                        'id': activity.threat_feed.id,
+                        'name': activity.threat_feed.name
+                    } if activity.threat_feed else None,
+                    'indicator': {
+                        'id': activity.indicator.id,
+                        'value': activity.indicator.value,
+                        'type': activity.indicator.type
+                    } if activity.indicator else None,
+                    'organization': {
+                        'id': activity.organization.id,
+                        'name': activity.organization.name
+                    } if activity.organization else None,
+                }
+            })
+        
+        return Response({
+            'success': True,
+            'count': len(activities_data),
+            'activities': activities_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching recent activities: {str(e)}")
+        return Response({
+            'success': False,
+            'error': 'Failed to fetch recent activities',
             'details': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

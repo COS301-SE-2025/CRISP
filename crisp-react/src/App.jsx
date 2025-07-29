@@ -360,6 +360,16 @@ function Dashboard({ active, showPage }) {
   const [healthLoading, setHealthLoading] = useState(false);
   const [healthError, setHealthError] = useState(null);
   
+  // Recent Activities State
+  const [recentActivities, setRecentActivities] = useState([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
+  const [activitiesError, setActivitiesError] = useState(null);
+
+  // Dashboard Export State
+  const [showDashboardExportModal, setShowDashboardExportModal] = useState(false);
+  const [dashboardExportFormat, setDashboardExportFormat] = useState('json');
+  const [dashboardExporting, setDashboardExporting] = useState(false);
+  
   // Fetch dashboard data from backend
   useEffect(() => {
     if (active) {
@@ -367,6 +377,7 @@ function Dashboard({ active, showPage }) {
       fetchRecentIoCs();
       fetchChartData();
       fetchSystemHealth();
+      fetchRecentActivities();
     }
   }, [active]);
 
@@ -399,8 +410,8 @@ function Dashboard({ active, showPage }) {
         for (const feed of feedsData.results) {
           const feedStatus = await api.get(`/api/threat-feeds/${feed.id}/status/`);
           if (feedStatus) {
-            totalIndicators += feedStatus.indicators_count || 0;
-            totalTTPs += feedStatus.ttps_count || 0;
+            totalIndicators += feedStatus.indicator_count || 0;
+            totalTTPs += feedStatus.ttp_count || 0;
           }
         }
       }
@@ -585,6 +596,26 @@ function Dashboard({ active, showPage }) {
       age: getAge(indicator.created_at || new Date().toISOString()),
       created_at: indicator.created_at || new Date().toISOString()
     };
+  };
+
+  // Fetch recent activities
+  const fetchRecentActivities = async () => {
+    setActivitiesLoading(true);
+    setActivitiesError(null);
+    
+    try {
+      const response = await api.get('/api/recent-activities/?limit=10');
+      if (response && response.success) {
+        setRecentActivities(response.activities || []);
+      } else {
+        setActivitiesError('Failed to load recent activities');
+      }
+    } catch (error) {
+      console.error('Error fetching recent activities:', error);
+      setActivitiesError('Failed to load recent activities');
+    } finally {
+      setActivitiesLoading(false);
+    }
   };
 
   // Utility functions for system health display
@@ -1023,6 +1054,194 @@ function Dashboard({ active, showPage }) {
     }
   };
 
+  // Dashboard Export Functions
+  function closeDashboardExportModal() {
+    setShowDashboardExportModal(false);
+    setDashboardExportFormat('json');
+  }
+
+  async function handleDashboardExport() {
+    setDashboardExporting(true);
+    
+    try {
+      let exportData;
+      let filename;
+      let mimeType;
+
+      const exportPayload = {
+        export_date: new Date().toISOString(),
+        dashboard_stats: dashboardStats,
+        recent_iocs: recentIoCs,
+        system_health: systemHealth,
+        chart_data: chartData,
+        chart_summary: chartSummary,
+        chart_filters: chartFilters
+      };
+
+      switch (dashboardExportFormat) {
+        case 'csv':
+          exportData = exportDashboardToCSV(exportPayload);
+          filename = `dashboard_export_${new Date().toISOString().split('T')[0]}.csv`;
+          mimeType = 'text/csv';
+          break;
+          
+        case 'json':
+          exportData = exportDashboardToJSON(exportPayload);
+          filename = `dashboard_export_${new Date().toISOString().split('T')[0]}.json`;
+          mimeType = 'application/json';
+          break;
+          
+        case 'summary':
+          exportData = exportDashboardToSummary(exportPayload);
+          filename = `dashboard_summary_${new Date().toISOString().split('T')[0]}.txt`;
+          mimeType = 'text/plain';
+          break;
+          
+        default:
+          throw new Error('Unsupported export format');
+      }
+
+      // Create and download file
+      const blob = new Blob([exportData], { type: mimeType });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      closeDashboardExportModal();
+      
+      console.log(`Successfully exported dashboard data as ${dashboardExportFormat.toUpperCase()}`);
+      
+    } catch (error) {
+      console.error('Dashboard export failed:', error);
+      alert('Export failed. Please try again.');
+    } finally {
+      setDashboardExporting(false);
+    }
+  }
+
+  function exportDashboardToCSV(data) {
+    let csvContent = '';
+    
+    // Add header
+    csvContent += 'CRISP Dashboard Export\n';
+    csvContent += `Export Date: ${new Date(data.export_date).toLocaleString()}\n\n`;
+    
+    // Dashboard Statistics
+    csvContent += 'DASHBOARD STATISTICS\n';
+    csvContent += 'Metric,Value\n';
+    csvContent += `Active IoCs,${data.dashboard_stats.indicators || 0}\n`;
+    csvContent += `TTPs,${data.dashboard_stats.ttps || 0}\n`;
+    csvContent += `Threat Feeds,${data.dashboard_stats.threat_feeds || 0}\n`;
+    csvContent += `Platform Status,${data.dashboard_stats.status || 'Unknown'}\n\n`;
+
+    // Recent IoCs Table
+    if (data.recent_iocs && data.recent_iocs.length > 0) {
+      csvContent += 'RECENT INDICATORS OF COMPROMISE\n';
+      csvContent += 'Type,Indicator,Source,Severity,Status,Created\n';
+      
+      data.recent_iocs.forEach(ioc => {
+        const csvRow = [
+          ioc.displayType || '',
+          `"${(ioc.value || '').replace(/"/g, '""')}"`,
+          ioc.source || '',
+          ioc.severity || '',
+          'Active',
+          ioc.created_at || ''
+        ].join(',');
+        csvContent += csvRow + '\n';
+      });
+      csvContent += '\n';
+    }
+
+    // System Health Summary
+    if (data.system_health) {
+      csvContent += 'SYSTEM HEALTH\n';
+      csvContent += 'Component,Status,Details\n';
+      csvContent += `Overall Status,${data.system_health.status || 'Unknown'},\n`;
+      csvContent += `Database,${data.system_health.database?.status || 'Unknown'},${data.system_health.database?.details || ''}\n`;
+      csvContent += `Redis,${data.system_health.services?.redis?.status || 'Unknown'},${data.system_health.services?.redis?.details || ''}\n`;
+      if (data.system_health.system) {
+        csvContent += `CPU Usage,${data.system_health.system.cpu_percent?.toFixed(1) || 'N/A'}%,\n`;
+        csvContent += `Memory Usage,${data.system_health.system.memory_percent?.toFixed(1) || 'N/A'}%,\n`;
+        csvContent += `Disk Usage,${data.system_health.system.disk_percent?.toFixed(1) || 'N/A'}%,\n`;
+      }
+    }
+
+    return csvContent;
+  }
+
+  function exportDashboardToJSON(data) {
+    return JSON.stringify(data, null, 2);
+  }
+
+  function exportDashboardToSummary(data) {
+    let summary = '';
+    
+    summary += 'CRISP THREAT INTELLIGENCE DASHBOARD SUMMARY\n';
+    summary += '=' + '='.repeat(48) + '\n\n';
+    summary += `Export Date: ${new Date(data.export_date).toLocaleString()}\n\n`;
+
+    // Overview
+    summary += 'OVERVIEW\n';
+    summary += '-'.repeat(20) + '\n';
+    summary += `• Active IoCs: ${data.dashboard_stats.indicators || 0}\n`;
+    summary += `• TTPs: ${data.dashboard_stats.ttps || 0}\n`;
+    summary += `• Threat Feeds: ${data.dashboard_stats.threat_feeds || 0}\n`;
+    summary += `• Platform Status: ${data.dashboard_stats.status || 'Unknown'}\n\n`;
+
+    // Recent Activity
+    if (data.recent_iocs && data.recent_iocs.length > 0) {
+      summary += 'RECENT THREAT INTELLIGENCE\n';
+      summary += '-'.repeat(30) + '\n';
+      summary += `Total Recent IoCs: ${data.recent_iocs.length}\n\n`;
+      
+      const typeDistribution = data.recent_iocs.reduce((acc, ioc) => {
+        acc[ioc.displayType] = (acc[ioc.displayType] || 0) + 1;
+        return acc;
+      }, {});
+      
+      summary += 'Type Distribution:\n';
+      Object.entries(typeDistribution).forEach(([type, count]) => {
+        summary += `  • ${type}: ${count}\n`;
+      });
+      summary += '\n';
+    }
+
+    // System Health
+    if (data.system_health) {
+      summary += 'SYSTEM HEALTH\n';
+      summary += '-'.repeat(20) + '\n';
+      summary += `Overall Status: ${data.system_health.status || 'Unknown'}\n`;
+      summary += `Database: ${data.system_health.database?.status || 'Unknown'}\n`;
+      summary += `Redis: ${data.system_health.services?.redis?.status || 'Unknown'}\n`;
+      
+      if (data.system_health.system) {
+        summary += `CPU Usage: ${data.system_health.system.cpu_percent?.toFixed(1) || 'N/A'}%\n`;
+        summary += `Memory Usage: ${data.system_health.system.memory_percent?.toFixed(1) || 'N/A'}%\n`;
+        summary += `Disk Usage: ${data.system_health.system.disk_percent?.toFixed(1) || 'N/A'}%\n`;
+      }
+      summary += '\n';
+    }
+
+    // Chart Summary
+    if (data.chart_summary && data.chart_summary.total_indicators > 0) {
+      summary += 'THREAT ACTIVITY TRENDS\n';
+      summary += '-'.repeat(25) + '\n';
+      summary += `Total Indicators (${data.chart_filters.days} days): ${data.chart_summary.total_indicators}\n`;
+      summary += `Daily Average: ${data.chart_summary.avg_daily}\n`;
+      summary += `Date Range: ${data.chart_summary.start_date} to ${data.chart_summary.end_date}\n\n`;
+    }
+
+    summary += 'Generated by CRISP Threat Intelligence Platform\n';
+    
+    return summary;
+  }
+
   return (
     <section id="dashboard" className={`page-section ${active ? 'active' : ''}`}>
       {/* Dashboard Header */}
@@ -1032,7 +1251,7 @@ function Dashboard({ active, showPage }) {
           <p className="page-subtitle">Overview of threat intelligence and platform activity</p>
         </div>
         <div className="action-buttons">
-          <button className="btn btn-outline"><i className="fas fa-download"></i> Export Data</button>
+          <button className="btn btn-outline" onClick={() => setShowDashboardExportModal(true)}><i className="fas fa-download"></i> Export Data</button>
           <button className="btn btn-primary" onClick={() => showPage('threat-feeds', 'addFeed')}><i className="fas fa-plus"></i> Add New Feed</button>
         </div>
       </div>
@@ -1379,58 +1598,48 @@ function Dashboard({ active, showPage }) {
               <h2 className="card-title"><i className="fas fa-history card-icon"></i> Recent Activity</h2>
             </div>
             <div className="card-content">
-              <ul className="activity-stream">
-                <li className="activity-item">
-                  <div className="activity-icon"><i className="fas fa-share-alt"></i></div>
-                  <div className="activity-details">
-                    <div className="activity-text">New IoC batch shared with 4 institutions</div>
-                    <div className="activity-meta">
-                      <div className="activity-time">10 minutes ago</div>
-                      <span className="badge badge-active">Automated</span>
-                    </div>
-                  </div>
-                </li>
-                <li className="activity-item">
-                  <div className="activity-icon"><i className="fas fa-sync-alt"></i></div>
-                  <div className="activity-details">
-                    <div className="activity-text">CIRCL MISP feed updated with 28 new indicators</div>
-                    <div className="activity-meta">
-                      <div className="activity-time">25 minutes ago</div>
-                      <span className="badge badge-active">Feed Update</span>
-                    </div>
-                  </div>
-                </li>
-                <li className="activity-item">
-                  <div className="activity-icon"><i className="fas fa-exclamation-triangle"></i></div>
-                  <div className="activity-details">
-                    <div className="activity-text">High severity alert: Ransomware campaign targeting education sector</div>
-                    <div className="activity-meta">
-                      <div className="activity-time">1 hour ago</div>
-                      <span className="badge badge-high">Alert</span>
-                    </div>
-                  </div>
-                </li>
-                <li className="activity-item">
-                  <div className="activity-icon"><i className="fas fa-plus"></i></div>
-                  <div className="activity-details">
-                    <div className="activity-text">University of Johannesburg connected as new institution</div>
-                    <div className="activity-meta">
-                      <div className="activity-time">2 hours ago</div>
-                      <span className="badge badge-active">New Connection</span>
-                    </div>
-                  </div>
-                </li>
-                <li className="activity-item">
-                  <div className="activity-icon"><i className="fas fa-search"></i></div>
-                  <div className="activity-details">
-                    <div className="activity-text">TTP analysis completed for recent phishing campaign</div>
-                    <div className="activity-meta">
-                      <div className="activity-time">3 hours ago</div>
-                      <span className="badge badge-active">Analysis</span>
-                    </div>
-                  </div>
-                </li>
-              </ul>
+              {activitiesLoading ? (
+                <div className="loading-state">
+                  <div className="loading-spinner"></div>
+                  <p>Loading recent activities...</p>
+                </div>
+              ) : activitiesError ? (
+                <div className="error-state">
+                  <i className="fas fa-exclamation-triangle"></i>
+                  <p>{activitiesError}</p>
+                  <button className="btn btn-primary btn-sm" onClick={fetchRecentActivities}>
+                    <i className="fas fa-retry"></i> Retry
+                  </button>
+                </div>
+              ) : recentActivities.length === 0 ? (
+                <div className="empty-state">
+                  <i className="fas fa-history"></i>
+                  <p>No recent activities</p>
+                  <p className="text-muted">System activities will appear here</p>
+                </div>
+              ) : (
+                <ul className="activity-stream">
+                  {recentActivities.map((activity) => (
+                    <li key={activity.id} className="activity-item">
+                      <div className="activity-icon">
+                        <i className={activity.icon}></i>
+                      </div>
+                      <div className="activity-details">
+                        <div className="activity-text">{activity.title}</div>
+                        {activity.description && (
+                          <div className="activity-description">{activity.description}</div>
+                        )}
+                        <div className="activity-meta">
+                          <div className="activity-time">{activity.time_ago}</div>
+                          <span className={`badge ${activity.badge_type}`}>
+                            {activity.badge_text}
+                          </span>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
         </div>
@@ -1743,6 +1952,72 @@ function Dashboard({ active, showPage }) {
           )}
         </div>
       </div>
+
+      {/* Dashboard Export Modal */}
+      {showDashboardExportModal && (
+        <div className="modal-overlay" onClick={closeDashboardExportModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2><i className="fas fa-download"></i> Export Dashboard Data</h2>
+              <button className="modal-close" onClick={closeDashboardExportModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">Export Format</label>
+                <select 
+                  className="form-control"
+                  value={dashboardExportFormat} 
+                  onChange={(e) => setDashboardExportFormat(e.target.value)}
+                >
+                  <option value="json">JSON - Complete Data</option>
+                  <option value="csv">CSV - Tabular Format</option>
+                  <option value="summary">Summary Report</option>
+                </select>
+              </div>
+
+              <div className="export-info">
+                <div className="export-preview">
+                  <div>
+                    <strong>Export Details:</strong>
+                    <p>Dashboard export will include:</p>
+                    <ul>
+                      <li>System statistics ({dashboardStats.indicators} IoCs, {dashboardStats.ttps} TTPs, {dashboardStats.threat_feeds} feeds)</li>
+                      <li>Recent threat intelligence ({recentIoCs.length} items)</li>
+                      <li>System health data</li>
+                      <li>Threat activity chart data ({chartData.length} data points)</li>
+                    </ul>
+                    {dashboardExportFormat === 'csv' && (
+                      <p><em>CSV format includes IoCs table and summary metrics.</em></p>
+                    )}
+                    {dashboardExportFormat === 'json' && (
+                      <p><em>JSON format includes complete structured data export.</em></p>
+                    )}
+                    {dashboardExportFormat === 'summary' && (
+                      <p><em>Summary report includes key insights and formatted overview.</em></p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <div className="modal-actions">
+                <button type="button" className="btn btn-outline" onClick={closeDashboardExportModal} disabled={dashboardExporting}>
+                  Cancel
+                </button>
+                <button type="button" className="btn btn-primary" onClick={handleDashboardExport} disabled={dashboardExporting}>
+                  {dashboardExporting ? (
+                    <><i className="fas fa-spinner fa-spin"></i> Exporting...</>
+                  ) : (
+                    <><i className="fas fa-download"></i> Export Dashboard</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
