@@ -1535,22 +1535,284 @@ def _create_ttp(request):
         )
 
 
-@api_view(['GET'])
+def _update_ttp(request, ttp_id):
+    """
+    Update an existing TTP with validation and conflict detection.
+    
+    Supports both PUT (complete update) and PATCH (partial update) methods.
+    """
+    try:
+        from core.repositories.ttp_repository import TTPRepository
+        from core.services.ttp_service import TTPService
+        import re
+        
+        # Get the existing TTP
+        ttp = TTPRepository.get_by_id(ttp_id)
+        if not ttp:
+            return Response(
+                {"error": "TTP not found", "ttp_id": ttp_id},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        data = request.data
+        errors = []
+        is_put = request.method == 'PUT'
+        
+        # For PUT requests, validate that all required fields are present
+        if is_put:
+            required_fields = ['name', 'description', 'mitre_technique_id', 'mitre_tactic']
+            for field in required_fields:
+                if not data.get(field) or not str(data.get(field)).strip():
+                    errors.append(f"Field '{field}' is required for PUT requests and cannot be empty")
+        
+        if errors:
+            return Response(
+                {"error": "Validation failed", "details": errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Prepare update data with existing values as fallback
+        update_data = {}
+        
+        # Handle name field
+        if 'name' in data:
+            name = str(data['name']).strip()
+            if len(name) < 3:
+                errors.append("TTP name must be at least 3 characters long")
+            elif len(name) > 255:
+                errors.append("TTP name cannot exceed 255 characters")
+            else:
+                update_data['name'] = name
+        elif is_put:
+            update_data['name'] = ttp.name  # Keep existing for PUT
+        
+        # Handle description field
+        if 'description' in data:
+            description = str(data['description']).strip()
+            if len(description) < 10:
+                errors.append("TTP description must be at least 10 characters long")
+            elif len(description) > 5000:
+                errors.append("TTP description cannot exceed 5000 characters")
+            else:
+                update_data['description'] = description
+        elif is_put:
+            update_data['description'] = ttp.description  # Keep existing for PUT
+        
+        # Handle MITRE technique ID
+        if 'mitre_technique_id' in data:
+            mitre_technique_id = str(data['mitre_technique_id']).strip().upper()
+            mitre_pattern = r'^T\d{4}(\.\d{3})?$'
+            if not re.match(mitre_pattern, mitre_technique_id):
+                errors.append("MITRE technique ID must follow format T1234 or T1234.001 (e.g., T1566.001)")
+            else:
+                # Check for duplicates (excluding current TTP)
+                existing_ttp = TTPData.objects.filter(
+                    mitre_technique_id=mitre_technique_id,
+                    threat_feed=ttp.threat_feed
+                ).exclude(id=ttp.id).first()
+                
+                if existing_ttp:
+                    errors.append(f"TTP with MITRE technique ID '{mitre_technique_id}' already exists in this threat feed")
+                else:
+                    update_data['mitre_technique_id'] = mitre_technique_id
+        elif is_put:
+            update_data['mitre_technique_id'] = ttp.mitre_technique_id  # Keep existing for PUT
+        
+        # Handle MITRE tactic
+        if 'mitre_tactic' in data:
+            mitre_tactic = str(data['mitre_tactic']).strip().lower()
+            valid_tactics = [choice[0] for choice in TTPData.MITRE_TACTIC_CHOICES]
+            if mitre_tactic not in valid_tactics:
+                errors.append(f"Invalid MITRE tactic. Must be one of: {', '.join(valid_tactics)}")
+            else:
+                update_data['mitre_tactic'] = mitre_tactic
+        elif is_put:
+            update_data['mitre_tactic'] = ttp.mitre_tactic  # Keep existing for PUT
+        
+        # Handle MITRE subtechnique (optional)
+        if 'mitre_subtechnique' in data:
+            mitre_subtechnique = str(data['mitre_subtechnique']).strip() if data['mitre_subtechnique'] else None
+            if mitre_subtechnique and len(mitre_subtechnique) > 255:
+                errors.append("MITRE subtechnique name cannot exceed 255 characters")
+            else:
+                update_data['mitre_subtechnique'] = mitre_subtechnique
+        elif is_put:
+            update_data['mitre_subtechnique'] = ttp.mitre_subtechnique  # Keep existing for PUT
+        
+        # Handle threat feed ID (optional)
+        if 'threat_feed_id' in data:
+            threat_feed_id = data['threat_feed_id']
+            if threat_feed_id:
+                try:
+                    threat_feed_id = int(threat_feed_id)
+                    threat_feed = ThreatFeed.objects.get(id=threat_feed_id)
+                    update_data['threat_feed'] = threat_feed
+                except (ValueError, ThreatFeed.DoesNotExist):
+                    errors.append(f"Invalid threat feed ID: {threat_feed_id}")
+            else:
+                update_data['threat_feed'] = ttp.threat_feed  # Keep existing if null provided
+        elif is_put:
+            update_data['threat_feed'] = ttp.threat_feed  # Keep existing for PUT
+        
+        # Handle STIX ID (optional, but cannot be changed if already set)
+        if 'stix_id' in data:
+            stix_id = str(data['stix_id']).strip() if data['stix_id'] else None
+            if stix_id:
+                # Validate STIX ID format
+                stix_pattern = r'^attack-pattern--[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                if not re.match(stix_pattern, stix_id):
+                    errors.append("STIX ID must follow format: attack-pattern--xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
+                elif stix_id != ttp.stix_id:
+                    # Check if the new STIX ID already exists
+                    if TTPData.objects.filter(stix_id=stix_id).exclude(id=ttp.id).exists():
+                        errors.append(f"TTP with STIX ID '{stix_id}' already exists")
+                    else:
+                        update_data['stix_id'] = stix_id
+                # If stix_id matches existing, no change needed
+            # If empty stix_id provided, keep existing
+        elif is_put:
+            update_data['stix_id'] = ttp.stix_id  # Keep existing for PUT
+        
+        if errors:
+            return Response(
+                {"error": "Validation failed", "details": errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if any changes were actually made
+        changes_made = False
+        for field, new_value in update_data.items():
+            current_value = getattr(ttp, field)
+            if current_value != new_value:
+                changes_made = True
+                break
+        
+        if not changes_made:
+            return Response(
+                {"message": "No changes detected", "data": _format_ttp_response(ttp)},
+                status=status.HTTP_200_OK
+            )
+        
+        # Store original values for logging
+        original_values = {
+            'name': ttp.name,
+            'mitre_technique_id': ttp.mitre_technique_id,
+            'mitre_tactic': ttp.mitre_tactic
+        }
+        
+        # Update the TTP
+        try:
+            ttp_service = TTPService()
+            updated_ttp = ttp_service.update_ttp(ttp.id, update_data)
+        except:
+            # Fallback to repository method
+            updated_ttp = TTPRepository.update(ttp.id, update_data)
+        
+        if not updated_ttp:
+            return Response(
+                {"error": "Failed to update TTP", "ttp_id": ttp_id},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        # Log the update activity
+        try:
+            changed_fields = [field for field, new_value in update_data.items() 
+                            if getattr(ttp, field) != new_value]
+            
+            SystemActivity.objects.create(
+                activity_type='ttp_updated',
+                description=f'TTP updated: {updated_ttp.name} ({updated_ttp.mitre_technique_id})',
+                details={
+                    'ttp_id': updated_ttp.id,
+                    'method': request.method,
+                    'changed_fields': changed_fields,
+                    'original_values': original_values,
+                    'mitre_technique_id': updated_ttp.mitre_technique_id,
+                    'mitre_tactic': updated_ttp.mitre_tactic,
+                    'source': 'api_update'
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Could not log TTP update activity: {str(e)}")
+        
+        # Format and return response
+        response_data = {
+            'success': True,
+            'message': f'TTP updated successfully using {request.method} method',
+            'data': _format_ttp_response(updated_ttp)
+        }
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+        
+    except ValueError:
+        return Response(
+            {"error": "Invalid TTP ID format", "ttp_id": ttp_id},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        logger.error(f"Error updating TTP {ttp_id}: {str(e)}")
+        return Response(
+            {"error": "Failed to update TTP", "details": str(e), "ttp_id": ttp_id},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+def _format_ttp_response(ttp):
+    """Helper function to format TTP data for API responses."""
+    tactic_display = dict(TTPData.MITRE_TACTIC_CHOICES).get(ttp.mitre_tactic, ttp.mitre_tactic)
+    
+    return {
+        'id': ttp.id,
+        'name': ttp.name,
+        'description': ttp.description,
+        'mitre_technique_id': ttp.mitre_technique_id,
+        'mitre_tactic': ttp.mitre_tactic,
+        'mitre_tactic_display': tactic_display,
+        'mitre_subtechnique': ttp.mitre_subtechnique,
+        'stix_id': ttp.stix_id,
+        'threat_feed': {
+            'id': ttp.threat_feed.id,
+            'name': ttp.threat_feed.name,
+            'is_external': ttp.threat_feed.is_external
+        } if ttp.threat_feed else None,
+        'is_anonymized': ttp.is_anonymized,
+        'created_at': ttp.created_at.isoformat(),
+        'updated_at': ttp.updated_at.isoformat(),
+    }
+
+
+@api_view(['GET', 'PUT', 'PATCH'])
 @permission_classes([AllowAny])
 def ttp_detail(request, ttp_id):
     """
-    Get detailed information about a specific TTP.
+    GET: Get detailed information about a specific TTP.
+    PUT: Completely update a TTP (all fields required).
+    PATCH: Partially update a TTP (only provided fields updated).
     
     Path Parameters:
-    - ttp_id: The ID of the TTP to retrieve
+    - ttp_id: The ID of the TTP to retrieve/update
     
-    Returns detailed TTP information including:
+    GET Returns detailed TTP information including:
     - All TTP fields and metadata
     - Related threat feed information
     - STIX mapping details
     - Creation and modification history
     - Related indicators (if any)
+    
+    PUT/PATCH Body Parameters:
+    - name: TTP name (PUT: required, PATCH: optional)
+    - description: TTP description (PUT: required, PATCH: optional)
+    - mitre_technique_id: MITRE ATT&CK technique ID (PUT: required, PATCH: optional)
+    - mitre_tactic: MITRE tactic (PUT: required, PATCH: optional)
+    - mitre_subtechnique: MITRE subtechnique name (optional)
+    - threat_feed_id: ID of associated threat feed (optional)
+    - stix_id: STIX ID (optional, cannot be changed if already set)
     """
+    
+    if request.method in ['PUT', 'PATCH']:
+        return _update_ttp(request, ttp_id)
+    
+    # Handle GET request (existing detail functionality)
     try:
         from core.repositories.ttp_repository import TTPRepository
         
