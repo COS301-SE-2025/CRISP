@@ -1641,141 +1641,36 @@ function Dashboard({ active, showPage }) {
               </div>
             )}
 
-            {/* Individual Feed Status */}
-            {systemHealth.feeds && systemHealth.feeds.feeds && systemHealth.feeds.feeds.length > 0 ? (
-              <div className="feed-list">
-                {systemHealth.feeds.feeds.map(feed => (
-                  <div key={feed.id} className="feed-item" style={{
-                    border: '1px solid #dee2e6',
-                    borderRadius: '6px',
-                    padding: '16px',
-                    marginBottom: '12px',
-                    background: 'white'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      marginBottom: '12px'
-                    }}>
-                      <div style={{flex: 1}}>
-                        <h4 style={{
-                          margin: '0 0 4px 0',
-                          fontSize: '16px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px'
-                        }}>
-                          <i 
-                            className={getStatusIcon(feed.sync_status)}
-                            style={{color: getStatusColor(feed.sync_status)}}
-                          ></i>
-                          {feed.name}
-                          {feed.is_external && (
-                            <span style={{
-                              background: '#17a2b8',
-                              color: 'white',
-                              padding: '2px 6px',
-                              borderRadius: '12px',
-                              fontSize: '12px'
-                            }}>
-                              External
-                            </span>
-                          )}
-                          {!feed.is_active && (
-                            <span style={{
-                              background: '#6c757d',
-                              color: 'white',
-                              padding: '2px 6px',
-                              borderRadius: '12px',
-                              fontSize: '12px'
-                            }}>
-                              Inactive
-                            </span>
-                          )}
-                        </h4>
-                        
-                        <div style={{
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                          gap: '12px',
-                          fontSize: '14px',
-                          color: '#666'
-                        }}>
-                          <div>
-                            <strong>Last Sync:</strong> {formatTimestamp(feed.last_sync)}
-                          </div>
-                          <div>
-                            <strong>Sync Status:</strong> 
-                            <span style={{
-                              color: getStatusColor(feed.sync_status),
-                              fontWeight: 'bold',
-                              marginLeft: '4px',
-                              textTransform: 'capitalize'
-                            }}>
-                              {feed.sync_status}
-                            </span>
-                          </div>
-                          <div>
-                            <strong>IoCs:</strong> {feed.indicator_count}
-                          </div>
-                          <div>
-                            <strong>TTPs:</strong> {feed.ttp_count}
-                          </div>
-                          <div>
-                            <strong>Sync Count:</strong> {feed.sync_count}
-                          </div>
-                        </div>
-
-                        {feed.last_error && (
-                          <div style={{
-                            marginTop: '8px',
-                            padding: '8px',
-                            background: '#fff5f5',
-                            border: '1px solid #fed7d7',
-                            borderRadius: '4px',
-                            fontSize: '13px',
-                            color: '#c53030'
-                          }}>
-                            <strong>Last Error:</strong> {feed.last_error}
-                          </div>
-                        )}
-                      </div>
-
-                      <div style={{marginLeft: '16px'}}>
-                        {feed.is_external && (
-                          <button
-                            className="btn btn-outline btn-sm"
-                            onClick={() => testFeedConnection(feed.id)}
-                            style={{
-                              marginBottom: '8px',
-                              fontSize: '12px'
-                            }}
-                            title="Test connection to this feed"
-                          >
-                            <i className="fas fa-plug"></i> Test Connection
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+            {/* Quick Feed Management Action */}
+            {systemHealth.feeds && systemHealth.feeds.total === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                color: '#666',
+                padding: '24px',
+                background: '#f8f9fa',
+                borderRadius: '6px',
+                marginTop: '16px'
+              }}>
+                <i className="fas fa-rss" style={{fontSize: '32px', marginBottom: '12px'}}></i>
+                <p style={{margin: '0 0 12px 0'}}>No threat feeds configured yet.</p>
+                <button 
+                  className="btn btn-primary btn-sm"
+                  onClick={() => showPage('threat-feeds')}
+                >
+                  <i className="fas fa-plus"></i> Manage Feeds
+                </button>
               </div>
             ) : (
               <div style={{
                 textAlign: 'center',
-                color: '#666',
-                padding: '40px',
-                background: '#f8f9fa',
-                borderRadius: '6px'
+                padding: '16px',
+                marginTop: '16px'
               }}>
-                <i className="fas fa-rss" style={{fontSize: '48px', marginBottom: '16px'}}></i>
-                <p>No threat feeds configured yet.</p>
                 <button 
-                  className="btn btn-primary"
-                  onClick={() => showPage('threat-feeds', 'addFeed')}
+                  className="btn btn-outline btn-sm"
+                  onClick={() => showPage('threat-feeds')}
                 >
-                  <i className="fas fa-plus"></i> Add First Feed
+                  <i className="fas fa-cog"></i> Manage All Feeds
                 </button>
               </div>
             )}

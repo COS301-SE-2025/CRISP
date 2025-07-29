@@ -766,6 +766,176 @@ def indicator_share(request, indicator_id):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+def system_health(request):
+    """Get system health status including database, Redis, and system resources."""
+    try:
+        import psutil
+        from django.db import connection
+        from django.core.cache import cache
+        from django.utils import timezone
+        import redis
+        
+        health_data = {
+            'status': 'healthy',
+            'timestamp': timezone.now().isoformat(),
+            'database': {},
+            'services': {'redis': {}},
+            'system': {},
+            'feeds': {}
+        }
+        
+        overall_status = 'healthy'
+        
+        # Database health check
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                result = cursor.fetchone()
+                if result and result[0] == 1:
+                    health_data['database'] = {
+                        'status': 'healthy',
+                        'connection': 'active',
+                        'connection_count': 1,
+                        'details': 'Database connection successful'
+                    }
+                else:
+                    health_data['database'] = {
+                        'status': 'unhealthy',
+                        'connection': 'failed',
+                        'connection_count': 0,
+                        'details': 'Database query returned unexpected result'
+                    }
+                    overall_status = 'unhealthy'
+        except Exception as e:
+            health_data['database'] = {
+                'status': 'unhealthy',
+                'connection': 'failed',
+                'connection_count': 0,
+                'details': f'Database error: {str(e)}'
+            }
+            overall_status = 'unhealthy'
+        
+        # Redis health check
+        try:
+            # Try to connect to Redis using cache framework
+            cache.set('health_check', 'test', 10)
+            test_value = cache.get('health_check')
+            if test_value == 'test':
+                health_data['services']['redis'] = {
+                    'status': 'healthy',
+                    'connection': 'active',
+                    'info': '6.0+',
+                    'details': 'Redis connection and operations successful'
+                }
+            else:
+                health_data['services']['redis'] = {
+                    'status': 'unhealthy',
+                    'connection': 'failed',
+                    'info': 'unknown',
+                    'details': 'Redis cache test failed'
+                }
+                overall_status = 'degraded'
+        except Exception as e:
+            health_data['services']['redis'] = {
+                'status': 'unhealthy',
+                'connection': 'failed',
+                'info': 'unknown',
+                'details': f'Redis error: {str(e)}'
+            }
+            overall_status = 'degraded'
+        
+        # System resources check
+        try:
+            cpu_percent = psutil.cpu_percent(interval=1)
+            memory = psutil.virtual_memory()
+            disk = psutil.disk_usage('/')
+            
+            # Determine resource status
+            resource_status = 'healthy'
+            if cpu_percent > 90 or memory.percent > 90 or disk.percent > 90:
+                resource_status = 'warning'
+                if overall_status == 'healthy':
+                    overall_status = 'degraded'
+            
+            health_data['system'] = {
+                'status': resource_status,
+                'cpu_percent': round(cpu_percent, 1),
+                'memory_percent': round(memory.percent, 1),
+                'disk_percent': round(disk.percent, 1),
+                'last_check': timezone.now().isoformat(),
+                'details': f'CPU: {cpu_percent:.1f}%, RAM: {memory.percent:.1f}%, Disk: {disk.percent:.1f}%'
+            }
+        except Exception as e:
+            health_data['system'] = {
+                'status': 'unknown',
+                'cpu_percent': 0.0,
+                'memory_percent': 0.0,
+                'disk_percent': 0.0,
+                'last_check': timezone.now().isoformat(),
+                'details': f'Resource monitoring error: {str(e)}'
+            }
+        
+        # Feed status summary
+        try:
+            total_feeds = ThreatFeed.objects.count()
+            active_feeds = ThreatFeed.objects.filter(is_active=True).count()
+            external_feeds = ThreatFeed.objects.filter(is_external=True, is_active=True).count()
+            
+            # Get individual feed details
+            feeds_list = []
+            for feed in ThreatFeed.objects.all():
+                # Get feed sync status
+                sync_status = 'healthy' if feed.is_active else 'inactive'
+                if feed.last_sync:
+                    # Check if last sync was recent (within 24 hours)
+                    time_since_sync = timezone.now() - feed.last_sync
+                    if time_since_sync.total_seconds() > 86400:  # 24 hours
+                        sync_status = 'warning'
+                
+                feeds_list.append({
+                    'id': feed.id,
+                    'name': feed.name,
+                    'is_active': feed.is_active,
+                    'is_external': feed.is_external,
+                    'sync_status': sync_status,
+                    'last_sync': feed.last_sync.isoformat() if feed.last_sync else None,
+                    'description': feed.description or '',
+                    'last_error': None  # Add error tracking if needed
+                })
+            
+            health_data['feeds'] = {
+                'status': 'healthy' if active_feeds > 0 else 'warning',
+                'total': total_feeds,
+                'active': active_feeds,
+                'external': external_feeds,
+                'feeds': feeds_list,
+                'details': f'{active_feeds}/{total_feeds} feeds active, {external_feeds} external'
+            }
+        except Exception as e:
+            health_data['feeds'] = {
+                'status': 'unknown',
+                'total': 0,
+                'active': 0,
+                'external': 0,
+                'feeds': [],
+                'details': f'Feed status error: {str(e)}'
+            }
+        
+        health_data['status'] = overall_status
+        
+        return Response(health_data)
+        
+    except Exception as e:
+        logger.error(f"Error getting system health: {str(e)}")
+        return Response({
+            'status': 'error',
+            'timestamp': timezone.now().isoformat(),
+            'error': 'Failed to get system health',
+            'details': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def threat_activity_chart_data(request):
     """Get historical IoC data aggregated by date for the threat activity chart."""
     try:
