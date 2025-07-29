@@ -346,6 +346,19 @@ function Dashboard({ active, showPage }) {
     avg_daily: 0,
     type_distribution: []
   });
+
+  // System Health Monitoring State
+  const [systemHealth, setSystemHealth] = useState({
+    status: 'unknown',
+    database: { status: 'unknown' },
+    services: { redis: { status: 'unknown' } },
+    system: { cpu_percent: 0, memory_percent: 0, disk_percent: 0 },
+    feeds: { total: 0, active: 0, external: 0, feeds: [] },
+    errors: [],
+    timestamp: null
+  });
+  const [healthLoading, setHealthLoading] = useState(false);
+  const [healthError, setHealthError] = useState(null);
   
   // Fetch dashboard data from backend
   useEffect(() => {
@@ -353,6 +366,7 @@ function Dashboard({ active, showPage }) {
       fetchDashboardData();
       fetchRecentIoCs();
       fetchChartData();
+      fetchSystemHealth();
     }
   }, [active]);
 
@@ -362,6 +376,17 @@ function Dashboard({ active, showPage }) {
       fetchChartData();
     }
   }, [chartFilters, active]);
+
+  // Auto-refresh system health every 30 seconds
+  useEffect(() => {
+    if (!active) return;
+    
+    const interval = setInterval(() => {
+      fetchSystemHealth();
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [active]);
   
   const fetchDashboardData = async () => {
     const feedsData = await api.get('/api/threat-feeds/');
@@ -454,6 +479,41 @@ function Dashboard({ active, showPage }) {
     }
   };
 
+  // Fetch system health data from API
+  const fetchSystemHealth = async () => {
+    setHealthLoading(true);
+    setHealthError(null);
+    
+    try {
+      const response = await api.get('/api/system-health/');
+      
+      if (response) {
+        setSystemHealth({
+          status: response.status || 'unknown',
+          database: response.database || { status: 'unknown' },
+          services: response.services || { redis: { status: 'unknown' } },
+          system: response.system || { cpu_percent: 0, memory_percent: 0, disk_percent: 0 },
+          feeds: response.feeds || { total: 0, active: 0, external: 0, feeds: [] },
+          errors: response.errors || [],
+          timestamp: response.timestamp || new Date().toISOString()
+        });
+      } else {
+        throw new Error('Failed to fetch system health data');
+      }
+    } catch (error) {
+      console.error('Error fetching system health:', error);
+      setHealthError('Failed to load system health data');
+      // Set fallback data
+      setSystemHealth(prev => ({
+        ...prev,
+        status: 'error',
+        timestamp: new Date().toISOString()
+      }));
+    } finally {
+      setHealthLoading(false);
+    }
+  };
+
   // Transform IoC data for dashboard display
   const transformIoCForDashboard = (indicator) => {
     // Map indicator types to display names
@@ -525,6 +585,96 @@ function Dashboard({ active, showPage }) {
       age: getAge(indicator.created_at || new Date().toISOString()),
       created_at: indicator.created_at || new Date().toISOString()
     };
+  };
+
+  // Utility functions for system health display
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'healthy':
+      case 'connected':
+      case 'active':
+      case 'success':
+        return '#28a745';
+      case 'warning':
+      case 'stale':
+        return '#ffc107';
+      case 'error':
+      case 'disconnected':
+      case 'failed':
+      case 'inactive':
+        return '#dc3545';
+      default:
+        return '#6c757d';
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'healthy':
+      case 'connected':
+      case 'active':
+      case 'success':
+        return 'fas fa-check-circle';
+      case 'warning':
+      case 'stale':
+        return 'fas fa-exclamation-triangle';
+      case 'error':
+      case 'disconnected':
+      case 'failed':
+      case 'inactive':
+        return 'fas fa-times-circle';
+      default:
+        return 'fas fa-question-circle';
+    }
+  };
+
+  const formatTimestamp = (timestamp) => {
+    if (!timestamp) return 'Unknown';
+    
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    return date.toLocaleDateString();
+  };
+
+  const formatUptime = (seconds) => {
+    if (!seconds) return 'Unknown';
+    
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    
+    if (hours > 24) {
+      const days = Math.floor(hours / 24);
+      const remainingHours = hours % 24;
+      return `${days}d ${remainingHours}h`;
+    }
+    
+    return `${hours}h ${minutes}m`;
+  };
+
+  const testFeedConnection = async (feedId) => {
+    try {
+      const response = await api.post(`/api/threat-feeds/${feedId}/test-connection/`);
+      if (response && response.success) {
+        // Refresh system health to show updated connection status
+        fetchSystemHealth();
+        alert('Connection test successful!');
+      } else {
+        alert('Connection test failed. Please check the feed configuration.');
+      }
+    } catch (error) {
+      console.error('Error testing feed connection:', error);
+      alert('Connection test failed due to an error.');
+    }
   };
   
   // Set up D3 charts when component mounts or data changes
@@ -1283,6 +1433,419 @@ function Dashboard({ active, showPage }) {
               </ul>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* System Health & Feed Status Monitoring */}
+      <div className="card" style={{marginTop: '24px'}}>
+        <div className="card-header">
+          <h2 className="card-title">
+            <i className="fas fa-heartbeat card-icon"></i> System Health & Feed Status
+          </h2>
+          <div className="card-actions">
+            <button 
+              className="btn btn-outline btn-sm"
+              onClick={fetchSystemHealth}
+              disabled={healthLoading}
+              title="Refresh system health"
+            >
+              <i className={`fas fa-sync-alt ${healthLoading ? 'fa-spin' : ''}`}></i>
+              {healthLoading ? ' Loading...' : ' Refresh'}
+            </button>
+          </div>
+        </div>
+
+        <div className="card-content">
+          {healthError && (
+            <div className="alert alert-error" style={{
+              background: '#fff5f5',
+              border: '1px solid #fed7d7',
+              color: '#c53030',
+              padding: '12px',
+              borderRadius: '4px',
+              marginBottom: '16px'
+            }}>
+              <i className="fas fa-exclamation-triangle"></i> {healthError}
+            </div>
+          )}
+
+          {/* System Status Overview */}
+          <div className="system-status-overview" style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '16px',
+            marginBottom: '24px'
+          }}>
+            <div className="status-card" style={{
+              background: '#f8f9fa',
+              border: '1px solid #dee2e6',
+              borderRadius: '8px',
+              padding: '16px',
+              textAlign: 'center'
+            }}>
+              <div style={{
+                fontSize: '24px',
+                color: getStatusColor(systemHealth.status),
+                marginBottom: '8px'
+              }}>
+                <i className={getStatusIcon(systemHealth.status)}></i>
+              </div>
+              <h3 style={{margin: '0 0 4px 0', fontSize: '16px'}}>Overall Status</h3>
+              <p style={{
+                margin: '0',
+                color: getStatusColor(systemHealth.status),
+                fontWeight: 'bold',
+                textTransform: 'capitalize'
+              }}>
+                {systemHealth.status}
+              </p>
+              <small style={{color: '#666'}}>
+                Last Check: {formatTimestamp(systemHealth.timestamp)}
+              </small>
+            </div>
+
+            <div className="status-card" style={{
+              background: '#f8f9fa',
+              border: '1px solid #dee2e6',
+              borderRadius: '8px',
+              padding: '16px',
+              textAlign: 'center'
+            }}>
+              <div style={{
+                fontSize: '24px',
+                color: getStatusColor(systemHealth.database?.status || 'unknown'),
+                marginBottom: '8px'
+              }}>
+                <i className="fas fa-database"></i>
+              </div>
+              <h3 style={{margin: '0 0 4px 0', fontSize: '16px'}}>Database</h3>
+              <p style={{
+                margin: '0',
+                color: getStatusColor(systemHealth.database?.status || 'unknown'),
+                fontWeight: 'bold',
+                textTransform: 'capitalize'
+              }}>
+                {systemHealth.database?.status || 'Unknown'}
+              </p>
+              <small style={{color: '#666'}}>
+                {systemHealth.database?.connection_count 
+                  ? `${systemHealth.database.connection_count} connections`
+                  : 'Connection info unavailable'
+                }
+              </small>
+            </div>
+
+            <div className="status-card" style={{
+              background: '#f8f9fa',
+              border: '1px solid #dee2e6',
+              borderRadius: '8px',
+              padding: '16px',
+              textAlign: 'center'
+            }}>
+              <div style={{
+                fontSize: '24px',
+                color: getStatusColor(systemHealth.services?.redis?.status || 'unknown'),
+                marginBottom: '8px'
+              }}>
+                <i className="fas fa-memory"></i>
+              </div>
+              <h3 style={{margin: '0 0 4px 0', fontSize: '16px'}}>Redis</h3>
+              <p style={{
+                margin: '0',
+                color: getStatusColor(systemHealth.services?.redis?.status || 'unknown'),
+                fontWeight: 'bold',
+                textTransform: 'capitalize'
+              }}>
+                {systemHealth.services?.redis?.status || 'Unknown'}
+              </p>
+              <small style={{color: '#666'}}>
+                {systemHealth.services?.redis?.info 
+                  ? `v${systemHealth.services.redis.info}`
+                  : 'Version unavailable'
+                }
+              </small>
+            </div>
+
+            <div className="status-card" style={{
+              background: '#f8f9fa',
+              border: '1px solid #dee2e6',
+              borderRadius: '8px',
+              padding: '16px',
+              textAlign: 'center'
+            }}>
+              <div style={{
+                fontSize: '24px',
+                color: systemHealth.system?.cpu_percent > 80 ? '#dc3545' : 
+                      systemHealth.system?.cpu_percent > 60 ? '#ffc107' : '#28a745',
+                marginBottom: '8px'
+              }}>
+                <i className="fas fa-microchip"></i>
+              </div>
+              <h3 style={{margin: '0 0 4px 0', fontSize: '16px'}}>System Resources</h3>
+              <p style={{margin: '0', fontWeight: 'bold'}}>
+                CPU: {systemHealth.system?.cpu_percent?.toFixed(1) || 'N/A'}%
+              </p>
+              <small style={{color: '#666'}}>
+                RAM: {systemHealth.system?.memory_percent?.toFixed(1) || 'N/A'}% | 
+                Disk: {systemHealth.system?.disk_percent?.toFixed(1) || 'N/A'}%
+              </small>
+            </div>
+          </div>
+
+          {/* Feed Status Section */}
+          <div className="feed-status-section">
+            <h3 style={{
+              margin: '0 0 16px 0',
+              fontSize: '18px',
+              borderBottom: '2px solid #dee2e6',
+              paddingBottom: '8px'
+            }}>
+              Feed Status Monitoring
+            </h3>
+
+            {/* Feed Summary */}
+            {systemHealth.feeds && systemHealth.feeds.total > 0 && (
+              <div className="feed-summary" style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                gap: '12px',
+                marginBottom: '20px',
+                padding: '16px',
+                background: '#f1f3f4',
+                borderRadius: '6px'
+              }}>
+                <div style={{textAlign: 'center'}}>
+                  <div style={{fontSize: '24px', fontWeight: 'bold', color: '#0056b3'}}>
+                    {systemHealth.feeds.total}
+                  </div>
+                  <small>Total Feeds</small>
+                </div>
+                <div style={{textAlign: 'center'}}>
+                  <div style={{fontSize: '24px', fontWeight: 'bold', color: '#28a745'}}>
+                    {systemHealth.feeds.active}
+                  </div>
+                  <small>Active</small>
+                </div>
+                <div style={{textAlign: 'center'}}>
+                  <div style={{fontSize: '24px', fontWeight: 'bold', color: '#17a2b8'}}>
+                    {systemHealth.feeds.external}
+                  </div>
+                  <small>External</small>
+                </div>
+                <div style={{textAlign: 'center'}}>
+                  <div style={{fontSize: '24px', fontWeight: 'bold', color: '#6c757d'}}>
+                    {systemHealth.feeds.total - systemHealth.feeds.external}
+                  </div>
+                  <small>Internal</small>
+                </div>
+              </div>
+            )}
+
+            {/* Individual Feed Status */}
+            {systemHealth.feeds && systemHealth.feeds.feeds && systemHealth.feeds.feeds.length > 0 ? (
+              <div className="feed-list">
+                {systemHealth.feeds.feeds.map(feed => (
+                  <div key={feed.id} className="feed-item" style={{
+                    border: '1px solid #dee2e6',
+                    borderRadius: '6px',
+                    padding: '16px',
+                    marginBottom: '12px',
+                    background: 'white'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      marginBottom: '12px'
+                    }}>
+                      <div style={{flex: 1}}>
+                        <h4 style={{
+                          margin: '0 0 4px 0',
+                          fontSize: '16px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}>
+                          <i 
+                            className={getStatusIcon(feed.sync_status)}
+                            style={{color: getStatusColor(feed.sync_status)}}
+                          ></i>
+                          {feed.name}
+                          {feed.is_external && (
+                            <span style={{
+                              background: '#17a2b8',
+                              color: 'white',
+                              padding: '2px 6px',
+                              borderRadius: '12px',
+                              fontSize: '12px'
+                            }}>
+                              External
+                            </span>
+                          )}
+                          {!feed.is_active && (
+                            <span style={{
+                              background: '#6c757d',
+                              color: 'white',
+                              padding: '2px 6px',
+                              borderRadius: '12px',
+                              fontSize: '12px'
+                            }}>
+                              Inactive
+                            </span>
+                          )}
+                        </h4>
+                        
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                          gap: '12px',
+                          fontSize: '14px',
+                          color: '#666'
+                        }}>
+                          <div>
+                            <strong>Last Sync:</strong> {formatTimestamp(feed.last_sync)}
+                          </div>
+                          <div>
+                            <strong>Sync Status:</strong> 
+                            <span style={{
+                              color: getStatusColor(feed.sync_status),
+                              fontWeight: 'bold',
+                              marginLeft: '4px',
+                              textTransform: 'capitalize'
+                            }}>
+                              {feed.sync_status}
+                            </span>
+                          </div>
+                          <div>
+                            <strong>IoCs:</strong> {feed.indicator_count}
+                          </div>
+                          <div>
+                            <strong>TTPs:</strong> {feed.ttp_count}
+                          </div>
+                          <div>
+                            <strong>Sync Count:</strong> {feed.sync_count}
+                          </div>
+                        </div>
+
+                        {feed.last_error && (
+                          <div style={{
+                            marginTop: '8px',
+                            padding: '8px',
+                            background: '#fff5f5',
+                            border: '1px solid #fed7d7',
+                            borderRadius: '4px',
+                            fontSize: '13px',
+                            color: '#c53030'
+                          }}>
+                            <strong>Last Error:</strong> {feed.last_error}
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{marginLeft: '16px'}}>
+                        {feed.is_external && (
+                          <button
+                            className="btn btn-outline btn-sm"
+                            onClick={() => testFeedConnection(feed.id)}
+                            style={{
+                              marginBottom: '8px',
+                              fontSize: '12px'
+                            }}
+                            title="Test connection to this feed"
+                          >
+                            <i className="fas fa-plug"></i> Test Connection
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{
+                textAlign: 'center',
+                color: '#666',
+                padding: '40px',
+                background: '#f8f9fa',
+                borderRadius: '6px'
+              }}>
+                <i className="fas fa-rss" style={{fontSize: '48px', marginBottom: '16px'}}></i>
+                <p>No threat feeds configured yet.</p>
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => showPage('threat-feeds', 'addFeed')}
+                >
+                  <i className="fas fa-plus"></i> Add First Feed
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Error Summary */}
+          {systemHealth.errors && systemHealth.errors.length > 0 && (
+            <div className="error-summary" style={{
+              marginTop: '24px',
+              padding: '16px',
+              background: '#fff5f5',
+              border: '1px solid #fed7d7',
+              borderRadius: '6px'
+            }}>
+              <h4 style={{
+                margin: '0 0 12px 0',
+                color: '#c53030',
+                fontSize: '16px'
+              }}>
+                <i className="fas fa-exclamation-triangle"></i> System Errors ({systemHealth.errors.length})
+              </h4>
+              <ul style={{margin: '0', paddingLeft: '20px'}}>
+                {systemHealth.errors.map((error, index) => (
+                  <li key={index} style={{
+                    color: '#c53030',
+                    marginBottom: '4px'
+                  }}>
+                    {error}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* System Metrics */}
+          {systemHealth.system && Object.keys(systemHealth.system).length > 0 && (
+            <div className="system-metrics" style={{
+              marginTop: '24px',
+              padding: '16px',
+              background: '#f8f9fa',
+              borderRadius: '6px'
+            }}>
+              <h4 style={{
+                margin: '0 0 12px 0',
+                fontSize: '16px'
+              }}>
+                <i className="fas fa-chart-line"></i> System Metrics
+              </h4>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '12px',
+                fontSize: '14px'
+              }}>
+                {systemHealth.system.uptime && (
+                  <div>
+                    <strong>Uptime:</strong> {formatUptime(systemHealth.system.uptime)}
+                  </div>
+                )}
+                {systemHealth.system.load_average && (
+                  <div>
+                    <strong>Load Average:</strong> {systemHealth.system.load_average.join(', ')}
+                  </div>
+                )}
+                <div>
+                  <strong>Last Updated:</strong> {formatTimestamp(systemHealth.system.last_check)}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </section>
