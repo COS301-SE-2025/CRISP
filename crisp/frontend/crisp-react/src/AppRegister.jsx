@@ -10,6 +10,7 @@ import OrganisationManagement from './components/OrganisationManagement.jsx';
 import TrustManagement from './components/TrustManagement.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import PhoneNumberInput from './components/PhoneNumberInput.jsx';
+import Pagination from './components/Pagination.jsx';
 
 
 function AppRegister({ user, onLogout }) {
@@ -3162,11 +3163,11 @@ function AdminSettings({ active, onNavigate }) {
   const [logsFilter, setLogsFilter] = useState({
     limit: 50,
     action: '',
-    success: '',
-    start_date: '',
-    end_date: ''
+    success: ''
   });
   const [showDetailedView, setShowDetailedView] = useState(false);
+  const [logsCurrentPage, setLogsCurrentPage] = useState(1);
+  const [logsTotalItems, setLogsTotalItems] = useState(0);
 
   useEffect(() => {
     if (active) {
@@ -3199,7 +3200,7 @@ function AdminSettings({ active, onNavigate }) {
     }
   };
 
-  const fetchLogs = async (filters = logsFilter) => {
+  const fetchLogs = async (filters = logsFilter, page = logsCurrentPage) => {
     setLogsLoading(true);
     try {
       // Remove empty filter values
@@ -3207,13 +3208,22 @@ function AdminSettings({ active, onNavigate }) {
         Object.entries(filters).filter(([key, value]) => value !== '')
       );
       
-      const response = await getComprehensiveAuditLogs(cleanFilters);
+      // Add pagination parameters
+      const paginatedFilters = {
+        ...cleanFilters,
+        page: page,
+        limit: filters.limit === 'all' ? 10000 : (filters.limit || 50)
+      };
+      
+      const response = await getComprehensiveAuditLogs(paginatedFilters);
       const logsData = response?.success ? response.data : response;
       
       setLogs(logsData?.logs || []);
+      setLogsTotalItems(logsData?.total || logsData?.logs?.length || 0);
     } catch (error) {
       console.error('Error fetching logs:', error);
       setLogs([]);
+      setLogsTotalItems(0);
     } finally {
       setLogsLoading(false);
     }
@@ -3221,7 +3231,13 @@ function AdminSettings({ active, onNavigate }) {
 
   const handleViewLogs = () => {
     setShowLogsModal(true);
-    fetchLogs();
+    setLogsCurrentPage(1);
+    fetchLogs(logsFilter, 1);
+  };
+
+  const handleLogsPageChange = (page) => {
+    setLogsCurrentPage(page);
+    fetchLogs(logsFilter, page);
   };
 
   const exportLogsToPDF = () => {
@@ -3349,7 +3365,7 @@ function AdminSettings({ active, onNavigate }) {
           <div class="header">
             <h1>CRISP System Audit Logs Report</h1>
             <p><strong>Generated:</strong> ${currentDate}</p>
-            <p><strong>Report Period:</strong> ${logsFilter.start_date || 'All Time'} to ${logsFilter.end_date || 'Present'}</p>
+            <p><strong>Report Period:</strong> All Time</p>
           </div>
           
           <div class="summary">
@@ -3754,19 +3770,46 @@ function AdminSettings({ active, onNavigate }) {
                       value={logsFilter.limit} 
                       onChange={(e) => setLogsFilter({...logsFilter, limit: e.target.value})}
                     >
+                      <option value="all">All</option>
                       <option value="25">25</option>
                       <option value="50">50</option>
                       <option value="100">100</option>
                       <option value="200">200</option>
                     </select>
                   </div>
+                </div>
+                
+                <div className="filter-row">
                   <button 
                     className="btn btn-primary" 
-                    onClick={() => fetchLogs(logsFilter)}
+                    onClick={() => {
+                      setLogsCurrentPage(1);
+                      fetchLogs(logsFilter, 1);
+                    }}
                     disabled={logsLoading}
                   >
                     <i className={`fas fa-search ${logsLoading ? 'fa-spin' : ''}`}></i>
-                    Filter
+                    Apply Filters
+                  </button>
+                  <button 
+                    className="btn btn-outline" 
+                    onClick={() => {
+                      setLogsFilter({
+                        limit: 50,
+                        action: '',
+                        success: ''
+                      });
+                      setLogsCurrentPage(1);
+                      fetchLogs({
+                        limit: 50,
+                        action: '',
+                        success: ''
+                      }, 1);
+                    }}
+                    disabled={logsLoading}
+                  >
+                    <i className="fas fa-times"></i>
+                    Clear
                   </button>
                 </div>
               </div>
@@ -3904,6 +3947,18 @@ function AdminSettings({ active, onNavigate }) {
                       </tbody>
                     </table>
                     </div>
+                    
+                    {/* Pagination */}
+                    {logsFilter.limit !== 'all' && (
+                      <Pagination
+                        currentPage={logsCurrentPage}
+                        totalItems={logsTotalItems}
+                        itemsPerPage={parseInt(logsFilter.limit)}
+                        onPageChange={handleLogsPageChange}
+                        showInfo={true}
+                        showJumpToPage={true}
+                      />
+                    )}
                   </>
                 ) : (
                   <div className="no-logs">

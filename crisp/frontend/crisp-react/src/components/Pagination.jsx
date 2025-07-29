@@ -62,11 +62,22 @@ const Pagination = ({
       )}
       
       <div className="pagination-controls">
+        {/* First button */}
+        <button 
+          className="pagination-btn"
+          onClick={() => onPageChange(1)}
+          disabled={currentPage === 1}
+          title="Go to first page"
+        >
+          ⏮ First
+        </button>
+
         {/* Previous button */}
         <button 
           className="pagination-btn"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
+          title="Go to previous page"
         >
           ← Previous
         </button>
@@ -94,12 +105,23 @@ const Pagination = ({
           className="pagination-btn"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
+          title="Go to next page"
         >
           Next →
         </button>
+
+        {/* Last button */}
+        <button 
+          className="pagination-btn"
+          onClick={() => onPageChange(totalPages)}
+          disabled={currentPage === totalPages}
+          title="Go to last page"
+        >
+          Last ⏭
+        </button>
       </div>
 
-      {showJumpToPage && totalPages > 10 && (
+      {showJumpToPage && totalPages > 5 && (
         <div className="pagination-jump">
           <label>
             Jump to page:
@@ -110,8 +132,23 @@ const Pagination = ({
               placeholder={`1-${totalPages}`}
               onKeyPress={handleJumpToPage}
               className="pagination-jump-input"
+              title={`Enter a page number between 1 and ${totalPages}`}
             />
           </label>
+          <button
+            className="pagination-btn pagination-jump-btn"
+            onClick={() => {
+              const input = document.querySelector('.pagination-jump-input');
+              const page = parseInt(input.value);
+              if (page >= 1 && page <= totalPages) {
+                onPageChange(page);
+                input.value = '';
+              }
+            }}
+            title="Jump to entered page"
+          >
+            Go
+          </button>
         </div>
       )}
     </div>

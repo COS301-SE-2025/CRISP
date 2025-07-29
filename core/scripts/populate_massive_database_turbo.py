@@ -260,35 +260,45 @@ class TurboMassiveDatabasePopulator:
         role_weights = [70, 25, 5]
         
         for i in range(user_count):
-            try:
-                role = random.choices(roles, weights=role_weights)[0]
-                
-                first_name = fake.first_name()
-                last_name = fake.last_name()
-                username = f"{first_name.lower()}.{last_name.lower()}.{i}@{org.domain}"
-                
-                with transaction.atomic():
-                    user = CustomUser.objects.create(
-                        username=username,
-                        email=username,
-                        first_name=first_name,
-                        last_name=last_name,
-                        organization=org,
-                        role=role,
-                        is_active=random.choice([True, True, True, False]),
-                        is_publisher=random.choice([True, False]),
-                        is_verified=random.choice([True, True, False]),
-                        date_joined=fake.date_time_between(start_date='-2y', end_date='now', tzinfo=timezone.get_current_timezone())
-                    )
-                    user.set_password('UserPass123!')
-                    user.save()
-                    created_users.append(user)
+            max_retries = 3
+            retry_count = 0
+            
+            while retry_count < max_retries:
+                try:
+                    role = random.choices(roles, weights=role_weights)[0]
                     
-            except Exception as e:
-                continue
+                    first_name = fake.first_name()
+                    last_name = fake.last_name()
+                    # Add timestamp to make username more unique
+                    unique_id = int(time.time() * 1000000) % 1000000
+                    username = f"{first_name.lower()}.{last_name.lower()}.{unique_id}@{org.domain}"
+                    
+                    with transaction.atomic():
+                        user = CustomUser.objects.create(
+                            username=username,
+                            email=username,
+                            first_name=first_name,
+                            last_name=last_name,
+                            organization=org,
+                            role=role,
+                            is_active=random.choice([True, True, True, False]),
+                            is_publisher=random.choice([True, False]),
+                            is_verified=random.choice([True, True, False]),
+                            date_joined=fake.date_time_between(start_date='-2y', end_date='now', tzinfo=timezone.get_current_timezone())
+                        )
+                        user.set_password('UserPass123!')
+                        user.save()
+                        created_users.append(user)
+                        break  # Success, exit retry loop
+                        
+                except Exception as e:
+                    retry_count += 1
+                    if retry_count >= max_retries:
+                        print(f"Failed to create user after {max_retries} retries: {e}")
+                        break
+                    # Add small delay before retry
+                    time.sleep(0.01)
                 
-        return created_users
-
     def create_users(self):
         """Create massive number of users with parallel processing"""
         print(f"👥 Creating users for {len(self.organizations)} organizations...")
@@ -310,16 +320,22 @@ class TurboMassiveDatabasePopulator:
                       position=0, leave=True, file=sys.stdout, dynamic_ncols=True) as pbar:
                 futures = [executor.submit(self.create_user_batch, org_data) for org_data in org_user_pairs]
                 
+                total_created = 0
                 for future in as_completed(futures):
                     try:
                         created_users = future.result()
                         self.users.extend(created_users)
-                        pbar.update(len(created_users))
-                        pbar.set_postfix({"Total Users": len(self.users)})
+                        batch_size = len(created_users)
+                        total_created += batch_size
+                        pbar.update(batch_size)
+                        pbar.set_postfix({"Created": total_created, "Target": total_estimated_users})
                     except Exception as e:
                         pbar.write(f"Warning: User batch failed: {e}")
                         
-        print(f"\n✅ Created {len(self.users)} users across all organizations")
+        print(f"\n✅ Created {len(self.users)} users across all organizations (target was {total_estimated_users})")
+        
+        if len(self.users) < total_estimated_users * 0.8:  # If we created less than 80% of target
+            print(f"⚠️ Warning: Only created {len(self.users)}/{total_estimated_users} users. Check for errors above.")
 
     def create_trust_relationship_batch(self, batch_size):
         """Create a batch of trust relationships"""
