@@ -855,6 +855,50 @@ export const createTrustGroup = async (groupData) => {
   return await handleResponse(response);
 };
 
+export const updateTrustGroup = async (groupId, updateData) => {
+  const response = await fetch(`${API_URL}trust/groups/${groupId}/`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify(updateData)
+  });
+  
+  return await handleResponse(response);
+};
+
+export const deleteTrustGroup = async (groupId) => {
+  const response = await fetch(`${API_URL}trust/groups/${groupId}/`, {
+    method: 'DELETE',
+    headers: { ...authHeader() }
+  });
+  
+  return await handleResponse(response);
+};
+
+export const joinTrustGroup = async (groupId) => {
+  const response = await fetch(`${API_URL}trust/groups/${groupId}/join/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader() }
+  });
+  
+  return await handleResponse(response);
+};
+
+// Trust Levels API function
+export const getTrustLevels = async () => {
+  try {
+    const response = await fetch(`${API_URL}trust/levels/`, {
+      method: 'GET',
+      headers: { ...authHeader() }
+    });
+    
+    const result = await handleResponse(response);
+    return Array.isArray(result.data) ? result.data : [];
+  } catch (error) {
+    console.error('Failed to fetch trust levels:', error);
+    return [];
+  }
+};
+
 // User List API function
 export const getUsersList = async () => {
   try {

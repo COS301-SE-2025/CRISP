@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 CRISP Database Population Script
-Populates the PostgreSQL database with extensive test data for testing and development.
+Populates the database with extensive test data for testing and development.
 """
 
 import os

@@ -116,11 +116,18 @@ class MigrationTest(TestCase):
         try:
             # Check that tables exist for our main models
             with connection.cursor() as cursor:
-                # Get all table names
-                cursor.execute("""
-                    SELECT name FROM sqlite_master 
-                    WHERE type='table' AND name NOT LIKE 'sqlite_%'
-                """)
+                # Get all table names (works for both PostgreSQL and SQLite)
+                if connection.vendor == 'postgresql':
+                    cursor.execute("""
+                        SELECT table_name FROM information_schema.tables 
+                        WHERE table_schema = 'public'
+                    """)
+                else:
+                    # Fallback for SQLite (if needed for testing)
+                    cursor.execute("""
+                        SELECT name FROM sqlite_master 
+                        WHERE type='table' AND name NOT LIKE 'sqlite_%'
+                    """)
                 tables = [row[0] for row in cursor.fetchall()]
                 
                 # Check for expected tables (these might vary based on actual migration state)

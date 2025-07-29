@@ -85,12 +85,16 @@ WSGI_APPLICATION = 'crisp.TrustManagement.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'crisp' / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('DB_NAME', 'crisp'),
+        'USER': os.getenv('DB_USER', 'admin'),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'AdminPassword'),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '5432'),
         'OPTIONS': {
-            'timeout': 30,  # 30 second timeout for database locks
+            'connect_timeout': 60,
         },
-        'CONN_MAX_AGE': 0,  # Close connections immediately to prevent locking
+        'CONN_MAX_AGE': 60,  # Keep connections alive for better performance
     }
 }
 

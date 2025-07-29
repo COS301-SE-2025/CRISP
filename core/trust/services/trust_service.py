@@ -60,8 +60,9 @@ class TrustService:
                     if field not in relationship_data:
                         return {"success": False, "message": f"Missing required field: {field}"}
                 
-                # Check permissions
-                if requesting_user.role not in ["BlueVisionAdmin"] and str(requesting_user.organization.id) != str(relationship_data["source_organization"]):
+                # Check permissions - Admins can create relationships for any organization
+                is_admin = hasattr(requesting_user, 'role') and requesting_user.role == "BlueVisionAdmin"
+                if not is_admin and (not requesting_user.organization or str(requesting_user.organization.id) != str(relationship_data["source_organization"])):
                     return {"success": False, "message": "Insufficient permissions to create trust relationship for this organization"}
                 
                 # Check for same organization
