@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { getUsersList, createUser, updateUser, deactivateUser, reactivateUser, deleteUser, changeUsername, getUserDetails, getOrganizations } from '../api.js';
+import { getUsersList, createUser, updateUser, deactivateUser, reactivateUser, deleteUser, changeUsername, getUserDetails, getOrganizations, getCurrentUser } from '../api.js';
 import LoadingSpinner from './LoadingSpinner.jsx';
 import ConfirmationModal from './ConfirmationModal.jsx';
 import Pagination from './Pagination.jsx';
@@ -13,6 +13,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
   const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const [showModal, setShowModal] = useState(() => {
     // Use initialSection prop first, then URL params
     if (initialSection === 'create') return true;
@@ -55,8 +56,23 @@ const UserManagement = ({ active = true, initialSection = null }) => {
 
   const roles = ['admin', 'publisher', 'viewer'];
 
+  // Get current user and check if user is a publisher
+  const isPublisher = currentUser?.role === 'publisher';
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'BlueVisionAdmin';
+  
+  // Get allowed roles based on current user's permissions
+  const getAllowedRoles = () => {
+    if (isPublisher) {
+      return ['viewer']; // Publishers can only create viewers
+    }
+    return roles; // Admins can create any role
+  };
+
   useEffect(() => {
     if (active) {
+      // Get current user info
+      const user = getCurrentUser();
+      setCurrentUser(user);
       loadUsers();
       loadOrganizations();
     }
@@ -193,13 +209,14 @@ const UserManagement = ({ active = true, initialSection = null }) => {
   const handleAddUser = () => {
     setModalMode('add');
     setSelectedUser(null);
+    const defaultRole = isPublisher ? 'viewer' : 'viewer'; // Publishers can only create viewers
     setFormData({
       username: '',
       email: '',
       first_name: '',
       last_name: '',
       password: '',
-      role: 'viewer',
+      role: defaultRole,
       organization_id: '',
       is_verified: false,
       is_active: true
@@ -492,7 +509,22 @@ const UserManagement = ({ active = true, initialSection = null }) => {
   return (
     <div style={{ padding: '2rem', fontFamily: 'Arial, sans-serif', position: 'relative' }}>
       {(operationLoading || submitting) && <LoadingSpinner fullscreen={true} />}
-      <h1 style={{ marginBottom: '2rem', color: '#333' }}>User Management</h1>
+      <div style={{ marginBottom: '2rem' }}>
+        <h1 style={{ marginBottom: '0.5rem', color: '#333' }}>User Management</h1>
+        {isPublisher && (
+          <div style={{
+            padding: '0.75rem 1rem',
+            backgroundColor: '#fff3cd',
+            color: '#856404',
+            borderRadius: '6px',
+            border: '1px solid #ffeaa7',
+            fontSize: '0.875rem',
+            fontWeight: '500'
+          }}>
+            <strong>Publisher Mode:</strong> You can view and manage users from your organization and organizations with trusted relationships. You can only create viewer users, and role changes are restricted.
+          </div>
+        )}
+      </div>
       
       {/* Controls */}
       <div style={{ 
@@ -529,7 +561,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
           }}
         >
           <option value="">All Roles</option>
-          {roles.map(role => (
+          {getAllowedRoles().map(role => (
             <option key={role} value={role}>{role}</option>
           ))}
         </select>
@@ -875,25 +907,35 @@ const UserManagement = ({ active = true, initialSection = null }) => {
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
                   Role
+                  {isPublisher && modalMode !== 'view' && (
+                    <span style={{ fontSize: '0.75rem', color: '#856404', marginLeft: '0.5rem' }}>
+                      (Limited to viewer role)
+                    </span>
+                  )}
                 </label>
                 <select
                   name="role"
                   value={formData.role}
                   onChange={handleInputChange}
-                  disabled={modalMode === 'view'}
+                  disabled={modalMode === 'view' || (isPublisher && modalMode === 'edit')}
                   style={{
                     width: '100%',
                     padding: '0.5rem',
                     border: '1px solid #ddd',
                     borderRadius: '4px',
-                    backgroundColor: modalMode === 'view' ? '#f8f9fa' : 'white',
-                    color: modalMode === 'view' ? '#333' : '#000'
+                    backgroundColor: modalMode === 'view' || (isPublisher && modalMode === 'edit') ? '#f8f9fa' : 'white',
+                    color: modalMode === 'view' || (isPublisher && modalMode === 'edit') ? '#666' : '#000'
                   }}
                 >
-                  {roles.map(role => (
+                  {getAllowedRoles().map(role => (
                     <option key={role} value={role}>{role}</option>
                   ))}
                 </select>
+                {isPublisher && modalMode === 'edit' && (
+                  <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>
+                    Role changes are restricted for publisher users
+                  </div>
+                )}
               </div>
 
               <div style={{ marginBottom: '1rem' }}>

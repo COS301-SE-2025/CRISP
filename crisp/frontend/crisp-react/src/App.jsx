@@ -476,11 +476,11 @@ function Header({ user, onLogout, isAdmin, isBlueVisionAdmin, isPublisher, userR
                   {(isPublisher || isBlueVisionAdmin || userRole === 'admin') && (
                     <>
                       <div className="menu-divider"></div>
-                      <button className="menu-item" onClick={() => {setShowUserMenu(false); window.location.href = '/user-management';}}>
+                      <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('user-management');}}>
                         <i className="fas fa-users"></i>
                         <span>User Management</span>
                       </button>
-                      <button className="menu-item" onClick={() => {setShowUserMenu(false); window.location.href = '/trust-management';}}>
+                      <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('trust-management');}}>
                         <i className="fas fa-handshake"></i>
                         <span>Trust Management</span>
                       </button>

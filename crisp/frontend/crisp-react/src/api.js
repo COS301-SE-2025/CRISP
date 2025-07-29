@@ -272,7 +272,7 @@ export const getUserStatistics = async () => {
 // Organization Management API functions
 export const getOrganizations = async () => {
   try {
-    const response = await fetch(`${API_URL}organizations/`, {
+    const response = await fetch(`${API_URL}organizations/list_organizations/`, {
       method: 'GET',
       headers: { ...authHeader() }
     });
@@ -280,22 +280,24 @@ export const getOrganizations = async () => {
     if (!response.ok) {
       if (response.status === 403) {
         console.warn('Access denied to organizations list');
-        return { data: [] };
+        return { data: { organizations: [] } };
       }
       if (response.status === 500) {
         console.warn('Organizations service temporarily unavailable');
-        return { data: [] };
+        return { data: { organizations: [] } };
       }
     }
     
     const result = await handleResponse(response);
-    // The API returns an array directly. We need to wrap it in the expected format.
+    // The response structure is { success: true, data: { organizations: [...] } }
     return {
-      data: Array.isArray(result) ? result : []
+      data: {
+        organizations: result.data?.organizations || []
+      }
     };
   } catch (error) {
     console.error('Failed to fetch organizations:', error);
-    return { data: [] };
+    return { data: { organizations: [] } };
   }
 };
 
