@@ -4847,8 +4847,8 @@ function TTPAnalysis({ active }) {
     try {
       // Get TTP trends data from the API
       const response = await api.get('/api/ttps/trends/?days=120&granularity=month&group_by=tactic');
-      if (response && response.data) {
-        setTrendsData(response.data);
+      if (response && response.series) {
+        setTrendsData(response.series);
       } else {
         setTrendsData([]);
       }
@@ -4948,6 +4948,9 @@ function TTPAnalysis({ active }) {
         setSelectedTTP({ ...selectedTTP, ...editFormData });
         setIsEditMode(false);
         alert('TTP updated successfully');
+        
+        // Refresh trends data to reflect changes
+        fetchTTPTrendsData();
       } else {
         alert('Failed to update TTP');
       }
@@ -5048,8 +5051,9 @@ function TTPAnalysis({ active }) {
         closeCreateTTPModal();
         alert('TTP created successfully!');
         
-        // Refresh matrix data to include new TTP
+        // Refresh matrix data and trends data to include new TTP
         fetchMatrixData();
+        fetchTTPTrendsData();
       } else {
         // Handle API validation errors
         if (response && response.errors) {
@@ -5200,30 +5204,35 @@ function TTPAnalysis({ active }) {
     // Group data by date and aggregate by tactic
     const dateMap = new Map();
     
-    apiData.forEach(item => {
-      const date = item.date;
-      if (!dateMap.has(date)) {
-        dateMap.set(date, {
-          date: date,
-          'initial-access': 0,
-          'execution': 0,
-          'persistence': 0,
-          'defense-evasion': 0,
-          'impact': 0,
-          'privilege-escalation': 0,
-          'discovery': 0,
-          'lateral-movement': 0,
-          'collection': 0,
-          'command-and-control': 0,
-          'exfiltration': 0
-        });
-      }
+    // Process each series (tactic) from the API response
+    apiData.forEach(series => {
+      const tactic = series.group_name ? series.group_name.toLowerCase().replace(/\s+/g, '-') : 'unknown';
       
-      const tactic = item.tactic ? item.tactic.toLowerCase().replace(/\s+/g, '-') : 'unknown';
-      const dateEntry = dateMap.get(date);
-      if (dateEntry.hasOwnProperty(tactic)) {
-        dateEntry[tactic] = item.count || 0;
-      }
+      // Process each data point in the series
+      series.data_points.forEach(point => {
+        const date = point.date;
+        if (!dateMap.has(date)) {
+          dateMap.set(date, {
+            date: date,
+            'initial-access': 0,
+            'execution': 0,
+            'persistence': 0,
+            'defense-evasion': 0,
+            'impact': 0,
+            'privilege-escalation': 0,
+            'discovery': 0,
+            'lateral-movement': 0,
+            'collection': 0,
+            'command-and-control': 0,
+            'exfiltration': 0
+          });
+        }
+        
+        const dateEntry = dateMap.get(date);
+        if (dateEntry.hasOwnProperty(tactic)) {
+          dateEntry[tactic] = point.count || 0;
+        }
+      });
     });
     
     // Convert to array and sort by date
@@ -5241,6 +5250,9 @@ function TTPAnalysis({ active }) {
         // Remove the deleted TTP from the local state
         setTtpData(prevData => prevData.filter(ttp => ttp.id !== ttpId));
         alert('TTP deleted successfully');
+        
+        // Refresh trends data to reflect deletion
+        fetchTTPTrendsData();
       } else {
         alert('Failed to delete TTP');
       }
@@ -5257,16 +5269,25 @@ function TTPAnalysis({ active }) {
   }, [active, trendsData]);
 
   const createTTPTrendsChart = () => {
-    // Clear previous chart if any
-    d3.select(ttpChartRef.current).selectAll("*").remove();
-    
-    // Return early if no trends data
-    if (!trendsData || trendsData.length === 0) {
-      return;
-    }
-    
-    // Transform API data to chart format
-    const data = transformTrendsDataForChart(trendsData);
+    try {
+      // Clear previous chart if any
+      if (ttpChartRef.current) {
+        d3.select(ttpChartRef.current).selectAll("*").remove();
+      }
+      
+      // Return early if no trends data or ref not available
+      if (!trendsData || trendsData.length === 0 || !ttpChartRef.current) {
+        return;
+      }
+      
+      // Transform API data to chart format
+      const data = transformTrendsDataForChart(trendsData);
+      
+      // Return early if transformed data is empty
+      if (!data || data.length === 0) {
+        console.warn('No chart data available after transformation');
+        return;
+      }
 
     // Set dimensions and margins for the chart
     const width = ttpChartRef.current.clientWidth;
@@ -5397,6 +5418,19 @@ function TTPAnalysis({ active }) {
         .style("font-size", "12px")
         .text(categoryLabels[category]);
     });
+    } catch (error) {
+      console.error('Error creating TTP trends chart:', error);
+      // Display error message in the chart container
+      if (ttpChartRef.current) {
+        d3.select(ttpChartRef.current).selectAll("*").remove();
+        d3.select(ttpChartRef.current)
+          .append("div")
+          .style("text-align", "center")
+          .style("color", "#e53e3e")
+          .style("padding", "20px")
+          .text("Error loading chart data. Please try refreshing.");
+      }
+    }
   };
 
   return (
