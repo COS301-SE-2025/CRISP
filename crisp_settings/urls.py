@@ -5,7 +5,7 @@ from django.shortcuts import redirect
 from rest_framework import routers
 from core.api.threat_feed_views import ThreatFeedViewSet
 from core.viewing.home import home
-from core.api.threat_feed_views import indicators_list, indicators_bulk_import, indicator_update, indicator_share, threat_activity_chart_data, system_health, recent_activities, ttps_list, ttp_detail, mitre_matrix, ttp_trends, ttp_export
+from core.api.threat_feed_views import indicators_list, indicators_bulk_import, indicator_update, indicator_share, threat_activity_chart_data, system_health, recent_activities, ttps_list, ttp_detail, mitre_matrix, ttp_trends, ttp_export, ttp_mitre_mapping, ttp_bulk_mapping, ttp_mapping_validation, ttp_auto_map_existing
 
 # Set up REST API router
 router = routers.DefaultRouter()
@@ -30,6 +30,10 @@ urlpatterns = [
     path('api/ttps/mitre-matrix/', mitre_matrix, name='mitre-matrix'),
     path('api/ttps/trends/', ttp_trends, name='ttp-trends'),
     path('api/ttps/export/', ttp_export, name='ttp-export'),
+    path('api/ttps/mitre-mapping/', ttp_mitre_mapping, name='ttp-mitre-mapping'),
+    path('api/ttps/bulk-mapping/', ttp_bulk_mapping, name='ttp-bulk-mapping'),
+    path('api/ttps/mapping-validation/', ttp_mapping_validation, name='ttp-mapping-validation'),
+    path('api/ttps/auto-map-existing/', ttp_auto_map_existing, name='ttp-auto-map-existing'),
     path('api/ttps/<int:ttp_id>/', ttp_detail, name='ttp-detail'),
     path('api/status/', include('core.urls')),
     path('taxii2/', include('core.taxii.urls')),

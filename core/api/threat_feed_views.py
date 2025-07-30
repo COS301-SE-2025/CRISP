@@ -2862,3 +2862,270 @@ def ttp_export(request):
             {"error": "Failed to export TTP data", "details": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def ttp_mitre_mapping(request):
+    """
+    POST: Map a TTP to MITRE ATT&CK framework
+    
+    Request Body:
+    {
+        "name": "TTP name",
+        "description": "TTP description"
+    }
+    
+    Returns mapping suggestions with confidence scores.
+    """
+    try:
+        from core.services.mitre_mapping_service import TTPMappingService
+        
+        # Validate request data
+        name = request.data.get('name', '').strip()
+        description = request.data.get('description', '').strip()
+        
+        if not name:
+            return Response(
+                {"error": "TTP name is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Initialize mapping service and perform mapping
+        mapping_service = TTPMappingService()
+        mapping_result = mapping_service.map_ttp_to_mitre(name, description)
+        
+        return Response(mapping_result, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error mapping TTP to MITRE: {str(e)}")
+        return Response(
+            {"error": "Failed to map TTP to MITRE", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def ttp_bulk_mapping(request):
+    """
+    POST: Map multiple TTPs to MITRE ATT&CK framework in bulk
+    
+    Request Body:
+    {
+        "ttps": [
+            {
+                "id": "optional_id",
+                "name": "TTP name",
+                "description": "TTP description"
+            }
+        ]
+    }
+    
+    Returns bulk mapping results.
+    """
+    try:
+        from core.services.mitre_mapping_service import TTPMappingService
+        
+        # Validate request data
+        ttps = request.data.get('ttps', [])
+        
+        if not ttps or not isinstance(ttps, list):
+            return Response(
+                {"error": "TTPs array is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if len(ttps) > 100:  # Limit bulk operations
+            return Response(
+                {"error": "Maximum 100 TTPs allowed per bulk request"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate each TTP
+        for i, ttp in enumerate(ttps):
+            if not isinstance(ttp, dict) or not ttp.get('name'):
+                return Response(
+                    {"error": f"TTP at index {i} must have a 'name' field"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Initialize mapping service and perform bulk mapping
+        mapping_service = TTPMappingService()
+        bulk_result = mapping_service.bulk_map_ttps(ttps)
+        
+        return Response(bulk_result, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error in bulk TTP mapping: {str(e)}")
+        return Response(
+            {"error": "Failed to perform bulk TTP mapping", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def ttp_mapping_validation(request):
+    """
+    POST: Validate a MITRE technique-tactic mapping
+    
+    Request Body:
+    {
+        "technique_id": "T1566",
+        "tactic_id": "initial-access"
+    }
+    
+    Returns validation result.
+    """
+    try:
+        from core.services.mitre_mapping_service import TTPMappingService
+        
+        # Validate request data
+        technique_id = request.data.get('technique_id', '').strip()
+        tactic_id = request.data.get('tactic_id', '').strip()
+        
+        if not technique_id:
+            return Response(
+                {"error": "technique_id is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not tactic_id:
+            return Response(
+                {"error": "tactic_id is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Initialize mapping service and validate mapping
+        mapping_service = TTPMappingService()
+        validation_result = mapping_service.validate_mapping(technique_id, tactic_id)
+        
+        return Response(validation_result, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error validating TTP mapping: {str(e)}")
+        return Response(
+            {"error": "Failed to validate TTP mapping", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def ttp_auto_map_existing(request):
+    """
+    POST: Automatically map existing TTPs that don't have MITRE mappings
+    
+    Query Parameters:
+    - limit: Maximum number of TTPs to process (default: 50, max: 200)
+    - force: Whether to re-map TTPs that already have mappings (default: false)
+    - confidence_threshold: Minimum confidence score to apply mappings (default: 80)
+    
+    Returns auto-mapping results and statistics.
+    """
+    try:
+        from core.services.mitre_mapping_service import TTPMappingService
+        from core.models.models import TTPData
+        
+        # Get query parameters
+        limit = min(int(request.GET.get('limit', 50)), 200)
+        force_remap = request.GET.get('force', 'false').lower() == 'true'
+        confidence_threshold = float(request.GET.get('confidence_threshold', 80))
+        
+        # Build queryset
+        queryset = TTPData.objects.all()
+        
+        if not force_remap:
+            # Only process TTPs without existing mappings
+            from django.db import models as django_models
+            queryset = queryset.filter(
+                django_models.Q(mitre_technique_id__isnull=True) | 
+                django_models.Q(mitre_technique_id__exact='') |
+                django_models.Q(mitre_tactic__isnull=True) |
+                django_models.Q(mitre_tactic__exact='')
+            )
+        
+        ttps_to_process = queryset[:limit]
+        
+        if not ttps_to_process:
+            return Response({
+                "success": True,
+                "message": "No TTPs found that need mapping",
+                "total_processed": 0,
+                "successfully_mapped": 0,
+                "high_confidence_mappings": 0,
+                "mappings": []
+            })
+        
+        # Prepare TTP data for bulk mapping
+        ttp_data = []
+        for ttp in ttps_to_process:
+            ttp_data.append({
+                'id': ttp.id,
+                'name': ttp.name,
+                'description': ttp.description
+            })
+        
+        # Perform bulk mapping
+        mapping_service = TTPMappingService()
+        bulk_result = mapping_service.bulk_map_ttps(ttp_data)
+        
+        # Apply mappings that meet confidence threshold
+        applied_mappings = 0
+        high_confidence_mappings = 0
+        updated_ttps = []
+        
+        for mapping_data in bulk_result.get('mappings', []):
+            mapping = mapping_data.get('mapping', {})
+            best_match = mapping.get('best_match')
+            confidence = mapping.get('confidence', 0)
+            
+            if best_match and confidence >= confidence_threshold:
+                try:
+                    ttp_id = mapping_data.get('ttp_id')
+                    ttp = TTPData.objects.get(id=ttp_id)
+                    
+                    # Update TTP with MITRE mapping
+                    ttp.mitre_technique_id = best_match.get('technique_id', '')
+                    ttp.mitre_tactic = best_match.get('tactic_id', '')
+                    ttp.save()
+                    
+                    applied_mappings += 1
+                    if confidence >= 90:
+                        high_confidence_mappings += 1
+                    
+                    updated_ttps.append({
+                        'ttp_id': ttp.id,
+                        'ttp_name': ttp.name,
+                        'technique_id': best_match.get('technique_id'),
+                        'technique_name': best_match.get('technique_name'),
+                        'tactic_id': best_match.get('tactic_id'),
+                        'tactic_name': best_match.get('tactic_name'),
+                        'confidence': confidence
+                    })
+                    
+                except Exception as e:
+                    logger.error(f"Error updating TTP {ttp_id}: {e}")
+        
+        return Response({
+            "success": True,
+            "total_processed": len(ttps_to_process),
+            "total_mappings_found": bulk_result.get('mapped_count', 0),
+            "successfully_applied": applied_mappings,
+            "high_confidence_mappings": high_confidence_mappings,
+            "confidence_threshold": confidence_threshold,
+            "updated_ttps": updated_ttps,
+            "bulk_mapping_stats": {
+                "mapped_count": bulk_result.get('mapped_count', 0),
+                "high_confidence_count": bulk_result.get('high_confidence_count', 0),
+                "errors": bulk_result.get('errors', [])
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error in auto-mapping existing TTPs: {str(e)}")
+        return Response(
+            {"error": "Failed to auto-map existing TTPs", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
