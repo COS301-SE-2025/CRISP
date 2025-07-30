@@ -997,6 +997,329 @@ class TTPTrendsAPITestCase(TransactionTestCase):
             self.assertIn(s['trend'], ['increasing', 'decreasing', 'stable', 'insufficient_data'])
 
 
+class TTPExportAPITestCase(TransactionTestCase):
+    """Test TTP Export API endpoint"""
+
+    def setUp(self):
+        super().setUp()
+        
+        # Clear any existing data
+        ThreatFeed.objects.all().delete()
+        Organization.objects.all().delete()
+        TTPData.objects.all().delete()
+        
+        # Create unique suffix for this test
+        self.unique_suffix = get_unique_identifier()
+        
+        # Create an Organization
+        self.organization = create_test_organization(
+            name_suffix=f"export_test_{self.unique_suffix}",
+            unique=True
+        )
+        
+        # Create a test threat feed
+        self.threat_feed = create_test_threat_feed(
+            name_suffix=f"export_test_{self.unique_suffix}",
+            organization=self.organization,
+            unique=True
+        )
+        
+        # Create test TTPs with different tactics
+        self.test_ttps = []
+        tactics = ['initial_access', 'execution', 'persistence']
+        
+        for i in range(6):  # Create 6 TTPs
+            ttp_data = {
+                'name': f'Export Test TTP {i+1}',
+                'description': f'Test TTP description for export {i+1}',
+                'mitre_technique_id': f'T1566.{i+1:03d}',
+                'mitre_tactic': tactics[i % 3],
+                'mitre_subtechnique': f'Subtechnique {i+1}' if i % 2 == 0 else None,
+                'threat_feed': self.threat_feed,
+                'stix_id': f'attack-pattern--{uuid.uuid4()}',
+                'is_anonymized': i % 3 == 0,  # Every third TTP is anonymized
+                'original_data': {'original_name': f'Original TTP {i+1}'} if i % 3 == 0 else None
+            }
+            ttp = TTPData.objects.create(**ttp_data)
+            self.test_ttps.append(ttp)
+        
+        self.client = APIClient()
+
+    def test_ttp_export_json_basic(self):
+        """Test basic JSON export functionality"""
+        url = '/api/ttps/export/?format=json'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Type'], 'application/json')
+        self.assertIn('attachment', response['Content-Disposition'])
+        self.assertIn('ttps_export_', response['Content-Disposition'])
+        
+        # Parse JSON response
+        import json
+        data = json.loads(response.content.decode())
+        
+        self.assertIn('export_info', data)
+        self.assertIn('ttps', data)
+        self.assertEqual(data['export_info']['format'], 'json')
+        self.assertEqual(data['export_info']['total_records'], 6)
+        self.assertEqual(len(data['ttps']), 6)
+        
+        # Check TTP structure
+        ttp = data['ttps'][0]
+        self.assertIn('id', ttp)
+        self.assertIn('name', ttp)
+        self.assertIn('mitre_technique_id', ttp)
+        self.assertIn('mitre_tactic', ttp)
+
+    def test_ttp_export_csv_basic(self):
+        """Test basic CSV export functionality"""
+        url = '/api/ttps/export/?format=csv'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Type'], 'text/csv')
+        self.assertIn('attachment', response['Content-Disposition'])
+        self.assertIn('ttps_export_', response['Content-Disposition'])
+        self.assertIn('.csv', response['Content-Disposition'])
+        
+        # Parse CSV response
+        import csv
+        from io import StringIO
+        csv_content = response.content.decode()
+        reader = csv.DictReader(StringIO(csv_content))
+        rows = list(reader)
+        
+        self.assertEqual(len(rows), 6)
+        
+        # Check CSV headers
+        headers = reader.fieldnames
+        self.assertIn('id', headers)
+        self.assertIn('name', headers)
+        self.assertIn('mitre_technique_id', headers)
+
+    def test_ttp_export_stix_basic(self):
+        """Test basic STIX export functionality"""
+        url = '/api/ttps/export/?format=stix'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Type'], 'application/stix+json')
+        self.assertIn('attachment', response['Content-Disposition'])
+        self.assertIn('ttps_stix_export_', response['Content-Disposition'])
+        
+        # Parse STIX response
+        import json
+        bundle = json.loads(response.content.decode())
+        
+        self.assertEqual(bundle['type'], 'bundle')
+        self.assertEqual(bundle['spec_version'], '2.1')
+        self.assertIn('objects', bundle)
+        
+        # Should have 7 objects (1 identity + 6 attack patterns)
+        self.assertEqual(len(bundle['objects']), 7)
+        
+        # Check identity object
+        identity = bundle['objects'][0]
+        self.assertEqual(identity['type'], 'identity')
+        self.assertEqual(identity['name'], 'CRISP Threat Intelligence Platform')
+        
+        # Check attack patterns
+        attack_patterns = [obj for obj in bundle['objects'] if obj['type'] == 'attack-pattern']
+        self.assertEqual(len(attack_patterns), 6)
+        
+        # Check attack pattern structure
+        pattern = attack_patterns[0]
+        self.assertIn('name', pattern)
+        self.assertIn('description', pattern)
+        self.assertIn('external_references', pattern)
+
+    def test_ttp_export_tactic_filter(self):
+        """Test export with tactic filter"""
+        url = '/api/ttps/export/?format=json&tactic=execution'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        import json
+        data = json.loads(response.content.decode())
+        
+        # Should have 2 TTPs with execution tactic
+        self.assertEqual(len(data['ttps']), 2)
+        for ttp in data['ttps']:
+            self.assertEqual(ttp['mitre_tactic'], 'execution')
+
+    def test_ttp_export_technique_filter(self):
+        """Test export with technique ID filter"""
+        url = '/api/ttps/export/?format=json&technique_id=T1566.001'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        import json
+        data = json.loads(response.content.decode())
+        
+        # Should have 1 TTP matching the technique
+        self.assertEqual(len(data['ttps']), 1)
+        self.assertEqual(data['ttps'][0]['mitre_technique_id'], 'T1566.001')
+
+    def test_ttp_export_feed_filter(self):
+        """Test export with feed filter"""
+        url = f'/api/ttps/export/?format=json&feed_id={self.threat_feed.id}'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        import json
+        data = json.loads(response.content.decode())
+        
+        # Should have all 6 TTPs from our test feed
+        self.assertEqual(len(data['ttps']), 6)
+        for ttp in data['ttps']:
+            self.assertEqual(ttp['threat_feed_id'], self.threat_feed.id)
+
+    def test_ttp_export_limit_parameter(self):
+        """Test export with limit parameter"""
+        url = '/api/ttps/export/?format=json&limit=3'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        import json
+        data = json.loads(response.content.decode())
+        
+        # Should have maximum 3 TTPs
+        self.assertLessEqual(len(data['ttps']), 3)
+
+    def test_ttp_export_include_anonymized_false(self):
+        """Test export excluding anonymized TTPs"""
+        url = '/api/ttps/export/?format=json&include_anonymized=false'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        import json
+        data = json.loads(response.content.decode())
+        
+        # Should exclude anonymized TTPs (4 non-anonymized TTPs)
+        self.assertEqual(len(data['ttps']), 4)
+        for ttp in data['ttps']:
+            self.assertFalse(ttp['is_anonymized'])
+
+    def test_ttp_export_include_original_data(self):
+        """Test export including original data for anonymized TTPs"""
+        url = '/api/ttps/export/?format=json&include_original=true'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        import json
+        data = json.loads(response.content.decode())
+        
+        # Find anonymized TTPs and check they have original data
+        anonymized_ttps = [ttp for ttp in data['ttps'] if ttp['is_anonymized']]
+        self.assertGreater(len(anonymized_ttps), 0)
+        
+        for ttp in anonymized_ttps:
+            if ttp.get('original_data'):
+                self.assertIsInstance(ttp['original_data'], dict)
+
+    def test_ttp_export_fields_selection(self):
+        """Test export with field selection"""
+        url = '/api/ttps/export/?format=json&fields=id,name,mitre_technique_id'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        import json
+        data = json.loads(response.content.decode())
+        
+        # Check that only selected fields are present
+        ttp = data['ttps'][0]
+        expected_fields = {'id', 'name', 'mitre_technique_id'}
+        actual_fields = set(ttp.keys())
+        self.assertEqual(actual_fields, expected_fields)
+
+    def test_ttp_export_date_filters(self):
+        """Test export with date filters"""
+        from datetime import date, timedelta
+        
+        # Test created_after filter
+        yesterday = (date.today() - timedelta(days=1)).strftime('%Y-%m-%d')
+        url = f'/api/ttps/export/?format=json&created_after={yesterday}'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        import json
+        data = json.loads(response.content.decode())
+        
+        # Should have TTPs created after yesterday (today's TTPs)
+        self.assertGreater(len(data['ttps']), 0)
+
+    def test_ttp_export_error_handling(self):
+        """Test export error handling"""
+        # Test invalid format
+        url = '/api/ttps/export/?format=invalid'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        
+        # Test invalid feed_id
+        url = '/api/ttps/export/?format=json&feed_id=invalid'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        
+        # Test invalid date format
+        url = '/api/ttps/export/?format=json&created_after=invalid-date'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_ttp_export_stix_external_references(self):
+        """Test STIX export includes proper external references"""
+        url = '/api/ttps/export/?format=stix'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        import json
+        bundle = json.loads(response.content.decode())
+        
+        attack_patterns = [obj for obj in bundle['objects'] if obj['type'] == 'attack-pattern']
+        
+        # Check that attack patterns have MITRE external references
+        for pattern in attack_patterns:
+            if 'external_references' in pattern:
+                mitre_refs = [ref for ref in pattern['external_references'] if ref['source_name'] == 'mitre-attack']
+                self.assertGreater(len(mitre_refs), 0)
+                
+                mitre_ref = mitre_refs[0]
+                self.assertIn('external_id', mitre_ref)
+                self.assertIn('url', mitre_ref)
+                self.assertTrue(mitre_ref['url'].startswith('https://attack.mitre.org/'))
+
+    def test_ttp_export_stix_kill_chain_phases(self):
+        """Test STIX export includes proper kill chain phases"""
+        url = '/api/ttps/export/?format=stix'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        import json
+        bundle = json.loads(response.content.decode())
+        
+        attack_patterns = [obj for obj in bundle['objects'] if obj['type'] == 'attack-pattern']
+        
+        # Check that attack patterns have kill chain phases
+        for pattern in attack_patterns:
+            if 'kill_chain_phases' in pattern:
+                phases = pattern['kill_chain_phases']
+                self.assertGreater(len(phases), 0)
+                
+                phase = phases[0]
+                self.assertEqual(phase['kill_chain_name'], 'mitre-attack')
+                self.assertIn('phase_name', phase)
+
+
 if __name__ == '__main__':
     import unittest
     unittest.main()

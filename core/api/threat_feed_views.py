@@ -2554,3 +2554,311 @@ def ttp_trends(request):
             {"error": "Failed to get TTP trends data", "details": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def ttp_export(request):
+    """
+    GET: Export TTP data in multiple formats (CSV, JSON, STIX).
+    
+    Query Parameters:
+    - format: Export format - 'csv', 'json', 'stix' (default: 'json')
+    - tactic: Filter by specific MITRE tactic (optional)
+    - technique_id: Filter by specific MITRE technique ID (optional)
+    - feed_id: Filter by specific threat feed ID (optional)
+    - include_anonymized: Include anonymized TTPs (default: true)
+    - include_original: Include original data for anonymized TTPs (default: false)
+    - fields: Comma-separated list of fields to include (optional)
+    - limit: Maximum number of records to export (default: 1000, max: 10000)
+    - created_after: Filter TTPs created after this date (YYYY-MM-DD format)
+    - created_before: Filter TTPs created before this date (YYYY-MM-DD format)
+    
+    Returns TTP data in the specified format with proper content headers for download.
+    """
+    try:
+        import csv
+        import json
+        import uuid
+        from io import StringIO
+        from datetime import datetime
+        from django.http import HttpResponse
+        from django.db.models import Q
+        
+        # Get and validate query parameters
+        export_format = request.GET.get('format', 'json').lower()
+        tactic = request.GET.get('tactic', '').strip()
+        technique_id = request.GET.get('technique_id', '').strip()
+        feed_id = request.GET.get('feed_id', '').strip()
+        include_anonymized = request.GET.get('include_anonymized', 'true').lower() == 'true'
+        include_original = request.GET.get('include_original', 'false').lower() == 'true'
+        fields_param = request.GET.get('fields', '').strip()
+        limit = int(request.GET.get('limit', 1000))
+        created_after = request.GET.get('created_after', '').strip()
+        created_before = request.GET.get('created_before', '').strip()
+        
+        # Validate format
+        valid_formats = ['csv', 'json', 'stix']
+        if export_format not in valid_formats:
+            return Response(
+                {"error": f"Invalid format. Must be one of: {', '.join(valid_formats)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate limit
+        if limit < 1 or limit > 10000:
+            limit = 1000
+        
+        # Start with all TTPs
+        queryset = TTPData.objects.select_related('threat_feed').all()
+        
+        # Apply filters
+        if not include_anonymized:
+            queryset = queryset.filter(is_anonymized=False)
+        
+        if tactic:
+            queryset = queryset.filter(mitre_tactic=tactic)
+        
+        if technique_id:
+            queryset = queryset.filter(mitre_technique_id__icontains=technique_id)
+        
+        if feed_id:
+            try:
+                feed_id_int = int(feed_id)
+                queryset = queryset.filter(threat_feed_id=feed_id_int)
+            except ValueError:
+                return Response(
+                    {"error": "Invalid feed_id parameter. Must be an integer."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Apply date filters
+        if created_after:
+            try:
+                after_date = datetime.strptime(created_after, '%Y-%m-%d').date()
+                queryset = queryset.filter(created_at__date__gte=after_date)
+            except ValueError:
+                return Response(
+                    {"error": "Invalid created_after date format. Use YYYY-MM-DD."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        if created_before:
+            try:
+                before_date = datetime.strptime(created_before, '%Y-%m-%d').date()
+                queryset = queryset.filter(created_at__date__lte=before_date)
+            except ValueError:
+                return Response(
+                    {"error": "Invalid created_before date format. Use YYYY-MM-DD."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Apply limit and order
+        queryset = queryset.order_by('-created_at')[:limit]
+        ttps = list(queryset)
+        
+        # Define available fields
+        all_fields = [
+            'id', 'name', 'description', 'mitre_technique_id', 'mitre_tactic', 
+            'mitre_tactic_display', 'mitre_subtechnique', 'stix_id', 
+            'threat_feed_id', 'threat_feed_name', 'threat_feed_is_external',
+            'is_anonymized', 'created_at', 'updated_at'
+        ]
+        
+        # Parse fields parameter
+        if fields_param:
+            requested_fields = [f.strip() for f in fields_param.split(',')]
+            selected_fields = [f for f in requested_fields if f in all_fields]
+            if not selected_fields:
+                selected_fields = all_fields
+        else:
+            selected_fields = all_fields
+        
+        # Helper function to extract TTP data
+        def extract_ttp_data(ttp):
+            # Get tactic display name
+            tactic_display = dict(TTPData.MITRE_TACTIC_CHOICES).get(ttp.mitre_tactic, ttp.mitre_tactic) if ttp.mitre_tactic else ''
+            
+            data = {
+                'id': ttp.id,
+                'name': ttp.name,
+                'description': ttp.description,
+                'mitre_technique_id': ttp.mitre_technique_id,
+                'mitre_tactic': ttp.mitre_tactic or '',
+                'mitre_tactic_display': tactic_display,
+                'mitre_subtechnique': ttp.mitre_subtechnique or '',
+                'stix_id': ttp.stix_id,
+                'threat_feed_id': ttp.threat_feed.id if ttp.threat_feed else None,
+                'threat_feed_name': ttp.threat_feed.name if ttp.threat_feed else '',
+                'threat_feed_is_external': ttp.threat_feed.is_external if ttp.threat_feed else False,
+                'is_anonymized': ttp.is_anonymized,
+                'created_at': ttp.created_at.isoformat(),
+                'updated_at': ttp.updated_at.isoformat()
+            }
+            
+            # Add original data if requested and available
+            if include_original and ttp.is_anonymized and ttp.original_data:
+                data['original_data'] = ttp.original_data
+            
+            # Filter to selected fields
+            return {field: data[field] for field in selected_fields if field in data}
+        
+        # Generate timestamp for filename
+        timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+        
+        # CSV Export
+        if export_format == 'csv':
+            output = StringIO()
+            writer = csv.DictWriter(output, fieldnames=selected_fields, extrasaction='ignore')
+            writer.writeheader()
+            
+            for ttp in ttps:
+                row_data = extract_ttp_data(ttp)
+                # Convert complex data to strings for CSV
+                for key, value in row_data.items():
+                    if isinstance(value, (dict, list)):
+                        row_data[key] = json.dumps(value)
+                    elif value is None:
+                        row_data[key] = ''
+                writer.writerow(row_data)
+            
+            response = HttpResponse(output.getvalue(), content_type='text/csv')
+            response['Content-Disposition'] = f'attachment; filename="ttps_export_{timestamp}.csv"'
+            return response
+        
+        # JSON Export
+        elif export_format == 'json':
+            export_data = {
+                'export_info': {
+                    'format': 'json',
+                    'generated_at': timezone.now().isoformat(),
+                    'total_records': len(ttps),
+                    'filters_applied': {
+                        'tactic': tactic,
+                        'technique_id': technique_id,
+                        'feed_id': feed_id,
+                        'include_anonymized': include_anonymized,
+                        'include_original': include_original,
+                        'created_after': created_after,
+                        'created_before': created_before,
+                        'limit': limit
+                    },
+                    'selected_fields': selected_fields
+                },
+                'ttps': [extract_ttp_data(ttp) for ttp in ttps]
+            }
+            
+            response = HttpResponse(
+                json.dumps(export_data, indent=2, ensure_ascii=False),
+                content_type='application/json'
+            )
+            response['Content-Disposition'] = f'attachment; filename="ttps_export_{timestamp}.json"'
+            return response
+        
+        # STIX Export
+        elif export_format == 'stix':
+            # Create STIX bundle
+            stix_objects = []
+            bundle_id = f"bundle--{str(uuid.uuid4())}"
+            
+            # Add identity object for the organization
+            identity_obj = {
+                "type": "identity",
+                "spec_version": "2.1",
+                "id": f"identity--{str(uuid.uuid4())}",
+                "created": timezone.now().isoformat(),
+                "modified": timezone.now().isoformat(),
+                "name": "CRISP Threat Intelligence Platform",
+                "identity_class": "system",
+                "description": "Collaborative Research Infrastructure for Sharing Practices"
+            }
+            stix_objects.append(identity_obj)
+            
+            # Convert TTPs to STIX Attack Pattern objects
+            for ttp in ttps:
+                # Create basic STIX attack pattern
+                attack_pattern = {
+                    "type": "attack-pattern",
+                    "spec_version": "2.1",
+                    "id": ttp.stix_id,
+                    "created": ttp.created_at.isoformat(),
+                    "modified": ttp.updated_at.isoformat(),
+                    "name": ttp.name,
+                    "description": ttp.description,
+                    "created_by_ref": identity_obj["id"]
+                }
+                
+                # Add MITRE ATT&CK external references
+                external_refs = []
+                if ttp.mitre_technique_id:
+                    mitre_url = f"https://attack.mitre.org/techniques/{ttp.mitre_technique_id.replace('.', '/')}/"
+                    external_refs.append({
+                        "source_name": "mitre-attack",
+                        "external_id": ttp.mitre_technique_id,
+                        "url": mitre_url
+                    })
+                
+                if external_refs:
+                    attack_pattern["external_references"] = external_refs
+                
+                # Add kill chain phases
+                if ttp.mitre_tactic:
+                    tactic_mapping = {
+                        'reconnaissance': 'reconnaissance',
+                        'resource_development': 'resource-development',
+                        'initial_access': 'initial-access',
+                        'execution': 'execution',
+                        'persistence': 'persistence',
+                        'privilege_escalation': 'privilege-escalation',
+                        'defense_evasion': 'defense-evasion',
+                        'credential_access': 'credential-access',
+                        'discovery': 'discovery',
+                        'lateral_movement': 'lateral-movement',
+                        'collection': 'collection',
+                        'command_and_control': 'command-and-control',
+                        'exfiltration': 'exfiltration',
+                        'impact': 'impact'
+                    }
+                    
+                    kill_chain_phase = tactic_mapping.get(ttp.mitre_tactic, ttp.mitre_tactic)
+                    attack_pattern["kill_chain_phases"] = [{
+                        "kill_chain_name": "mitre-attack",
+                        "phase_name": kill_chain_phase
+                    }]
+                
+                # Add custom properties
+                if ttp.threat_feed:
+                    attack_pattern["x_crisp_threat_feed"] = ttp.threat_feed.name
+                    attack_pattern["x_crisp_threat_feed_external"] = ttp.threat_feed.is_external
+                
+                if ttp.mitre_subtechnique:
+                    attack_pattern["x_crisp_subtechnique"] = ttp.mitre_subtechnique
+                
+                if ttp.is_anonymized:
+                    attack_pattern["x_crisp_anonymized"] = True
+                    if include_original and ttp.original_data:
+                        attack_pattern["x_crisp_original_data"] = ttp.original_data
+                
+                stix_objects.append(attack_pattern)
+            
+            # Create STIX bundle
+            bundle = {
+                "type": "bundle",
+                "id": bundle_id,
+                "spec_version": "2.1",
+                "objects": stix_objects
+            }
+            
+            response = HttpResponse(
+                json.dumps(bundle, indent=2, ensure_ascii=False),
+                content_type='application/stix+json'
+            )
+            response['Content-Disposition'] = f'attachment; filename="ttps_stix_export_{timestamp}.json"'
+            return response
+        
+    except Exception as e:
+        logger.error(f"Error exporting TTP data: {str(e)}")
+        return Response(
+            {"error": "Failed to export TTP data", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
