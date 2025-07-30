@@ -990,7 +990,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
           }}>
             <h2 style={{ marginBottom: '1.5rem', color: '#333' }}>
               {modalMode === 'add' ? 'Add New User' : 
-               modalMode === 'edit' ? 'Edit User' : 'View User'}
+               modalMode === 'edit' ? 'Edit User' : `View User: ${formData.first_name} ${formData.last_name}`.trim() || formData.username}
             </h2>
             
             {modalLoading ? (
@@ -998,6 +998,107 @@ const UserManagement = ({ active = true, initialSection = null }) => {
             ) : (
             
             <form onSubmit={handleSubmit}>
+              {modalMode === 'view' && (
+                <div style={{ 
+                  marginBottom: '1.5rem', 
+                  padding: '1rem', 
+                  backgroundColor: '#f8f9fa', 
+                  borderRadius: '6px',
+                  border: '1px solid #e9ecef'
+                }}>
+                  <h3 style={{ margin: '0 0 1rem 0', color: '#495057', fontSize: '1.1rem' }}>User Information</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div>
+                      <strong style={{ color: '#495057' }}>Username:</strong>
+                      <div style={{ color: '#6c757d', marginTop: '0.25rem' }}>{formData.username || 'Not available'}</div>
+                    </div>
+                    <div>
+                      <strong style={{ color: '#495057' }}>Role:</strong>
+                      <div style={{ 
+                        color: formData.role === 'BlueVisionAdmin' ? '#dc3545' : 
+                              formData.role === 'publisher' ? '#fd7e14' : 
+                              formData.role === 'admin' ? '#6f42c1' : '#28a745',
+                        marginTop: '0.25rem',
+                        fontWeight: '500'
+                      }}>{formData.role || 'Not available'}</div>
+                    </div>
+                    <div>
+                      <strong style={{ color: '#495057' }}>Email:</strong>
+                      <div style={{ color: '#6c757d', marginTop: '0.25rem' }}>{formData.email || 'Not available'}</div>
+                    </div>
+                    <div>
+                      <strong style={{ color: '#495057' }}>Status:</strong>
+                      <div style={{ marginTop: '0.25rem' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '3px',
+                          fontSize: '0.875rem',
+                          backgroundColor: formData.is_active ? '#d4edda' : '#f8d7da',
+                          color: formData.is_active ? '#155724' : '#721c24',
+                          marginRight: '0.5rem'
+                        }}>
+                          {formData.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                        {formData.is_verified && (
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: '3px',
+                            fontSize: '0.875rem',
+                            backgroundColor: '#d1ecf1',
+                            color: '#0c5460'
+                          }}>
+                            Verified
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <strong style={{ color: '#495057' }}>Full Name:</strong>
+                      <div style={{ color: '#6c757d', marginTop: '0.25rem' }}>
+                        {`${formData.first_name || ''} ${formData.last_name || ''}`.trim() || 'Not provided'}
+                      </div>
+                    </div>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <strong style={{ color: '#495057' }}>Organization:</strong>
+                      <div style={{ color: '#6c757d', marginTop: '0.25rem' }}>
+                        {organizations.find(org => org.id === formData.organization_id)?.name || 'Not assigned'}
+                      </div>
+                    </div>
+                    {formData.date_joined && (
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <strong style={{ color: '#495057' }}>Date Joined:</strong>
+                        <div style={{ color: '#6c757d', marginTop: '0.25rem' }}>
+                          {new Date(formData.date_joined).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    {formData.last_login && (
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <strong style={{ color: '#495057' }}>Last Login:</strong>
+                        <div style={{ color: '#6c757d', marginTop: '0.25rem' }}>
+                          {new Date(formData.last_login).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {modalMode !== 'view' && (
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
                   Username {!formData.username && modalMode === 'add' && <span style={{ color: 'red' }}>*</span>}
@@ -1026,10 +1127,12 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                   </div>
                 )}
               </div>
+              )}
 
+              {modalMode !== 'view' && (
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                  Email {modalMode === 'add' && !formData.email && <span style={{ color: 'red' }}>*</span>} {!formData.email && modalMode === 'view' && '(Not available at current access level)'}
+                  Email {modalMode === 'add' && !formData.email && <span style={{ color: 'red' }}>*</span>}
                 </label>
                 <input
                   type="email"
@@ -1049,7 +1152,9 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                   }}
                 />
               </div>
+              )}
 
+              {modalMode !== 'view' && (
               <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
@@ -1092,6 +1197,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                   />
                 </div>
               </div>
+              )}
 
               {modalMode === 'add' && (
                 <div style={{ marginBottom: '1rem' }}>
@@ -1138,6 +1244,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                 </div>
               )}
 
+              {modalMode !== 'view' && (
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
                   Role
@@ -1171,7 +1278,9 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                   </div>
                 )}
               </div>
+              )}
 
+              {modalMode !== 'view' && (
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
                   Organization {modalMode === 'add' && !formData.organization_id && <span style={{ color: 'red' }}>*</span>}
@@ -1197,7 +1306,9 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                   ))}
                 </select>
               </div>
+              )}
 
+              {modalMode !== 'view' && (
               <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <input
@@ -1220,6 +1331,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                   Active
                 </label>
               </div>
+              )}
 
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                 <button
