@@ -4790,6 +4790,7 @@ function TTPAnalysis({ active }) {
   const [trendsData, setTrendsData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [trendsLoading, setTrendsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('matrix');
   const ttpChartRef = useRef(null);
   
   // Fetch TTP data from backend
@@ -4832,6 +4833,10 @@ function TTPAnalysis({ active }) {
       setTrendsData([]);
     }
     setTrendsLoading(false);
+  };
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
   };
 
   const transformTrendsDataForChart = (apiData) => {
@@ -5051,15 +5056,38 @@ function TTPAnalysis({ active }) {
       </div>
 
       <div className="tabs">
-        <div className="tab active">MITRE ATT&CK Matrix</div>
-        <div className="tab">TTP List</div>
-        <div className="tab">Threat Actors</div>
-        <div className="tab">Campaigns</div>
+        <div 
+          className={`tab ${activeTab === 'matrix' ? 'active' : ''}`}
+          onClick={() => handleTabChange('matrix')}
+        >
+          MITRE ATT&CK Matrix
+        </div>
+        <div 
+          className={`tab ${activeTab === 'list' ? 'active' : ''}`}
+          onClick={() => handleTabChange('list')}
+        >
+          TTP List
+        </div>
+        <div 
+          className={`tab ${activeTab === 'actors' ? 'active' : ''}`}
+          onClick={() => handleTabChange('actors')}
+        >
+          Threat Actors
+        </div>
+        <div 
+          className={`tab ${activeTab === 'campaigns' ? 'active' : ''}`}
+          onClick={() => handleTabChange('campaigns')}
+        >
+          Campaigns
+        </div>
       </div>
 
-      <div className="card">
-        <div className="card-header">
-          <h2 className="card-title"><i className="fas fa-sitemap card-icon"></i> MITRE ATT&CK Enterprise Matrix</h2>
+      {/* MITRE ATT&CK Matrix Tab */}
+      {activeTab === 'matrix' && (
+        <>
+          <div className="card">
+            <div className="card-header">
+              <h2 className="card-title"><i className="fas fa-sitemap card-icon"></i> MITRE ATT&CK Enterprise Matrix</h2>
           <div className="card-actions">
             <button className="btn btn-outline btn-sm"><i className="fas fa-filter"></i> Filter</button>
           </div>
@@ -5251,10 +5279,157 @@ function TTPAnalysis({ active }) {
           </div>
         </div>
       </div>
+        </>
+      )}
 
-      <div className="card mt-4">
-        <div className="card-header">
-          <h2 className="card-title"><i className="fas fa-tasks card-icon"></i> Recent TTP Analyses</h2>
+      {/* TTP List Tab */}
+      {activeTab === 'list' && (
+        <div className="card">
+          <div className="card-header">
+            <h2 className="card-title"><i className="fas fa-list card-icon"></i> TTP List</h2>
+            <div className="card-actions">
+              <button className="btn btn-outline btn-sm"><i className="fas fa-filter"></i> Filter</button>
+              <button className="btn btn-outline btn-sm"><i className="fas fa-download"></i> Export</button>
+            </div>
+          </div>
+          <div className="card-content">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>MITRE ID</th>
+                  <th>Tactic</th>
+                  <th>Source Feed</th>
+                  <th>Confidence</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan="8" style={{textAlign: 'center', padding: '2rem'}}>
+                      <i className="fas fa-spinner fa-spin"></i> Loading TTPs...
+                    </td>
+                  </tr>
+                ) : ttpData.length > 0 ? (
+                  ttpData.map((ttp) => (
+                    <tr key={ttp.id}>
+                      <td>{ttp.id}</td>
+                      <td>{ttp.name}</td>
+                      <td>{ttp.mitre_technique_id}</td>
+                      <td>{ttp.mitre_tactic_display || ttp.mitre_tactic}</td>
+                      <td>{ttp.threat_feed ? ttp.threat_feed.name : 'N/A'}</td>
+                      <td>{ttp.confidence || 'N/A'}%</td>
+                      <td>{ttp.created_at ? new Date(ttp.created_at).toLocaleDateString() : 'N/A'}</td>
+                      <td>
+                        <button 
+                          className="btn btn-outline btn-sm" 
+                          onClick={() => deleteTTP(ttp.id)}
+                          title="Delete TTP"
+                        >
+                          <i className="fas fa-trash"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="8" style={{textAlign: 'center', padding: '2rem'}}>
+                      No TTPs found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* TTP Trends Chart (shared across relevant tabs) */}
+      {(activeTab === 'matrix' || activeTab === 'list') && (
+        <div className="card mt-4">
+          <div className="card-header">
+            <h2 className="card-title"><i className="fas fa-chart-line card-icon"></i> TTP Trends Chart</h2>
+            <div className="card-actions">
+              <button className="btn btn-outline btn-sm"><i className="fas fa-calendar-alt"></i> Last 90 Days</button>
+            </div>
+          </div>
+          <div className="card-content">
+            <div className="chart-container" ref={ttpChartRef}>
+              {trendsLoading ? (
+                <div style={{textAlign: 'center', padding: '4rem'}}>
+                  <i className="fas fa-spinner fa-spin" style={{fontSize: '2rem', color: '#0056b3'}}></i>
+                  <p style={{marginTop: '1rem', color: '#666'}}>Loading TTP trends data...</p>
+                </div>
+              ) : trendsData.length === 0 ? (
+                <div style={{textAlign: 'center', padding: '4rem'}}>
+                  <i className="fas fa-chart-line" style={{fontSize: '2rem', color: '#ccc'}}></i>
+                  <p style={{marginTop: '1rem', color: '#666'}}>No TTP trends data available</p>
+                  <p style={{color: '#888', fontSize: '0.9rem'}}>TTP data will appear here as it becomes available</p>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Threat Actors Tab */}
+      {activeTab === 'actors' && (
+        <div className="card">
+          <div className="card-header">
+            <h2 className="card-title"><i className="fas fa-user-secret card-icon"></i> Threat Actors</h2>
+            <div className="card-actions">
+              <button className="btn btn-outline btn-sm"><i className="fas fa-filter"></i> Filter</button>
+              <button className="btn btn-primary btn-sm"><i className="fas fa-plus"></i> Add Actor</button>
+            </div>
+          </div>
+          <div className="card-content">
+            <div style={{textAlign: 'center', padding: '4rem'}}>
+              <i className="fas fa-user-secret" style={{fontSize: '3rem', color: '#ccc'}}></i>
+              <h3 style={{marginTop: '1rem', color: '#666'}}>Threat Actors Management</h3>
+              <p style={{color: '#888', fontSize: '0.9rem'}}>Track and analyze threat actor profiles, campaigns, and TTPs</p>
+              <div style={{marginTop: '2rem'}}>
+                <button className="btn btn-primary">
+                  <i className="fas fa-plus"></i> Add First Threat Actor
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Campaigns Tab */}
+      {activeTab === 'campaigns' && (
+        <div className="card">
+          <div className="card-header">
+            <h2 className="card-title"><i className="fas fa-project-diagram card-icon"></i> Campaigns</h2>
+            <div className="card-actions">
+              <button className="btn btn-outline btn-sm"><i className="fas fa-filter"></i> Filter</button>
+              <button className="btn btn-primary btn-sm"><i className="fas fa-plus"></i> Add Campaign</button>
+            </div>
+          </div>
+          <div className="card-content">
+            <div style={{textAlign: 'center', padding: '4rem'}}>
+              <i className="fas fa-project-diagram" style={{fontSize: '3rem', color: '#ccc'}}></i>
+              <h3 style={{marginTop: '1rem', color: '#666'}}>Campaign Management</h3>
+              <p style={{color: '#888', fontSize: '0.9rem'}}>Monitor threat campaigns, their TTPs, and associated indicators</p>
+              <div style={{marginTop: '2rem'}}>
+                <button className="btn btn-primary">
+                  <i className="fas fa-plus"></i> Add First Campaign
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recent TTP Analyses (only shown on matrix and list tabs) */}
+      {(activeTab === 'matrix' || activeTab === 'list') && (
+        <div className="card mt-4">
+          <div className="card-header">
+            <h2 className="card-title"><i className="fas fa-tasks card-icon"></i> Recent TTP Analyses</h2>
         </div>
         <div className="card-content">
           <table className="data-table">
@@ -5318,7 +5493,8 @@ function TTPAnalysis({ active }) {
             </tbody>
           </table>
         </div>
-      </div>
+        </div>
+      )}
     </section>
   );
 }
