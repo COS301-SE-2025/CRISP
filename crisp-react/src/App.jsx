@@ -4801,6 +4801,19 @@ function TTPAnalysis({ active }) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editFormData, setEditFormData] = useState({});
   
+  // TTP Creation Modal state
+  const [showCreateTTPModal, setShowCreateTTPModal] = useState(false);
+  const [createFormData, setCreateFormData] = useState({
+    name: '',
+    description: '',
+    mitre_technique_id: '',
+    mitre_tactic: '',
+    mitre_subtechnique: '',
+    threat_feed_id: ''
+  });
+  const [createFormErrors, setCreateFormErrors] = useState({});
+  const [isCreating, setIsCreating] = useState(false);
+  
   const ttpChartRef = useRef(null);
   
   // Fetch TTP data from backend
@@ -4942,6 +4955,120 @@ function TTPAnalysis({ active }) {
       console.error('Error updating TTP:', error);
       alert('Error updating TTP: ' + (error.message || 'Unknown error'));
     }
+  };
+
+  // TTP Creation Modal functions
+  const openCreateTTPModal = () => {
+    setShowCreateTTPModal(true);
+    setCreateFormData({
+      name: '',
+      description: '',
+      mitre_technique_id: '',
+      mitre_tactic: '',
+      mitre_subtechnique: '',
+      threat_feed_id: ''
+    });
+    setCreateFormErrors({});
+  };
+
+  const closeCreateTTPModal = () => {
+    setShowCreateTTPModal(false);
+    setCreateFormData({
+      name: '',
+      description: '',
+      mitre_technique_id: '',
+      mitre_tactic: '',
+      mitre_subtechnique: '',
+      threat_feed_id: ''
+    });
+    setCreateFormErrors({});
+  };
+
+  const handleCreateFormChange = (field, value) => {
+    setCreateFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Clear error for this field when user starts typing
+    if (createFormErrors[field]) {
+      setCreateFormErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
+  };
+
+  const validateCreateForm = () => {
+    const errors = {};
+    
+    // Required field validation
+    if (!createFormData.name.trim()) {
+      errors.name = 'TTP name is required';
+    }
+    
+    if (!createFormData.description.trim()) {
+      errors.description = 'Description is required';
+    }
+    
+    if (!createFormData.mitre_technique_id.trim()) {
+      errors.mitre_technique_id = 'MITRE technique ID is required';
+    } else {
+      // Validate MITRE technique ID format (T####.### or T####)
+      const mitreIdPattern = /^T\d{4}(\.\d{3})?$/;
+      if (!mitreIdPattern.test(createFormData.mitre_technique_id.trim())) {
+        errors.mitre_technique_id = 'Invalid MITRE technique ID format (e.g., T1566.001 or T1566)';
+      }
+    }
+    
+    if (!createFormData.mitre_tactic) {
+      errors.mitre_tactic = 'MITRE tactic is required';
+    }
+    
+    setCreateFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const createNewTTP = async () => {
+    if (!validateCreateForm()) {
+      return;
+    }
+    
+    setIsCreating(true);
+    
+    try {
+      const response = await api.post('/api/ttps/', createFormData);
+      
+      if (response && response.success) {
+        // Add the new TTP to local state
+        const newTTP = response.ttp;
+        setTtpData(prevData => [newTTP, ...prevData]);
+        
+        // Close modal and show success message
+        closeCreateTTPModal();
+        alert('TTP created successfully!');
+        
+        // Refresh matrix data to include new TTP
+        fetchMatrixData();
+      } else {
+        // Handle API validation errors
+        if (response && response.errors) {
+          setCreateFormErrors(response.errors);
+        } else {
+          alert('Failed to create TTP. Please try again.');
+        }
+      }
+    } catch (error) {
+      console.error('Error creating TTP:', error);
+      
+      if (error.response && error.response.data && error.response.data.errors) {
+        setCreateFormErrors(error.response.data.errors);
+      } else {
+        alert('Error creating TTP: ' + (error.message || 'Unknown error'));
+      }
+    }
+    
+    setIsCreating(false);
   };
 
   const renderMatrixHeaders = () => {
@@ -5281,7 +5408,9 @@ function TTPAnalysis({ active }) {
         </div>
         <div className="action-buttons">
           <button className="btn btn-outline"><i className="fas fa-download"></i> Export Analysis</button>
-          <button className="btn btn-primary"><i className="fas fa-plus"></i> New TTP</button>
+          <button className="btn btn-primary" onClick={openCreateTTPModal}>
+            <i className="fas fa-plus"></i> New TTP
+          </button>
         </div>
       </div>
 
@@ -5844,6 +5973,162 @@ function TTPAnalysis({ active }) {
                   )}
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TTP Creation Modal */}
+      {showCreateTTPModal && (
+        <div className="modal-overlay" onClick={closeCreateTTPModal}>
+          <div className="modal-content ttp-create-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>
+                <i className="fas fa-plus-circle"></i> 
+                Create New TTP
+              </h2>
+              <button className="modal-close" onClick={closeCreateTTPModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <form onSubmit={(e) => { e.preventDefault(); createNewTTP(); }}>
+                <div className="create-form-grid">
+                  {/* Basic Information Section */}
+                  <div className="form-section">
+                    <h4><i className="fas fa-info-circle"></i> Basic Information</h4>
+                    
+                    <div className="form-group">
+                      <label className="form-label">
+                        TTP Name <span className="required">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        className={`form-control ${createFormErrors.name ? 'error' : ''}`}
+                        value={createFormData.name}
+                        onChange={(e) => handleCreateFormChange('name', e.target.value)}
+                        placeholder="Enter TTP name (e.g., Spear Phishing Attachment)"
+                      />
+                      {createFormErrors.name && (
+                        <span className="error-text">{createFormErrors.name}</span>
+                      )}
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">
+                        Description <span className="required">*</span>
+                      </label>
+                      <textarea
+                        className={`form-control ${createFormErrors.description ? 'error' : ''}`}
+                        value={createFormData.description}
+                        onChange={(e) => handleCreateFormChange('description', e.target.value)}
+                        placeholder="Describe the TTP, its purpose, and how it's used by threat actors..."
+                        rows="4"
+                      />
+                      {createFormErrors.description && (
+                        <span className="error-text">{createFormErrors.description}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* MITRE ATT&CK Mapping Section */}
+                  <div className="form-section">
+                    <h4><i className="fas fa-crosshairs"></i> MITRE ATT&CK Mapping</h4>
+                    
+                    <div className="form-group">
+                      <label className="form-label">
+                        MITRE Technique ID <span className="required">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        className={`form-control ${createFormErrors.mitre_technique_id ? 'error' : ''}`}
+                        value={createFormData.mitre_technique_id}
+                        onChange={(e) => handleCreateFormChange('mitre_technique_id', e.target.value.toUpperCase())}
+                        placeholder="T1566.001"
+                        pattern="T[0-9]{4}(\.[0-9]{3})?"
+                      />
+                      {createFormErrors.mitre_technique_id && (
+                        <span className="error-text">{createFormErrors.mitre_technique_id}</span>
+                      )}
+                      <small className="form-help">
+                        Format: T1234 or T1234.001 (e.g., T1566.001 for Spear Phishing Attachment)
+                      </small>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">
+                        MITRE Tactic <span className="required">*</span>
+                      </label>
+                      <select
+                        className={`form-control ${createFormErrors.mitre_tactic ? 'error' : ''}`}
+                        value={createFormData.mitre_tactic}
+                        onChange={(e) => handleCreateFormChange('mitre_tactic', e.target.value)}
+                      >
+                        <option value="">Select a tactic</option>
+                        <option value="initial-access">Initial Access</option>
+                        <option value="execution">Execution</option>
+                        <option value="persistence">Persistence</option>
+                        <option value="privilege-escalation">Privilege Escalation</option>
+                        <option value="defense-evasion">Defense Evasion</option>
+                        <option value="credential-access">Credential Access</option>
+                        <option value="discovery">Discovery</option>
+                        <option value="lateral-movement">Lateral Movement</option>
+                        <option value="collection">Collection</option>
+                        <option value="command-and-control">Command and Control</option>
+                        <option value="exfiltration">Exfiltration</option>
+                        <option value="impact">Impact</option>
+                      </select>
+                      {createFormErrors.mitre_tactic && (
+                        <span className="error-text">{createFormErrors.mitre_tactic}</span>
+                      )}
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">
+                        Sub-technique (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={createFormData.mitre_subtechnique}
+                        onChange={(e) => handleCreateFormChange('mitre_subtechnique', e.target.value)}
+                        placeholder="Sub-technique name if applicable"
+                      />
+                      <small className="form-help">
+                        Specific variant or sub-category of the main technique
+                      </small>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Form Actions */}
+                <div className="form-actions">
+                  <button 
+                    type="button" 
+                    className="btn btn-outline" 
+                    onClick={closeCreateTTPModal}
+                    disabled={isCreating}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary"
+                    disabled={isCreating}
+                  >
+                    {isCreating ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin"></i> Creating TTP...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-plus"></i> Create TTP
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
@@ -7527,6 +7812,133 @@ function CSSStyles() {
         .badge-info {
             background: #17a2b8;
             color: white;
+        }
+
+        /* TTP Creation Modal */
+        .ttp-create-modal {
+            max-width: 800px;
+            width: 90vw;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .create-form-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (min-width: 768px) {
+            .create-form-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            border: 1px solid #e9ecef;
+        }
+
+        .form-section h4 {
+            margin: 0 0 1.5rem 0;
+            color: var(--primary-blue);
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 0.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #333;
+            font-size: 0.9rem;
+        }
+
+        .required {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+
+        .form-control:focus {
+            outline: 0;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 0.2rem rgba(0, 86, 179, 0.25);
+        }
+
+        .form-control.error {
+            border-color: #dc3545;
+        }
+
+        .form-control.error:focus {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+        }
+
+        .error-text {
+            display: block;
+            margin-top: 0.25rem;
+            font-size: 0.8rem;
+            color: #dc3545;
+        }
+
+        .form-help {
+            display: block;
+            margin-top: 0.25rem;
+            font-size: 0.8rem;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .form-actions .btn {
+            min-width: 120px;
+            padding: 0.75rem 1.5rem;
+        }
+
+        /* Responsive adjustments for create modal */
+        @media (max-width: 767px) {
+            .create-form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+            }
+            
+            .form-actions .btn {
+                width: 100%;
+            }
         }
         
         /* Reports Section */
