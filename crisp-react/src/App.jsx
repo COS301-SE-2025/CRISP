@@ -4788,8 +4788,10 @@ Only patterns and techniques, no indicators</option>
 function TTPAnalysis({ active }) {
   const [ttpData, setTtpData] = useState([]);
   const [trendsData, setTrendsData] = useState([]);
+  const [matrixData, setMatrixData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [trendsLoading, setTrendsLoading] = useState(false);
+  const [matrixLoading, setMatrixLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('matrix');
   const ttpChartRef = useRef(null);
   
@@ -4798,6 +4800,7 @@ function TTPAnalysis({ active }) {
     if (active) {
       fetchTTPData();
       fetchTTPTrendsData();
+      fetchMatrixData();
     }
   }, [active]);
   
@@ -4835,8 +4838,154 @@ function TTPAnalysis({ active }) {
     setTrendsLoading(false);
   };
 
+  const fetchMatrixData = async () => {
+    setMatrixLoading(true);
+    try {
+      // Get MITRE matrix data from the API
+      const response = await api.get('/api/ttps/mitre-matrix/');
+      if (response && response.success) {
+        setMatrixData(response);
+      } else {
+        setMatrixData(null);
+      }
+    } catch (error) {
+      console.error('Error fetching MITRE matrix data:', error);
+      setMatrixData(null);
+    }
+    setMatrixLoading(false);
+  };
+
   const handleTabChange = (tab) => {
     setActiveTab(tab);
+  };
+
+  const refreshMatrixData = () => {
+    fetchMatrixData();
+  };
+
+  const renderMatrixHeaders = () => {
+    if (!matrixData || !matrixData.matrix) {
+      return null;
+    }
+
+    // MITRE ATT&CK Enterprise tactics in order with display names
+    const tacticOrder = [
+      { code: 'initial-access', name: 'Initial Access' },
+      { code: 'execution', name: 'Execution' },
+      { code: 'persistence', name: 'Persistence' },
+      { code: 'privilege-escalation', name: 'Privilege Escalation' },
+      { code: 'defense-evasion', name: 'Defense Evasion' },
+      { code: 'credential-access', name: 'Credential Access' },
+      { code: 'discovery', name: 'Discovery' },
+      { code: 'lateral-movement', name: 'Lateral Movement' },
+      { code: 'collection', name: 'Collection' },
+      { code: 'exfiltration', name: 'Exfiltration' },
+      { code: 'impact', name: 'Impact' }
+    ];
+
+    return (
+      <thead>
+        <tr>
+          {tacticOrder.map(tactic => {
+            const tacticData = matrixData.matrix[tactic.code];
+            const count = tacticData ? tacticData.technique_count : 0;
+            return (
+              <th key={tactic.code} title={`${count} techniques in ${tactic.name}`}>
+                {tactic.name}
+                <div className="tactic-count">({count})</div>
+              </th>
+            );
+          })}
+        </tr>
+      </thead>
+    );
+  };
+
+  const renderDynamicMatrix = () => {
+    if (!matrixData || !matrixData.matrix) {
+      return null;
+    }
+
+    const tactics = Object.values(matrixData.matrix);
+    
+    // MITRE ATT&CK Enterprise tactics in order
+    const tacticOrder = [
+      'initial-access',
+      'execution', 
+      'persistence',
+      'privilege-escalation',
+      'defense-evasion',
+      'credential-access',
+      'discovery',
+      'lateral-movement',
+      'collection',
+      'exfiltration',
+      'impact'
+    ];
+
+    // Create rows - we'll show up to 5 techniques per tactic
+    const maxRows = 5;
+    const rows = [];
+
+    for (let rowIndex = 0; rowIndex < maxRows; rowIndex++) {
+      const row = [];
+      
+      tacticOrder.forEach(tacticCode => {
+        const tacticData = matrixData.matrix[tacticCode];
+        if (tacticData && tacticData.techniques && tacticData.techniques.length > rowIndex) {
+          const technique = tacticData.techniques[rowIndex];
+          row.push({
+            technique: technique,
+            hasData: true,
+            isActive: tacticData.technique_count > 0
+          });
+        } else {
+          // Empty cell
+          row.push({
+            technique: null,
+            hasData: false,
+            isActive: false
+          });
+        }
+      });
+      
+      // Only add row if it has at least one technique
+      if (row.some(cell => cell.hasData)) {
+        rows.push(row);
+      }
+    }
+
+    return (
+      <tbody>
+        {rows.map((row, rowIndex) => (
+          <tr key={rowIndex}>
+            {row.map((cell, cellIndex) => (
+              <td 
+                key={cellIndex} 
+                className={`matrix-cell ${cell.isActive ? 'active' : ''}`}
+                title={cell.technique ? `${cell.technique.name} (${cell.technique.technique_id})` : ''}
+              >
+                {cell.technique ? (
+                  <>
+                    <div className="technique-name">
+                      {cell.technique.name.length > 20 
+                        ? cell.technique.name.substring(0, 20) + '...'
+                        : cell.technique.name
+                      }
+                    </div>
+                    {cell.technique.technique_id && (
+                      <div className="technique-id">{cell.technique.technique_id}</div>
+                    )}
+                  </>
+                ) : (
+                  <div className="empty-cell">-</div>
+                )}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    );
   };
 
   const transformTrendsDataForChart = (apiData) => {
@@ -5089,168 +5238,58 @@ function TTPAnalysis({ active }) {
             <div className="card-header">
               <h2 className="card-title"><i className="fas fa-sitemap card-icon"></i> MITRE ATT&CK Enterprise Matrix</h2>
           <div className="card-actions">
+            <button 
+              className="btn btn-outline btn-sm" 
+              onClick={refreshMatrixData} 
+              disabled={matrixLoading}
+              title="Refresh matrix data"
+            >
+              <i className={`fas ${matrixLoading ? 'fa-spinner fa-spin' : 'fa-sync-alt'}`}></i> Refresh
+            </button>
             <button className="btn btn-outline btn-sm"><i className="fas fa-filter"></i> Filter</button>
           </div>
         </div>
         <div className="card-content">
           <div className="matrix-container">
-            <table className="mitre-matrix">
-              <thead>
-                <tr>
-                  <th>Initial Access</th>
-                  <th>Execution</th>
-                  <th>Persistence</th>
-                  <th>Privilege Escalation</th>
-                  <th>Defense Evasion</th>
-                  <th>Credential Access</th>
-                  <th>Discovery</th>
-                  <th>Lateral Movement</th>
-                  <th>Collection</th>
-                  <th>Exfiltration</th>
-                  <th>Impact</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="matrix-cell active">
-                    Phishing
-                    <div className="technique-count">8</div>
-                  </td>
-                  <td className="matrix-cell active">
-                    Command & Scripting
-                    <div className="technique-count">6</div>
-                  </td>
-                  <td className="matrix-cell">
-                    Boot/Logon Autostart
-                    <div className="technique-count">2</div>
-                  </td>
-                  <td className="matrix-cell">
-                    Access Token Manipulation
-                    <div className="technique-count">1</div>
-                  </td>
-                  <td className="matrix-cell active">
-                    Obfuscated Files
-                    <div className="technique-count">5</div>
-                  </td>
-                  <td className="matrix-cell active">
-                    Brute Force
-                    <div className="technique-count">4</div>
-                  </td>
-                  <td className="matrix-cell">
-                    Account Discovery
-                    <div className="technique-count">3</div>
-                  </td>
-                  <td className="matrix-cell">
-                    Remote Services
-                    <div className="technique-count">2</div>
-                  </td>
-                  <td className="matrix-cell">
-                    Data from Local System
-                    <div className="technique-count">2</div>
-                  </td>
-                  <td className="matrix-cell">
-                    Exfiltration Over Web
-                    <div className="technique-count">3</div>
-                  </td>
-                  <td className="matrix-cell active">
-                    Data Encryption
-                    <div className="technique-count">7</div>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="matrix-cell active">
-                    Valid Accounts
-                    <div className="technique-count">5</div>
-                  </td>
-                  <td className="matrix-cell">
-                    Native API
-                    <div className="technique-count">2</div>
-                  </td>
-                  <td className="matrix-cell active">
-                    Create Account
-                    <div className="technique-count">4</div>
-                  </td>
-                  <td className="matrix-cell">
-                    Bypass UAC
-                    <div className="technique-count">1</div>
-                  </td>
-                  <td className="matrix-cell">
-                    Indicator Removal
-                    <div className="technique-count">2</div>
-                  </td>
-                  <td className="matrix-cell active">
-                    Credentials from Browser
-                    <div className="technique-count">4</div>
-                  </td>
-                  <td className="matrix-cell active">
-                    Network Service Scanning
-                    <div className="technique-count">5</div>
-                  </td>
-                  <td className="matrix-cell active">
-                    Exploitation of Remote Services
-                    <div className="technique-count">4</div>
-                  </td>
-                  <td className="matrix-cell">
-                    Screen Capture
-                    <div className="technique-count">3</div>
-                  </td>
-                  <td className="matrix-cell active">
-                    Exfiltration Over C2
-                    <div className="technique-count">5</div>
-                  </td>
-                  <td className="matrix-cell active">
-                    Service Stop
-                    <div className="technique-count">6</div>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="matrix-cell">
-                    External Remote Services
-                    <div className="technique-count">3</div>
-                  </td>
-                  <td className="matrix-cell active">
-                    Windows Management Instrumentation
-                    <div className="technique-count">4</div>
-                  </td>
-                  <td className="matrix-cell">
-                    Scheduled Task
-                    <div className="technique-count">3</div>
-                  </td>
-                  <td className="matrix-cell active">
-                    Scheduled Task
-                    <div className="technique-count">4</div>
-                  </td>
-                  <td className="matrix-cell active">
-                    Process Injection
-                    <div className="technique-count">4</div>
-                  </td>
-                  <td className="matrix-cell">
-                    Input Capture
-                    <div className="technique-count">2</div>
-                  </td>
-                  <td className="matrix-cell">
-                    System Information Discovery
-                    <div className="technique-count">3</div>
-                  </td>
-                  <td className="matrix-cell">
-                    Internal Spearphishing
-                    <div className="technique-count">2</div>
-                  </td>
-                  <td className="matrix-cell active">
-                    Data from Network
-                    <div className="technique-count">4</div>
-                  </td>
-                  <td className="matrix-cell">
-                    Scheduled Transfer
-                    <div className="technique-count">1</div>
-                  </td>
-                  <td className="matrix-cell">
-                    Resource Hijacking
-                    <div className="technique-count">2</div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            {matrixLoading ? (
+              <div style={{textAlign: 'center', padding: '4rem'}}>
+                <i className="fas fa-spinner fa-spin" style={{fontSize: '2rem', color: '#0056b3'}}></i>
+                <p style={{marginTop: '1rem', color: '#666'}}>Loading MITRE ATT&CK Matrix...</p>
+              </div>
+            ) : matrixData ? (
+              <>
+                <table className="mitre-matrix">
+                  {renderMatrixHeaders()}
+                  {renderDynamicMatrix()}
+                </table>
+                {matrixData.statistics && (
+                  <div className="matrix-stats" style={{marginTop: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '8px'}}>
+                    <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem'}}>
+                      <div>
+                        <strong>Total Techniques:</strong> {matrixData.total_techniques}
+                      </div>
+                      <div>
+                        <strong>Active Tactics:</strong> {matrixData.statistics.tactics_with_techniques}
+                      </div>
+                      <div>
+                        <strong>Avg per Tactic:</strong> {matrixData.statistics.average_techniques_per_tactic}
+                      </div>
+                      {matrixData.statistics.most_common_tactic && (
+                        <div>
+                          <strong>Top Tactic:</strong> {matrixData.matrix[matrixData.statistics.most_common_tactic]?.tactic_name}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{textAlign: 'center', padding: '4rem'}}>
+                <i className="fas fa-sitemap" style={{fontSize: '3rem', color: '#ccc'}}></i>
+                <p style={{marginTop: '1rem', color: '#666'}}>No MITRE ATT&CK data available</p>
+                <p style={{color: '#888', fontSize: '0.9rem'}}>Matrix will populate as TTP data becomes available</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -6970,6 +7009,43 @@ function CSSStyles() {
             align-items: center;
             justify-content: center;
             font-size: 10px;
+        }
+
+        .tactic-count {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: normal;
+            margin-top: 2px;
+        }
+
+        .technique-name {
+            font-weight: 500;
+            margin-bottom: 4px;
+            line-height: 1.2;
+        }
+
+        .technique-id {
+            font-size: 10px;
+            color: var(--primary-blue);
+            font-weight: bold;
+            background-color: rgba(0, 86, 179, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+
+        .empty-cell {
+            color: #ccc;
+            font-size: 18px;
+            text-align: center;
+        }
+
+        .matrix-stats {
+            font-size: 14px;
+        }
+
+        .matrix-stats strong {
+            color: var(--primary-blue);
         }
         
         /* Reports Section */
