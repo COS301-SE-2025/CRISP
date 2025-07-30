@@ -2090,3 +2090,171 @@ def ttp_detail(request, ttp_id):
             {"error": "Failed to get TTP details", "details": str(e), "ttp_id": ttp_id},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def mitre_matrix(request):
+    """
+    GET: Get MITRE ATT&CK Matrix data with technique counts organized by tactic.
+    
+    Query Parameters:
+    - feed_id: Filter by specific threat feed ID (optional)
+    - include_zero: Include tactics with zero techniques (default: false)
+    - format: Response format - 'matrix' or 'list' (default: 'matrix')
+    
+    Returns MITRE ATT&CK matrix data structured by tactics with technique counts,
+    technique details, and overall statistics.
+    """
+    try:
+        from django.db.models import Count, Q
+        from collections import defaultdict, OrderedDict
+        
+        # Get query parameters
+        feed_id = request.GET.get('feed_id', '').strip()
+        include_zero = request.GET.get('include_zero', 'false').lower() == 'true'
+        response_format = request.GET.get('format', 'matrix').lower()
+        
+        # Start with all TTPs
+        queryset = TTPData.objects.select_related('threat_feed').all()
+        
+        # Apply feed filter if provided
+        if feed_id:
+            try:
+                feed_id_int = int(feed_id)
+                queryset = queryset.filter(threat_feed_id=feed_id_int)
+            except ValueError:
+                return Response(
+                    {"error": "Invalid feed_id parameter. Must be an integer."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Get technique counts by tactic
+        tactic_counts = queryset.values('mitre_tactic').annotate(
+            count=Count('id')
+        ).order_by('mitre_tactic')
+        
+        # Create a mapping of tactic codes to counts
+        tactic_count_map = {item['mitre_tactic']: item['count'] for item in tactic_counts if item['mitre_tactic']}
+        
+        # Get detailed technique data grouped by tactic
+        tactic_techniques = defaultdict(list)
+        all_techniques = queryset.order_by('mitre_tactic', 'mitre_technique_id')
+        
+        for ttp in all_techniques:
+            if ttp.mitre_tactic:  # Only include TTPs with valid tactics
+                technique_data = {
+                    'id': ttp.id,
+                    'name': ttp.name,
+                    'technique_id': ttp.mitre_technique_id,
+                    'subtechnique': ttp.mitre_subtechnique,
+                    'description': ttp.description[:200] + '...' if len(ttp.description) > 200 else ttp.description,
+                    'threat_feed': {
+                        'id': ttp.threat_feed.id,
+                        'name': ttp.threat_feed.name,
+                        'is_external': ttp.threat_feed.is_external
+                    } if ttp.threat_feed else None,
+                    'is_anonymized': ttp.is_anonymized,
+                    'created_at': ttp.created_at.isoformat(),
+                    'stix_id': ttp.stix_id
+                }
+                tactic_techniques[ttp.mitre_tactic].append(technique_data)
+        
+        # Build the complete matrix structure
+        matrix_data = OrderedDict()
+        total_techniques = 0
+        
+        # Process all MITRE tactics from the model choices
+        for tactic_code, tactic_display in TTPData.MITRE_TACTIC_CHOICES:
+            technique_count = tactic_count_map.get(tactic_code, 0)
+            techniques = tactic_techniques.get(tactic_code, [])
+            
+            # Skip tactics with zero techniques if include_zero is False
+            if not include_zero and technique_count == 0:
+                continue
+            
+            matrix_data[tactic_code] = {
+                'tactic_code': tactic_code,
+                'tactic_name': tactic_display,
+                'technique_count': technique_count,
+                'techniques': techniques,
+                'has_techniques': technique_count > 0,
+                'percentage': 0  # Will be calculated after we have the total
+            }
+            
+            total_techniques += technique_count
+        
+        # Calculate percentages
+        for tactic_data in matrix_data.values():
+            if total_techniques > 0:
+                tactic_data['percentage'] = round((tactic_data['technique_count'] / total_techniques) * 100, 2)
+        
+        # Get feed information if filtering by specific feed
+        feed_info = None
+        if feed_id:
+            try:
+                from core.models.models import ThreatFeed
+                feed = ThreatFeed.objects.get(id=feed_id_int)
+                feed_info = {
+                    'id': feed.id,
+                    'name': feed.name,
+                    'description': feed.description,
+                    'is_external': feed.is_external,
+                    'is_active': feed.is_active
+                }
+            except ThreatFeed.DoesNotExist:
+                feed_info = {'error': 'Feed not found'}
+        
+        # Build response based on format
+        if response_format == 'list':
+            # Simple list format
+            tactics_list = []
+            for tactic_data in matrix_data.values():
+                tactics_list.append({
+                    'tactic': tactic_data['tactic_code'],
+                    'name': tactic_data['tactic_name'],
+                    'count': tactic_data['technique_count'],
+                    'percentage': tactic_data['percentage']
+                })
+            
+            response_data = {
+                'success': True,
+                'format': 'list',
+                'total_techniques': total_techniques,
+                'total_tactics': len(matrix_data),
+                'tactics': tactics_list,
+                'feed_filter': feed_info,
+                'generated_at': timezone.now().isoformat()
+            }
+        else:
+            # Full matrix format (default)
+            response_data = {
+                'success': True,
+                'format': 'matrix',
+                'total_techniques': total_techniques,
+                'total_tactics': len(matrix_data),
+                'matrix': dict(matrix_data),
+                'feed_filter': feed_info,
+                'statistics': {
+                    'most_common_tactic': max(matrix_data.items(), key=lambda x: x[1]['technique_count'])[0] if matrix_data else None,
+                    'least_common_tactic': min(matrix_data.items(), key=lambda x: x[1]['technique_count'])[0] if matrix_data else None,
+                    'tactics_with_techniques': sum(1 for tactic_data in matrix_data.values() if tactic_data['technique_count'] > 0),
+                    'tactics_without_techniques': sum(1 for tactic_data in matrix_data.values() if tactic_data['technique_count'] == 0),
+                    'average_techniques_per_tactic': round(total_techniques / len(matrix_data), 2) if matrix_data else 0
+                },
+                'filters': {
+                    'feed_id': feed_id,
+                    'include_zero': include_zero,
+                    'format': response_format
+                },
+                'generated_at': timezone.now().isoformat()
+            }
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error getting MITRE matrix data: {str(e)}")
+        return Response(
+            {"error": "Failed to get MITRE matrix data", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

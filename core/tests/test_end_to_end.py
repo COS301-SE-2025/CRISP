@@ -550,6 +550,164 @@ class APIErrorHandlingTestCase(TransactionTestCase):
             self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+class MITREMatrixAPITestCase(TransactionTestCase):
+    """Test MITRE ATT&CK Matrix API endpoint"""
+
+    def setUp(self):
+        super().setUp()
+        
+        # Clear any existing data
+        ThreatFeed.objects.all().delete()
+        Organization.objects.all().delete()
+        TTPData.objects.all().delete()
+        
+        # Create unique suffix for this test
+        self.unique_suffix = get_unique_identifier()
+        
+        # Create an Organization
+        self.organization = create_test_organization(
+            name_suffix=f"matrix_test_{self.unique_suffix}",
+            unique=True
+        )
+        
+        # Create a test threat feed
+        self.threat_feed = create_test_threat_feed(
+            name_suffix=f"matrix_test_{self.unique_suffix}",
+            organization=self.organization,
+            unique=True
+        )
+        
+        # Create some test TTPs with different tactics
+        self.test_ttps = [
+            {
+                'name': 'Phishing Test',
+                'description': 'Test phishing technique',
+                'mitre_technique_id': 'T1566.001',
+                'mitre_tactic': 'initial_access',
+                'threat_feed': self.threat_feed,
+                'stix_id': f'attack-pattern--{uuid.uuid4()}'
+            },
+            {
+                'name': 'Command Line Test',
+                'description': 'Test command line execution',
+                'mitre_technique_id': 'T1059.001',
+                'mitre_tactic': 'execution',
+                'threat_feed': self.threat_feed,
+                'stix_id': f'attack-pattern--{uuid.uuid4()}'
+            },
+            {
+                'name': 'Registry Persistence',
+                'description': 'Test registry persistence',
+                'mitre_technique_id': 'T1547.001',
+                'mitre_tactic': 'persistence',
+                'threat_feed': self.threat_feed,
+                'stix_id': f'attack-pattern--{uuid.uuid4()}'
+            }
+        ]
+        
+        # Create the TTP objects
+        for ttp_data in self.test_ttps:
+            TTPData.objects.create(**ttp_data)
+        
+        self.client = APIClient()
+
+    def test_mitre_matrix_basic_functionality(self):
+        """Test basic MITRE matrix endpoint functionality"""
+        url = '/api/ttps/mitre-matrix/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['format'], 'matrix')
+        self.assertEqual(data['total_techniques'], 3)
+        self.assertIn('matrix', data)
+        self.assertIn('statistics', data)
+        
+        # Check that our test tactics are present with correct counts
+        matrix = data['matrix']
+        self.assertEqual(matrix['initial_access']['technique_count'], 1)
+        self.assertEqual(matrix['execution']['technique_count'], 1)
+        self.assertEqual(matrix['persistence']['technique_count'], 1)
+
+    def test_mitre_matrix_list_format(self):
+        """Test MITRE matrix endpoint with list format"""
+        url = '/api/ttps/mitre-matrix/?format=list'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['format'], 'list')
+        self.assertEqual(data['total_techniques'], 3)
+        self.assertIn('tactics', data)
+        
+        # Check tactics list structure
+        tactics = data['tactics']
+        tactic_counts = {t['tactic']: t['count'] for t in tactics}
+        self.assertEqual(tactic_counts.get('initial_access', 0), 1)
+        self.assertEqual(tactic_counts.get('execution', 0), 1)
+        self.assertEqual(tactic_counts.get('persistence', 0), 1)
+
+    def test_mitre_matrix_feed_filter(self):
+        """Test MITRE matrix endpoint with feed filter"""
+        url = f'/api/ttps/mitre-matrix/?feed_id={self.threat_feed.id}'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['total_techniques'], 3)
+        self.assertIsNotNone(data['feed_filter'])
+        self.assertEqual(data['feed_filter']['name'], self.threat_feed.name)
+
+    def test_mitre_matrix_include_zero(self):
+        """Test MITRE matrix endpoint with include_zero parameter"""
+        url = '/api/ttps/mitre-matrix/?include_zero=true'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        data = response.json()
+        self.assertTrue(data['success'])
+        
+        # Should include all 14 MITRE tactics
+        matrix = data['matrix']
+        self.assertEqual(len(matrix), 14)  # All MITRE_TACTIC_CHOICES
+        
+        # Verify that tactics with zero techniques are included
+        zero_tactics = [t for t in matrix.values() if t['technique_count'] == 0]
+        self.assertGreater(len(zero_tactics), 0)
+
+    def test_mitre_matrix_error_handling(self):
+        """Test MITRE matrix endpoint error handling"""
+        # Test invalid feed_id
+        url = '/api/ttps/mitre-matrix/?feed_id=invalid'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        data = response.json()
+        self.assertIn('Invalid feed_id parameter', data['error'])
+
+    def test_mitre_matrix_statistics(self):
+        """Test MITRE matrix endpoint statistics"""
+        url = '/api/ttps/mitre-matrix/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        data = response.json()
+        statistics = data['statistics']
+        
+        self.assertIn('most_common_tactic', statistics)
+        self.assertIn('least_common_tactic', statistics)
+        self.assertIn('tactics_with_techniques', statistics)
+        self.assertEqual(statistics['tactics_with_techniques'], 3)
+
+
 if __name__ == '__main__':
     import unittest
     unittest.main()
