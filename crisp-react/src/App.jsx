@@ -4814,6 +4814,23 @@ function TTPAnalysis({ active }) {
   const [createFormErrors, setCreateFormErrors] = useState({});
   const [isCreating, setIsCreating] = useState(false);
   
+  // TTP Export Modal state
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState('json');
+  const [exportFilters, setExportFilters] = useState({
+    tactic: '',
+    technique_id: '',
+    feed_id: '',
+    include_anonymized: true,
+    include_original: false,
+    created_after: '',
+    created_before: '',
+    limit: 1000,
+    fields: ''
+  });
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
+  
   const ttpChartRef = useRef(null);
   
   // Fetch TTP data from backend
@@ -5073,6 +5090,97 @@ function TTPAnalysis({ active }) {
     }
     
     setIsCreating(false);
+  };
+
+  // Export Modal functions
+  const openExportModal = () => {
+    setShowExportModal(true);
+    setExportError('');
+  };
+
+  const closeExportModal = () => {
+    setShowExportModal(false);
+    setExportError('');
+  };
+
+  const handleExportFilterChange = (field, value) => {
+    setExportFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const downloadFile = (blob, filename) => {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+
+  const exportTTPData = async () => {
+    setIsExporting(true);
+    setExportError('');
+    
+    try {
+      // Build query parameters
+      const params = new URLSearchParams();
+      params.append('format', exportFormat);
+      
+      // Add filters if specified
+      if (exportFilters.tactic) params.append('tactic', exportFilters.tactic);
+      if (exportFilters.technique_id) params.append('technique_id', exportFilters.technique_id);
+      if (exportFilters.feed_id) params.append('feed_id', exportFilters.feed_id);
+      if (exportFilters.created_after) params.append('created_after', exportFilters.created_after);
+      if (exportFilters.created_before) params.append('created_before', exportFilters.created_before);
+      if (exportFilters.fields) params.append('fields', exportFilters.fields);
+      
+      params.append('include_anonymized', exportFilters.include_anonymized.toString());
+      params.append('include_original', exportFilters.include_original.toString());
+      params.append('limit', exportFilters.limit.toString());
+      
+      // Make the API request
+      const response = await fetch(`/api/ttps/export/?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Accept': exportFormat === 'csv' ? 'text/csv' : 
+                   exportFormat === 'stix' ? 'application/stix+json' : 
+                   'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Export failed: ${response.status} ${response.statusText}`);
+      }
+      
+      // Get the blob and filename from response
+      const blob = await response.blob();
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `ttps_export_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.${exportFormat}`;
+      
+      if (contentDisposition) {
+        const matches = contentDisposition.match(/filename="([^"]+)"/);
+        if (matches) {
+          filename = matches[1];
+        }
+      }
+      
+      // Download the file
+      downloadFile(blob, filename);
+      
+      // Close modal and show success message
+      closeExportModal();
+      alert(`Export completed successfully! Downloaded: ${filename}`);
+      
+    } catch (error) {
+      console.error('Export failed:', error);
+      setExportError('Export failed: ' + (error.message || 'Unknown error'));
+    }
+    
+    setIsExporting(false);
   };
 
   const renderMatrixHeaders = () => {
@@ -5441,7 +5549,9 @@ function TTPAnalysis({ active }) {
           <p className="page-subtitle">Track and analyze tactics, techniques, and procedures</p>
         </div>
         <div className="action-buttons">
-          <button className="btn btn-outline"><i className="fas fa-download"></i> Export Analysis</button>
+          <button className="btn btn-outline" onClick={openExportModal}>
+            <i className="fas fa-download"></i> Export Analysis
+          </button>
           <button className="btn btn-primary" onClick={openCreateTTPModal}>
             <i className="fas fa-plus"></i> New TTP
           </button>
@@ -6163,6 +6273,232 @@ function TTPAnalysis({ active }) {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TTP Export Modal */}
+      {showExportModal && (
+        <div className="modal-overlay" onClick={closeExportModal}>
+          <div className="modal-content export-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3><i className="fas fa-download"></i> Export TTP Analysis</h3>
+              <button className="modal-close" onClick={closeExportModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+
+            <div className="modal-body">
+              {exportError && (
+                <div className="alert alert-error">
+                  <i className="fas fa-exclamation-triangle"></i>
+                  {exportError}
+                </div>
+              )}
+
+              <div className="export-info">
+                <div className="info-card">
+                  <i className="fas fa-info-circle"></i>
+                  <div>
+                    <strong>Export Information</strong>
+                    <p>Export your TTP analysis data in multiple formats. You can filter the data and customize the export to meet your specific needs.</p>
+                  </div>
+                </div>
+              </div>
+
+              <form>
+                {/* Export Format Selection */}
+                <div className="form-section">
+                  <h4><i className="fas fa-file-alt"></i> Export Format</h4>
+                  <div className="format-options">
+                    <label className="format-option">
+                      <input
+                        type="radio"
+                        name="exportFormat"
+                        value="json"
+                        checked={exportFormat === 'json'}
+                        onChange={(e) => setExportFormat(e.target.value)}
+                      />
+                      <div className="format-card">
+                        <i className="fas fa-code"></i>
+                        <span>JSON</span>
+                        <small>Structured data format</small>
+                      </div>
+                    </label>
+                    <label className="format-option">
+                      <input
+                        type="radio"
+                        name="exportFormat"
+                        value="csv"
+                        checked={exportFormat === 'csv'}
+                        onChange={(e) => setExportFormat(e.target.value)}
+                      />
+                      <div className="format-card">
+                        <i className="fas fa-table"></i>
+                        <span>CSV</span>
+                        <small>Spreadsheet compatible</small>
+                      </div>
+                    </label>
+                    <label className="format-option">
+                      <input
+                        type="radio"
+                        name="exportFormat"
+                        value="stix"
+                        checked={exportFormat === 'stix'}
+                        onChange={(e) => setExportFormat(e.target.value)}
+                      />
+                      <div className="format-card">
+                        <i className="fas fa-shield-alt"></i>
+                        <span>STIX</span>
+                        <small>Threat intelligence standard</small>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Export Filters */}
+                <div className="form-section">
+                  <h4><i className="fas fa-filter"></i> Filters</h4>
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>MITRE Tactic</label>
+                      <select
+                        className="form-control"
+                        value={exportFilters.tactic}
+                        onChange={(e) => handleExportFilterChange('tactic', e.target.value)}
+                      >
+                        <option value="">All Tactics</option>
+                        <option value="initial-access">Initial Access</option>
+                        <option value="execution">Execution</option>
+                        <option value="persistence">Persistence</option>
+                        <option value="privilege-escalation">Privilege Escalation</option>
+                        <option value="defense-evasion">Defense Evasion</option>
+                        <option value="credential-access">Credential Access</option>
+                        <option value="discovery">Discovery</option>
+                        <option value="lateral-movement">Lateral Movement</option>
+                        <option value="collection">Collection</option>
+                        <option value="command-and-control">Command and Control</option>
+                        <option value="exfiltration">Exfiltration</option>
+                        <option value="impact">Impact</option>
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label>Technique ID</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={exportFilters.technique_id}
+                        onChange={(e) => handleExportFilterChange('technique_id', e.target.value)}
+                        placeholder="e.g., T1059"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Threat Feed ID</label>
+                      <input
+                        type="number"
+                        className="form-control"
+                        value={exportFilters.feed_id}
+                        onChange={(e) => handleExportFilterChange('feed_id', e.target.value)}
+                        placeholder="Enter feed ID"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Maximum Records</label>
+                      <input
+                        type="number"
+                        className="form-control"
+                        value={exportFilters.limit}
+                        onChange={(e) => handleExportFilterChange('limit', parseInt(e.target.value) || 1000)}
+                        min="1"
+                        max="10000"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Created After</label>
+                      <input
+                        type="date"
+                        className="form-control"
+                        value={exportFilters.created_after}
+                        onChange={(e) => handleExportFilterChange('created_after', e.target.value)}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Created Before</label>
+                      <input
+                        type="date"
+                        className="form-control"
+                        value={exportFilters.created_before}
+                        onChange={(e) => handleExportFilterChange('created_before', e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Specific Fields (comma-separated)</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={exportFilters.fields}
+                      onChange={(e) => handleExportFilterChange('fields', e.target.value)}
+                      placeholder="e.g., id,name,mitre_technique_id,description"
+                    />
+                    <small className="form-help">Leave empty to export all available fields</small>
+                  </div>
+                </div>
+
+                {/* Advanced Options */}
+                <div className="form-section">
+                  <h4><i className="fas fa-cog"></i> Advanced Options</h4>
+                  <div className="checkbox-group">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={exportFilters.include_anonymized}
+                        onChange={(e) => handleExportFilterChange('include_anonymized', e.target.checked)}
+                      />
+                      <span>Include anonymized TTPs</span>
+                    </label>
+
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={exportFilters.include_original}
+                        onChange={(e) => handleExportFilterChange('include_original', e.target.checked)}
+                      />
+                      <span>Include original data for anonymized TTPs</span>
+                    </label>
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={closeExportModal}>
+                Cancel
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={exportTTPData}
+                disabled={isExporting}
+              >
+                {isExporting ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin"></i> Exporting...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-download"></i> Export Data
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -8527,6 +8863,150 @@ function CSSStyles() {
 
         .info-card strong {
             color: var(--text-dark);
+        }
+
+        /* Export Modal Styles */
+        .export-modal {
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .format-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .format-option {
+            cursor: pointer;
+            position: relative;
+        }
+
+        .format-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .format-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1.5rem 1rem;
+            border: 2px solid var(--light-gray);
+            border-radius: 8px;
+            background: white;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .format-option:hover .format-card {
+            border-color: var(--primary-blue);
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.15);
+        }
+
+        .format-option input[type="radio"]:checked + .format-card {
+            border-color: var(--primary-blue);
+            background: #f8f9fa;
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
+        }
+
+        .format-card i {
+            font-size: 2rem;
+            color: var(--text-muted);
+            transition: color 0.2s ease;
+        }
+
+        .format-option:hover .format-card i,
+        .format-option input[type="radio"]:checked + .format-card i {
+            color: var(--primary-blue);
+        }
+
+        .format-card span {
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 1rem;
+        }
+
+        .format-card small {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+
+        .form-section {
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-blue);
+        }
+
+        .form-section h4 {
+            margin: 0 0 1rem 0;
+            color: var(--text-dark);
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-section h4 i {
+            color: var(--primary-blue);
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--primary-blue);
+        }
+
+        .checkbox-label span {
+            color: var(--text-dark);
+        }
+
+        .form-help {
+            display: block;
+            margin-top: 0.25rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .alert-error {
+            background: #ffeaea;
+            border: 1px solid #ffb3b3;
+            color: #d8000c;
+        }
+
+        .alert-error i {
+            color: #d8000c;
         }
 
         @media (max-width: 768px) {
