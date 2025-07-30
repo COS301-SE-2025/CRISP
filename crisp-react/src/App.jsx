@@ -4793,6 +4793,14 @@ function TTPAnalysis({ active }) {
   const [trendsLoading, setTrendsLoading] = useState(false);
   const [matrixLoading, setMatrixLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('matrix');
+  
+  // TTP Detail Modal state
+  const [showTTPModal, setShowTTPModal] = useState(false);
+  const [selectedTTP, setSelectedTTP] = useState(null);
+  const [ttpDetailLoading, setTtpDetailLoading] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editFormData, setEditFormData] = useState({});
+  
   const ttpChartRef = useRef(null);
   
   // Fetch TTP data from backend
@@ -4861,6 +4869,79 @@ function TTPAnalysis({ active }) {
 
   const refreshMatrixData = () => {
     fetchMatrixData();
+  };
+
+  // TTP Detail Modal functions
+  const openTTPModal = async (ttpId) => {
+    setShowTTPModal(true);
+    setTtpDetailLoading(true);
+    setIsEditMode(false);
+    
+    try {
+      const response = await api.get(`/api/ttps/${ttpId}/`);
+      if (response && response.success) {
+        setSelectedTTP(response.ttp);
+        setEditFormData({
+          name: response.ttp.name || '',
+          description: response.ttp.description || '',
+          mitre_technique_id: response.ttp.mitre_technique_id || '',
+          mitre_tactic: response.ttp.mitre_tactic || '',
+          mitre_subtechnique: response.ttp.mitre_subtechnique || '',
+          threat_feed_id: response.ttp.threat_feed?.id || ''
+        });
+      } else {
+        console.error('Failed to fetch TTP details');
+        setSelectedTTP(null);
+      }
+    } catch (error) {
+      console.error('Error fetching TTP details:', error);
+      setSelectedTTP(null);
+    }
+    setTtpDetailLoading(false);
+  };
+
+  const closeTTPModal = () => {
+    setShowTTPModal(false);
+    setSelectedTTP(null);
+    setIsEditMode(false);
+    setEditFormData({});
+  };
+
+  const toggleEditMode = () => {
+    setIsEditMode(!isEditMode);
+  };
+
+  const handleEditFormChange = (field, value) => {
+    setEditFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const saveTTPChanges = async () => {
+    if (!selectedTTP) return;
+    
+    try {
+      const response = await api.put(`/api/ttps/${selectedTTP.id}/`, editFormData);
+      if (response && response.success) {
+        // Update the TTP in local state
+        setTtpData(prevData => 
+          prevData.map(ttp => 
+            ttp.id === selectedTTP.id 
+              ? { ...ttp, ...editFormData }
+              : ttp
+          )
+        );
+        setSelectedTTP({ ...selectedTTP, ...editFormData });
+        setIsEditMode(false);
+        alert('TTP updated successfully');
+      } else {
+        alert('Failed to update TTP');
+      }
+    } catch (error) {
+      console.error('Error updating TTP:', error);
+      alert('Error updating TTP: ' + (error.message || 'Unknown error'));
+    }
   };
 
   const renderMatrixHeaders = () => {
@@ -5365,6 +5446,14 @@ function TTPAnalysis({ active }) {
                       <td>
                         <button 
                           className="btn btn-outline btn-sm" 
+                          onClick={() => openTTPModal(ttp.id)}
+                          title="View TTP Details"
+                          style={{marginRight: '5px'}}
+                        >
+                          <i className="fas fa-eye"></i>
+                        </button>
+                        <button 
+                          className="btn btn-outline btn-sm text-danger" 
                           onClick={() => deleteTTP(ttp.id)}
                           title="Delete TTP"
                         >
@@ -5506,10 +5595,15 @@ function TTPAnalysis({ active }) {
                       </span>
                     </td>
                     <td>
-                      <button className="btn btn-outline btn-sm" title="View Details">
+                      <button 
+                        className="btn btn-outline btn-sm" 
+                        title="View TTP Details"
+                        onClick={() => openTTPModal(ttp.id)}
+                        style={{marginRight: '5px'}}
+                      >
                         <i className="fas fa-eye"></i>
                       </button>
-                      <button className="btn btn-outline btn-sm" title="Share">
+                      <button className="btn btn-outline btn-sm" title="Share" style={{marginRight: '5px'}}>
                         <i className="fas fa-share-alt"></i>
                       </button>
                       <button 
@@ -5532,6 +5626,226 @@ function TTPAnalysis({ active }) {
             </tbody>
           </table>
         </div>
+        </div>
+      )}
+
+      {/* TTP Detail Modal */}
+      {showTTPModal && (
+        <div className="modal-overlay" onClick={closeTTPModal}>
+          <div className="modal-content ttp-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>
+                <i className="fas fa-crosshairs"></i> 
+                {isEditMode ? 'Edit TTP Details' : 'TTP Details'}
+              </h2>
+              <button className="modal-close" onClick={closeTTPModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              {ttpDetailLoading ? (
+                <div style={{textAlign: 'center', padding: '3rem'}}>
+                  <i className="fas fa-spinner fa-spin" style={{fontSize: '2rem', color: '#0056b3'}}></i>
+                  <p style={{marginTop: '1rem', color: '#666'}}>Loading TTP details...</p>
+                </div>
+              ) : selectedTTP ? (
+                <div className="ttp-detail-content">
+                  {/* TTP Header Info */}
+                  <div className="ttp-header-section">
+                    <div className="ttp-title-section">
+                      {isEditMode ? (
+                        <input
+                          type="text"
+                          className="form-control ttp-name-input"
+                          value={editFormData.name}
+                          onChange={(e) => handleEditFormChange('name', e.target.value)}
+                          placeholder="TTP Name"
+                        />
+                      ) : (
+                        <h3 className="ttp-title">{selectedTTP.name}</h3>
+                      )}
+                      
+                      <div className="ttp-badges">
+                        <span className="badge badge-primary">
+                          {selectedTTP.mitre_technique_id || 'No MITRE ID'}
+                        </span>
+                        <span className="badge badge-secondary">
+                          {selectedTTP.mitre_tactic_display || selectedTTP.mitre_tactic || 'No Tactic'}
+                        </span>
+                        {selectedTTP.is_anonymized && (
+                          <span className="badge badge-info">Anonymized</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* TTP Details Grid */}
+                  <div className="ttp-details-grid">
+                    <div className="detail-section">
+                      <h4><i className="fas fa-info-circle"></i> Basic Information</h4>
+                      <div className="detail-row">
+                        <label>Description:</label>
+                        <div className="detail-value">
+                          {isEditMode ? (
+                            <textarea
+                              className="form-control"
+                              value={editFormData.description}
+                              onChange={(e) => handleEditFormChange('description', e.target.value)}
+                              placeholder="TTP Description"
+                              rows="4"
+                            />
+                          ) : (
+                            <p>{selectedTTP.description || 'No description available'}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="detail-section">
+                      <h4><i className="fas fa-crosshairs"></i> MITRE ATT&CK Mapping</h4>
+                      <div className="detail-row">
+                        <label>Technique ID:</label>
+                        <div className="detail-value">
+                          {isEditMode ? (
+                            <input
+                              type="text"
+                              className="form-control"
+                              value={editFormData.mitre_technique_id}
+                              onChange={(e) => handleEditFormChange('mitre_technique_id', e.target.value)}
+                              placeholder="e.g., T1566.001"
+                            />
+                          ) : (
+                            <span className="technique-id-display">
+                              {selectedTTP.mitre_technique_id || 'Not specified'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="detail-row">
+                        <label>Tactic:</label>
+                        <div className="detail-value">
+                          {isEditMode ? (
+                            <select
+                              className="form-control"
+                              value={editFormData.mitre_tactic}
+                              onChange={(e) => handleEditFormChange('mitre_tactic', e.target.value)}
+                            >
+                              <option value="">Select Tactic</option>
+                              <option value="initial-access">Initial Access</option>
+                              <option value="execution">Execution</option>
+                              <option value="persistence">Persistence</option>
+                              <option value="privilege-escalation">Privilege Escalation</option>
+                              <option value="defense-evasion">Defense Evasion</option>
+                              <option value="credential-access">Credential Access</option>
+                              <option value="discovery">Discovery</option>
+                              <option value="lateral-movement">Lateral Movement</option>
+                              <option value="collection">Collection</option>
+                              <option value="command-and-control">Command and Control</option>
+                              <option value="exfiltration">Exfiltration</option>
+                              <option value="impact">Impact</option>
+                            </select>
+                          ) : (
+                            <span>{selectedTTP.mitre_tactic_display || selectedTTP.mitre_tactic || 'Not specified'}</span>
+                          )}
+                        </div>
+                      </div>
+                      {(selectedTTP.mitre_subtechnique || isEditMode) && (
+                        <div className="detail-row">
+                          <label>Sub-technique:</label>
+                          <div className="detail-value">
+                            {isEditMode ? (
+                              <input
+                                type="text"
+                                className="form-control"
+                                value={editFormData.mitre_subtechnique}
+                                onChange={(e) => handleEditFormChange('mitre_subtechnique', e.target.value)}
+                                placeholder="Sub-technique name"
+                              />
+                            ) : (
+                              <span>{selectedTTP.mitre_subtechnique || 'None'}</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="detail-section">
+                      <h4><i className="fas fa-rss"></i> Threat Feed Information</h4>
+                      <div className="detail-row">
+                        <label>Source Feed:</label>
+                        <div className="detail-value">
+                          {selectedTTP.threat_feed ? (
+                            <div className="feed-info">
+                              <span className="feed-name">{selectedTTP.threat_feed.name}</span>
+                              <span className={`feed-type ${selectedTTP.threat_feed.is_external ? 'external' : 'internal'}`}>
+                                {selectedTTP.threat_feed.is_external ? 'External' : 'Internal'}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="no-data">Manual Entry</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="detail-section">
+                      <h4><i className="fas fa-clock"></i> Metadata</h4>
+                      <div className="detail-row">
+                        <label>Created:</label>
+                        <div className="detail-value">
+                          {selectedTTP.created_at ? new Date(selectedTTP.created_at).toLocaleString() : 'Unknown'}
+                        </div>
+                      </div>
+                      <div className="detail-row">
+                        <label>Last Modified:</label>
+                        <div className="detail-value">
+                          {selectedTTP.updated_at ? new Date(selectedTTP.updated_at).toLocaleString() : 'Never'}
+                        </div>
+                      </div>
+                      {selectedTTP.stix_id && (
+                        <div className="detail-row">
+                          <label>STIX ID:</label>
+                          <div className="detail-value">
+                            <code>{selectedTTP.stix_id}</code>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{textAlign: 'center', padding: '3rem'}}>
+                  <i className="fas fa-exclamation-triangle" style={{fontSize: '2rem', color: '#dc3545'}}></i>
+                  <p style={{marginTop: '1rem', color: '#666'}}>Failed to load TTP details</p>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={closeTTPModal}>
+                Close
+              </button>
+              {selectedTTP && !ttpDetailLoading && (
+                <>
+                  {isEditMode ? (
+                    <>
+                      <button className="btn btn-outline" onClick={toggleEditMode}>
+                        Cancel Edit
+                      </button>
+                      <button className="btn btn-primary" onClick={saveTTPChanges}>
+                        <i className="fas fa-save"></i> Save Changes
+                      </button>
+                    </>
+                  ) : (
+                    <button className="btn btn-primary" onClick={toggleEditMode}>
+                      <i className="fas fa-edit"></i> Edit TTP
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </section>
@@ -7046,6 +7360,173 @@ function CSSStyles() {
 
         .matrix-stats strong {
             color: var(--primary-blue);
+        }
+
+        /* TTP Detail Modal */
+        .ttp-modal {
+            max-width: 900px;
+            width: 90vw;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .ttp-detail-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .ttp-header-section {
+            border-bottom: 1px solid var(--medium-gray);
+            padding-bottom: 1rem;
+        }
+
+        .ttp-title-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .ttp-title {
+            margin: 0;
+            color: var(--primary-blue);
+            font-size: 1.5rem;
+        }
+
+        .ttp-name-input {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary-blue);
+        }
+
+        .ttp-badges {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .ttp-details-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (min-width: 768px) {
+            .ttp-details-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .detail-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .detail-section h4 {
+            margin: 0 0 1rem 0;
+            color: var(--primary-blue);
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .detail-row {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 1rem;
+        }
+
+        .detail-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .detail-row label {
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+        }
+
+        .detail-value {
+            color: #333;
+        }
+
+        .detail-value p {
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .technique-id-display {
+            background: rgba(0, 86, 179, 0.1);
+            color: var(--primary-blue);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        .feed-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .feed-name {
+            font-weight: 600;
+        }
+
+        .feed-type {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .feed-type.external {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .feed-type.internal {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .no-data {
+            color: #999;
+            font-style: italic;
+        }
+
+        .detail-value code {
+            background: #f1f3f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+
+        /* Badge styles for TTP modal */
+        .badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .badge-primary {
+            background: var(--primary-blue);
+            color: white;
+        }
+
+        .badge-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .badge-info {
+            background: #17a2b8;
+            color: white;
         }
         
         /* Reports Section */
