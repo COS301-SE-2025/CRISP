@@ -708,6 +708,295 @@ class MITREMatrixAPITestCase(TransactionTestCase):
         self.assertEqual(statistics['tactics_with_techniques'], 3)
 
 
+class TTPTrendsAPITestCase(TransactionTestCase):
+    """Test TTP Trends Chart API endpoint"""
+
+    def setUp(self):
+        super().setUp()
+        
+        # Clear any existing data
+        ThreatFeed.objects.all().delete()
+        Organization.objects.all().delete()
+        TTPData.objects.all().delete()
+        
+        # Create unique suffix for this test
+        self.unique_suffix = get_unique_identifier()
+        
+        # Create an Organization
+        self.organization = create_test_organization(
+            name_suffix=f"trends_test_{self.unique_suffix}",
+            unique=True
+        )
+        
+        # Create a test threat feed
+        self.threat_feed = create_test_threat_feed(
+            name_suffix=f"trends_test_{self.unique_suffix}",
+            organization=self.organization,
+            unique=True
+        )
+        
+        # Create test TTPs with staggered dates for trend analysis
+        from datetime import timedelta
+        from django.utils import timezone
+        base_date = timezone.now() - timedelta(days=10)
+        
+        self.test_ttps = []
+        tactics = ['initial_access', 'execution', 'persistence']
+        
+        for i in range(9):  # Create 9 TTPs over 9 days
+            ttp_data = {
+                'name': f'Test TTP {i+1}',
+                'description': f'Test TTP description {i+1}',
+                'mitre_technique_id': f'T1566.{i+1:03d}',
+                'mitre_tactic': tactics[i % 3],
+                'threat_feed': self.threat_feed,
+                'stix_id': f'attack-pattern--{uuid.uuid4()}',
+                'created_at': base_date + timedelta(days=i)
+            }
+            ttp = TTPData.objects.create(**ttp_data)
+            self.test_ttps.append(ttp)
+        
+        self.client = APIClient()
+
+    def test_ttp_trends_basic_functionality(self):
+        """Test basic TTP trends endpoint functionality"""
+        url = '/api/ttps/trends/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['total_observations'], 9)
+        self.assertIn('series', data)
+        self.assertIn('date_range', data)
+        self.assertIn('statistics', data)
+        
+        # Check that we have time series data
+        series = data['series']
+        self.assertGreater(len(series), 0)
+        
+        # Check each series has required fields
+        for s in series:
+            self.assertIn('group_key', s)
+            self.assertIn('group_name', s)
+            self.assertIn('data_points', s)
+            self.assertIn('total_count', s)
+            self.assertIn('trend', s)
+
+    def test_ttp_trends_group_by_tactic(self):
+        """Test TTP trends grouped by tactic"""
+        url = '/api/ttps/trends/?group_by=tactic'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        data = response.json()
+        series = data['series']
+        
+        # Should have 3 series (one for each tactic)
+        tactic_names = [s['group_key'] for s in series]
+        self.assertIn('initial_access', tactic_names)
+        self.assertIn('execution', tactic_names)
+        self.assertIn('persistence', tactic_names)
+        
+        # Each tactic should have 3 TTPs
+        for s in series:
+            self.assertEqual(s['total_count'], 3)
+
+    def test_ttp_trends_group_by_technique(self):
+        """Test TTP trends grouped by technique"""
+        url = '/api/ttps/trends/?group_by=technique'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        data = response.json()
+        series = data['series']
+        
+        # Should have 9 series (one for each technique)
+        self.assertEqual(len(series), 9)
+        
+        # Each technique should have 1 TTP
+        for s in series:
+            self.assertEqual(s['total_count'], 1)
+
+    def test_ttp_trends_group_by_feed(self):
+        """Test TTP trends grouped by feed"""
+        url = '/api/ttps/trends/?group_by=feed'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        data = response.json()
+        series = data['series']
+        
+        # Should have 1 series (our test feed)
+        self.assertEqual(len(series), 1)
+        self.assertEqual(series[0]['total_count'], 9)
+
+    def test_ttp_trends_granularity_week(self):
+        """Test TTP trends with weekly granularity"""
+        url = '/api/ttps/trends/?granularity=week'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        data = response.json()
+        self.assertEqual(data['date_range']['granularity'], 'week')
+        
+        # Data points should be weekly
+        series = data['series']
+        if series:
+            data_points = series[0]['data_points']
+            # Should have fewer data points than daily
+            self.assertLessEqual(len(data_points), 5)  # Max 5 weeks in 30 days
+
+    def test_ttp_trends_granularity_month(self):
+        """Test TTP trends with monthly granularity"""
+        url = '/api/ttps/trends/?granularity=month'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        data = response.json()
+        self.assertEqual(data['date_range']['granularity'], 'month')
+
+    def test_ttp_trends_tactic_filter(self):
+        """Test TTP trends with tactic filter"""
+        url = '/api/ttps/trends/?tactic=execution'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        data = response.json()
+        # Should only show TTPs with execution tactic
+        self.assertEqual(data['total_observations'], 3)
+
+    def test_ttp_trends_technique_filter(self):
+        """Test TTP trends with technique ID filter"""
+        url = '/api/ttps/trends/?technique_id=T1566.001'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        data = response.json()
+        # Should only show TTPs matching the technique
+        self.assertEqual(data['total_observations'], 1)
+
+    def test_ttp_trends_feed_filter(self):
+        """Test TTP trends with feed filter"""
+        url = f'/api/ttps/trends/?feed_id={self.threat_feed.id}'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        data = response.json()
+        self.assertEqual(data['total_observations'], 9)
+        self.assertIsNotNone(data['feed_filter'])
+        self.assertEqual(data['feed_filter']['name'], self.threat_feed.name)
+
+    def test_ttp_trends_days_parameter(self):
+        """Test TTP trends with custom days parameter"""
+        url = '/api/ttps/trends/?days=7'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        data = response.json()
+        self.assertEqual(data['date_range']['days'], 7)
+        # Should show fewer observations since we're looking at fewer days
+        self.assertLessEqual(data['total_observations'], 9)
+
+    def test_ttp_trends_include_zero_false(self):
+        """Test TTP trends without including zero counts"""
+        url = '/api/ttps/trends/?include_zero=false'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        data = response.json()
+        
+        # Check that data points don't include dates with zero counts
+        series = data['series']
+        if series:
+            for s in series:
+                data_points = s['data_points']
+                # Should have fewer data points when excluding zeros
+                non_zero_points = [p for p in data_points if p['count'] > 0]
+                self.assertGreater(len(non_zero_points), 0)
+
+    def test_ttp_trends_statistics(self):
+        """Test TTP trends statistics"""
+        url = '/api/ttps/trends/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        data = response.json()
+        statistics = data['statistics']
+        
+        self.assertIn('peak_observation_date', statistics)
+        self.assertIn('average_daily_observations', statistics)
+        self.assertIn('groups_with_increasing_trend', statistics)
+        self.assertIn('groups_with_decreasing_trend', statistics)
+        self.assertIn('groups_with_stable_trend', statistics)
+
+    def test_ttp_trends_top_performers(self):
+        """Test TTP trends top performers"""
+        url = '/api/ttps/trends/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        data = response.json()
+        top_performers = data['top_performers']
+        
+        self.assertIsInstance(top_performers, list)
+        self.assertLessEqual(len(top_performers), 5)  # Max 5 top performers
+        
+        # Check top performers structure
+        if top_performers:
+            for performer in top_performers:
+                self.assertIn('group_key', performer)
+                self.assertIn('group_name', performer)
+                self.assertIn('total_count', performer)
+                self.assertIn('trend', performer)
+
+    def test_ttp_trends_error_handling(self):
+        """Test TTP trends endpoint error handling"""
+        # Test invalid granularity
+        url = '/api/ttps/trends/?granularity=invalid'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        
+        # Test invalid group_by
+        url = '/api/ttps/trends/?group_by=invalid'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        
+        # Test invalid feed_id
+        url = '/api/ttps/trends/?feed_id=invalid'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_ttp_trends_trend_calculation(self):
+        """Test TTP trends trend calculation logic"""
+        url = '/api/ttps/trends/?group_by=tactic'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        data = response.json()
+        series = data['series']
+        
+        # Check that trends are calculated
+        for s in series:
+            self.assertIn('trend', s)
+            self.assertIn('trend_percentage', s)
+            self.assertIn(s['trend'], ['increasing', 'decreasing', 'stable', 'insufficient_data'])
+
+
 if __name__ == '__main__':
     import unittest
     unittest.main()

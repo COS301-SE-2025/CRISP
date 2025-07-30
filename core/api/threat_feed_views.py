@@ -2258,3 +2258,299 @@ def mitre_matrix(request):
             {"error": "Failed to get MITRE matrix data", "details": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def ttp_trends(request):
+    """
+    GET: Get TTP trends data for time-series analysis and visualization.
+    
+    Query Parameters:
+    - days: Number of days to look back (default: 30, max: 365)
+    - tactic: Filter by specific MITRE tactic (optional)
+    - technique_id: Filter by specific MITRE technique ID (optional)
+    - feed_id: Filter by specific threat feed ID (optional)
+    - granularity: Time granularity - 'day', 'week', 'month' (default: 'day')
+    - group_by: Group data by - 'tactic', 'technique', 'feed' (default: 'tactic')
+    - include_zero: Include dates with zero observations (default: true)
+    
+    Returns time-series data showing TTP observation trends over time,
+    organized by the specified grouping with comprehensive statistics.
+    """
+    try:
+        from django.db.models import Count, Q
+        from django.db.models.functions import TruncDate, TruncWeek, TruncMonth
+        from collections import defaultdict, OrderedDict
+        from datetime import timedelta, datetime
+        
+        # Get and validate query parameters
+        days = int(request.GET.get('days', 30))
+        if days < 1 or days > 365:
+            days = 30
+            
+        tactic = request.GET.get('tactic', '').strip()
+        technique_id = request.GET.get('technique_id', '').strip()
+        feed_id = request.GET.get('feed_id', '').strip()
+        granularity = request.GET.get('granularity', 'day').lower()
+        group_by = request.GET.get('group_by', 'tactic').lower()
+        include_zero = request.GET.get('include_zero', 'true').lower() == 'true'
+        
+        # Validate parameters
+        valid_granularities = ['day', 'week', 'month']
+        if granularity not in valid_granularities:
+            return Response(
+                {"error": f"Invalid granularity. Must be one of: {', '.join(valid_granularities)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        valid_group_by = ['tactic', 'technique', 'feed']
+        if group_by not in valid_group_by:
+            return Response(
+                {"error": f"Invalid group_by. Must be one of: {', '.join(valid_group_by)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Calculate date range
+        end_date = timezone.now()
+        start_date = end_date - timedelta(days=days)
+        
+        # Start with all TTPs in the date range
+        queryset = TTPData.objects.filter(
+            created_at__gte=start_date,
+            created_at__lte=end_date
+        ).select_related('threat_feed')
+        
+        # Apply filters
+        if tactic:
+            queryset = queryset.filter(mitre_tactic=tactic)
+        
+        if technique_id:
+            queryset = queryset.filter(mitre_technique_id__icontains=technique_id)
+        
+        if feed_id:
+            try:
+                feed_id_int = int(feed_id)
+                queryset = queryset.filter(threat_feed_id=feed_id_int)
+            except ValueError:
+                return Response(
+                    {"error": "Invalid feed_id parameter. Must be an integer."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Choose truncation function based on granularity
+        truncate_func = {
+            'day': TruncDate,
+            'week': TruncWeek,
+            'month': TruncMonth
+        }[granularity]
+        
+        # Group data by date and specified grouping
+        if group_by == 'tactic':
+            # Group by tactic
+            trends_data = queryset.annotate(
+                date_group=truncate_func('created_at')
+            ).values('date_group', 'mitre_tactic').annotate(
+                count=Count('id')
+            ).order_by('date_group', 'mitre_tactic')
+            
+            group_field = 'mitre_tactic'
+            group_display_map = dict(TTPData.MITRE_TACTIC_CHOICES)
+            
+        elif group_by == 'technique':
+            # Group by technique
+            trends_data = queryset.annotate(
+                date_group=truncate_func('created_at')
+            ).values('date_group', 'mitre_technique_id', 'name').annotate(
+                count=Count('id')
+            ).order_by('date_group', 'mitre_technique_id')
+            
+            group_field = 'mitre_technique_id'
+            group_display_map = {}
+            
+        else:  # group_by == 'feed'
+            # Group by threat feed
+            trends_data = queryset.annotate(
+                date_group=truncate_func('created_at')
+            ).values('date_group', 'threat_feed__id', 'threat_feed__name').annotate(
+                count=Count('id')
+            ).order_by('date_group', 'threat_feed__id')
+            
+            group_field = 'threat_feed__id'
+            group_display_map = {}
+        
+        # Organize data for time series
+        time_series = defaultdict(lambda: defaultdict(int))
+        groups_found = set()
+        dates_found = set()
+        
+        for item in trends_data:
+            date_key = item['date_group'].strftime('%Y-%m-%d')
+            
+            if group_by == 'tactic':
+                group_key = item[group_field] or 'unknown'
+                group_display = group_display_map.get(group_key, group_key.replace('_', ' ').title())
+            elif group_by == 'technique':
+                group_key = item[group_field]
+                group_display = f"{group_key}: {item['name'][:50]}{'...' if len(item['name']) > 50 else ''}"
+            else:  # feed
+                group_key = item[group_field]
+                group_display = item['threat_feed__name']
+            
+            time_series[group_key][date_key] = item['count']
+            groups_found.add((group_key, group_display))
+            dates_found.add(date_key)
+        
+        # Generate complete date range if include_zero is True
+        if include_zero:
+            current_date = start_date.date()
+            end_date_only = end_date.date()
+            
+            while current_date <= end_date_only:
+                date_key = current_date.strftime('%Y-%m-%d')
+                dates_found.add(date_key)
+                
+                # Move to next period
+                if granularity == 'day':
+                    current_date += timedelta(days=1)
+                elif granularity == 'week':
+                    current_date += timedelta(weeks=1)
+                else:  # month
+                    if current_date.month == 12:
+                        current_date = current_date.replace(year=current_date.year + 1, month=1)
+                    else:
+                        current_date = current_date.replace(month=current_date.month + 1)
+        
+        # Build the response data structure
+        sorted_dates = sorted(dates_found)
+        series_data = []
+        
+        for group_key, group_display in sorted(groups_found, key=lambda x: x[1]):
+            data_points = []
+            total_count = 0
+            max_count = 0
+            
+            for date_key in sorted_dates:
+                count = time_series[group_key].get(date_key, 0)
+                data_points.append({
+                    'date': date_key,
+                    'count': count
+                })
+                total_count += count
+                max_count = max(max_count, count)
+            
+            series_data.append({
+                'group_key': group_key,
+                'group_name': group_display,
+                'group_type': group_by,
+                'data_points': data_points,
+                'total_count': total_count,
+                'max_count': max_count,
+                'average_count': round(total_count / len(sorted_dates), 2) if sorted_dates else 0
+            })
+        
+        # Calculate overall statistics
+        total_observations = sum(series['total_count'] for series in series_data)
+        
+        # Get top performers
+        top_groups = sorted(series_data, key=lambda x: x['total_count'], reverse=True)[:5]
+        
+        # Calculate trend direction for each series (simple linear trend)
+        for series in series_data:
+            if len(series['data_points']) >= 2:
+                # Simple trend calculation: compare first half to second half
+                mid_point = len(series['data_points']) // 2
+                first_half_avg = sum(p['count'] for p in series['data_points'][:mid_point]) / mid_point if mid_point > 0 else 0
+                second_half_avg = sum(p['count'] for p in series['data_points'][mid_point:]) / (len(series['data_points']) - mid_point)
+                
+                if second_half_avg > first_half_avg * 1.1:
+                    series['trend'] = 'increasing'
+                elif second_half_avg < first_half_avg * 0.9:
+                    series['trend'] = 'decreasing'
+                else:
+                    series['trend'] = 'stable'
+                
+                series['trend_percentage'] = round(((second_half_avg - first_half_avg) / first_half_avg * 100) if first_half_avg > 0 else 0, 2)
+            else:
+                series['trend'] = 'insufficient_data'
+                series['trend_percentage'] = 0
+        
+        # Get feed information if filtering by specific feed
+        feed_info = None
+        if feed_id:
+            try:
+                from core.models.models import ThreatFeed
+                feed = ThreatFeed.objects.get(id=feed_id_int)
+                feed_info = {
+                    'id': feed.id,
+                    'name': feed.name,
+                    'description': feed.description,
+                    'is_external': feed.is_external,
+                    'is_active': feed.is_active
+                }
+            except ThreatFeed.DoesNotExist:
+                feed_info = {'error': 'Feed not found'}
+        
+        # Build final response
+        response_data = {
+            'success': True,
+            'total_observations': total_observations,
+            'total_groups': len(series_data),
+            'date_range': {
+                'start_date': start_date.strftime('%Y-%m-%d'),
+                'end_date': end_date.strftime('%Y-%m-%d'),
+                'days': days,
+                'granularity': granularity
+            },
+            'series': series_data,
+            'top_performers': [
+                {
+                    'group_key': series['group_key'],
+                    'group_name': series['group_name'],
+                    'total_count': series['total_count'],
+                    'trend': series['trend']
+                }
+                for series in top_groups
+            ],
+            'statistics': {
+                'peak_observation_date': None,  # Will be calculated
+                'average_daily_observations': round(total_observations / len(sorted_dates), 2) if sorted_dates else 0,
+                'most_active_period': granularity,
+                'groups_with_increasing_trend': sum(1 for s in series_data if s['trend'] == 'increasing'),
+                'groups_with_decreasing_trend': sum(1 for s in series_data if s['trend'] == 'decreasing'),
+                'groups_with_stable_trend': sum(1 for s in series_data if s['trend'] == 'stable')
+            },
+            'filters': {
+                'days': days,
+                'tactic': tactic,
+                'technique_id': technique_id,
+                'feed_id': feed_id,
+                'granularity': granularity,
+                'group_by': group_by,
+                'include_zero': include_zero
+            },
+            'feed_filter': feed_info,
+            'generated_at': timezone.now().isoformat()
+        }
+        
+        # Find peak observation date
+        daily_totals = defaultdict(int)
+        for series in series_data:
+            for point in series['data_points']:
+                daily_totals[point['date']] += point['count']
+        
+        if daily_totals:
+            peak_date = max(daily_totals.items(), key=lambda x: x[1])
+            response_data['statistics']['peak_observation_date'] = {
+                'date': peak_date[0],
+                'count': peak_date[1]
+            }
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error getting TTP trends data: {str(e)}")
+        return Response(
+            {"error": "Failed to get TTP trends data", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

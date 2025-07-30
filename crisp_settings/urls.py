@@ -5,7 +5,7 @@ from django.shortcuts import redirect
 from rest_framework import routers
 from core.api.threat_feed_views import ThreatFeedViewSet
 from core.viewing.home import home
-from core.api.threat_feed_views import indicators_list, indicators_bulk_import, indicator_update, indicator_share, threat_activity_chart_data, system_health, recent_activities, ttps_list, ttp_detail, mitre_matrix
+from core.api.threat_feed_views import indicators_list, indicators_bulk_import, indicator_update, indicator_share, threat_activity_chart_data, system_health, recent_activities, ttps_list, ttp_detail, mitre_matrix, ttp_trends
 
 # Set up REST API router
 router = routers.DefaultRouter()
@@ -28,6 +28,7 @@ urlpatterns = [
     path('api/recent-activities/', recent_activities, name='recent-activities'),
     path('api/ttps/', ttps_list, name='ttps-list'),
     path('api/ttps/mitre-matrix/', mitre_matrix, name='mitre-matrix'),
+    path('api/ttps/trends/', ttp_trends, name='ttp-trends'),
     path('api/ttps/<int:ttp_id>/', ttp_detail, name='ttp-detail'),
     path('api/status/', include('core.urls')),
     path('taxii2/', include('core.taxii.urls')),
