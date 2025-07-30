@@ -14,6 +14,9 @@ const UserManagement = ({ active = true, initialSection = null }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [showErrorBar, setShowErrorBar] = useState(false);
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [showSuccessBar, setShowSuccessBar] = useState(false);
   const [showModal, setShowModal] = useState(() => {
     // Use initialSection prop first, then URL params
     if (initialSection === 'create') return true;
@@ -66,6 +69,117 @@ const UserManagement = ({ active = true, initialSection = null }) => {
       return ['viewer', 'publisher']; // Publishers can create viewers and other publishers
     }
     return roles; // Admins can create any role
+  };
+
+  // Handle errors by closing popups and showing error bar
+  const handleError = (errorMessage) => {
+    // Close any open modals or popups
+    setShowModal(false);
+    setShowActionsPopup(false);
+    setShowConfirmation(false);
+    setSelectedUserForActions(null);
+    
+    // Set error and show error bar
+    setError(errorMessage);
+    setShowErrorBar(true);
+    
+    // Auto-hide error bar after 10 seconds
+    setTimeout(() => {
+      setShowErrorBar(false);
+      setError(null);
+    }, 10000);
+  };
+
+  // Clear error
+  const clearError = () => {
+    setShowErrorBar(false);
+    setError(null);
+  };
+
+  // Handle success messages
+  const handleSuccess = (message) => {
+    // Clear any existing error
+    setShowErrorBar(false);
+    setError(null);
+    
+    // Set success message and show success bar
+    setSuccessMessage(message);
+    setShowSuccessBar(true);
+    
+    // Auto-hide success bar after 5 seconds
+    setTimeout(() => {
+      setShowSuccessBar(false);
+      setSuccessMessage(null);
+    }, 5000);
+  };
+
+  // Clear success message
+  const clearSuccess = () => {
+    setShowSuccessBar(false);
+    setSuccessMessage(null);
+  };
+
+  // Update a specific user in the users list
+  const updateUserInList = (updatedUser) => {
+    setAllUsers(prevUsers => 
+      prevUsers.map(user => 
+        user.id === updatedUser.id 
+          ? { 
+              ...user, 
+              ...updatedUser, 
+              can_manage: updatedUser.can_manage !== undefined ? updatedUser.can_manage : user.can_manage,
+              organization: updatedUser.organization?.name ? updatedUser.organization : user.organization
+            }
+          : user
+      )
+    );
+  };
+
+  // Remove a user from the list (for permanent deletion)
+  const removeUserFromList = (userId) => {
+    setAllUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+  };
+
+  // Refresh user data if viewing/editing a specific user
+  const refreshCurrentUserData = async () => {
+    if (selectedUser && selectedUser.id && (showModal || showActionsPopup)) {
+      try {
+        const response = await api.getUserDetails(selectedUser.id);
+        const updatedUser = response.data?.user || response.user || response.data;
+        
+        if (updatedUser) {
+          // Update selected user data
+          setSelectedUser(updatedUser);
+          
+          // Update the user in the main list
+          updateUserInList(updatedUser);
+          
+          // If in actions popup, also update selectedUserForActions
+          if (showActionsPopup && selectedUserForActions && selectedUserForActions.id === updatedUser.id) {
+            setSelectedUserForActions(updatedUser);
+          }
+          
+          // If in modal, update form data
+          if (showModal && (modalMode === 'view' || modalMode === 'edit')) {
+            const formDataToSet = {
+              username: updatedUser.username || '',
+              email: updatedUser.email || '',
+              first_name: updatedUser.first_name || '',
+              last_name: updatedUser.last_name || '',
+              password: '',
+              role: updatedUser.role || 'viewer',
+              organization_id: updatedUser.organization?.id || updatedUser.organization_id || '',
+              is_verified: Boolean(updatedUser.is_verified),
+              is_active: updatedUser.is_active !== false
+            };
+            setFormData(formDataToSet);
+          }
+        }
+      } catch (err) {
+        console.log('Failed to refresh user data:', err);
+        // Don't show error for refresh failures, just log it
+      }
+    }
   };
 
   useEffect(() => {
@@ -140,6 +254,9 @@ const UserManagement = ({ active = true, initialSection = null }) => {
       const usersList = Array.isArray(usersData) ? usersData : [];
       setAllUsers(usersList);
       setUsers(usersList); // Initially show all users
+      
+      // Refresh current user data if popup is open
+      await refreshCurrentUserData();
     } catch (err) {
       console.error('Failed to load users:', err);
       setError('Failed to load users: ' + err.message);
@@ -265,7 +382,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
       setShowModal(true);
     } catch (err) {
       console.error('Error in handleEditUser:', err);
-      setError('Failed to load user details: ' + (err.message || err));
+      handleError('Failed to load user details: ' + (err.message || err));
     } finally {
       setModalLoading(false);
     }
@@ -312,7 +429,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
       setShowModal(true);
     } catch (err) {
       console.error('Error in handleViewUser:', err);
-      setError('Failed to load user details: ' + (err.message || err));
+      handleError('Failed to load user details: ' + (err.message || err));
     } finally {
       setModalLoading(false);
     }
@@ -330,9 +447,14 @@ const UserManagement = ({ active = true, initialSection = null }) => {
           setOperationLoading(true);
           await new Promise(resolve => setTimeout(resolve, 800));
           await api.deactivateUser(userId, 'Deactivated by admin');
-          loadUsers();
+          // Update user status in list for better performance
+          const userInList = allUsers.find(u => u.id === userId);
+          if (userInList) {
+            updateUserInList({...userInList, is_active: false});
+          }
+          handleSuccess(`User "${username}" deactivated successfully`);
         } catch (err) {
-          setError('Failed to deactivate user: ' + err.message);
+          handleError('Failed to deactivate user: ' + err.message);
         } finally {
           setOperationLoading(false);
         }
@@ -353,9 +475,14 @@ const UserManagement = ({ active = true, initialSection = null }) => {
           setOperationLoading(true);
           await new Promise(resolve => setTimeout(resolve, 800));
           await api.reactivateUser(userId, 'Reactivated by admin');
-          loadUsers();
+          // Update user status in list for better performance
+          const userInList = allUsers.find(u => u.id === userId);
+          if (userInList) {
+            updateUserInList({...userInList, is_active: true});
+          }
+          handleSuccess(`User "${username}" reactivated successfully`);
         } catch (err) {
-          setError('Failed to reactivate user: ' + err.message);
+          handleError('Failed to reactivate user: ' + err.message);
         } finally {
           setOperationLoading(false);
         }
@@ -376,12 +503,14 @@ const UserManagement = ({ active = true, initialSection = null }) => {
           setOperationLoading(true);
           await new Promise(resolve => setTimeout(resolve, 800));
           await api.deleteUser(userId, 'Deleted by admin');
-          loadUsers();
+          // Remove user from list instead of full reload for better performance
+          removeUserFromList(userId);
           // Ensure actions popup is closed after successful deletion
           setShowActionsPopup(false);
           setSelectedUserForActions(null);
+          handleSuccess(`User "${username}" permanently deleted successfully`);
         } catch (err) {
-          setError('Failed to delete user: ' + err.message);
+          handleError('Failed to delete user: ' + err.message);
         } finally {
           setOperationLoading(false);
         }
@@ -399,14 +528,14 @@ const UserManagement = ({ active = true, initialSection = null }) => {
       const username = formData.username.trim();
       
       if (username.length < 3) {
-        setError('Username must be at least 3 characters long');
+        handleError('Username must be at least 3 characters long');
         return;
       }
       
       // Check for valid characters (letters, numbers, underscores only)
       const validUsernameRegex = /^[a-zA-Z0-9_]+$/;
       if (!validUsernameRegex.test(username)) {
-        setError('Username can only contain letters, numbers, and underscores');
+        handleError('Username can only contain letters, numbers, and underscores');
         return;
       }
     }
@@ -453,16 +582,23 @@ const UserManagement = ({ active = true, initialSection = null }) => {
           setShowModal(false);
           setError(null); // Clear any previous errors
           loadUsers();
+          
+          // Show success message
+          const actionText = modalMode === 'add' ? 'created' : 'updated';
+          const userName = modalMode === 'add' ? formData.username : selectedUser?.username;
+          handleSuccess(`User "${userName}" ${actionText} successfully`);
         } catch (err) {
           console.error('Error in handleSubmit:', err);
           // Handle different error types
+          let errorMessage;
           if (Array.isArray(err)) {
-            setError(err.join(', '));
+            errorMessage = err.join(', ');
           } else if (typeof err === 'string') {
-            setError(err);
+            errorMessage = err;
           } else {
-            setError('Failed to save user: ' + (err.message || 'Unknown error'));
+            errorMessage = 'Failed to save user: ' + (err.message || 'Unknown error');
           }
+          handleError(errorMessage);
         } finally {
           setSubmitting(false);
         }
@@ -504,11 +640,25 @@ const UserManagement = ({ active = true, initialSection = null }) => {
 
   if (!active) return null;
   if (loading) return <LoadingSpinner fullscreen={true} />;
-  if (error) return <div style={{ padding: '2rem', color: 'red' }}>{error}</div>;
 
   return (
-    <div style={{ padding: '2rem', fontFamily: 'Arial, sans-serif', position: 'relative' }}>
-      {(operationLoading || submitting) && <LoadingSpinner fullscreen={true} />}
+    <>
+      <style>
+        {`
+          @keyframes slideDown {
+            from {
+              opacity: 0;
+              transform: translateY(-10px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+        `}
+      </style>
+      <div style={{ padding: '2rem', fontFamily: 'Arial, sans-serif', position: 'relative' }}>
+        {(operationLoading || submitting) && <LoadingSpinner fullscreen={true} />}
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ marginBottom: '0.5rem', color: '#333' }}>User Management</h1>
         {isPublisher && (
@@ -596,6 +746,90 @@ const UserManagement = ({ active = true, initialSection = null }) => {
           </label>
         </div>
       </div>
+
+      {/* Error Bar */}
+      {showErrorBar && error && (
+        <div style={{
+          position: 'relative',
+          marginBottom: '1rem',
+          padding: '1rem 1.5rem',
+          backgroundColor: '#f8d7da',
+          color: '#721c24',
+          border: '1px solid #f5c6cb',
+          borderRadius: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          animation: 'slideDown 0.3s ease-out'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span style={{ fontSize: '1.25rem' }}>⚠️</span>
+            <span style={{ fontWeight: '500' }}>{error}</span>
+          </div>
+          <button
+            onClick={clearError}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#721c24',
+              fontSize: '1.5rem',
+              cursor: 'pointer',
+              padding: '0.25rem',
+              lineHeight: '1',
+              opacity: '0.7',
+              transition: 'opacity 0.2s ease'
+            }}
+            onMouseEnter={(e) => e.target.style.opacity = '1'}
+            onMouseLeave={(e) => e.target.style.opacity = '0.7'}
+            title="Close error message"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* Success Bar */}
+      {showSuccessBar && successMessage && (
+        <div style={{
+          position: 'relative',
+          marginBottom: '1rem',
+          padding: '1rem 1.5rem',
+          backgroundColor: '#d4edda',
+          color: '#155724',
+          border: '1px solid #c3e6cb',
+          borderRadius: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          animation: 'slideDown 0.3s ease-out'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span style={{ fontSize: '1.25rem' }}>✅</span>
+            <span style={{ fontWeight: '500' }}>{successMessage}</span>
+          </div>
+          <button
+            onClick={clearSuccess}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#155724',
+              fontSize: '1.5rem',
+              cursor: 'pointer',
+              padding: '0.25rem',
+              lineHeight: '1',
+              opacity: '0.7',
+              transition: 'opacity 0.2s ease'
+            }}
+            onMouseEnter={(e) => e.target.style.opacity = '1'}
+            onMouseLeave={(e) => e.target.style.opacity = '0.7'}
+            title="Close success message"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Hint Text */}
       <div style={{ 
@@ -1123,40 +1357,18 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                 View Details
               </button>
               
-              <button
-                onClick={() => {
-                  closeActionsPopup();
-                  handleEditUser(selectedUserForActions.id);
-                }}
-                style={{
-                  padding: '0.75rem 1rem',
-                  backgroundColor: '#5D8AA8',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  transition: 'all 0.2s ease',
-                  textAlign: 'left'
-                }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#4A7088'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#5D8AA8'}
-              >
-                Edit User
-              </button>
-              
-              {selectedUserForActions.is_active ? (
+              {/* Only show edit button if user can manage this user */}
+              {(selectedUserForActions.can_manage !== false) && (
                 <button
                   onClick={() => {
                     closeActionsPopup();
-                    handleDeleteUser(selectedUserForActions.id, selectedUserForActions.username);
+                    handleEditUser(selectedUserForActions.id);
                   }}
                   style={{
                     padding: '0.75rem 1rem',
-                    backgroundColor: 'white',
-                    color: '#5D8AA8',
-                    border: '2px solid #5D8AA8',
+                    backgroundColor: '#5D8AA8',
+                    color: 'white',
+                    border: 'none',
                     borderRadius: '6px',
                     cursor: 'pointer',
                     fontSize: '0.875rem',
@@ -1164,70 +1376,116 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                     transition: 'all 0.2s ease',
                     textAlign: 'left'
                   }}
-                  onMouseEnter={(e) => {
-                    e.target.style.borderColor = '#dc3545';
-                    e.target.style.color = '#dc3545';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.borderColor = '#5D8AA8';
-                    e.target.style.color = '#5D8AA8';
-                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#4A7088'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#5D8AA8'}
                 >
-                  Deactivate User
-                </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    closeActionsPopup();
-                    handleReactivateUser(selectedUserForActions.id, selectedUserForActions.username);
-                  }}
-                  style={{
-                    padding: '0.75rem 1rem',
-                    backgroundColor: 'white',
-                    color: '#5D8AA8',
-                    border: '2px solid #5D8AA8',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    transition: 'all 0.2s ease',
-                    textAlign: 'left'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.borderColor = '#28a745';
-                    e.target.style.color = '#28a745';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.borderColor = '#5D8AA8';
-                    e.target.style.color = '#5D8AA8';
-                  }}
-                >
-                  Reactivate User
+                  Edit User
                 </button>
               )}
               
-              <button
-                onClick={() => {
-                  closeActionsPopup();
-                  handlePermanentDeleteUser(selectedUserForActions.id, selectedUserForActions.username);
-                }}
-                style={{
-                  padding: '0.75rem 1rem',
-                  backgroundColor: '#5D8AA8',
-                  color: 'white',
-                  border: 'none',
+              {/* Only show deactivate/reactivate button if user can manage this user */}
+              {(selectedUserForActions.can_manage !== false) && (
+                selectedUserForActions.is_active ? (
+                  <button
+                    onClick={() => {
+                      closeActionsPopup();
+                      handleDeleteUser(selectedUserForActions.id, selectedUserForActions.username);
+                    }}
+                    style={{
+                      padding: '0.75rem 1rem',
+                      backgroundColor: 'white',
+                      color: '#5D8AA8',
+                      border: '2px solid #5D8AA8',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      transition: 'all 0.2s ease',
+                      textAlign: 'left'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.borderColor = '#dc3545';
+                      e.target.style.color = '#dc3545';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.borderColor = '#5D8AA8';
+                      e.target.style.color = '#5D8AA8';
+                    }}
+                  >
+                    Deactivate User
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      closeActionsPopup();
+                      handleReactivateUser(selectedUserForActions.id, selectedUserForActions.username);
+                    }}
+                    style={{
+                      padding: '0.75rem 1rem',
+                      backgroundColor: 'white',
+                      color: '#5D8AA8',
+                      border: '2px solid #5D8AA8',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      transition: 'all 0.2s ease',
+                      textAlign: 'left'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.borderColor = '#28a745';
+                      e.target.style.color = '#28a745';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.borderColor = '#5D8AA8';
+                      e.target.style.color = '#5D8AA8';
+                    }}
+                  >
+                    Reactivate User
+                  </button>
+                )
+              )}
+              
+              {/* Only show permanent delete button if user can manage this user */}
+              {(selectedUserForActions.can_manage !== false) && (
+                <button
+                  onClick={() => {
+                    closeActionsPopup();
+                    handlePermanentDeleteUser(selectedUserForActions.id, selectedUserForActions.username);
+                  }}
+                  style={{
+                    padding: '0.75rem 1rem',
+                    backgroundColor: '#5D8AA8',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    transition: 'all 0.2s ease',
+                    textAlign: 'left'
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#4A7088'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#5D8AA8'}
+                >
+                  Permanently Delete
+                </button>
+              )}
+              
+              {/* Show message if no management actions are available */}
+              {(selectedUserForActions.can_manage === false) && (
+                <div style={{
+                  padding: '1rem',
+                  backgroundColor: '#fff3cd',
+                  color: '#856404',
                   borderRadius: '6px',
-                  cursor: 'pointer',
+                  border: '1px solid #ffeaa7',
                   fontSize: '0.875rem',
-                  fontWeight: '500',
-                  transition: 'all 0.2s ease',
-                  textAlign: 'left'
-                }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#4A7088'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#5D8AA8'}
-              >
-                Permanently Delete
-              </button>
+                  textAlign: 'center'
+                }}>
+                  <strong>View Only:</strong> You can view this user's details but cannot perform management actions.
+                </div>
+              )}
             </div>
             
             <div style={{ 
@@ -1265,7 +1523,8 @@ const UserManagement = ({ active = true, initialSection = null }) => {
         isDestructive={confirmationData?.isDestructive}
         actionType={confirmationData?.actionType}
       />
-    </div>
+      </div>
+    </>
   );
 };
 

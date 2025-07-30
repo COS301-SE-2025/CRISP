@@ -146,21 +146,35 @@ class AccessControlService:
         if managing_user == target_user:
             return True
             
-        # BlueVision Admins can manage all users
+        # BlueVision Admins can manage all users except other BlueVision Admins
         if managing_user.role == 'BlueVisionAdmin':
+            # BlueVision Admins cannot edit/delete/deactivate other BlueVision Admins
+            if target_user.role == 'BlueVisionAdmin' and managing_user != target_user:
+                return False
             return True
             
-        # Superusers can manage all users
+        # Superusers can manage all users except BlueVision Admins
         if getattr(managing_user, 'is_superuser', False):
+            # Prevent superusers from managing BlueVision Admins
+            if target_user.role == 'BlueVisionAdmin':
+                return False
             return True
             
-        # Admins can manage all users
+        # Admins can manage all users except BlueVision Admins
         if managing_user.role == 'admin':
+            # Prevent admins from managing BlueVision Admins
+            if target_user.role == 'BlueVisionAdmin':
+                return False
             return True
             
-        # Publishers can manage viewers
-        if managing_user.role == 'publisher' and target_user.role == 'viewer':
-            return True
+        # Publishers can manage viewers and other publishers in their organization, but NOT BlueVision Admins
+        if managing_user.role == 'publisher':
+            # Publishers cannot manage BlueVision Admins under any circumstances
+            if target_user.role == 'BlueVisionAdmin':
+                return False
+            # Publishers can manage viewers and other publishers in their organization
+            if target_user.role in ['viewer', 'publisher'] and managing_user.organization == target_user.organization:
+                return True
             
         return False
 

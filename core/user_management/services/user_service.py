@@ -99,6 +99,10 @@ class UserService:
         except CustomUser.DoesNotExist:
             raise ValidationError("User not found")
         
+        # Additional protection: Publishers cannot edit BlueVision Admins
+        if updating_user.role == 'publisher' and target_user.role == 'BlueVisionAdmin':
+            raise PermissionDenied("Publishers cannot edit BlueVision Administrator accounts")
+        
         # Check permissions
         if not self.access_control.can_manage_user(updating_user, target_user):
             # Users can update their own basic profile
@@ -294,7 +298,10 @@ class UserService:
             can_access = (
                 requesting_user.id == target_user.id or  # Own profile
                 self._can_manage_user_safe(requesting_user, target_user) or  # Can manage
-                self._can_access_organization_safe(requesting_user, target_user.organization)  # Trust access
+                self._can_access_organization_safe(requesting_user, target_user.organization) or  # Trust access
+                # Publishers can view users in their own organization (including BlueVision admins)
+                (requesting_user.role == 'publisher' and 
+                 requesting_user.organization == target_user.organization)
             )
         except Exception as e:
             logger.error(f"Error checking access permissions: {str(e)}")
@@ -535,6 +542,10 @@ class UserService:
         except CustomUser.DoesNotExist:
             raise ValidationError("User not found")
         
+        # Additional protection: Publishers cannot deactivate BlueVision Admins
+        if deactivating_user.role == 'publisher' and target_user.role == 'BlueVisionAdmin':
+            raise PermissionDenied("Publishers cannot deactivate BlueVision Administrator accounts")
+        
         # Check permissions
         if not self.access_control.can_manage_user(deactivating_user, target_user):
             raise PermissionDenied("No permission to deactivate this user")
@@ -604,6 +615,15 @@ class UserService:
         Raises:
             PermissionDenied: If deleting user doesn't have permission
         """
+        try:
+            target_user = CustomUser.objects.get(id=user_id)
+        except CustomUser.DoesNotExist:
+            raise ValidationError("User not found")
+        
+        # Additional protection: Publishers cannot delete BlueVision Admins
+        if deleting_user.role == 'publisher' and target_user.role == 'BlueVisionAdmin':
+            raise PermissionDenied("Publishers cannot delete BlueVision Administrator accounts")
+        
         # Use deactivate_user for soft delete
         self.deactivate_user(deleting_user, user_id, reason)
         return True
@@ -628,9 +648,13 @@ class UserService:
         except CustomUser.DoesNotExist:
             raise ValidationError("User not found")
         
-        # Check permissions - only BlueVision admins can permanently delete
-        if not (deleting_user.role == 'BlueVisionAdmin' or deleting_user.is_superuser):
-            raise PermissionDenied("Only BlueVision administrators can permanently delete users")
+        # Additional protection: Publishers cannot delete BlueVision Admins
+        if deleting_user.role == 'publisher' and target_user.role == 'BlueVisionAdmin':
+            raise PermissionDenied("Publishers cannot delete BlueVision Administrator accounts")
+        
+        # Check permissions for permanent deletion
+        if not self.access_control.can_manage_user(deleting_user, target_user):
+            raise PermissionDenied("No permission to permanently delete this user")
         
         # Prevent self-deletion
         if deleting_user.id == target_user.id:
@@ -753,6 +777,10 @@ class UserService:
         except CustomUser.DoesNotExist:
             raise ValidationError("User not found")
         
+        # Additional protection: Publishers cannot change BlueVision Admin usernames
+        if requesting_user.role == 'publisher' and target_user.role == 'BlueVisionAdmin':
+            raise PermissionDenied("Publishers cannot change BlueVision Administrator usernames")
+        
         # Check permissions - only admins or publishers can change usernames
         if not self.access_control.can_manage_user(requesting_user, target_user):
             # Users can change their own username
@@ -830,6 +858,10 @@ class UserService:
             raise ValidationError("User not found")
         
         is_self_change = requesting_user.id == target_user.id
+        
+        # Additional protection: Publishers cannot change BlueVision Admin passwords
+        if requesting_user.role == 'publisher' and target_user.role == 'BlueVisionAdmin' and not is_self_change:
+            raise PermissionDenied("Publishers cannot change BlueVision Administrator passwords")
         
         # Check permissions
         if not (is_self_change or self.access_control.can_manage_user(requesting_user, target_user)):
