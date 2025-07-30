@@ -57,18 +57,23 @@ const UserManagement = ({ active = true, initialSection = null }) => {
     is_active: true
   });
 
-  const roles = ['admin', 'publisher', 'viewer'];
+  const roles = ['publisher', 'viewer'];
+  const allRoles = ['BlueVisionAdmin', 'publisher', 'viewer'];
 
   // Get current user and check if user is a publisher
   const isPublisher = currentUser?.role === 'publisher';
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'BlueVisionAdmin';
+  const isBlueVisionAdmin = currentUser?.role === 'BlueVisionAdmin';
   
   // Get allowed roles based on current user's permissions
   const getAllowedRoles = () => {
+    if (isBlueVisionAdmin) {
+      return allRoles; // BlueVisionAdmins can create BlueVisionAdmin, publisher, viewer
+    }
     if (isPublisher) {
       return ['viewer', 'publisher']; // Publishers can create viewers and other publishers
     }
-    return roles; // Admins can create any role
+    return roles; // Regular admins can create publisher, viewer (no admin role)
   };
 
   // Handle errors by closing popups and showing error bar
