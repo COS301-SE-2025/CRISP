@@ -4787,13 +4787,16 @@ Only patterns and techniques, no indicators</option>
 // TTP Analysis Component
 function TTPAnalysis({ active }) {
   const [ttpData, setTtpData] = useState([]);
+  const [trendsData, setTrendsData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [trendsLoading, setTrendsLoading] = useState(false);
   const ttpChartRef = useRef(null);
   
   // Fetch TTP data from backend
   useEffect(() => {
     if (active) {
       fetchTTPData();
+      fetchTTPTrendsData();
     }
   }, [active]);
   
@@ -4812,6 +4815,57 @@ function TTPAnalysis({ active }) {
       setTtpData([]);
     }
     setLoading(false);
+  };
+
+  const fetchTTPTrendsData = async () => {
+    setTrendsLoading(true);
+    try {
+      // Get TTP trends data from the API
+      const response = await api.get('/api/ttps/trends/?days=120&granularity=month&group_by=tactic');
+      if (response && response.data) {
+        setTrendsData(response.data);
+      } else {
+        setTrendsData([]);
+      }
+    } catch (error) {
+      console.error('Error fetching TTP trends data:', error);
+      setTrendsData([]);
+    }
+    setTrendsLoading(false);
+  };
+
+  const transformTrendsDataForChart = (apiData) => {
+    // Group data by date and aggregate by tactic
+    const dateMap = new Map();
+    
+    apiData.forEach(item => {
+      const date = item.date;
+      if (!dateMap.has(date)) {
+        dateMap.set(date, {
+          date: date,
+          'initial-access': 0,
+          'execution': 0,
+          'persistence': 0,
+          'defense-evasion': 0,
+          'impact': 0,
+          'privilege-escalation': 0,
+          'discovery': 0,
+          'lateral-movement': 0,
+          'collection': 0,
+          'command-and-control': 0,
+          'exfiltration': 0
+        });
+      }
+      
+      const tactic = item.tactic ? item.tactic.toLowerCase().replace(/\s+/g, '-') : 'unknown';
+      const dateEntry = dateMap.get(date);
+      if (dateEntry.hasOwnProperty(tactic)) {
+        dateEntry[tactic] = item.count || 0;
+      }
+    });
+    
+    // Convert to array and sort by date
+    return Array.from(dateMap.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
   };
 
   const deleteTTP = async (ttpId) => {
@@ -4835,22 +4889,22 @@ function TTPAnalysis({ active }) {
   };
   
   useEffect(() => {
-    if (active && ttpChartRef.current) {
+    if (active && ttpChartRef.current && trendsData.length > 0) {
       createTTPTrendsChart();
     }
-  }, [active]);
+  }, [active, trendsData]);
 
   const createTTPTrendsChart = () => {
     // Clear previous chart if any
     d3.select(ttpChartRef.current).selectAll("*").remove();
     
-    // Sample data - TTP observations over time by category
-    const data = [
-      { date: "2025-02", initialAccess: 12, execution: 8, persistence: 5, defenseEvasion: 7, impact: 10 },
-      { date: "2025-03", initialAccess: 15, execution: 10, persistence: 6, defenseEvasion: 9, impact: 12 },
-      { date: "2025-04", initialAccess: 18, execution: 14, persistence: 8, defenseEvasion: 13, impact: 16 },
-      { date: "2025-05", initialAccess: 22, execution: 17, persistence: 11, defenseEvasion: 15, impact: 19 }
-    ];
+    // Return early if no trends data
+    if (!trendsData || trendsData.length === 0) {
+      return;
+    }
+    
+    // Transform API data to chart format
+    const data = transformTrendsDataForChart(trendsData);
 
     // Set dimensions and margins for the chart
     const width = ttpChartRef.current.clientWidth;
@@ -4874,7 +4928,7 @@ function TTPAnalysis({ active }) {
       .padding(0.5);
 
     const y = d3.scaleLinear()
-      .domain([0, d3.max(data, d => Math.max(d.initialAccess, d.execution, d.persistence, d.defenseEvasion, d.impact)) * 1.1])
+      .domain([0, d3.max(data, d => Math.max(...Object.keys(colors).map(tactic => d[tactic] || 0))) * 1.1])
       .range([innerHeight, 0]);
 
     // Define line generator
@@ -4883,23 +4937,38 @@ function TTPAnalysis({ active }) {
       .y(d => y(d.value))
       .curve(d3.curveMonotoneX);
 
-    // Define colors for different TTP categories
+    // Define colors for different TTP categories (MITRE ATT&CK tactics)
     const colors = {
-      initialAccess: "#0056b3",
-      execution: "#00a0e9",
-      persistence: "#38a169",
-      defenseEvasion: "#e53e3e",
-      impact: "#f6ad55"
+      'initial-access': "#0056b3",
+      'execution': "#00a0e9", 
+      'persistence': "#38a169",
+      'defense-evasion': "#e53e3e",
+      'impact': "#f6ad55",
+      'privilege-escalation': "#805ad5",
+      'discovery': "#ed8936",
+      'lateral-movement': "#38b2ac",
+      'collection': "#d53f8c",
+      'command-and-control': "#319795",
+      'exfiltration': "#dd6b20"
     };
 
-    // Create line for each category
-    const categories = ['initialAccess', 'execution', 'persistence', 'defenseEvasion', 'impact'];
+    // Get only tactics that have data in the dataset
+    const categories = Object.keys(colors).filter(tactic => 
+      data.some(d => d[tactic] > 0)
+    );
+    
     const categoryLabels = {
-      initialAccess: "Initial Access",
-      execution: "Execution",
-      persistence: "Persistence",
-      defenseEvasion: "Defense Evasion",
-      impact: "Impact"
+      'initial-access': "Initial Access",
+      'execution': "Execution",
+      'persistence': "Persistence", 
+      'defense-evasion': "Defense Evasion",
+      'impact': "Impact",
+      'privilege-escalation': "Privilege Escalation",
+      'discovery': "Discovery",
+      'lateral-movement': "Lateral Movement",
+      'collection': "Collection",
+      'command-and-control': "Command and Control",
+      'exfiltration': "Exfiltration"
     };
 
     categories.forEach(category => {
@@ -5167,7 +5236,18 @@ function TTPAnalysis({ active }) {
         </div>
         <div className="card-content">
           <div className="chart-container" ref={ttpChartRef}>
-            {/* D3.js Chart will be rendered here */}
+            {trendsLoading ? (
+              <div style={{textAlign: 'center', padding: '4rem'}}>
+                <i className="fas fa-spinner fa-spin" style={{fontSize: '2rem', color: '#0056b3'}}></i>
+                <p style={{marginTop: '1rem', color: '#666'}}>Loading TTP trends data...</p>
+              </div>
+            ) : trendsData.length === 0 ? (
+              <div style={{textAlign: 'center', padding: '4rem'}}>
+                <i className="fas fa-chart-line" style={{fontSize: '2rem', color: '#ccc'}}></i>
+                <p style={{marginTop: '1rem', color: '#666'}}>No TTP trends data available</p>
+                <p style={{color: '#888', fontSize: '0.9rem'}}>TTP data will appear here as it becomes available</p>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
