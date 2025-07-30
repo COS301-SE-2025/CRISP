@@ -95,6 +95,20 @@ const api = {
       console.error(`API Error: ${endpoint}`, error);
       return null;
     }
+  },
+  
+  delete: async (endpoint) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error(`API Error: ${endpoint}`, error);
+      return null;
+    }
   }
 };
 
@@ -4785,26 +4799,39 @@ function TTPAnalysis({ active }) {
   
   const fetchTTPData = async () => {
     setLoading(true);
-    // Get TTP data from feeds
-    const feedData = await api.get('/api/threat-feeds/');
-    if (feedData && feedData.length > 0) {
-      // Get TTP status from the first feed
-      const feedStatus = await api.get(`/api/threat-feeds/${feedData[0].id}/status/`);
-      if (feedStatus) {
-        // Create mock TTP data based on feed data
-        const mockTTPs = Array.from({length: Math.min(feedStatus.ttp_count, 10)}, (_, i) => ({
-          id: `T${1000 + i}`,
-          name: `TTP-${i + 1}`,
-          tactic: ['Initial Access', 'Execution', 'Persistence', 'Defense Evasion', 'Impact'][i % 5],
-          technique: `Technique ${i + 1}`,
-          source: feedData[0].name || 'Unknown',
-          severity: ['High', 'Medium', 'Low'][i % 3],
-          frequency: Math.floor(Math.random() * 50) + 1
-        }));
-        setTtpData(mockTTPs);
+    try {
+      // Get TTP data from the API
+      const response = await api.get('/api/ttps/');
+      if (response && response.results) {
+        setTtpData(response.results);
+      } else {
+        setTtpData([]);
       }
+    } catch (error) {
+      console.error('Error fetching TTP data:', error);
+      setTtpData([]);
     }
     setLoading(false);
+  };
+
+  const deleteTTP = async (ttpId) => {
+    if (!confirm('Are you sure you want to delete this TTP? This action cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      const response = await api.delete(`/api/ttps/${ttpId}/`);
+      if (response && response.success) {
+        // Remove the deleted TTP from the local state
+        setTtpData(prevData => prevData.filter(ttp => ttp.id !== ttpId));
+        alert('TTP deleted successfully');
+      } else {
+        alert('Failed to delete TTP');
+      }
+    } catch (error) {
+      console.error('Error deleting TTP:', error);
+      alert('Error deleting TTP: ' + (error.message || 'Unknown error'));
+    }
   };
   
   useEffect(() => {
@@ -5153,12 +5180,12 @@ function TTPAnalysis({ active }) {
           <table className="data-table">
             <thead>
               <tr>
-                <th>TTP ID</th>
+                <th>ID</th>
                 <th>Name</th>
-                <th>Category</th>
-                <th>MITRE ID</th>
-                <th>Associated Threat Actor</th>
-                <th>Last Observed</th>
+                <th>MITRE Technique</th>
+                <th>Tactic</th>
+                <th>Threat Feed</th>
+                <th>Created</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -5175,18 +5202,29 @@ function TTPAnalysis({ active }) {
                   <tr key={ttp.id}>
                     <td>{ttp.id}</td>
                     <td>{ttp.name}</td>
-                    <td>{ttp.tactic}</td>
-                    <td>{ttp.id}</td>
-                    <td>{ttp.source}</td>
-                    <td>{new Date().toISOString().split('T')[0]}</td>
+                    <td>{ttp.mitre_technique_id}</td>
+                    <td>{ttp.mitre_tactic_display || ttp.mitre_tactic}</td>
+                    <td>{ttp.threat_feed ? ttp.threat_feed.name : 'N/A'}</td>
+                    <td>{new Date(ttp.created_at).toLocaleDateString()}</td>
                     <td>
-                      <span className={`badge badge-${ttp.severity.toLowerCase()}`}>
-                        {ttp.severity}
+                      <span className={`badge ${ttp.is_anonymized ? 'badge-info' : 'badge-success'}`}>
+                        {ttp.is_anonymized ? 'Anonymized' : 'Active'}
                       </span>
                     </td>
                     <td>
-                      <button className="btn btn-outline btn-sm"><i className="fas fa-eye"></i></button>
-                      <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i></button>
+                      <button className="btn btn-outline btn-sm" title="View Details">
+                        <i className="fas fa-eye"></i>
+                      </button>
+                      <button className="btn btn-outline btn-sm" title="Share">
+                        <i className="fas fa-share-alt"></i>
+                      </button>
+                      <button 
+                        className="btn btn-outline btn-sm text-danger" 
+                        title="Delete TTP"
+                        onClick={() => deleteTTP(ttp.id)}
+                      >
+                        <i className="fas fa-trash"></i>
+                      </button>
                     </td>
                   </tr>
                 ))
