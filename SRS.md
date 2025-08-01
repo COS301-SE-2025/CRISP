@@ -598,12 +598,17 @@ interface FeedService {
 
 ### 7.2 Architectural Patterns
 
-#### 7.2.1 Primary Architectural Patterns
-- **Three-Tier Architecture**: Clear separation between presentation (React), application (Django), and data (PostgreSQL) layers
-- **Model-View-Controller (MVC)**: Django framework enforces MVC pattern for organized code structure
-- **RESTful API Architecture**: Stateless, resource-based API design for client-server communication
-- **Microservices Architecture**: Modular services for threat processing, anonymization, alerting, and external integrations
-- **Event-Driven Architecture**: Asynchronous processing for threat feed consumption and alert generation using RabbitMQ
+#### 7.2.1 4-Layered Architecture  
+- **N-Layered Architecture Pattern**: The system adopts an N-Layered architecture approach, promoting strict separation of concerns and unidirectional dependencies across layers.  
+- **Presentation Layer**: Responsible for handling HTTP requests/responses, authentication checks, and API endpoint exposure, implemented using Django views and serializers.  
+- **Business Logic Layer**: Encapsulates domain-specific rules, workflows, and validations, implemented through service classes that are independent of HTTP and database concerns.  
+- **Data Access Layer**: Manages ORM-based model (Object-Relational Mapping) definitions and data operations, using repository patterns to abstract database interactions from higher layers.  
+- **Infrastructure Layer**: Centralizes configurations, middleware (e.g., audit logging), and integrations with external systems like authentication providers and email services.  
+- **Strict Layering and Dependency Flow**: Higher layers (e.g., views) depend only on the immediate lower layer (e.g., services), with no reverse or cross-layer coupling.  
+- **Service-Oriented Design within Layers**: While not a microservices architecture, the business layer is organized by well-defined domain services and interfaces.  
+- **Technology Independence**: Business logic remains decoupled from Django-specific constructs and database technologies, supporting future flexibility.  
+- **Maintainability and Testability**: The clear division of responsibilities enables modular testing, easier debugging, and scalable development practices.
+
 
 #### 7.2.2 Integration Patterns
 - **API Gateway Pattern**: Centralized entry point for all external API requests with authentication and rate limiting
