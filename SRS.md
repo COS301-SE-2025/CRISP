@@ -598,23 +598,35 @@ interface FeedService {
 
 ### 7.2 Architectural Patterns
 
-#### 7.2.1 4-Layered Architecture  
-- **N-Layered Architecture Pattern**: The system adopts an N-Layered architecture approach, promoting strict separation of concerns and unidirectional dependencies across layers.  
-- **Presentation Layer**: Responsible for handling HTTP requests/responses, authentication checks, and API endpoint exposure, implemented using Django views and serializers.  
-- **Business Logic Layer**: Encapsulates domain-specific rules, workflows, and validations, implemented through service classes that are independent of HTTP and database concerns.  
-- **Data Access Layer**: Manages ORM-based model (Object-Relational Mapping) definitions and data operations, using repository patterns to abstract database interactions from higher layers.  
-- **Infrastructure Layer**: Centralizes configurations, middleware (e.g., audit logging), and integrations with external systems like authentication providers and email services.  
-- **Strict Layering and Dependency Flow**: Higher layers (e.g., views) depend only on the immediate lower layer (e.g., services), with no reverse or cross-layer coupling.  
-- **Service-Oriented Design within Layers**: While not a microservices architecture, the business layer is organized by well-defined domain services and interfaces.  
-- **Technology Independence**: Business logic remains decoupled from Django-specific constructs and database technologies, supporting future flexibility.  
-- **Maintainability and Testability**: The clear division of responsibilities enables modular testing, easier debugging, and scalable development practices.
+#### 7.2.1 N-Layered Architecture Pattern
 
+We adopted a 4-layered architecture approach, promoting strict sepration of concerns and undirectional dependencies across the layers
+ 
+- **Presentation Layer**: Responsible for handling HTTP requests/responses, authentication checks, and API endpoint exposure, implemented using Django REST Framework views and serializers. 
+- **Service Layer**: Encapsulates domain-specific business logic, workflows, and validations through dedicated service classes (AuthenticationService, ThreatIntelligenceService, InstitutionService, AlertService, STIXTaxiiService, AnonymizationService, TrustService, FeedService) that remain independent of HTTP and database concerns.
+- **Data Access Layer**: Manages data persistence operations to abstract database interactions from higher layers (ThreatFeedRepository, IndicatorRepository, InstitutionRepository, TTPRepository).
+- **Data Layer**: PostgreSQL database with Django ORM models (Object relational mapping) representing core domain entities (User, Institution, ThreatFeed, Indicator, TTPData, TrustRelationship).
+- **Strict Layering and Dependency Flow**: Higher layers depend only on the immediate lower layer, with no reverse or cross-layer coupling, ensuring maintainability and testability.
 
-#### 7.2.2 Integration Patterns
-- **API Gateway Pattern**: Centralized entry point for all external API requests with authentication and rate limiting
-- **Repository Pattern**: Data access abstraction layer isolating business logic from database implementation
-- **Service Layer Pattern**: Business logic encapsulation in dedicated service classes
-- **Facade Pattern**: Simplified interface to complex subsystem interactions
+#### 7.2.2 Service-Oriented Architecture (SOA) Pattern
+
+The service layer implements SOA principles to achieve modularity, reusability, and loose coupling.
+
+- **Service Encapsulation**: Each service encapsulates a specific domain concern with well-defined interfaces and responsibilities.
+- **Service Autonomy**: Services operate independently with their own data access and business logic, reducing interdependencies.
+- **Service Composability**: Complex operations are achieved by composing multiple services (e.g., threat publication involves ThreatIntelligenceService, AnonymizationService, and STIXTaxiiService).
+- **Service Contracts**: Clear interfaces define service capabilities, inputs, and outputs, enabling contract-based development.
+- **Service Discovery**: Services are loosely coupled through dependency injection and interface-based communication.
+
+#### 7.2.3 Model-View-Controller (MVC) Pattern
+
+Our frontend implements the MVC pattern using React to separate presentation concerns.
+
+- **Model**: Context API and state management handle application data, API responses, and client-side data models representing threat intelligence, users, and institutions.
+- **View**: React components with Material-UI provide the user interface, including dashboards, forms, data visualizations using D3.js.
+- **Controller**:  Event handlers, API calls, navigation logic, and user interaction management bridge the Model and View components.
+- **Separation of Concerns**: Clear boundaries between data management, presentation, and user interaction logic enable independent development and testing.
+- **Component Reusability**: Modular React components can be reused across different views and contexts within the application.
 
 ### 7.3 Design Patterns
 
