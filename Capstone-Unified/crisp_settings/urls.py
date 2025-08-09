@@ -8,7 +8,7 @@ from core.viewing.home import home
 from core.simple_auth_views import login_view, system_health, alert_statistics
 from core.api_extensions import (
     list_organizations, organization_types, trust_groups, trust_levels, 
-    trust_metrics, trust_relationships, trust_overview, list_users
+    trust_metrics, trust_relationships, trust_relationships_detail, trust_overview, list_users
 )
 
 # Set up REST API router
@@ -39,6 +39,7 @@ urlpatterns = [
     path('api/v1/trust/levels/', trust_levels, name='trust-levels'),
     path('api/v1/trust/metrics/', trust_metrics, name='trust-metrics'),
     path('api/v1/trust/relationships/', trust_relationships, name='trust-relationships'),
+    path('api/v1/trust/relationships/<int:relationship_id>/', trust_relationships_detail, name='trust-relationship-detail'),
     
     # Admin endpoints
     path('api/v1/admin/trust_overview/', trust_overview, name='trust-overview'),

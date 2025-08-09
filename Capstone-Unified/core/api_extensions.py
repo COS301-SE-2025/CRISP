@@ -10,65 +10,54 @@ import json
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def list_organizations(request):
-    """Organizations endpoint with realistic data"""
-    # Generate organizations based on user email domains
-    user_domains = set()
-    for user in User.objects.all():
-        if user.email and '@' in user.email:
-            domain = user.email.split('@')[1]
-            user_domains.add(domain)
-    
-    org_types_map = {
-        'security.com': 'security_vendor',
-        'threatintel.com': 'security_vendor', 
-        'bluevision.com': 'security_vendor',
-        'gov.com': 'government',
-        'agency.com': 'government',
-        'financial.com': 'financial',
-        'financialcorp.com': 'financial',
-        'healthcare.com': 'healthcare',
-        'healthcaresystems.com': 'healthcare',
-        'university.com': 'education',
-        'universityresearch.com': 'education',
-        'tech.com': 'technology',
-        'techsecurityinc.com': 'technology',
-    }
+    """Organizations endpoint returning real organizations from database"""
+    from core.models.models import Organization
     
     organizations = []
-    for i, domain in enumerate(sorted(user_domains)[:15], 1):
-        org_name = domain.replace('.com', '').replace('corp', ' Corp').replace('inc', ' Inc').title()
-        org_type = org_types_map.get(domain, 'other')
+    for org in Organization.objects.all():
+        # Count users belonging to this organization (if we have that relationship)
+        user_count = User.objects.filter(email__icontains=org.name.lower().replace(' ', '')).count()
         
         organizations.append({
-            "id": i,
-            "name": org_name,
-            "organization_type": org_type,
-            "country": "US",
-            "is_active": True,
-            "created_date": "2025-01-01T00:00:00Z",
-            "user_count": User.objects.filter(email__endswith=f'@{domain}').count()
+            "id": str(org.id),  # Convert UUID to string for frontend
+            "name": org.name,
+            "organization_type": org.organization_type or 'other',
+            "description": org.description or '',
+            "country": "US",  # Default for now
+            "is_active": True,  # Organizations don't have is_active field currently
+            "created_date": "2025-01-01T00:00:00Z",  # Default for now
+            "user_count": user_count
         })
     
-    # Add some default organizations if we don't have enough
-    default_orgs = [
-        {"name": "BlueVision Security", "type": "security_vendor"},
-        {"name": "Government Cyber Defense", "type": "government"}, 
-        {"name": "Financial Services Corp", "type": "financial"},
-        {"name": "TechCorp Industries", "type": "technology"},
-        {"name": "Healthcare Alliance", "type": "healthcare"}
-    ]
+    # If no organizations exist, create some defaults
+    if not organizations:
+        default_orgs = [
+            {"name": "Bluevision", "type": "security_vendor"},
+            {"name": "Test", "type": "other"}, 
+            {"name": "Financial Corp", "type": "financial"},
+            {"name": "TechCorp Industries", "type": "technology"},
+            {"name": "Healthcare Alliance", "type": "healthcare"}
+        ]
+        
+        for org_data in default_orgs:
+            org, created = Organization.objects.get_or_create(
+                name=org_data["name"],
+                defaults={
+                    'organization_type': org_data["type"],
+                    'description': f'Default organization: {org_data["name"]}'
+                }
+            )
+            organizations.append({
+                "id": str(org.id),
+                "name": org.name,
+                "organization_type": org.organization_type,
+                "description": org.description or '',
+                "country": "US",
+                "is_active": True,
+                "created_date": "2025-01-01T00:00:00Z",
+                "user_count": 0
+            })
     
-    while len(organizations) < 5:
-        org = default_orgs[len(organizations)]
-        organizations.append({
-            "id": len(organizations) + 1,
-            "name": org["name"],
-            "organization_type": org["type"],
-            "country": "US",
-            "is_active": True,
-            "created_date": "2025-01-01T00:00:00Z",
-            "user_count": 0
-        })
     return Response({
         "success": True,
         "data": {
@@ -238,13 +227,16 @@ def trust_relationships(request):
     if request.method == 'GET':
         # Get actual trust relationships from database
         relationships = []
-        for rel in TrustRelationship.objects.filter(is_active=True):
+        for rel in TrustRelationship.objects.all():  # Get all relationships, not just active ones
             relationships.append({
                 "id": rel.id,
                 "source_organization": rel.source_organization.name,
+                "source_organization_name": rel.source_organization.name,  # Frontend expects this field
                 "target_organization": rel.target_organization.name,
-                "trust_level": rel.trust_level.name.lower(),
+                "target_organization_name": rel.target_organization.name,  # Frontend expects this field
+                "trust_level": rel.trust_level.name.upper(),  # Frontend expects uppercase
                 "relationship_type": rel.relationship_type,
+                "status": "active" if rel.is_active else "suspended",  # Map is_active to status
                 "established_date": rel.created_at.isoformat(),
                 "last_updated": rel.updated_at.isoformat(),
                 "notes": rel.notes or "",
@@ -261,25 +253,42 @@ def trust_relationships(request):
         try:
             data = json.loads(request.body) if request.body else {}
             
-            source_org_name = data.get('source_organization')
-            target_org_name = data.get('target_organization') 
+            source_org_input = data.get('source_organization')
+            target_org_input = data.get('target_organization') 
             trust_level_name = data.get('trust_level', 'medium')
             
-            if not source_org_name or not target_org_name:
+            if not source_org_input or not target_org_input:
                 return Response({
                     "success": False,
                     "error": "Source and target organizations are required"
                 }, status=status.HTTP_400_BAD_REQUEST)
             
-            # Get or create organizations
-            source_org, created = Organization.objects.get_or_create(
-                name=source_org_name,
-                defaults={'organization_type': 'commercial', 'description': f'Auto-created organization: {source_org_name}'}
-            )
-            target_org, created = Organization.objects.get_or_create(
-                name=target_org_name,
-                defaults={'organization_type': 'commercial', 'description': f'Auto-created organization: {target_org_name}'}
-            )
+            # Handle organization input - could be UUID ID or name
+            # Try to get by UUID ID first, then by name
+            source_org = None
+            try:
+                # Try as UUID first
+                import uuid
+                uuid.UUID(str(source_org_input))  # Validate UUID format
+                source_org = Organization.objects.get(id=source_org_input)
+            except (ValueError, Organization.DoesNotExist):
+                # Try by name or create new one
+                source_org, created = Organization.objects.get_or_create(
+                    name=str(source_org_input),
+                    defaults={'organization_type': 'commercial', 'description': f'Auto-created organization: {source_org_input}'}
+                )
+            
+            target_org = None
+            try:
+                # Try as UUID first
+                uuid.UUID(str(target_org_input))  # Validate UUID format
+                target_org = Organization.objects.get(id=target_org_input)
+            except (ValueError, Organization.DoesNotExist):
+                # Try by name or create new one
+                target_org, created = Organization.objects.get_or_create(
+                    name=str(target_org_input),
+                    defaults={'organization_type': 'commercial', 'description': f'Auto-created organization: {target_org_input}'}
+                )
             
             # Get existing trust level or use first one if not found
             trust_level_name_lower = trust_level_name.lower()
@@ -315,9 +324,12 @@ def trust_relationships(request):
                 "data": {
                     "id": relationship.id,
                     "source_organization": relationship.source_organization.name,
+                    "source_organization_name": relationship.source_organization.name,  # Frontend expects this field
                     "target_organization": relationship.target_organization.name,
-                    "trust_level": relationship.trust_level.name.lower(),
+                    "target_organization_name": relationship.target_organization.name,  # Frontend expects this field
+                    "trust_level": relationship.trust_level.name.upper(),  # Frontend expects uppercase
                     "relationship_type": relationship.relationship_type,
+                    "status": "active" if relationship.is_active else "suspended",  # Map is_active to status
                     "established_date": relationship.created_at.isoformat(),
                     "last_updated": relationship.updated_at.isoformat(),
                     "notes": relationship.notes or "",
@@ -331,6 +343,117 @@ def trust_relationships(request):
                 "success": False,
                 "error": str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def trust_relationships_detail(request, relationship_id):
+    """Trust relationship detail endpoint for individual relationships"""
+    try:
+        relationship = TrustRelationship.objects.get(id=relationship_id)  # Allow both active and suspended
+    except TrustRelationship.DoesNotExist:
+        return Response({
+            "success": False,
+            "error": "Trust relationship not found"
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    if request.method == 'GET':
+        # Return individual relationship details
+        return Response({
+            "success": True,
+            "data": {
+                "id": relationship.id,
+                "source_organization": relationship.source_organization.name,
+                "source_organization_name": relationship.source_organization.name,  # Frontend expects this field
+                "target_organization": relationship.target_organization.name,
+                "target_organization_name": relationship.target_organization.name,  # Frontend expects this field
+                "trust_level": relationship.trust_level.name.upper(),  # Frontend expects uppercase
+                "relationship_type": relationship.relationship_type,
+                "status": "active" if relationship.is_active else "suspended",  # Map is_active to status
+                "established_date": relationship.created_at.isoformat(),
+                "last_updated": relationship.updated_at.isoformat(),
+                "notes": relationship.notes or "",
+                "created_by": relationship.created_by
+            }
+        })
+    
+    elif request.method == 'PUT':
+        # Update relationship
+        try:
+            data = json.loads(request.body) if request.body else {}
+            
+            # Update fields if provided
+            if 'source_organization' in data:
+                source_org, created = Organization.objects.get_or_create(
+                    name=data['source_organization'],
+                    defaults={'organization_type': 'commercial', 'description': f'Auto-created: {data["source_organization"]}'}
+                )
+                relationship.source_organization = source_org
+            
+            if 'target_organization' in data:
+                target_org, created = Organization.objects.get_or_create(
+                    name=data['target_organization'],
+                    defaults={'organization_type': 'commercial', 'description': f'Auto-created: {data["target_organization"]}'}
+                )
+                relationship.target_organization = target_org
+                
+            if 'trust_level' in data:
+                trust_level_name_lower = data['trust_level'].lower()
+                try:
+                    trust_level = TrustLevel.objects.get(name=trust_level_name_lower)
+                    relationship.trust_level = trust_level
+                except TrustLevel.DoesNotExist:
+                    # Use existing trust level as fallback
+                    pass
+            
+            if 'relationship_type' in data:
+                relationship.relationship_type = data['relationship_type']
+            
+            if 'notes' in data:
+                relationship.notes = data['notes']
+            
+            # Handle status changes (active/suspended)
+            if 'status' in data:
+                if data['status'] == 'active':
+                    relationship.is_active = True
+                elif data['status'] == 'suspended':
+                    relationship.is_active = False
+            
+            relationship.save()
+            
+            return Response({
+                "success": True,
+                "data": {
+                    "id": relationship.id,
+                    "source_organization": relationship.source_organization.name,
+                    "source_organization_name": relationship.source_organization.name,  # Frontend expects this field
+                    "target_organization": relationship.target_organization.name,
+                    "target_organization_name": relationship.target_organization.name,  # Frontend expects this field
+                    "trust_level": relationship.trust_level.name.upper(),  # Frontend expects uppercase
+                    "relationship_type": relationship.relationship_type,
+                    "status": "active" if relationship.is_active else "suspended",  # Map is_active to status
+                    "established_date": relationship.created_at.isoformat(),
+                    "last_updated": relationship.updated_at.isoformat(),
+                    "notes": relationship.notes or "",
+                    "created_by": relationship.created_by
+                },
+                "message": "Trust relationship updated successfully"
+            })
+            
+        except Exception as e:
+            return Response({
+                "success": False,
+                "error": str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif request.method == 'DELETE':
+        # Hard delete relationship - permanently remove from database
+        relationship_info = f"{relationship.source_organization.name} → {relationship.target_organization.name}"
+        relationship.delete()
+        
+        return Response({
+            "success": True,
+            "message": f"Trust relationship '{relationship_info}' deleted permanently"
+        }, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

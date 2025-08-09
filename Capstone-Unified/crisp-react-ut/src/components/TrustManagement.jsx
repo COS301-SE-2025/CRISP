@@ -173,9 +173,15 @@ function TrustManagement({ active, initialTab = null }) {
     
     if (mode === 'edit' && item) {
       if (type === 'relationship') {
+        // Map trust level string back to ID for dropdown
+        const trustLevelId = trustData.trustLevels.find(
+          level => level.name.toLowerCase() === item.trust_level.toLowerCase()
+        )?.id || '';
+        
         setFormData({
+          source_organization: item.source_organization || '',
           target_organization: item.target_organization || '',
-          trust_level: item.trust_level_id || '',
+          trust_level: trustLevelId,
           relationship_type: item.relationship_type || 'bilateral',
           notes: item.notes || ''
         });
@@ -191,6 +197,7 @@ function TrustManagement({ active, initialTab = null }) {
       }
     } else {
       setFormData({
+        source_organization: '',
         target_organization: '',
         trust_level: '',
         relationship_type: 'bilateral',
@@ -234,11 +241,20 @@ function TrustManagement({ active, initialTab = null }) {
           setSubmitting(true);
           
           if (modalType === 'relationship') {
+            // Convert IDs to names for the API
+            const relationshipData = {
+              source_organization: trustData.organizations.find(org => org.id === formData.source_organization)?.name || formData.source_organization,
+              target_organization: trustData.organizations.find(org => org.id === formData.target_organization)?.name || formData.target_organization,
+              trust_level: trustData.trustLevels.find(level => level.id === formData.trust_level)?.name || formData.trust_level,
+              relationship_type: formData.relationship_type,
+              notes: formData.notes
+            };
+            
             if (modalMode === 'add') {
-              await api.createTrustRelationship(formData);
+              await api.createTrustRelationship(relationshipData);
               setSuccess('Trust relationship created successfully');
             } else {
-              await api.updateTrustRelationship(selectedItem.id, formData);
+              await api.updateTrustRelationship(selectedItem.id, relationshipData);
               setSuccess('Trust relationship updated successfully');
             }
           } else if (modalType === 'group') {
