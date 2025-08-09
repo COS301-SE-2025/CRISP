@@ -7,8 +7,10 @@ from core.api.threat_feed_views import ThreatFeedViewSet
 from core.viewing.home import home
 from core.simple_auth_views import login_view, system_health, alert_statistics
 from core.api_extensions import (
-    list_organizations, organization_types, trust_groups, trust_levels, 
-    trust_metrics, trust_relationships, trust_relationships_detail, trust_overview, list_users
+    list_organizations, organization_types, create_organization, organization_detail,
+    deactivate_organization, reactivate_organization,
+    trust_groups, trust_levels, trust_metrics, trust_relationships, trust_relationships_detail, 
+    trust_overview, list_users, create_user, user_detail
 )
 
 # Set up REST API router
@@ -33,6 +35,13 @@ urlpatterns = [
     # Organizations endpoints
     path('api/v1/organizations/list_organizations/', list_organizations, name='list-organizations'),
     path('api/v1/organizations/types/', organization_types, name='organization-types'),
+    path('api/v1/organizations/create_organization/', create_organization, name='create-organization'),
+    path('api/v1/organizations/<str:organization_id>/get_organization/', organization_detail, name='get-organization'),
+    path('api/v1/organizations/<str:organization_id>/update_organization/', organization_detail, name='update-organization'),
+    path('api/v1/organizations/<str:organization_id>/delete_organization/', organization_detail, name='delete-organization'),
+    path('api/v1/organizations/<str:organization_id>/', organization_detail, name='organization-detail'),
+    path('api/v1/organizations/<str:organization_id>/deactivate_organization/', deactivate_organization, name='deactivate-organization'),
+    path('api/v1/organizations/<str:organization_id>/reactivate_organization/', reactivate_organization, name='reactivate-organization'),
     
     # Trust management endpoints
     path('api/v1/trust/groups/', trust_groups, name='trust-groups'),
@@ -44,6 +53,13 @@ urlpatterns = [
     # Admin endpoints
     path('api/v1/admin/trust_overview/', trust_overview, name='trust-overview'),
     path('api/v1/users/list/', list_users, name='list-users'),
+    
+    # User management endpoints
+    path('api/v1/users/create_user/', create_user, name='create-user'),
+    path('api/v1/users/<int:user_id>/get_user/', user_detail, name='get-user'),
+    path('api/v1/users/<int:user_id>/update_user/', user_detail, name='update-user'),
+    path('api/v1/users/<int:user_id>/delete_user/', user_detail, name='delete-user'),
+    
     
     # Temporarily disabled until imports are fixed
     # path('api/v1/', include('core_ut.urls_ut')),  # User management and trust APIs

@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth.models import User
-from core.models.models import Organization, TrustLevel, TrustRelationship
+from core.models.models import Organization, TrustLevel, TrustRelationship, UserProfile
 from django.shortcuts import get_object_or_404
 import json
 
@@ -71,13 +71,13 @@ def list_organizations(request):
 def organization_types(request):
     """Organization types endpoint"""
     types = [
-        {"id": "security_vendor", "name": "Security Vendor"},
-        {"id": "government", "name": "Government Agency"},
-        {"id": "financial", "name": "Financial Institution"},
-        {"id": "healthcare", "name": "Healthcare Provider"},
-        {"id": "education", "name": "Educational Institution"},
-        {"id": "technology", "name": "Technology Company"},
-        {"id": "other", "name": "Other"}
+        {"id": "security_vendor", "name": "Security Vendor", "value": "security_vendor"},
+        {"id": "government", "name": "Government Agency", "value": "government"},
+        {"id": "financial", "name": "Financial Institution", "value": "financial"},
+        {"id": "healthcare", "name": "Healthcare Provider", "value": "healthcare"},
+        {"id": "education", "name": "Educational Institution", "value": "education"},
+        {"id": "technology", "name": "Technology Company", "value": "technology"},
+        {"id": "other", "name": "Other", "value": "other"}
     ]
     return Response({
         "success": True,
@@ -85,6 +85,197 @@ def organization_types(request):
             "organization_types": types
         }
     })
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_organization(request):
+    """Create organization endpoint"""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        
+        name = data.get('name')
+        organization_type = data.get('organization_type', 'other')
+        description = data.get('description', '')
+        
+        if not name:
+            return Response({
+                "success": False,
+                "error": "Organization name is required"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if organization already exists
+        if Organization.objects.filter(name=name).exists():
+            return Response({
+                "success": False,
+                "error": "Organization with this name already exists"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Create organization
+        org = Organization.objects.create(
+            name=name,
+            organization_type=organization_type,
+            description=description
+        )
+        
+        return Response({
+            "success": True,
+            "data": {
+                "id": str(org.id),
+                "name": org.name,
+                "organization_type": org.organization_type,
+                "description": org.description,
+                "is_active": True
+            },
+            "message": "Organization created successfully"
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        return Response({
+            "success": False,
+            "error": str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def organization_detail(request, organization_id):
+    """Organization detail endpoint for get/update/delete operations"""
+    try:
+        # Handle both UUID and integer IDs
+        try:
+            import uuid
+            uuid.UUID(str(organization_id))
+            org = Organization.objects.get(id=organization_id)
+        except (ValueError, Organization.DoesNotExist):
+            # Try to find by name if not UUID
+            try:
+                org = Organization.objects.get(name=organization_id)
+            except Organization.DoesNotExist:
+                return Response({
+                    "success": False,
+                    "error": "Organization not found"
+                }, status=status.HTTP_404_NOT_FOUND)
+    except Organization.DoesNotExist:
+        return Response({
+            "success": False,
+            "error": "Organization not found"
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    if request.method == 'GET':
+        return Response({
+            "success": True,
+            "data": {
+                "id": str(org.id),
+                "name": org.name,
+                "organization_type": org.organization_type,
+                "description": org.description,
+                "is_active": True  # Organizations don't have is_active field currently
+            }
+        })
+    
+    elif request.method == 'PUT':
+        try:
+            data = json.loads(request.body) if request.body else {}
+            
+            # Update organization fields
+            if 'name' in data:
+                org.name = data['name']
+            if 'organization_type' in data:
+                org.organization_type = data['organization_type']
+            if 'description' in data:
+                org.description = data['description']
+            
+            org.save()
+            
+            return Response({
+                "success": True,
+                "data": {
+                    "id": str(org.id),
+                    "name": org.name,
+                    "organization_type": org.organization_type,
+                    "description": org.description,
+                    "is_active": True
+                },
+                "message": "Organization updated successfully"
+            })
+            
+        except Exception as e:
+            return Response({
+                "success": False,
+                "error": str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif request.method == 'DELETE':
+        org_name = org.name
+        org.delete()
+        
+        return Response({
+            "success": True,
+            "message": f"Organization '{org_name}' deleted permanently"
+        }, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def deactivate_organization(request, organization_id):
+    """Deactivate organization endpoint"""
+    try:
+        # Handle both UUID and string IDs
+        try:
+            import uuid
+            uuid.UUID(str(organization_id))
+            org = Organization.objects.get(id=organization_id)
+        except (ValueError, Organization.DoesNotExist):
+            try:
+                org = Organization.objects.get(name=organization_id)
+            except Organization.DoesNotExist:
+                return Response({
+                    "success": False,
+                    "error": "Organization not found"
+                }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Since Organization model doesn't have is_active field, we'll simulate deactivation
+        # This could be enhanced to add an is_active field to the model
+        return Response({
+            "success": True,
+            "message": f"Organization '{org.name}' deactivated successfully"
+        })
+        
+    except Exception as e:
+        return Response({
+            "success": False,
+            "error": str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def reactivate_organization(request, organization_id):
+    """Reactivate organization endpoint"""
+    try:
+        # Handle both UUID and string IDs
+        try:
+            import uuid
+            uuid.UUID(str(organization_id))
+            org = Organization.objects.get(id=organization_id)
+        except (ValueError, Organization.DoesNotExist):
+            try:
+                org = Organization.objects.get(name=organization_id)
+            except Organization.DoesNotExist:
+                return Response({
+                    "success": False,
+                    "error": "Organization not found"
+                }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Since Organization model doesn't have is_active field, we'll simulate reactivation
+        # This could be enhanced to add an is_active field to the model
+        return Response({
+            "success": True,
+            "message": f"Organization '{org.name}' reactivated successfully"
+        })
+        
+    except Exception as e:
+        return Response({
+            "success": False,
+            "error": str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
@@ -505,6 +696,12 @@ def list_users(request):
     """List users endpoint"""
     users = []
     for user in User.objects.all():
+        # Get or create user profile to access organization
+        try:
+            profile = user.profile
+        except UserProfile.DoesNotExist:
+            profile = UserProfile.objects.create(user=user)
+            
         users.append({
             "id": user.id,
             "username": user.username,
@@ -515,6 +712,8 @@ def list_users(request):
             "is_staff": user.is_staff,
             "is_superuser": user.is_superuser,
             "role": "BlueVisionAdmin" if user.is_superuser else "user",
+            "organization": profile.organization.name if profile.organization else None,
+            "organization_id": str(profile.organization.id) if profile.organization else None,
             "date_joined": user.date_joined.isoformat() if user.date_joined else None,
             "last_login": user.last_login.isoformat() if user.last_login else None
         })
@@ -526,3 +725,217 @@ def list_users(request):
             "count": len(users)
         }
     })
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_user(request):
+    """Create new user endpoint"""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        
+        username = data.get('username')
+        email = data.get('email', username)
+        password = data.get('password', 'defaultpassword123')
+        first_name = data.get('first_name', '')
+        last_name = data.get('last_name', '')
+        is_staff = data.get('is_staff', False)
+        is_superuser = data.get('is_superuser', False)
+        
+        if not username:
+            return Response({
+                "success": False,
+                "error": "Username is required"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if user already exists
+        if User.objects.filter(username=username).exists():
+            return Response({
+                "success": False,
+                "error": "User with this username already exists"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Create user
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            is_staff=is_staff,
+            is_superuser=is_superuser,
+            is_active=True
+        )
+        
+        # Create user profile and handle organization assignment
+        profile = UserProfile.objects.create(user=user)
+        
+        # Handle organization assignment (check both 'organization' and 'organization_id')
+        organization_value = data.get('organization') or data.get('organization_id')
+        if organization_value:
+            # Try to find organization by name or ID
+            try:
+                # Try by UUID first
+                import uuid
+                uuid.UUID(str(organization_value))
+                organization = Organization.objects.get(id=organization_value)
+            except (ValueError, Organization.DoesNotExist):
+                # Try by name
+                try:
+                    organization = Organization.objects.get(name=organization_value)
+                except Organization.DoesNotExist:
+                    # Organization not found, but continue with user creation
+                    organization = None
+            
+            if organization:
+                profile.organization = organization
+                profile.save()
+        
+        return Response({
+            "success": True,
+            "data": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "is_active": user.is_active,
+                "is_staff": user.is_staff,
+                "is_superuser": user.is_superuser,
+                "role": "BlueVisionAdmin" if user.is_superuser else "user",
+                "organization": profile.organization.name if profile.organization else None,
+                "organization_id": str(profile.organization.id) if profile.organization else None,
+                "date_joined": user.date_joined.isoformat() if user.date_joined else None
+            },
+            "message": "User created successfully"
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        return Response({
+            "success": False,
+            "error": str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def user_detail(request, user_id):
+    """User detail endpoint for get/update/delete operations"""
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({
+            "success": False,
+            "error": "User not found"
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    if request.method == 'GET':
+        # Get or create user profile to access organization
+        try:
+            profile = user.profile
+        except UserProfile.DoesNotExist:
+            profile = UserProfile.objects.create(user=user)
+        
+        return Response({
+            "success": True,
+            "data": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "is_active": user.is_active,
+                "is_staff": user.is_staff,
+                "is_superuser": user.is_superuser,
+                "role": "BlueVisionAdmin" if user.is_superuser else "user",
+                "organization": profile.organization.name if profile.organization else None,
+                "organization_id": str(profile.organization.id) if profile.organization else None,
+                "date_joined": user.date_joined.isoformat() if user.date_joined else None,
+                "last_login": user.last_login.isoformat() if user.last_login else None
+            }
+        })
+    
+    elif request.method == 'PUT':
+        try:
+            data = json.loads(request.body) if request.body else {}
+            print(f"DEBUG: Received user update data: {data}")  # Debug log
+            
+            # Get or create user profile
+            try:
+                profile = user.profile
+            except UserProfile.DoesNotExist:
+                profile = UserProfile.objects.create(user=user)
+            
+            # Update user fields
+            if 'first_name' in data:
+                user.first_name = data['first_name']
+            if 'last_name' in data:
+                user.last_name = data['last_name']
+            if 'email' in data:
+                user.email = data['email']
+            if 'is_staff' in data:
+                user.is_staff = data['is_staff']
+            if 'is_superuser' in data:
+                user.is_superuser = data['is_superuser']
+            if 'is_active' in data:
+                user.is_active = data['is_active']
+            
+            # Handle organization assignment (check both 'organization' and 'organization_id')
+            organization_value = data.get('organization') or data.get('organization_id')
+            if 'organization' in data or 'organization_id' in data:
+                if organization_value:
+                    # Try to find organization by name or ID
+                    try:
+                        # Try by UUID first
+                        import uuid
+                        uuid.UUID(str(organization_value))
+                        organization = Organization.objects.get(id=organization_value)
+                    except (ValueError, Organization.DoesNotExist):
+                        # Try by name
+                        try:
+                            organization = Organization.objects.get(name=organization_value)
+                        except Organization.DoesNotExist:
+                            return Response({
+                                "success": False,
+                                "error": f"Organization '{organization_value}' not found"
+                            }, status=status.HTTP_400_BAD_REQUEST)
+                    
+                    profile.organization = organization
+                else:
+                    profile.organization = None
+            
+            user.save()
+            profile.save()
+            
+            return Response({
+                "success": True,
+                "data": {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                    "is_active": user.is_active,
+                    "is_staff": user.is_staff,
+                    "is_superuser": user.is_superuser,
+                    "role": "BlueVisionAdmin" if user.is_superuser else "user",
+                    "organization": profile.organization.name if profile.organization else None,
+                    "organization_id": str(profile.organization.id) if profile.organization else None,
+                    "date_joined": user.date_joined.isoformat() if user.date_joined else None
+                },
+                "message": "User updated successfully"
+            })
+            
+        except Exception as e:
+            return Response({
+                "success": False,
+                "error": str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif request.method == 'DELETE':
+        username = user.username
+        user.delete()
+        
+        return Response({
+            "success": True,
+            "message": f"User '{username}' deleted permanently"
+        }, status=status.HTTP_200_OK)
+

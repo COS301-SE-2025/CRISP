@@ -47,6 +47,18 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+class UserProfile(models.Model):
+    """
+    User profile to extend the default Django User with organization relationship
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    organization = models.ForeignKey('Organization', on_delete=models.SET_NULL, null=True, blank=True, related_name='user_profiles')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.organization.name if self.organization else 'No Organization'}"
+
 
 class Organization(models.Model):
     """
