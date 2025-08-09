@@ -3,8 +3,17 @@
 CRISP (Cyber Risk Information Sharing Platform) is a secure threat intelligence sharing platform designed to streamline and enhance threat intelligence sharing among Institutions, particularly in response to increasing ransomware attacks targeting tertiary education institutions.
 
 ## 📋 Project Links
-- https://teams.microsoft.com/l/meetingrecap?driveId=b%21Opdmyntpw0KbT1FIx3jwECKk7kzKq7BMq1KibFpSH3cHq0FaEhGjTZgSi8Ftnxe8&driveItemId=01EMA7DMQOBNOF5AMDGNDIA3YMMZFUOZVY&sitePath=https%3A%2F%2Funiversitypretoria-my.sharepoint.com%2F%3Av%3A%2Fg%2Fpersonal%2Fu22574982_up_ac_za%2FEQ4LXF6BgzNGgG8MZktHZrgBSNTMg3NZ0sg8yjYDV_IZyw&fileUrl=https%3A%2F%2Funiversitypretoria-my.sharepoint.com%2Fpersonal%2Fu22574982_up_ac_za%2FDocuments%2FRecordings%2FMeeting%2520with%2520Mr.%2520AP%2520van%2520der%2520Colf-20250627_155022-Meeting%2520Recording.mp4%3Fweb%3D1&threadId=19%3Ameeting_NDU3Njc0N2EtNTQ3NS00ZjJjLTlmODctNzE5Y2ZlYjkyOTNm%40thread.v2&organizerId=acf38b8a-21c1-4014-9e6d-1995f92463c0&tenantId=ddfa59c8-38d0-49a3-822e-1d3bcb5bf85b&callId=498669da-1962-4b37-b366-9d44e45a8930&threadType=Meeting&meetingType=MeetNow&subType=RecapSharingLink_RecapCore
-- **[Functional Requirements (SRS) Document](https://github.com/COS301-SE-2025/CRISP/blob/documents/SRS.md)** - Detailed system requirements and specifications
+- **[MeetingRecap](https://teams.microsoft.com/l/meetingrecap?driveId=b%21Opdmyntpw0KbT1FIx3jwECKk7kzKq7BMq1KibFpSH3cHq0FaEhGjTZgSi8Ftnxe8&driveItemId=01EMA7DMQOBNOF5AMDGNDIA3YMMZFUOZVY&sitePath=https%3A%2F%2Funiversitypretoria-my.sharepoint.com%2F%3Av%3A%2Fg%2Fpersonal%2Fu22574982_up_ac_za%2FEQ4LXF6BgzNGgG8MZktHZrgBSNTMg3NZ0sg8yjYDV_IZyw&fileUrl=https%3A%2F%2Funiversitypretoria-my.sharepoint.com%2Fpersonal%2Fu22574982_up_ac_za%2FDocuments%2FRecordings%2FMeeting%2520with%2520Mr.%2520AP%2520van%2520der%2520Colf-20250627_155022-Meeting%2520Recording.mp4%3Fweb%3D1&threadId=19%3Ameeting_NDU3Njc0N2EtNTQ3NS00ZjJjLTlmODctNzE5Y2ZlYjkyOTNm%40thread.v2&organizerId=acf38b8a-21c1-4014-9e6d-1995f92463c0&tenantId=ddfa59c8-38d0-49a3-822e-1d3bcb5bf85b&callId=498669da-1962-4b37-b366-9d44e45a8930&threadType=Meeting&meetingType=MeetNow&subType=RecapSharingLink_RecapCore)** 
+
+- **[Project Management](https://github.com/orgs/COS301-SE-2025/projects/205/views/1)** - scrum board tool github pages
+
+- **[PDF user manual](https://github.com/COS301-SE-2025/CRISP/blob/documents/CRISP%20User%20Manual.pdf)** - **Done by Liam, double check before demo (2025-08-09)**
+
+- **[Technical installation manual]()** - **NEEDS TO BE IMPLEMENTED (2025-08-09)**
+
+- **[Coding standards/quality](https://github.com/COS301-SE-2025/CRISP/wiki/Coding-Standards-Document)** 
+
+- **[Functional Requirements (SRS) Document](https://github.com/COS301-SE-2025/CRISP/blob/documents/SRS.md)** - Detailed system requirements and specifications **NBNB please update(2025-08-09) need updated diagrams**
 - **[GitHub Project Board](https://github.com/orgs/COS301-SE-2025/projects/205)** - Track our development progress and sprint planning
 
 ## 🎯 Project Overview
