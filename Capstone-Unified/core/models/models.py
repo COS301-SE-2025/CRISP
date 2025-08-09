@@ -84,6 +84,7 @@ class Organization(models.Model):
     website = models.URLField(blank=True, null=True)
     domain = models.CharField(max_length=255, blank=True, null=True)
     stix_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
+    is_active = models.BooleanField(default=True, help_text="Whether this organization is active")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_organizations')
