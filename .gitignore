@@ -1,7 +1,4 @@
-# ===========================================
-# UNIFIED PROJECT .GITIGNORE
-# Merged from Publication Consumption Anonymization and Trust Users Management
-# ===========================================
+
 
 # Python
 __pycache__/
@@ -102,18 +99,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Settings Files
-settings.py
-local_settings.py
-*.settings
-settings.json
-settings.local.json
-config.json
-config.local.json
-.settings/
-settings/
-configuration.py
-configuration.json
+
 
 # React Build Files
 build/
