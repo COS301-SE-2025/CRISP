@@ -70,7 +70,7 @@ class TrustService:
                     return {"success": False, "message": "Cannot create trust relationship with same organization"}
                 
                 # Get the trust level object
-                from core.trust.models import TrustLevel
+                from core_ut.trust.models import TrustLevel
                 try:
                     trust_level = TrustLevel.objects.get(id=relationship_data["trust_level"])
                     trust_level_name = trust_level.name
@@ -82,7 +82,7 @@ class TrustService:
                 target_org = relationship_data["target_organization"]
                 
                 # Convert UUID strings to Organization objects if needed
-                from core.user_management.models import Organization
+                from core_ut.user_management.models import Organization
                 import uuid
                 
                 # Handle UUID objects or strings
@@ -104,7 +104,7 @@ class TrustService:
         # Handle static method pattern: create_trust_relationship(source_org, target_org, trust_level_name, ...)
         elif source_org is not None and target_org is not None and trust_level_name is not None:
             # Convert string UUIDs to Organization objects if needed
-            from core.user_management.models import Organization
+            from core_ut.user_management.models import Organization
             import uuid
             
             if isinstance(source_org, (str, uuid.UUID)):
@@ -239,7 +239,7 @@ class TrustService:
                 # Convert approving_org string UUID to Organization object if needed
                 if isinstance(approving_org, str):
                     try:
-                        from core.user_management.models import Organization
+                        from core_ut.user_management.models import Organization
                         approving_org = Organization.objects.get(id=approving_org)
                     except Organization.DoesNotExist:
                         raise ValidationError("Approving organization not found")

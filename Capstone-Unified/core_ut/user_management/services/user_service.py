@@ -667,8 +667,8 @@ class UserService:
                 
                 # Delete all related objects using Django ORM to properly handle foreign keys
                 from django.contrib.admin.models import LogEntry
-                from core.trust.models import TrustLog, TrustRelationship
-                from core.alerts.models import EmailLog
+                from core_ut.trust.models import TrustLog, TrustRelationship
+                from core_ut.alerts.models import EmailLog
                 
                 # Delete Django admin log entries for this user
                 LogEntry.objects.filter(user_id=target_user.id).delete()
@@ -691,7 +691,7 @@ class UserService:
                 
                 # Delete user invitations
                 try:
-                    from core.user_management.models import UserInvitation
+                    from core_ut.user_management.models import UserInvitation
                     UserInvitation.objects.filter(
                         models.Q(inviter=target_user) | models.Q(accepted_by=target_user)
                     ).delete()
@@ -700,7 +700,7 @@ class UserService:
                 
                 # Delete password reset tokens
                 try:
-                    from core.user_management.models import PasswordResetToken
+                    from core_ut.user_management.models import PasswordResetToken
                     PasswordResetToken.objects.filter(user=target_user).delete()
                 except:
                     pass  # PasswordResetToken might not exist

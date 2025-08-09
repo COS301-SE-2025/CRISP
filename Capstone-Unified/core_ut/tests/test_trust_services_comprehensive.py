@@ -10,13 +10,13 @@ from unittest.mock import patch, Mock, MagicMock
 import unittest
 import uuid
 
-from core.trust.services.trust_service import TrustService
-from core.trust.services.trust_group_service import TrustGroupService
-from core.trust.models import (
+from core_ut.trust.services.trust_service import TrustService
+from core_ut.trust.services.trust_group_service import TrustGroupService
+from core_ut.trust.models import (
     TrustRelationship, TrustGroup, TrustGroupMembership,
     TrustLevel, TrustLog, SharingPolicy
 )
-from core.user_management.models import Organization, CustomUser
+from core_ut.user_management.models import Organization, CustomUser
 
 
 class TrustServiceTest(TestCase):

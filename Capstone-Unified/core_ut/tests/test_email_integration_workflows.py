@@ -8,11 +8,11 @@ from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 from datetime import timedelta
 from django.db import transaction
-from core.user_management.models.invitation_models import UserInvitation, PasswordResetToken
-from core.user_management.models.user_models import CustomUser, Organization
-from core.user_management.services.invitation_service import UserInvitationService, PasswordResetService
-from core.notifications.services.gmail_smtp_service import GmailSMTPService
-from core.tests.factories import CustomUserFactory, OrganizationFactory, CustomUserWithoutOrgFactory
+from core_ut.user_management.models.invitation_models import UserInvitation, PasswordResetToken
+from core_ut.user_management.models.user_models import CustomUser, Organization
+from core_ut.user_management.services.invitation_service import UserInvitationService, PasswordResetService
+from core_ut.notifications.services.gmail_smtp_service import GmailSMTPService
+from core_ut.tests.factories import CustomUserFactory, OrganizationFactory, CustomUserWithoutOrgFactory
 import uuid
 
 

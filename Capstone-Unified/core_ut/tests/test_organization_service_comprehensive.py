@@ -7,9 +7,9 @@ from django.core.exceptions import ValidationError, PermissionDenied
 from django.utils import timezone
 from unittest.mock import patch, Mock
 from datetime import timedelta
-from core.user_management.services.organization_service import OrganizationService
-from core.user_management.models import CustomUser, Organization, AuthenticationLog
-from core.trust.models import TrustRelationship, TrustLevel, TrustGroup, TrustGroupMembership
+from core_ut.user_management.services.organization_service import OrganizationService
+from core_ut.user_management.models import CustomUser, Organization, AuthenticationLog
+from core_ut.trust.models import TrustRelationship, TrustLevel, TrustGroup, TrustGroupMembership
 
 
 class OrganizationServiceComprehensiveTest(TestCase):

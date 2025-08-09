@@ -8,9 +8,9 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.utils import timezone
 from datetime import timedelta
-from core.user_management.models.invitation_models import UserInvitation, PasswordResetToken
-from core.user_management.models.user_models import CustomUser, Organization
-from core.tests.factories import CustomUserFactory, OrganizationFactory
+from core_ut.user_management.models.invitation_models import UserInvitation, PasswordResetToken
+from core_ut.user_management.models.user_models import CustomUser, Organization
+from core_ut.tests.factories import CustomUserFactory, OrganizationFactory
 import uuid
 
 

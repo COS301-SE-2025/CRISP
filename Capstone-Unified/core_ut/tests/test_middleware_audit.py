@@ -12,11 +12,11 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import timedelta
 
-from core.user_management.models import CustomUser, Organization, AuthenticationLog
-from core.trust.models import TrustLog
-from core.middleware.audit_middleware import AuditMiddleware
-from core.audit.services.audit_service import AuditService
-from core.tests.test_fixtures import BaseTestCase
+from core_ut.user_management.models import CustomUser, Organization, AuthenticationLog
+from core_ut.trust.models import TrustLog
+from core_ut.middleware.audit_middleware import AuditMiddleware
+from core_ut.audit.services.audit_service import AuditService
+from core_ut.tests.test_fixtures import BaseTestCase
 
 
 class AuditMiddlewareTest(BaseTestCase):

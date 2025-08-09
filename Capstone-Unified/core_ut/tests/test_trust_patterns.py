@@ -10,10 +10,10 @@ from django.test import TestCase
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
-from core.trust.models import TrustLevel, TrustRelationship, TrustGroup, TrustLog
-from core.tests.test_fixtures import BaseTestCase
-from core.trust.patterns.factory.trust_factory import TrustFactory
-from core.trust.patterns.strategy import TrustLevelAccessStrategy, AccessControlStrategy
+from core_ut.trust.models import TrustLevel, TrustRelationship, TrustGroup, TrustLog
+from core_ut.tests.test_fixtures import BaseTestCase
+from core_ut.trust.patterns.factory.trust_factory import TrustFactory
+from core_ut.trust.patterns.strategy import TrustLevelAccessStrategy, AccessControlStrategy
 
 
 class TrustFactoryTest(BaseTestCase):
@@ -106,7 +106,7 @@ class TrustObserverTest(BaseTestCase):
     def test_observer_pattern_exists(self):
         """Test that observer pattern components exist"""
         try:
-            from core.trust.patterns.observer.trust_observers import TrustEventManager
+            from core_ut.trust.patterns.observer.trust_observers import TrustEventManager
             self.assertTrue(hasattr(TrustEventManager, 'notify_observers'))
         except ImportError:
             self.skipTest("Observer pattern not fully implemented")

@@ -6,11 +6,11 @@ from django.test import TestCase
 from django.core.exceptions import ValidationError
 from unittest.mock import patch, Mock
 import builtins
-from core.user_management.factories.user_factory import (
+from core_ut.user_management.factories.user_factory import (
     UserCreator, StandardUserCreator, PublisherUserCreator, 
     AdminUserCreator, UserFactory
 )
-from core.user_management.models import CustomUser, Organization, AuthenticationLog
+from core_ut.user_management.models import CustomUser, Organization, AuthenticationLog
 import secrets
 import string
 
@@ -386,7 +386,7 @@ class UserCreatorComprehensiveTest(TestCase):
     def test_factory_boy_integration_organization(self):
         """Test factory boy integration for organizations"""
         try:
-            from core.user_management.factories.user_factory import OrganizationFactory
+            from core_ut.user_management.factories.user_factory import OrganizationFactory
             org = OrganizationFactory()
             self.assertIsInstance(org, Organization)
             self.assertTrue(org.name.startswith('Test Organization'))
@@ -399,7 +399,7 @@ class UserCreatorComprehensiveTest(TestCase):
     def test_factory_boy_integration_user(self):
         """Test factory boy integration for users"""
         try:
-            from core.user_management.factories.user_factory import UserFactory as FactoryBoyUserFactory
+            from core_ut.user_management.factories.user_factory import UserFactory as FactoryBoyUserFactory
             user = FactoryBoyUserFactory()
             self.assertIsInstance(user, CustomUser)
             self.assertEqual(user.role, 'viewer')
@@ -419,7 +419,7 @@ class UserCreatorComprehensiveTest(TestCase):
             return original_import(name, *args, **kwargs)
         
         with patch('builtins.__import__', side_effect=mock_import):
-            from core.user_management.factories.user_factory import OrganizationFactory
+            from core_ut.user_management.factories.user_factory import OrganizationFactory
             org = OrganizationFactory.create(name='Custom Org')
             self.assertEqual(org.name, 'Custom Org')
     
@@ -433,7 +433,7 @@ class UserCreatorComprehensiveTest(TestCase):
             return original_import(name, *args, **kwargs)
         
         with patch('builtins.__import__', side_effect=mock_import):
-            from core.user_management.factories.user_factory import UserFactory as FallbackUserFactory
+            from core_ut.user_management.factories.user_factory import UserFactory as FallbackUserFactory
             user = FallbackUserFactory.create(username='fallback@example.com')
             self.assertEqual(user.username, 'fallback@example.com')
     

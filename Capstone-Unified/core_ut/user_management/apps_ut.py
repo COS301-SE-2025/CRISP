@@ -8,4 +8,4 @@ class UserManagementConfig(AppConfig):
     
     def ready(self):
         """Initialize app when Django starts"""
-        import core.user_management.signals
+        import core_ut.user_management.signals

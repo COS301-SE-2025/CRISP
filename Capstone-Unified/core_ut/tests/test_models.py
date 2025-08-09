@@ -10,8 +10,8 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import timedelta
 
-from core.trust.models import TrustLevel, TrustRelationship, TrustGroup, TrustLog
-from core.user_management.models import Organization, CustomUser
+from core_ut.trust.models import TrustLevel, TrustRelationship, TrustGroup, TrustLog
+from core_ut.user_management.models import Organization, CustomUser
 
 
 class TrustLevelTest(TestCase):

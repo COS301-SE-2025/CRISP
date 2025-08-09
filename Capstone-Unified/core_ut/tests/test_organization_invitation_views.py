@@ -11,9 +11,9 @@ from rest_framework.test import APIClient
 from rest_framework import status
 from django.utils import timezone
 from datetime import timedelta
-from core.user_management.models.invitation_models import UserInvitation
-from core.user_management.models.user_models import CustomUser, Organization
-from core.tests.factories import CustomUserFactory, OrganizationFactory, CustomUserWithoutOrgFactory
+from core_ut.user_management.models.invitation_models import UserInvitation
+from core_ut.user_management.models.user_models import CustomUser, Organization
+from core_ut.tests.factories import CustomUserFactory, OrganizationFactory, CustomUserWithoutOrgFactory
 import uuid
 
 

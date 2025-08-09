@@ -6,9 +6,9 @@ from django.test import TestCase
 from django.core.exceptions import PermissionDenied
 from unittest.mock import patch, Mock
 from datetime import datetime, timedelta
-from core.user_management.services.trust_aware_service import TrustAwareService
-from core.user_management.models import CustomUser, Organization
-from core.trust.models import TrustRelationship, TrustLevel, TrustGroup, TrustGroupMembership
+from core_ut.user_management.services.trust_aware_service import TrustAwareService
+from core_ut.user_management.models import CustomUser, Organization
+from core_ut.trust.models import TrustRelationship, TrustLevel, TrustGroup, TrustGroupMembership
 
 
 class TrustAwareServiceComprehensiveTest(TestCase):

@@ -78,6 +78,7 @@ sphinx-rtd-theme>=1.2.2
 
 # Utilities
 click>=8.1.0
+psutil>=5.9.0
 
 # Note: Review version conflicts and test compatibility before production deployment
 # Some packages may have conflicting version requirements that need resolution

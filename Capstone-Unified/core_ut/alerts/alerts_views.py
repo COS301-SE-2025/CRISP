@@ -11,7 +11,7 @@ from django.utils import timezone
 from django.conf import settings
 import logging
 
-from core.notifications.services.gmail_smtp_service import GmailSMTPService
+from core_ut.notifications.services.gmail_smtp_service import GmailSMTPService
 
 logger = logging.getLogger(__name__)
 
@@ -150,7 +150,7 @@ def get_email_statistics(request):
     try:
         # Get real email statistics from database
         try:
-            from core.alerts.models import EmailLog
+            from core_ut.alerts.models import EmailLog
             
             # Get organization-specific stats if user belongs to one
             organization = request.user.organization if hasattr(request.user, 'organization') else None

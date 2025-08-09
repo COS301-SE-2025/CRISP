@@ -364,7 +364,7 @@ try:
     import factory
     import factory.django  # Add this import
     from django.contrib.auth import get_user_model
-    from core.user_management.models import Organization
+    from core_ut.user_management.models import Organization
 
     User = get_user_model()
 

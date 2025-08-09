@@ -359,7 +359,7 @@ class AdminViewSet(GenericViewSet):
         try:
             self._check_admin_permission(request.user, 'can_view_system_analytics')
             
-            from core.trust.models import TrustRelationship, TrustGroup, TrustLog
+            from core_ut.trust.models import TrustRelationship, TrustGroup, TrustLog
             
             # Get trust statistics
             trust_stats = {
@@ -441,7 +441,7 @@ class AdminViewSet(GenericViewSet):
     def _get_total_trust_relationships(self):
         """Get total trust relationships count"""
         try:
-            from core.trust.models import TrustRelationship
+            from core_ut.trust.models import TrustRelationship
             return TrustRelationship.objects.count()
         except:
             return 0
@@ -449,7 +449,7 @@ class AdminViewSet(GenericViewSet):
     def _get_active_trust_relationships(self):
         """Get active trust relationships count"""
         try:
-            from core.trust.models import TrustRelationship
+            from core_ut.trust.models import TrustRelationship
             return TrustRelationship.objects.filter(
                 status='active', is_active=True
             ).count()
@@ -459,7 +459,7 @@ class AdminViewSet(GenericViewSet):
     def _get_pending_trust_approvals(self):
         """Get pending trust approvals count"""
         try:
-            from core.trust.models import TrustRelationship
+            from core_ut.trust.models import TrustRelationship
             return TrustRelationship.objects.filter(status='pending').count()
         except:
             return 0
@@ -654,7 +654,7 @@ class AdminViewSet(GenericViewSet):
             ).values('action').annotate(count=Count('id'))
             
             # Get trust log statistics
-            from core.trust.models import TrustLog
+            from core_ut.trust.models import TrustLog
             trust_stats = TrustLog.objects.filter(
                 timestamp__gte=start_date
             ).values('action').annotate(count=Count('id'))

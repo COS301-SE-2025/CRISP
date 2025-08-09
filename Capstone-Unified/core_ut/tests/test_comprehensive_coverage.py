@@ -12,18 +12,18 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import timedelta
 
-from core.user_management.models import (
+from core_ut.user_management.models import (
     CustomUser, Organization, AuthenticationLog, UserSession, 
     UserProfile, TrustedDevice
 )
-from core.user_management.models.invitation_models import UserInvitation, PasswordResetToken
-from core.trust.models import (
+from core_ut.user_management.models.invitation_models import UserInvitation, PasswordResetToken
+from core_ut.trust.models import (
     TrustLevel, TrustRelationship, TrustGroup, TrustGroupMembership, 
     TrustLog, SharingPolicy
 )
-from core.notifications.services.gmail_smtp_service import GmailSMTPService
-from core.user_management.services.invitation_service import UserInvitationService, PasswordResetService
-from core.tests.test_fixtures import BaseTestCase
+from core_ut.notifications.services.gmail_smtp_service import GmailSMTPService
+from core_ut.user_management.services.invitation_service import UserInvitationService, PasswordResetService
+from core_ut.tests.test_fixtures import BaseTestCase
 
 
 class ModelMethodCoverageTest(BaseTestCase):
@@ -488,7 +488,7 @@ class UtilityFunctionCoverageTest(BaseTestCase):
     
     def test_validation_utilities(self):
         """Test validation utility functions"""
-        from core.user_management.validators import (
+        from core_ut.user_management.validators import (
             validate_user_role, validate_phone_number, validate_json_field,
             validate_uuid_string, validate_ip_address_list
         )
@@ -539,7 +539,7 @@ class UtilityFunctionCoverageTest(BaseTestCase):
     
     def test_service_utilities(self):
         """Test service utility methods"""
-        from core.audit.services.audit_service import AuditService
+        from core_ut.audit.services.audit_service import AuditService
         
         audit_service = AuditService()
         
@@ -562,7 +562,7 @@ class UtilityFunctionCoverageTest(BaseTestCase):
     
     def test_pattern_utilities(self):
         """Test design pattern utility classes"""
-        from core.trust.patterns.factory.trust_factory import TrustFactory
+        from core_ut.trust.patterns.factory.trust_factory import TrustFactory
         
         factory = TrustFactory()
         
@@ -572,7 +572,7 @@ class UtilityFunctionCoverageTest(BaseTestCase):
         
         # Test observer pattern
         try:
-            from core.trust.patterns.observer.trust_observers import TrustEventManager
+            from core_ut.trust.patterns.observer.trust_observers import TrustEventManager
             
             event_manager = TrustEventManager()
             

@@ -11,7 +11,7 @@ from django.conf import settings
 from django.utils import timezone
 from datetime import datetime
 
-from core.services.gmail_smtp_service import GmailSMTPService
+from core_ut.services.gmail_smtp_service import GmailSMTPService
 
 
 class GmailSMTPServiceTestCase(TestCase):

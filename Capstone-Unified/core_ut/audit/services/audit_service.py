@@ -180,7 +180,7 @@ class AuditService:
                 self.logger.debug("Skipping audit log in test environment")
                 return True
                 
-            from core.trust.models import TrustLog
+            from core_ut.trust.models import TrustLog
             
             # Skip logging if user doesn't exist in database
             if user and hasattr(user, 'pk') and not user.pk:
@@ -432,12 +432,12 @@ class AuditService:
         """
         try:
             from datetime import timedelta
-            from core.user_management.models import AuthenticationLog
-            from core.trust.models import TrustLog
+            from core_ut.user_management.models import AuthenticationLog
+            from core_ut.trust.models import TrustLog
             
             # Handle user_id parameter
             if user_id and not user:
-                from core.user_management.models import CustomUser
+                from core_ut.user_management.models import CustomUser
                 try:
                     user = CustomUser.objects.get(id=user_id)
                 except CustomUser.DoesNotExist:
@@ -505,8 +505,8 @@ class AuditService:
         try:
             from datetime import timedelta
             from django.db import models
-            from core.user_management.models import AuthenticationLog
-            from core.trust.models import TrustLog
+            from core_ut.user_management.models import AuthenticationLog
+            from core_ut.trust.models import TrustLog
             
             start_date = timezone.now() - timedelta(days=days)
             
@@ -567,8 +567,8 @@ class AuditService:
         """
         try:
             from datetime import timedelta
-            from core.user_management.models import AuthenticationLog
-            from core.trust.models import TrustLog
+            from core_ut.user_management.models import AuthenticationLog
+            from core_ut.trust.models import TrustLog
             
             # Use severity_filter if provided, otherwise use severity
             if severity_filter is not None:
@@ -676,7 +676,7 @@ class AuditService:
     def _get_user_logs(self, filters: Dict = None, limit: int = 100, offset: int = 0) -> List[Dict]:
         """Get user management logs with filtering."""
         try:
-            from core.user_management.models import AuthenticationLog
+            from core_ut.user_management.models import AuthenticationLog
             
             query = AuthenticationLog.objects.select_related('user')  # Remove 'target_user' as it doesn't exist
             
@@ -703,7 +703,7 @@ class AuditService:
     def _get_trust_logs(self, filters: Dict = None, limit: int = 100, offset: int = 0) -> List[Dict]:
         """Get trust management logs with filtering."""
         try:
-            from core.trust.models import TrustLog
+            from core_ut.trust.models import TrustLog
             
             query = TrustLog.objects.select_related('user', 'trust_relationship', 'trust_group')
             
@@ -1066,8 +1066,8 @@ class AuditService:
         """
         try:
             from datetime import timedelta
-            from core.user_management.models import AuthenticationLog
-            from core.trust.models import TrustLog
+            from core_ut.user_management.models import AuthenticationLog
+            from core_ut.trust.models import TrustLog
             
             # Use older_than_days if provided, otherwise use days
             effective_days = older_than_days or days
@@ -1184,8 +1184,8 @@ class AuditService:
         try:
             from datetime import timedelta
             from django.db.models import Count
-            from core.user_management.models import AuthenticationLog
-            from core.trust.models import TrustLog
+            from core_ut.user_management.models import AuthenticationLog
+            from core_ut.trust.models import TrustLog
             
             start_date = timezone.now() - timedelta(days=days)
             

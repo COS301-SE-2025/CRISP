@@ -5,7 +5,7 @@ Simple Email Test - Basic Functionality Check
 import unittest
 from unittest.mock import patch, MagicMock
 from django.test import TestCase
-from core.notifications.services.gmail_smtp_service import GmailSMTPService
+from core_ut.notifications.services.gmail_smtp_service import GmailSMTPService
 
 class SimpleEmailTest(TestCase):
     """Simple test to verify email service works"""

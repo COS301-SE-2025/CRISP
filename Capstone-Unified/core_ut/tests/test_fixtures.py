@@ -6,8 +6,8 @@ Provides reusable test data setup to fix model instance issues across all test f
 
 import uuid
 from django.test import TestCase
-from core.user_management.models import Organization, CustomUser
-from core.trust.models import TrustLevel
+from core_ut.user_management.models import Organization, CustomUser
+from core_ut.trust.models import TrustLevel
 
 
 class BaseTestCase(TestCase):

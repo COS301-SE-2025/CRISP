@@ -7,7 +7,7 @@ from django.contrib.auth.signals import user_logged_in, user_login_failed
 from django.db.models.signals import post_save
 from unittest.mock import patch, Mock
 
-from core.signals import (
+from core_ut.signals import (
     log_user_changes,
     log_organization_changes,
     log_trust_relationship_changes,
@@ -15,8 +15,8 @@ from core.signals import (
     log_successful_login,
     log_failed_login
 )
-from core.user_management.models import CustomUser, Organization
-from core.trust.models import TrustLevel, TrustGroup, TrustRelationship
+from core_ut.user_management.models import CustomUser, Organization
+from core_ut.trust.models import TrustLevel, TrustGroup, TrustRelationship
 
 
 class SignalHandlerTest(TestCase):

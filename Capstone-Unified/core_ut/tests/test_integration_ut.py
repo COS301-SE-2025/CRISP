@@ -7,10 +7,10 @@ Tests end-to-end workflows and component integration.
 import uuid
 from django.test import TestCase
 
-from core.trust.models import TrustLevel, TrustRelationship, TrustGroup
-from core.trust.services.trust_service import TrustService
-from core.trust.services.trust_group_service import TrustGroupService
-from core.tests.test_fixtures import BaseTestCase  # Add this import
+from core_ut.trust.models import TrustLevel, TrustRelationship, TrustGroup
+from core_ut.trust.services.trust_service import TrustService
+from core_ut.trust.services.trust_group_service import TrustGroupService
+from core_ut.tests.test_fixtures import BaseTestCase  # Add this import
 
 
 class TrustManagementIntegrationTest(BaseTestCase):  # Change from TestCase to BaseTestCase
@@ -45,7 +45,7 @@ class TrustManagementIntegrationTest(BaseTestCase):  # Change from TestCase to B
 
     def test_trust_group_workflow(self):
         """Test trust group creation and membership"""
-        from core.trust.services.trust_group_service import TrustGroupService
+        from core_ut.trust.services.trust_group_service import TrustGroupService
         
         try:
             group = TrustGroupService.create_trust_group(

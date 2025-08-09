@@ -9,7 +9,7 @@ import LandingPage from "./LandingPage.jsx";
 import Construction from "./construction.jsx";
 import ForgotPassword from "./components/ForgotPassword.jsx";
 import ResetPassword from "./components/ResetPassword.jsx";
-import "./assets/index.css";
+import "./assets/index_ut.css";
 import "./assets/trust-management.css";
 
 // Import Font Awesome

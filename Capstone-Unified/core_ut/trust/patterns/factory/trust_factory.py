@@ -129,7 +129,7 @@ class TrustLogCreator(TrustObjectCreator):
         Returns:
             TrustLog: Created log entry
         """
-        from core.user_management.models import Organization, CustomUser
+        from core_ut.user_management.models import Organization, CustomUser
         
         # Convert source organization if it's a string UUID
         if isinstance(source_organization, str):

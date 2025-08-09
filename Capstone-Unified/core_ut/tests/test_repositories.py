@@ -6,13 +6,13 @@ Covers critical CRUD operations and business logic.
 
 import uuid
 from django.test import TestCase
-from core.trust.models import TrustLevel, TrustRelationship, TrustLog
-from core.trust.patterns.repository.trust_repository import (
+from core_ut.trust.models import TrustLevel, TrustRelationship, TrustLog
+from core_ut.trust.patterns.repository.trust_repository import (
     TrustRelationshipRepository,
     TrustLevelRepository, 
     TrustLogRepository
 )
-from core.tests.test_fixtures import BaseTestCase
+from core_ut.tests.test_fixtures import BaseTestCase
 
 
 class TrustRelationshipRepositoryTest(BaseTestCase):

@@ -4,9 +4,9 @@ Comprehensive tests for trust service to increase coverage
 
 from django.test import TestCase
 from unittest.mock import patch, Mock
-from core.trust.services.trust_service import TrustService
-from core.trust.models import TrustLevel, TrustRelationship, TrustGroup, TrustLog
-from core.user_management.models import CustomUser, Organization
+from core_ut.trust.services.trust_service import TrustService
+from core_ut.trust.models import TrustLevel, TrustRelationship, TrustGroup, TrustLog
+from core_ut.user_management.models import CustomUser, Organization
 from django.core.exceptions import ValidationError
 
 

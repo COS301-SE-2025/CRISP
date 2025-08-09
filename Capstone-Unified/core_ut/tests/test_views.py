@@ -14,9 +14,9 @@ from django.http import JsonResponse
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 
-from core.user_management.models import CustomUser, Organization
-from core.trust.models import TrustLevel, TrustRelationship, TrustGroup
-from core.tests.test_fixtures import BaseTestCase
+from core_ut.user_management.models import CustomUser, Organization
+from core_ut.trust.models import TrustLevel, TrustRelationship, TrustGroup
+from core_ut.tests.test_fixtures import BaseTestCase
 
 User = get_user_model()
 
@@ -31,14 +31,14 @@ class UserViewsTest(BaseTestCase):
     def test_view_classes_exist(self):
         """Test that view classes can be imported"""
         try:
-            from core.user_management.views.user_views import UserViewSet
+            from core_ut.user_management.views.user_views import UserViewSet
             self.assertTrue(hasattr(UserViewSet, 'get_queryset') or hasattr(UserViewSet, 'get'))
         except ImportError:
             # Views might not exist or have different names
             pass
         
         try:
-            from core.user_management.views.auth_views import AuthenticationView
+            from core_ut.user_management.views.auth_views import AuthenticationView
             self.assertTrue(hasattr(AuthenticationView, 'post') or hasattr(AuthenticationView, 'get'))
         except ImportError:
             # Views might not exist or have different names
@@ -111,7 +111,7 @@ class OrganizationViewsTest(BaseTestCase):
     def test_organization_view_classes_exist(self):
         """Test that organization view classes can be imported"""
         try:
-            from core.user_management.views.organization_views import OrganizationViewSet
+            from core_ut.user_management.views.organization_views import OrganizationViewSet
             self.assertTrue(hasattr(OrganizationViewSet, 'get_queryset') or hasattr(OrganizationViewSet, 'get'))
         except ImportError:
             # Views might not exist or have different names

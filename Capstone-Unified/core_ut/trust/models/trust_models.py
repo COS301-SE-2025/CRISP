@@ -238,7 +238,7 @@ class TrustGroup(models.Model):
             
             def all(self):
                 """Get all member organizations"""
-                from core.user_management.models import Organization
+                from core_ut.user_management.models import Organization
                 return Organization.objects.filter(
                     trust_group_memberships__trust_group=self.trust_group,
                     trust_group_memberships__is_active=True
@@ -752,7 +752,7 @@ class TrustLog(models.Model):
                        trust_group=None, ip_address=None, user_agent=None,
                        success=True, failure_reason=None, details=None):
         """Convenience method to log trust events"""
-        from core.user_management.models import Organization, CustomUser
+        from core_ut.user_management.models import Organization, CustomUser
         from unittest.mock import Mock
         
         # Convert source organization if it's a string UUID

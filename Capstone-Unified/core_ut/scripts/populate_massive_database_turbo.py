@@ -40,9 +40,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crisp.TrustManagement.settings')
 django.setup()
 
-from core.user_management.models import CustomUser, Organization, UserSession
-from core.trust.models import TrustRelationship, TrustGroup, TrustLevel, TrustGroupMembership
-from core.audit.services.audit_service import AuditService
+from core_ut.user_management.models import CustomUser, Organization, UserSession
+from core_ut.trust.models import TrustRelationship, TrustGroup, TrustLevel, TrustGroupMembership
+from core_ut.audit.services.audit_service import AuditService
 from django.db import transaction, connection
 
 fake = Faker()

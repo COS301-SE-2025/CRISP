@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.urls import reverse, resolve, NoReverseMatch
 import uuid
 
-from core.user_management.views import (
+from core_ut.user_management.views import (
     AuthenticationViewSet,
     UserViewSet,
     OrganizationViewSet,
@@ -19,7 +19,7 @@ class URLConfigurationTest(TestCase):
     def test_core_urls_include(self):
         """Test that core URLs properly include sub-applications."""
         # Test that URL patterns are properly configured
-        from core.urls import urlpatterns
+        from core_ut.urls import urlpatterns
         self.assertTrue(len(urlpatterns) > 0)
         
         # Check that user management URLs are included
@@ -200,7 +200,7 @@ class URLConfigurationTest(TestCase):
     
     def test_router_registration(self):
         """Test that viewsets are properly registered with router."""
-        from core.user_management.urls import router
+        from core_ut.user_management.urls import router
         
         # Check that router has been configured
         self.assertIsNotNone(router)
@@ -216,7 +216,7 @@ class URLConfigurationTest(TestCase):
     
     def test_api_version_consistency(self):
         """Test that all API endpoints use consistent versioning."""
-        from core.user_management.urls import urlpatterns
+        from core_ut.user_management.urls import urlpatterns
         
         api_patterns = []
         for pattern in urlpatterns:
@@ -234,7 +234,7 @@ class URLConfigurationTest(TestCase):
     
     def test_url_pattern_uniqueness(self):
         """Test that URL patterns are unique and don't conflict."""
-        from core.user_management.urls import urlpatterns
+        from core_ut.user_management.urls import urlpatterns
         
         pattern_strings = []
         for pattern in urlpatterns:
@@ -272,7 +272,7 @@ class URLConfigurationTest(TestCase):
     
     def test_trust_urls_inclusion(self):
         """Test that trust URLs are properly included."""
-        from core.urls import urlpatterns as core_patterns
+        from core_ut.urls import urlpatterns as core_patterns
         
         # Look for trust URL inclusion
         trust_included = False
@@ -286,7 +286,7 @@ class URLConfigurationTest(TestCase):
     def test_url_namespace_separation(self):
         """Test that URL namespaces are properly separated."""
         # Test that user management and trust URLs don't conflict
-        from core.user_management.urls import urlpatterns as user_patterns
+        from core_ut.user_management.urls import urlpatterns as user_patterns
         
         user_pattern_strings = []
         for pattern in user_patterns:

@@ -8,7 +8,7 @@ from django.utils import timezone
 from datetime import timedelta
 import uuid
 
-from core.tests.factories import (
+from core_ut.tests.factories import (
     OrganizationFactory,
     CustomUserFactory as UserFactory,
     TrustLevelFactory,
@@ -16,11 +16,11 @@ from core.tests.factories import (
     TrustGroupFactory,
     TrustLogFactory
 )
-from core.trust.models import (
+from core_ut.trust.models import (
     TrustLevel, TrustRelationship, TrustGroup,
     TrustLog
 )
-from core.user_management.models import Organization
+from core_ut.user_management.models import Organization
 
 User = get_user_model()
 

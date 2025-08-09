@@ -66,7 +66,7 @@ class TrustGroupService:
                     raise ValidationError("Trust group name is required")
                 
                 # Convert creator_org to Organization instance if it's a string
-                from core.user_management.models import Organization
+                from core_ut.user_management.models import Organization
                 if isinstance(creator_org, str):
                     creator_org_instance = Organization.objects.get(id=creator_org)
                 else:
@@ -139,7 +139,7 @@ class TrustGroupService:
                 )
                 
                 # Convert organization string to Organization instance if needed
-                from core.user_management.models import Organization
+                from core_ut.user_management.models import Organization
                 if isinstance(organization, str):
                     organization_obj = Organization.objects.get(id=organization)
                 else:

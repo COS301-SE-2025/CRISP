@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.core.exceptions import ValidationError
 from ..models import TrustLevel, TrustRelationship, TrustGroup, TrustGroupMembership, TrustLog
-from core.user_management.factories.user_factory import UserFactory, OrganizationFactory
+from core_ut.user_management.factories.user_factory import UserFactory, OrganizationFactory
 
 
 class TrustLevelModelTest(TestCase):

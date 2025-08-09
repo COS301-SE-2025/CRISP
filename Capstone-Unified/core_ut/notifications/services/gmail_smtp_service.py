@@ -68,7 +68,7 @@ class GmailSMTPService:
         # Create email log entry
         email_log = None
         try:
-            from core.alerts.models import EmailLog
+            from core_ut.alerts.models import EmailLog
             email_log = EmailLog.objects.create(
                 email_type=email_type,
                 recipient_emails=to_emails,

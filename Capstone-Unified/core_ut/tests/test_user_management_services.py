@@ -9,12 +9,12 @@ from unittest.mock import patch, Mock, MagicMock
 from datetime import timedelta
 import uuid
 
-from core.user_management.services.auth_service import AuthenticationService
-from core.user_management.services.user_service import UserService
-from core.user_management.services.access_control_service import AccessControlService
-from core.user_management.services.organization_service import OrganizationService
-from core.user_management.services.trust_aware_service import TrustAwareService
-from core.user_management.models import (
+from core_ut.user_management.services.auth_service import AuthenticationService
+from core_ut.user_management.services.user_service import UserService
+from core_ut.user_management.services.access_control_service import AccessControlService
+from core_ut.user_management.services.organization_service import OrganizationService
+from core_ut.user_management.services.trust_aware_service import TrustAwareService
+from core_ut.user_management.models import (
     CustomUser, Organization, UserSession, AuthenticationLog, 
     UserProfile, TrustedDevice
 )

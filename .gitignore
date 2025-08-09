@@ -115,5 +115,57 @@ settings/
 configuration.py
 configuration.json
 
+# React Build Files
+build/
+dist/
+*.tgz
+*.tar.gz
+
+# React Dev Files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Package Lock Files (optional - some teams commit these)
+package-lock.json
+yarn.lock
+
+# Django Migration Files (optional - depends on team preference)
+# */migrations/0*.py
+# !*/migrations/__init__.py
+
+# Security & Keys
+*.pem
+*.key
+*.crt
+*.p12
+secrets/
+keys/
+credentials/
+
+# Database Files
+*.sqlite3
+*.sqlite
+*.db
+
+# Cache & Session Files
+.cache/
+sessions/
+
+# JWT Secrets
+jwt_secret.txt
+secret_key.txt
+
+# Email Testing Files
+emails/
+email_test/
+
+# STIX/TAXII Data Files
+*.stix
+*.stix2
+taxii_data/
+threat_feeds/
+
 # Project-specific ignores
 # (Add project-specific patterns below this line)

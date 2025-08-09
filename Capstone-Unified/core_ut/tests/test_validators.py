@@ -9,7 +9,7 @@ from unittest.mock import patch
 from django.test import TestCase
 from django.core.cache import cache
 
-from core.trust.validators import (
+from core_ut.trust.validators import (
     TrustRelationshipValidator,
     TrustGroupValidator,
     SecurityValidator,

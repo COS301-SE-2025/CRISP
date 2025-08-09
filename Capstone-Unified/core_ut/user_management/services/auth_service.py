@@ -216,7 +216,7 @@ class AuthenticationService:
     def _get_user_trust_context(self, user: CustomUser) -> Dict:
         """Get trust context information for the user"""
         try:
-            from core.trust.models import TrustRelationship
+            from core_ut.trust.models import TrustRelationship
             
             # Default context for users without organization
             if not user.organization:

@@ -8,10 +8,10 @@ from django.utils import timezone
 from unittest.mock import Mock, patch
 from datetime import timedelta
 
-from core.trust.patterns.factory import TrustFactory, TrustRelationshipCreator, TrustGroupCreator, TrustLogCreator
-from core.trust.models import TrustLevel, TrustGroup, TrustRelationship, TrustGroupMembership, TrustLog
-from core.user_management.models import Organization
-from core.tests.factories import OrganizationFactory, TrustLevelFactory, CustomUserFactory
+from core_ut.trust.patterns.factory import TrustFactory, TrustRelationshipCreator, TrustGroupCreator, TrustLogCreator
+from core_ut.trust.models import TrustLevel, TrustGroup, TrustRelationship, TrustGroupMembership, TrustLog
+from core_ut.user_management.models import Organization
+from core_ut.tests.factories import OrganizationFactory, TrustLevelFactory, CustomUserFactory
 
 
 class TrustFactoryPatternTestCase(TestCase):
@@ -521,21 +521,21 @@ class TrustFactoryPatternTestCase(TestCase):
 
     def test_relationship_creator_inheritance(self):
         """Test that relationship creator properly inherits from base."""
-        from core.trust.patterns.factory.trust_factory import TrustObjectCreator
+        from core_ut.trust.patterns.factory.trust_factory import TrustObjectCreator
         
         creator = TrustRelationshipCreator()
         self.assertIsInstance(creator, TrustObjectCreator)
 
     def test_group_creator_inheritance(self):
         """Test that group creator properly inherits from base."""
-        from core.trust.patterns.factory.trust_factory import TrustObjectCreator
+        from core_ut.trust.patterns.factory.trust_factory import TrustObjectCreator
         
         creator = TrustGroupCreator()
         self.assertIsInstance(creator, TrustObjectCreator)
 
     def test_log_creator_inheritance(self):
         """Test that log creator properly inherits from base."""
-        from core.trust.patterns.factory.trust_factory import TrustObjectCreator
+        from core_ut.trust.patterns.factory.trust_factory import TrustObjectCreator
         
         creator = TrustLogCreator()
         self.assertIsInstance(creator, TrustObjectCreator)

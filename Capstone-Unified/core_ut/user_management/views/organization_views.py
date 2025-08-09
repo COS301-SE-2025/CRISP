@@ -473,7 +473,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         }
         """
         try:
-            from core.trust.models import TrustLevel, Organization
+            from core_ut.trust.models import TrustLevel, Organization
             
             trust_level_id = request.data.get('trust_level_id')
             relationship_type = request.data.get('relationship_type', 'bilateral')
@@ -572,7 +572,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         try:
             # Try to import trust models with better error handling
             try:
-                from core.trust.models import TrustRelationship
+                from core_ut.trust.models import TrustRelationship
                 from django.db.models import Q
             except ImportError as import_error:
                 logger.error(f"Failed to import trust models: {import_error}")
@@ -655,7 +655,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
     def update_trust_relationship(self, request, pk=None):
         """Update a trust relationship."""
         try:
-            from core.trust.models import TrustRelationship, TrustLevel
+            from core_ut.trust.models import TrustRelationship, TrustLevel
             
             user_org = request.user.organization
             if not user_org:
@@ -718,7 +718,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
     def delete_trust_relationship(self, request, pk=None):
         """Delete a trust relationship."""
         try:
-            from core.trust.models import TrustRelationship
+            from core_ut.trust.models import TrustRelationship
             
             user_org = request.user.organization
             if not user_org:
@@ -761,7 +761,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         try:
             # Try to import trust models with better error handling
             try:
-                from core.trust.models import TrustGroup, TrustGroupMembership
+                from core_ut.trust.models import TrustGroup, TrustGroupMembership
             except ImportError as import_error:
                 logger.error(f"Failed to import trust models: {import_error}")
                 return Response({
@@ -866,7 +866,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
     def create_trust_group(self, request):
         """Create a new trust group."""
         try:
-            from core.trust.models import TrustGroup, TrustLevel, TrustGroupMembership
+            from core_ut.trust.models import TrustGroup, TrustLevel, TrustGroupMembership
             
             user_org = request.user.organization
             if not user_org:

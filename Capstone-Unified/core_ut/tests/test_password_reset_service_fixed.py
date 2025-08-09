@@ -7,10 +7,10 @@ from unittest.mock import patch, MagicMock
 from django.test import TestCase
 from django.utils import timezone
 from datetime import timedelta
-from core.user_management.services.invitation_service import PasswordResetService
-from core.user_management.models.invitation_models import PasswordResetToken
-from core.user_management.models.user_models import CustomUser
-from core.tests.factories import CustomUserFactory
+from core_ut.user_management.services.invitation_service import PasswordResetService
+from core_ut.user_management.models.invitation_models import PasswordResetToken
+from core_ut.user_management.models.user_models import CustomUser
+from core_ut.tests.factories import CustomUserFactory
 
 
 class PasswordResetServiceTestCase(TestCase):

@@ -13,10 +13,10 @@ from django.db import transaction
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 
-from core.user_management.models.invitation_models import UserInvitation, PasswordResetToken
-from core.user_management.models.user_models import Organization
-from core.notifications.services.gmail_smtp_service import GmailSMTPService
-from core.audit.services.audit_service import AuditService
+from core_ut.user_management.models.invitation_models import UserInvitation, PasswordResetToken
+from core_ut.user_management.models.user_models import Organization
+from core_ut.notifications.services.gmail_smtp_service import GmailSMTPService
+from core_ut.audit.services.audit_service import AuditService
 
 CustomUser = get_user_model()
 logger = logging.getLogger(__name__)

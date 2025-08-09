@@ -7,8 +7,8 @@ from django.utils import timezone
 from unittest.mock import patch, Mock, MagicMock
 from datetime import timedelta
 
-from core.middleware.audit_middleware import AuditMiddleware
-from core.user_management.models import CustomUser, Organization
+from core_ut.middleware.audit_middleware import AuditMiddleware
+from core_ut.user_management.models import CustomUser, Organization
 
 
 class AuditMiddlewareTest(TestCase):

@@ -2,7 +2,7 @@ from typing import Dict, List, Optional, Tuple, Any
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied
 from ..models import CustomUser, Organization
-from core.trust.models import TrustRelationship, TrustLevel, TrustGroup
+from core_ut.trust.models import TrustRelationship, TrustLevel, TrustGroup
 import logging
 from django.utils.deprecation import MiddlewareMixin
 from django.http import JsonResponse
@@ -283,7 +283,7 @@ class AccessControlService:
         # Check trust relationships - only if user has an organization
         if user.organization:
             try:
-                from core.trust.models import TrustRelationship
+                from core_ut.trust.models import TrustRelationship
                 relationship = TrustRelationship.objects.filter(
                     source_organization=user.organization,
                     target_organization=organization,
@@ -316,7 +316,7 @@ class AuditMiddleware(MiddlewareMixin):
     def get_audit_service(self):
         """Get or create audit service instance"""
         try:
-            from core.audit.services.audit_service import AuditService
+            from core_ut.audit.services.audit_service import AuditService
             return AuditService()
         except ImportError:
             return logging.getLogger('audit')

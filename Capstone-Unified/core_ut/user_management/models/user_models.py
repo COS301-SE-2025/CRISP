@@ -148,7 +148,7 @@ class Organization(models.Model):
 
     def get_trust_relationships(self):
         """Get trust relationships involving this organization"""
-        from core.trust.models import TrustRelationship
+        from core_ut.trust.models import TrustRelationship
         return TrustRelationship.objects.filter(
             models.Q(source_organization=str(self.id)) |
             models.Q(target_organization=str(self.id))
@@ -383,7 +383,7 @@ class CustomUser(AbstractUser):
             return True
         
         # Check trust relationships for other organizations
-        from core.trust.services.trust_service import TrustService
+        from core_ut.trust.services.trust_service import TrustService
         trust_service = TrustService()
         return trust_service.can_access_organization_data(
             str(self.organization.id), 
@@ -398,7 +398,7 @@ class CustomUser(AbstractUser):
             accessible.extend(Organization.objects.exclude(id=self.organization.id))
         else:
             # Get organizations through trust relationships
-            from core.trust.services.trust_service import TrustService
+            from core_ut.trust.services.trust_service import TrustService
             trust_service = TrustService()
             trusted_org_ids = trust_service.get_accessible_organizations(
                 str(self.organization.id)

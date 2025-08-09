@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from ..models import Organization, AuthenticationLog, UserSession
-from core.tests.factories import CustomUserFactory as UserFactory, OrganizationFactory
+from core_ut.tests.factories import CustomUserFactory as UserFactory, OrganizationFactory
 
 
 User = get_user_model()

@@ -9,7 +9,7 @@ from django.contrib.auth import get_user_model
 from django.http import HttpRequest
 from unittest.mock import Mock, patch
 
-from core.trust.admin import (
+from core_ut.trust.admin import (
     TrustLevelAdmin,
     TrustGroupAdmin,
     TrustRelationshipAdmin,
@@ -17,9 +17,9 @@ from core.trust.admin import (
     TrustLogAdmin,
     SharingPolicyAdmin,
 )
-from core.trust.models import TrustLevel, TrustGroup, TrustRelationship, TrustGroupMembership, TrustLog, SharingPolicy
-from core.user_management.models import Organization
-from core.tests.factories import OrganizationFactory, TrustLevelFactory, CustomUserFactory
+from core_ut.trust.models import TrustLevel, TrustGroup, TrustRelationship, TrustGroupMembership, TrustLog, SharingPolicy
+from core_ut.user_management.models import Organization
+from core_ut.tests.factories import OrganizationFactory, TrustLevelFactory, CustomUserFactory
 
 User = get_user_model()
 

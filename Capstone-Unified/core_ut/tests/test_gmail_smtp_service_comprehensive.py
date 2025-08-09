@@ -11,10 +11,10 @@ from django.test import TestCase, override_settings
 from django.conf import settings
 from django.utils import timezone
 from datetime import datetime, timedelta
-from core.notifications.services.gmail_smtp_service import GmailSMTPService
-from core.user_management.models.user_models import CustomUser, Organization
-from core.alerts.models import EmailLog
-from core.tests.factories import CustomUserFactory, OrganizationFactory
+from core_ut.notifications.services.gmail_smtp_service import GmailSMTPService
+from core_ut.user_management.models.user_models import CustomUser, Organization
+from core_ut.alerts.models import EmailLog
+from core_ut.tests.factories import CustomUserFactory, OrganizationFactory
 
 
 class GmailSMTPServiceComprehensiveTestCase(TestCase):

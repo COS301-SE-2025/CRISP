@@ -17,14 +17,14 @@ class MigrationTest(TestCase):
         """Test that migrations exist for the apps."""
         # Check user_management migrations
         try:
-            from core.user_management.migrations import __init__
+            from core_ut.user_management.migrations import __init__
             self.assertTrue(True)  # Migration package exists
         except ImportError:
             self.fail("User management migrations not found")
         
         # Check trust migrations
         try:
-            from core.trust.migrations import __init__
+            from core_ut.trust.migrations import __init__
             self.assertTrue(True)  # Migration package exists
         except ImportError:
             self.fail("Trust migrations not found")
@@ -32,7 +32,7 @@ class MigrationTest(TestCase):
     def test_migration_initial_user_management(self):
         """Test that initial user management migration exists."""
         try:
-            from core.user_management.migrations import _0001_initial
+            from core_ut.user_management.migrations import _0001_initial
             # Migration exists, test basic structure
             migration = _0001_initial.Migration
             self.assertIsNotNone(migration.dependencies)
@@ -44,7 +44,7 @@ class MigrationTest(TestCase):
     def test_migration_initial_trust(self):
         """Test that initial trust migration exists."""
         try:
-            from core.trust.migrations import _0001_initial
+            from core_ut.trust.migrations import _0001_initial
             # Migration exists, test basic structure
             migration = _0001_initial.Migration
             self.assertIsNotNone(migration.dependencies)
@@ -56,7 +56,7 @@ class MigrationTest(TestCase):
     def test_migration_update_for_user_management(self):
         """Test that trust update migration exists."""
         try:
-            from core.trust.migrations import _0002_update_for_user_management
+            from core_ut.trust.migrations import _0002_update_for_user_management
             # Migration exists, test basic structure
             migration = _0002_update_for_user_management.Migration
             self.assertIsNotNone(migration.dependencies)
@@ -157,7 +157,7 @@ class MigrationTest(TestCase):
         """Test migration dependencies are correct."""
         try:
             # Test user management migration dependencies
-            from core.user_management.migrations import _0001_initial as user_init
+            from core_ut.user_management.migrations import _0001_initial as user_init
             migration = user_init.Migration
             
             # Should have dependencies (at least Django auth)
@@ -168,7 +168,7 @@ class MigrationTest(TestCase):
         
         try:
             # Test trust migration dependencies
-            from core.trust.migrations import _0002_update_for_user_management as trust_update
+            from core_ut.trust.migrations import _0002_update_for_user_management as trust_update
             migration = trust_update.Migration
             
             # Should depend on user management
@@ -189,7 +189,7 @@ class MigrationTest(TestCase):
     def test_migration_operations(self):
         """Test that migrations have valid operations."""
         try:
-            from core.user_management.migrations import _0001_initial as user_init
+            from core_ut.user_management.migrations import _0001_initial as user_init
             migration = user_init.Migration
             
             # Should have operations
@@ -205,7 +205,7 @@ class MigrationTest(TestCase):
             pass
         
         try:
-            from core.trust.migrations import _0001_initial as trust_init
+            from core_ut.trust.migrations import _0001_initial as trust_init
             migration = trust_init.Migration
             
             # Should have operations
@@ -225,7 +225,7 @@ class MigrationIntegrityTest(TestCase):
         # migrations in a test environment easily
         
         try:
-            from core.user_management.migrations import _0001_initial
+            from core_ut.user_management.migrations import _0001_initial
             migration = _0001_initial.Migration
             
             # Check that migration has operations
@@ -263,8 +263,8 @@ class MigrationIntegrityTest(TestCase):
             # But in a test environment, we'll just verify the structure exists
             
             # Import our models to ensure they can be loaded
-            from core.user_management.models import CustomUser, Organization
-            from core.trust.models import TrustLevel, TrustRelationship, TrustGroup
+            from core_ut.user_management.models import CustomUser, Organization
+            from core_ut.trust.models import TrustLevel, TrustRelationship, TrustGroup
             
             # If models can be imported, they're structurally valid
             self.assertTrue(True)
@@ -279,7 +279,7 @@ class MigrationPerformanceTest(TestCase):
     def test_migration_operation_efficiency(self):
         """Test that migrations use efficient operations."""
         try:
-            from core.user_management.migrations import _0001_initial
+            from core_ut.user_management.migrations import _0001_initial
             migration = _0001_initial.Migration
             
             # Check operation types for efficiency
@@ -299,7 +299,7 @@ class MigrationPerformanceTest(TestCase):
     def test_migration_index_usage(self):
         """Test that migrations include appropriate indexes."""
         try:
-            from core.user_management.migrations import _0001_initial
+            from core_ut.user_management.migrations import _0001_initial
             migration = _0001_initial.Migration
             
             # Look for index operations

@@ -7,7 +7,7 @@ from django.urls import reverse
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from unittest.mock import patch, Mock
-from core.user_management.models import CustomUser, Organization
+from core_ut.user_management.models import CustomUser, Organization
 
 
 class AlertsViewsComprehensiveTest(APITestCase):

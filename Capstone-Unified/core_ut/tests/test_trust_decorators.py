@@ -11,9 +11,9 @@ from django.test import TestCase
 from django.utils import timezone
 from datetime import timedelta
 
-from core.trust.models import TrustLevel, TrustRelationship
-from core.tests.test_fixtures import BaseTestCase
-from core.trust.patterns.decorator.trust_decorators import (
+from core_ut.trust.models import TrustLevel, TrustRelationship
+from core_ut.tests.test_fixtures import BaseTestCase
+from core_ut.trust.patterns.decorator.trust_decorators import (
     BasicTrustEvaluation, SecurityEnhancementDecorator, ComplianceDecorator,
     AuditDecorator, TrustDecoratorChain
 )

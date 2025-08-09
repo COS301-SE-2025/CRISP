@@ -8,7 +8,7 @@ from django.utils import timezone
 from unittest.mock import Mock, patch, MagicMock
 from datetime import timedelta
 
-from core.trust.patterns.observer import (
+from core_ut.trust.patterns.observer import (
     TrustObserver,
     TrustNotificationObserver,
     TrustMetricsObserver,
@@ -19,9 +19,9 @@ from core.trust.patterns.observer import (
     notify_access_event,
     notify_trust_relationship_event,
 )
-from core.trust.models import TrustRelationship, TrustLevel, TrustGroup, TrustLog
-from core.user_management.models import Organization
-from core.tests.factories import OrganizationFactory, TrustLevelFactory
+from core_ut.trust.models import TrustRelationship, TrustLevel, TrustGroup, TrustLog
+from core_ut.user_management.models import Organization
+from core_ut.tests.factories import OrganizationFactory, TrustLevelFactory
 
 
 class TrustObserverPatternTestCase(TestCase):

@@ -10,12 +10,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from unittest.mock import patch, Mock, MagicMock
 import json
 
-from core.user_management.views.auth_views import AuthenticationViewSet
-from core.user_management.views.user_views import UserViewSet
-from core.user_management.views.organization_views import OrganizationViewSet
-from core.user_management.views.admin_views import AdminViewSet
-from core.user_management.models import CustomUser, Organization
-from core.trust.models import TrustLevel
+from core_ut.user_management.views.auth_views import AuthenticationViewSet
+from core_ut.user_management.views.user_views import UserViewSet
+from core_ut.user_management.views.organization_views import OrganizationViewSet
+from core_ut.user_management.views.admin_views import AdminViewSet
+from core_ut.user_management.models import CustomUser, Organization
+from core_ut.trust.models import TrustLevel
 
 User = get_user_model()
 
@@ -297,7 +297,7 @@ class UserViewSetTest(APITestCase):
     
     def test_viewset_initialization(self):
         """Test viewset initialization."""
-        from core.user_management.views.user_views import UserViewSet
+        from core_ut.user_management.views.user_views import UserViewSet
         viewset = UserViewSet()
         self.assertIsNotNone(viewset.user_service)
         self.assertIsNotNone(viewset.access_control)
@@ -396,7 +396,7 @@ class OrganizationViewSetTest(APITestCase):
     
     def test_viewset_initialization(self):
         """Test viewset initialization."""
-        from core.user_management.views.organization_views import OrganizationViewSet
+        from core_ut.user_management.views.organization_views import OrganizationViewSet
         viewset = OrganizationViewSet()
         self.assertIsNotNone(viewset.org_service)
         self.assertIsNotNone(viewset.access_control)
@@ -468,7 +468,7 @@ class AdminViewSetTest(APITestCase):
     
     def test_viewset_initialization(self):
         """Test viewset initialization."""
-        from core.user_management.views.admin_views import AdminViewSet
+        from core_ut.user_management.views.admin_views import AdminViewSet
         viewset = AdminViewSet()
         # Test that viewset can be instantiated
         self.assertIsNotNone(viewset)

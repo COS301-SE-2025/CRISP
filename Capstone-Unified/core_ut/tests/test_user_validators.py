@@ -9,13 +9,13 @@ from django.test import TestCase
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 
-from core.user_management.validators import (
+from core_ut.user_management.validators import (
     CustomPasswordValidator, UsernameValidator, EmailValidator,
     OrganizationDomainValidator, validate_user_role, validate_phone_number,
     validate_json_field, validate_uuid_string, validate_ip_address_list
 )
-from core.user_management.models import CustomUser, Organization
-from core.tests.test_fixtures import BaseTestCase
+from core_ut.user_management.models import CustomUser, Organization
+from core_ut.tests.test_fixtures import BaseTestCase
 
 User = get_user_model()
 

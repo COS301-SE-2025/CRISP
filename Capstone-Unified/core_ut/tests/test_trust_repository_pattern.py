@@ -8,16 +8,16 @@ from django.utils import timezone
 from unittest.mock import Mock, patch
 from datetime import timedelta
 
-from core.trust.patterns.repository import (
+from core_ut.trust.patterns.repository import (
     TrustRelationshipRepository,
     TrustGroupRepository,
     TrustLevelRepository,
     TrustLogRepository,
     TrustRepositoryManager
 )
-from core.trust.models import TrustLevel, TrustGroup, TrustRelationship, TrustGroupMembership, TrustLog
-from core.user_management.models import Organization
-from core.tests.factories import OrganizationFactory, TrustLevelFactory, CustomUserFactory
+from core_ut.trust.models import TrustLevel, TrustGroup, TrustRelationship, TrustGroupMembership, TrustLog
+from core_ut.user_management.models import Organization
+from core_ut.tests.factories import OrganizationFactory, TrustLevelFactory, CustomUserFactory
 
 
 class TrustRepositoryPatternTestCase(TestCase):

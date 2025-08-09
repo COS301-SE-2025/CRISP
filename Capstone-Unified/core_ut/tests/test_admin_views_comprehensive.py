@@ -10,9 +10,9 @@ from django.core.exceptions import PermissionDenied
 from unittest.mock import patch, Mock
 from django.utils import timezone
 from datetime import timedelta
-from core.user_management.views.admin_views import AdminViewSet
-from core.user_management.models import CustomUser, Organization, AuthenticationLog
-from core.trust.models import TrustRelationship, TrustLevel, TrustGroup, TrustLog
+from core_ut.user_management.views.admin_views import AdminViewSet
+from core_ut.user_management.models import CustomUser, Organization, AuthenticationLog
+from core_ut.trust.models import TrustRelationship, TrustLevel, TrustGroup, TrustLog
 
 
 class AdminViewsComprehensiveTest(APITestCase):

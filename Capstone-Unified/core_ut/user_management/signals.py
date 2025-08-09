@@ -178,7 +178,7 @@ def organization_created_handler(sender, instance, created, **kwargs):
         logger.info(f"New organization created: {instance.name} (ID: {instance.id})")
         
         # Create default trust level if this is the first organization
-        from core.trust.models import TrustLevel
+        from core_ut.trust.models import TrustLevel
         if Organization.objects.count() == 1:
             TrustLevel.objects.get_or_create(
                 name='Default Public Trust',
@@ -222,7 +222,7 @@ def organization_deleted_handler(sender, instance, **kwargs):
     logger.info(f"Organization deleted: {instance.name} (ID: {instance.id})")
     
     # Clean up related trust relationships
-    from core.trust.models import TrustRelationship
+    from core_ut.trust.models import TrustRelationship
     TrustRelationship.objects.filter(
         source_organization=str(instance.id)
     ).delete()

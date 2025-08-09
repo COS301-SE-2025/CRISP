@@ -9,17 +9,17 @@ from datetime import timedelta
 from unittest.mock import patch, Mock
 import uuid
 
-from core.trust.patterns.repository.trust_repository import (
+from core_ut.trust.patterns.repository.trust_repository import (
     BaseRepository, 
     TrustRelationshipRepository,
     TrustGroupRepository,
     TrustLevelRepository
 )
-from core.trust.models import (
+from core_ut.trust.models import (
     TrustRelationship, TrustGroup, TrustGroupMembership, 
     TrustLevel, TrustLog, SharingPolicy
 )
-from core.user_management.models import Organization, CustomUser
+from core_ut.user_management.models import Organization, CustomUser
 
 
 class BaseRepositoryTest(TestCase):
@@ -692,7 +692,7 @@ class TrustGroupRepositoryTest(TestCase):
     def test_can_administer_success(self):
         """Test checking administration rights."""
         # Create admin membership for the user
-        from core.trust.models import TrustGroupMembership
+        from core_ut.trust.models import TrustGroupMembership
         membership = TrustGroupMembership.objects.create(
             trust_group=self.group1,
             organization=self.org1,

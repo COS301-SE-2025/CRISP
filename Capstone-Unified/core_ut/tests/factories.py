@@ -5,8 +5,8 @@ import factory
 from factory.django import DjangoModelFactory
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
-from core.user_management.models import Organization, UserSession
-from core.trust.models import TrustLevel, TrustRelationship, TrustGroup, TrustLog
+from core_ut.user_management.models import Organization, UserSession
+from core_ut.trust.models import TrustLevel, TrustRelationship, TrustGroup, TrustLog
 import uuid
 from django.utils import timezone
 from datetime import timedelta

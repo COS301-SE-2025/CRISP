@@ -7,10 +7,10 @@ Covers critical business logic and service operations.
 import uuid
 from unittest.mock import patch, Mock
 from django.test import TestCase
-from core.trust.models import TrustLevel, TrustRelationship, TrustGroup
-from core.trust.services.trust_service import TrustService
-from core.trust.services.trust_group_service import TrustGroupService
-from core.tests.test_fixtures import BaseTestCase
+from core_ut.trust.models import TrustLevel, TrustRelationship, TrustGroup
+from core_ut.trust.services.trust_service import TrustService
+from core_ut.trust.services.trust_group_service import TrustGroupService
+from core_ut.tests.test_fixtures import BaseTestCase
 
 
 class TrustServiceTest(BaseTestCase):
