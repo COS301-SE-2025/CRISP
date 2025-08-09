@@ -10,7 +10,7 @@ from core.api_extensions import (
     list_organizations, organization_types, create_organization, organization_detail,
     deactivate_organization, reactivate_organization,
     trust_groups, trust_levels, trust_metrics, trust_relationships, trust_relationships_detail, 
-    trust_overview, list_users, create_user, user_detail
+    trust_overview, list_users, create_user, user_detail, change_username
 )
 
 # Set up REST API router
@@ -59,6 +59,7 @@ urlpatterns = [
     path('api/v1/users/<int:user_id>/get_user/', user_detail, name='get-user'),
     path('api/v1/users/<int:user_id>/update_user/', user_detail, name='update-user'),
     path('api/v1/users/<int:user_id>/delete_user/', user_detail, name='delete-user'),
+    path('api/v1/users/<int:user_id>/change_username/', change_username, name='change-username'),
     
     
     # Temporarily disabled until imports are fixed

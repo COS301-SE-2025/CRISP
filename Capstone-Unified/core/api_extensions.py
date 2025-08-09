@@ -939,3 +939,52 @@ def user_detail(request, user_id):
             "message": f"User '{username}' deleted permanently"
         }, status=status.HTTP_200_OK)
 
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def change_username(request, user_id):
+    """Change username endpoint"""
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({
+            "success": False,
+            "error": "User not found"
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    try:
+        data = json.loads(request.body) if request.body else {}
+        new_username = data.get('new_username')
+        
+        if not new_username:
+            return Response({
+                "success": False,
+                "error": "New username is required"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if username already exists
+        if User.objects.filter(username=new_username).exclude(id=user_id).exists():
+            return Response({
+                "success": False,
+                "error": "Username already exists"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        old_username = user.username
+        user.username = new_username
+        user.save()
+        
+        return Response({
+            "success": True,
+            "data": {
+                "id": user.id,
+                "old_username": old_username,
+                "new_username": user.username
+            },
+            "message": f"Username changed from '{old_username}' to '{new_username}' successfully"
+        })
+        
+    except Exception as e:
+        return Response({
+            "success": False,
+            "error": str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+
