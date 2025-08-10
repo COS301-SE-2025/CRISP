@@ -4794,6 +4794,10 @@ function TTPAnalysis({ active }) {
   const [matrixLoading, setMatrixLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('matrix');
   
+  // Table sorting state
+  const [sortBy, setSortBy] = useState('created_at');
+  const [sortOrder, setSortOrder] = useState('desc');
+  
   // TTP Detail Modal state
   const [showTTPModal, setShowTTPModal] = useState(false);
   const [selectedTTP, setSelectedTTP] = useState(null);
@@ -4855,11 +4859,20 @@ function TTPAnalysis({ active }) {
     }
   }, [active]);
   
-  const fetchTTPData = async () => {
+  const fetchTTPData = async (sortByField = null, sortOrderValue = null) => {
     setLoading(true);
     try {
-      // Get TTP data from the API
-      const response = await api.get('/api/ttps/');
+      // Use provided sort parameters or current state
+      const currentSortBy = sortByField || sortBy;
+      const currentSortOrder = sortOrderValue || sortOrder;
+      
+      // Build API URL with sorting parameters
+      const params = new URLSearchParams();
+      params.append('sort_by', currentSortBy);
+      params.append('sort_order', currentSortOrder);
+      params.append('page_size', '50'); // Reasonable page size for table
+      
+      const response = await api.get(`/api/ttps/?${params.toString()}`);
       if (response && response.results) {
         setTtpData(response.results);
       } else {
@@ -4870,6 +4883,35 @@ function TTPAnalysis({ active }) {
       setTtpData([]);
     }
     setLoading(false);
+  };
+
+  // Handle column sorting
+  const handleSort = (column) => {
+    let newSortOrder = 'asc';
+    
+    // If clicking the same column, toggle sort order
+    if (sortBy === column) {
+      newSortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+      // New column, default to descending for dates, ascending for others
+      newSortOrder = (column === 'created_at' || column === 'updated_at') ? 'desc' : 'asc';
+    }
+    
+    setSortBy(column);
+    setSortOrder(newSortOrder);
+    
+    // Fetch data with new sorting
+    fetchTTPData(column, newSortOrder);
+  };
+
+  // Get sort icon for column headers
+  const getSortIcon = (column) => {
+    if (sortBy !== column) {
+      return <i className="fas fa-sort" style={{color: '#ccc', marginLeft: '5px'}}></i>;
+    }
+    
+    const iconClass = sortOrder === 'asc' ? 'fa-sort-up' : 'fa-sort-down';
+    return <i className={`fas ${iconClass}`} style={{color: '#0056b3', marginLeft: '5px'}}></i>;
   };
 
   const fetchTTPTrendsData = async () => {
@@ -5962,12 +6004,47 @@ function TTPAnalysis({ active }) {
           <table className="data-table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>MITRE Technique</th>
-                <th>Tactic</th>
+                <th 
+                  className="sortable-header"
+                  onClick={() => handleSort('id')}
+                  style={{cursor: 'pointer', userSelect: 'none'}}
+                >
+                  ID
+                  {getSortIcon('id')}
+                </th>
+                <th 
+                  className="sortable-header"
+                  onClick={() => handleSort('name')}
+                  style={{cursor: 'pointer', userSelect: 'none'}}
+                >
+                  Name
+                  {getSortIcon('name')}
+                </th>
+                <th 
+                  className="sortable-header"
+                  onClick={() => handleSort('mitre_technique_id')}
+                  style={{cursor: 'pointer', userSelect: 'none'}}
+                >
+                  MITRE Technique
+                  {getSortIcon('mitre_technique_id')}
+                </th>
+                <th 
+                  className="sortable-header"
+                  onClick={() => handleSort('mitre_tactic')}
+                  style={{cursor: 'pointer', userSelect: 'none'}}
+                >
+                  Tactic
+                  {getSortIcon('mitre_tactic')}
+                </th>
                 <th>Threat Feed</th>
-                <th>Created</th>
+                <th 
+                  className="sortable-header"
+                  onClick={() => handleSort('created_at')}
+                  style={{cursor: 'pointer', userSelect: 'none'}}
+                >
+                  Created
+                  {getSortIcon('created_at')}
+                </th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>

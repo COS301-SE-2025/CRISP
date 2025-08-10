@@ -419,6 +419,16 @@ div.pagination-wrapper {
   color: #495057;
 }
 
+/* Sortable table header styles */
+.sortable-header {
+  transition: all 0.2s ease;
+}
+
+.sortable-header:hover {
+  background: #e9ecef !important;
+  color: #0056b3 !important;
+}
+
 .data-table td {
   vertical-align: middle;
   border-bottom: 1px solid #dee2e6;

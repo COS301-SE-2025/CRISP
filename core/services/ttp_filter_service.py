@@ -97,7 +97,7 @@ class TTPFilterService:
     
     # Valid sort fields
     VALID_SORT_FIELDS = [
-        'name', 'mitre_technique_id', 'mitre_tactic', 'created_at', 
+        'id', 'name', 'mitre_technique_id', 'mitre_tactic', 'created_at', 
         'updated_at', 'threat_feed__name', 'severity_score'
     ]
     
