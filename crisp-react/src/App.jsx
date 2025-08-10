@@ -4792,7 +4792,13 @@ function TTPAnalysis({ active }) {
   const [loading, setLoading] = useState(false);
   const [trendsLoading, setTrendsLoading] = useState(false);
   const [matrixLoading, setMatrixLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('matrix');
+  const [activeTab, setActiveTab] = useState('overview');
+  
+  // Feed analysis state
+  const [feedComparisonData, setFeedComparisonData] = useState(null);
+  const [frequencyData, setFrequencyData] = useState(null);
+  const [seasonalData, setSeasonalData] = useState(null);
+  const [aggregationLoading, setAggregationLoading] = useState(false);
   
   // Table sorting state
   const [sortBy, setSortBy] = useState('created_at');
@@ -4826,21 +4832,12 @@ function TTPAnalysis({ active }) {
   const [showTTPModal, setShowTTPModal] = useState(false);
   const [selectedTTP, setSelectedTTP] = useState(null);
   const [ttpDetailLoading, setTtpDetailLoading] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [editFormData, setEditFormData] = useState({});
   
-  // TTP Creation Modal state
-  const [showCreateTTPModal, setShowCreateTTPModal] = useState(false);
-  const [createFormData, setCreateFormData] = useState({
-    name: '',
-    description: '',
-    mitre_technique_id: '',
-    mitre_tactic: '',
-    mitre_subtechnique: '',
-    threat_feed_id: ''
-  });
-  const [createFormErrors, setCreateFormErrors] = useState({});
-  const [isCreating, setIsCreating] = useState(false);
+  // Feed consumption state
+  const [availableFeeds, setAvailableFeeds] = useState([]);
+  const [selectedFeedForConsumption, setSelectedFeedForConsumption] = useState('');
+  const [consumptionInProgress, setConsumptionInProgress] = useState(false);
+  const [consumptionStatus, setConsumptionStatus] = useState('');
   
   // TTP Export Modal state
   const [showExportModal, setShowExportModal] = useState(false);
