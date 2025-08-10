@@ -6082,6 +6082,147 @@ function TTPAnalysis({ active }) {
         </div>
       </div>
 
+      {/* Feed Overview Tab */}
+      {activeTab === 'overview' && (
+        <div className="feed-analysis-overview">
+          <div className="overview-cards">
+            <div className="card">
+              <div className="card-header">
+                <h2 className="card-title">
+                  <i className="fas fa-chart-bar card-icon"></i> 
+                  Feed Comparison Statistics
+                </h2>
+                <button 
+                  className="btn btn-outline btn-sm" 
+                  onClick={fetchAggregationData}
+                  disabled={aggregationLoading}
+                >
+                  <i className={`fas ${aggregationLoading ? 'fa-spinner fa-spin' : 'fa-sync-alt'}`}></i> Refresh
+                </button>
+              </div>
+              <div className="card-content">
+                {aggregationLoading ? (
+                  <div className="loading-state">
+                    <i className="fas fa-spinner fa-spin"></i>
+                    <p>Loading feed comparison data...</p>
+                  </div>
+                ) : feedComparisonData ? (
+                  <div className="feed-comparison-grid">
+                    {feedComparisonData.feed_statistics && feedComparisonData.feed_statistics.map((feed, index) => (
+                      <div key={index} className="feed-stat-card">
+                        <div className="feed-name">{feed.threat_feed__name}</div>
+                        <div className="feed-stats">
+                          <div className="stat-item">
+                            <span className="stat-value">{feed.ttp_count}</span>
+                            <span className="stat-label">TTPs</span>
+                          </div>
+                          <div className="stat-item">
+                            <span className="stat-value">{feed.unique_techniques}</span>
+                            <span className="stat-label">Unique Techniques</span>
+                          </div>
+                          <div className="stat-item">
+                            <span className="stat-value">{feed.avg_techniques_per_day}</span>
+                            <span className="stat-label">Avg/Day</span>
+                          </div>
+                        </div>
+                        <div className={`feed-type ${feed.threat_feed__is_external ? 'external' : 'internal'}`}>
+                          {feed.threat_feed__is_external ? 'External Feed' : 'Internal Feed'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="empty-state">
+                    <i className="fas fa-chart-bar"></i>
+                    <p>No feed comparison data available</p>
+                    <p className="text-muted">Consume threat feeds to see comparison statistics</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="card">
+              <div className="card-header">
+                <h2 className="card-title">
+                  <i className="fas fa-fire card-icon"></i> 
+                  Top Techniques
+                </h2>
+              </div>
+              <div className="card-content">
+                {frequencyData && frequencyData.techniques ? (
+                  <div className="technique-frequency-list">
+                    {Object.entries(frequencyData.techniques)
+                      .sort(([,a], [,b]) => b.count - a.count)
+                      .slice(0, 10)
+                      .map(([techniqueId, data], index) => (
+                        <div key={techniqueId} className="frequency-item">
+                          <div className="technique-rank">#{data.rank}</div>
+                          <div className="technique-details">
+                            <div className="technique-id">{techniqueId}</div>
+                            <div className="technique-stats">
+                              <span className="count">{data.count} occurrences</span>
+                              <span className="percentage">({data.percentage}%)</span>
+                            </div>
+                          </div>
+                          <div className="frequency-bar">
+                            <div 
+                              className="frequency-fill" 
+                              style={{width: `${Math.min(data.percentage * 2, 100)}%`}}
+                            ></div>
+                          </div>
+                        </div>
+                      ))
+                    }
+                  </div>
+                ) : (
+                  <div className="empty-state">
+                    <i className="fas fa-fire"></i>
+                    <p>No technique frequency data available</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-header">
+              <h2 className="card-title">
+                <i className="fas fa-calendar-alt card-icon"></i> 
+                Seasonal Patterns
+              </h2>
+            </div>
+            <div className="card-content">
+              {seasonalData && seasonalData.statistics ? (
+                <div className="seasonal-analysis">
+                  <div className="seasonal-stats">
+                    <div className="stat-card">
+                      <div className="stat-value">{seasonalData.statistics.seasonality_strength}</div>
+                      <div className="stat-label">Seasonality Strength</div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-value">{seasonalData.statistics.peak_period.label}</div>
+                      <div className="stat-label">Peak Period</div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-value">{seasonalData.statistics.valley_period.label}</div>
+                      <div className="stat-label">Valley Period</div>
+                    </div>
+                  </div>
+                  <div className="seasonal-interpretation">
+                    <p>{seasonalData.interpretation}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <i className="fas fa-calendar-alt"></i>
+                  <p>No seasonal pattern data available</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MITRE ATT&CK Matrix Tab */}
       {activeTab === 'matrix' && (
         <>
@@ -6176,23 +6317,61 @@ function TTPAnalysis({ active }) {
       {activeTab === 'list' && (
         <div className="card">
           <div className="card-header">
-            <h2 className="card-title"><i className="fas fa-list card-icon"></i> TTP List</h2>
+            <h2 className="card-title"><i className="fas fa-shield-alt card-icon"></i> TTP Intelligence from Threat Feeds</h2>
             <div className="card-actions">
-              <button className="btn btn-outline btn-sm"><i className="fas fa-filter"></i> Filter</button>
-              <button className="btn btn-outline btn-sm"><i className="fas fa-download"></i> Export</button>
+              <button 
+                className="btn btn-outline btn-sm" 
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <i className="fas fa-filter"></i> Filter
+                {activeFiltersCount > 0 && (
+                  <span className="filter-count">{activeFiltersCount}</span>
+                )}
+              </button>
+              <button className="btn btn-outline btn-sm" onClick={openExportModal}>
+                <i className="fas fa-download"></i> Export
+              </button>
             </div>
           </div>
+          
+          <div className="intelligence-summary" style={{padding: '1rem', backgroundColor: '#f8f9fa', borderBottom: '1px solid #dee2e6'}}>
+            <div className="summary-stats">
+              <div className="stat-item">
+                <i className="fas fa-database"></i>
+                <span>{totalCount} TTPs from threat intelligence feeds</span>
+              </div>
+              <div className="stat-item">
+                <i className="fas fa-rss"></i>
+                <span>{availableFeeds.length} connected threat feeds</span>
+              </div>
+              <div className="stat-item">
+                <i className="fas fa-shield-alt"></i>
+                <span>Automatically mapped to MITRE ATT&CK</span>
+              </div>
+            </div>
+          </div>
+          
           <div className="card-content">
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>MITRE ID</th>
-                  <th>Tactic</th>
+                  <th onClick={() => handleSort('id')} style={{cursor: 'pointer'}}>
+                    ID {getSortIcon('id')}
+                  </th>
+                  <th onClick={() => handleSort('name')} style={{cursor: 'pointer'}}>
+                    TTP Name {getSortIcon('name')}
+                  </th>
+                  <th onClick={() => handleSort('mitre_technique_id')} style={{cursor: 'pointer'}}>
+                    MITRE Technique {getSortIcon('mitre_technique_id')}
+                  </th>
+                  <th onClick={() => handleSort('mitre_tactic')} style={{cursor: 'pointer'}}>
+                    Tactic {getSortIcon('mitre_tactic')}
+                  </th>
                   <th>Source Feed</th>
-                  <th>Confidence</th>
-                  <th>Created</th>
+                  <th>Intelligence Status</th>
+                  <th onClick={() => handleSort('created_at')} style={{cursor: 'pointer'}}>
+                    Discovered {getSortIcon('created_at')}
+                  </th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -6200,34 +6379,61 @@ function TTPAnalysis({ active }) {
                 {loading ? (
                   <tr>
                     <td colSpan="8" style={{textAlign: 'center', padding: '2rem'}}>
-                      <i className="fas fa-spinner fa-spin"></i> Loading TTPs...
+                      <i className="fas fa-spinner fa-spin"></i> Loading threat intelligence...
                     </td>
                   </tr>
                 ) : ttpData.length > 0 ? (
                   ttpData.map((ttp) => (
                     <tr key={ttp.id}>
                       <td>{ttp.id}</td>
-                      <td>{ttp.name}</td>
-                      <td>{ttp.mitre_technique_id}</td>
-                      <td>{ttp.mitre_tactic_display || ttp.mitre_tactic}</td>
-                      <td>{ttp.threat_feed ? ttp.threat_feed.name : 'N/A'}</td>
-                      <td>{ttp.confidence || 'N/A'}%</td>
-                      <td>{ttp.created_at ? new Date(ttp.created_at).toLocaleDateString() : 'N/A'}</td>
+                      <td>
+                        <div className="ttp-name-cell">
+                          <div className="ttp-title">{ttp.name}</div>
+                          {ttp.mitre_subtechnique && (
+                            <div className="ttp-subtechnique">{ttp.mitre_subtechnique}</div>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span className="technique-badge">{ttp.mitre_technique_id}</span>
+                      </td>
+                      <td>
+                        <span className="tactic-badge">{ttp.mitre_tactic_display || ttp.mitre_tactic}</span>
+                      </td>
+                      <td>
+                        {ttp.threat_feed ? (
+                          <div className="feed-source-cell">
+                            <span className="feed-name">{ttp.threat_feed.name}</span>
+                            <span className={`feed-type ${ttp.threat_feed.is_external ? 'external' : 'internal'}`}>
+                              {ttp.threat_feed.is_external ? 'External' : 'Internal'}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-muted">No Feed</span>
+                        )}
+                      </td>
+                      <td>
+                        <div className="intelligence-status">
+                          {ttp.is_anonymized ? (
+                            <span className="status-badge anonymized">
+                              <i className="fas fa-mask"></i> Anonymized
+                            </span>
+                          ) : (
+                            <span className="status-badge raw">
+                              <i className="fas fa-eye"></i> Raw Intel
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td>{ttp.created_at ? new Date(ttp.created_at).toLocaleDateString() : 'Unknown'}</td>
                       <td>
                         <button 
                           className="btn btn-outline btn-sm" 
                           onClick={() => openTTPModal(ttp.id)}
-                          title="View TTP Details"
+                          title="View Intelligence Details"
                           style={{marginRight: '5px'}}
                         >
-                          <i className="fas fa-eye"></i>
-                        </button>
-                        <button 
-                          className="btn btn-outline btn-sm text-danger" 
-                          onClick={() => deleteTTP(ttp.id)}
-                          title="Delete TTP"
-                        >
-                          <i className="fas fa-trash"></i>
+                          <i className="fas fa-search"></i>
                         </button>
                       </td>
                     </tr>
@@ -6235,7 +6441,13 @@ function TTPAnalysis({ active }) {
                 ) : (
                   <tr>
                     <td colSpan="8" style={{textAlign: 'center', padding: '2rem'}}>
-                      No TTPs found
+                      <div className="empty-state">
+                        <i className="fas fa-shield-alt"></i>
+                        <p>No TTP intelligence available</p>
+                        <p className="text-muted">
+                          Consume threat feeds to populate TTP intelligence data
+                        </p>
+                      </div>
                     </td>
                   </tr>
                 )}
@@ -6356,50 +6568,107 @@ function TTPAnalysis({ active }) {
       )}
 
       {/* Threat Actors Tab */}
-      {activeTab === 'actors' && (
-        <div className="card">
-          <div className="card-header">
-            <h2 className="card-title"><i className="fas fa-user-secret card-icon"></i> Threat Actors</h2>
-            <div className="card-actions">
-              <button className="btn btn-outline btn-sm"><i className="fas fa-filter"></i> Filter</button>
-              <button className="btn btn-primary btn-sm"><i className="fas fa-plus"></i> Add Actor</button>
-            </div>
-          </div>
-          <div className="card-content">
-            <div style={{textAlign: 'center', padding: '4rem'}}>
-              <i className="fas fa-user-secret" style={{fontSize: '3rem', color: '#ccc'}}></i>
-              <h3 style={{marginTop: '1rem', color: '#666'}}>Threat Actors Management</h3>
-              <p style={{color: '#888', fontSize: '0.9rem'}}>Track and analyze threat actor profiles, campaigns, and TTPs</p>
-              <div style={{marginTop: '2rem'}}>
-                <button className="btn btn-primary">
-                  <i className="fas fa-plus"></i> Add First Threat Actor
+      {activeTab === 'trends' && (
+        <div className="trends-analysis">
+          <div className="card">
+            <div className="card-header">
+              <h2 className="card-title"><i className="fas fa-chart-line card-icon"></i> TTP Trends & Patterns</h2>
+              <div className="card-actions">
+                <select className="form-control" style={{width: 'auto', marginRight: '10px'}}>
+                  <option value="30">Last 30 Days</option>
+                  <option value="90">Last 90 Days</option>
+                  <option value="180">Last 6 Months</option>
+                  <option value="365">Last Year</option>
+                </select>
+                <button 
+                  className="btn btn-outline btn-sm"
+                  onClick={fetchAggregationData}
+                  disabled={aggregationLoading}
+                >
+                  <i className={`fas ${aggregationLoading ? 'fa-spinner fa-spin' : 'fa-sync-alt'}`}></i> Refresh
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+            <div className="card-content">
+              {aggregationLoading ? (
+                <div className="loading-state">
+                  <i className="fas fa-spinner fa-spin"></i>
+                  <p>Loading trends analysis...</p>
+                </div>
+              ) : (
+                <div className="trends-content">
+                  <div className="trend-charts-grid">
+                    <div className="chart-container">
+                      <h3>Technique Frequency Over Time</h3>
+                      <div 
+                        className="trend-chart" 
+                        ref={ttpChartRef}
+                        style={{minHeight: '300px', width: '100%'}}
+                      >
+                        {/* D3.js Trend Chart will be rendered here */}
+                      </div>
+                    </div>
+                    
+                    <div className="tactic-distribution">
+                      <h3>Tactic Distribution</h3>
+                      {frequencyData && frequencyData.tactics ? (
+                        <div className="tactic-bars">
+                          {Object.entries(frequencyData.tactics)
+                            .sort(([,a], [,b]) => b.count - a.count)
+                            .slice(0, 8)
+                            .map(([tacticId, data]) => (
+                              <div key={tacticId} className="tactic-bar-item">
+                                <div className="tactic-label">{tacticId.replace('-', ' ')}</div>
+                                <div className="bar-container">
+                                  <div 
+                                    className="bar-fill"
+                                    style={{width: `${data.percentage}%`}}
+                                  ></div>
+                                </div>
+                                <div className="bar-value">{data.count}</div>
+                              </div>
+                            ))
+                          }
+                        </div>
+                      ) : (
+                        <div className="empty-state">
+                          <p>No tactic distribution data available</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-      {/* Campaigns Tab */}
-      {activeTab === 'campaigns' && (
-        <div className="card">
-          <div className="card-header">
-            <h2 className="card-title"><i className="fas fa-project-diagram card-icon"></i> Campaigns</h2>
-            <div className="card-actions">
-              <button className="btn btn-outline btn-sm"><i className="fas fa-filter"></i> Filter</button>
-              <button className="btn btn-primary btn-sm"><i className="fas fa-plus"></i> Add Campaign</button>
-            </div>
-          </div>
-          <div className="card-content">
-            <div style={{textAlign: 'center', padding: '4rem'}}>
-              <i className="fas fa-project-diagram" style={{fontSize: '3rem', color: '#ccc'}}></i>
-              <h3 style={{marginTop: '1rem', color: '#666'}}>Campaign Management</h3>
-              <p style={{color: '#888', fontSize: '0.9rem'}}>Monitor threat campaigns, their TTPs, and associated indicators</p>
-              <div style={{marginTop: '2rem'}}>
-                <button className="btn btn-primary">
-                  <i className="fas fa-plus"></i> Add First Campaign
-                </button>
-              </div>
+                  <div className="trend-insights">
+                    <h3>Key Insights</h3>
+                    <div className="insights-grid">
+                      <div className="insight-card">
+                        <i className="fas fa-trending-up"></i>
+                        <div>
+                          <h4>Emerging Techniques</h4>
+                          <p>New techniques appearing in recent threat intelligence</p>
+                        </div>
+                      </div>
+                      <div className="insight-card">
+                        <i className="fas fa-clock"></i>
+                        <div>
+                          <h4>Seasonal Patterns</h4>
+                          <p>{seasonalData && seasonalData.interpretation ? 
+                            seasonalData.interpretation : 
+                            'Analyzing temporal patterns in TTP usage'
+                          }</p>
+                        </div>
+                      </div>
+                      <div className="insight-card">
+                        <i className="fas fa-exclamation-triangle"></i>
+                        <div>
+                          <h4>High-Frequency TTPs</h4>
+                          <p>Most commonly observed techniques across all feeds</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -7091,161 +7360,6 @@ function TTPAnalysis({ active }) {
         </div>
       )}
 
-      {/* TTP Creation Modal */}
-      {showCreateTTPModal && (
-        <div className="modal-overlay" onClick={closeCreateTTPModal}>
-          <div className="modal-content ttp-create-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>
-                <i className="fas fa-plus-circle"></i> 
-                Create New TTP
-              </h2>
-              <button className="modal-close" onClick={closeCreateTTPModal}>
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
-            
-            <div className="modal-body">
-              <form onSubmit={(e) => { e.preventDefault(); createNewTTP(); }}>
-                <div className="create-form-grid">
-                  {/* Basic Information Section */}
-                  <div className="form-section">
-                    <h4><i className="fas fa-info-circle"></i> Basic Information</h4>
-                    
-                    <div className="form-group">
-                      <label className="form-label">
-                        TTP Name <span className="required">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        className={`form-control ${createFormErrors.name ? 'error' : ''}`}
-                        value={createFormData.name}
-                        onChange={(e) => handleCreateFormChange('name', e.target.value)}
-                        placeholder="Enter TTP name (e.g., Spear Phishing Attachment)"
-                      />
-                      {createFormErrors.name && (
-                        <span className="error-text">{createFormErrors.name}</span>
-                      )}
-                    </div>
-
-                    <div className="form-group">
-                      <label className="form-label">
-                        Description <span className="required">*</span>
-                      </label>
-                      <textarea
-                        className={`form-control ${createFormErrors.description ? 'error' : ''}`}
-                        value={createFormData.description}
-                        onChange={(e) => handleCreateFormChange('description', e.target.value)}
-                        placeholder="Describe the TTP, its purpose, and how it's used by threat actors..."
-                        rows="4"
-                      />
-                      {createFormErrors.description && (
-                        <span className="error-text">{createFormErrors.description}</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* MITRE ATT&CK Mapping Section */}
-                  <div className="form-section">
-                    <h4><i className="fas fa-crosshairs"></i> MITRE ATT&CK Mapping</h4>
-                    
-                    <div className="form-group">
-                      <label className="form-label">
-                        MITRE Technique ID <span className="required">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        className={`form-control ${createFormErrors.mitre_technique_id ? 'error' : ''}`}
-                        value={createFormData.mitre_technique_id}
-                        onChange={(e) => handleCreateFormChange('mitre_technique_id', e.target.value.toUpperCase())}
-                        placeholder="T1566.001"
-                        pattern="T[0-9]{4}(\.[0-9]{3})?"
-                      />
-                      {createFormErrors.mitre_technique_id && (
-                        <span className="error-text">{createFormErrors.mitre_technique_id}</span>
-                      )}
-                      <small className="form-help">
-                        Format: T1234 or T1234.001 (e.g., T1566.001 for Spear Phishing Attachment)
-                      </small>
-                    </div>
-
-                    <div className="form-group">
-                      <label className="form-label">
-                        MITRE Tactic <span className="required">*</span>
-                      </label>
-                      <select
-                        className={`form-control ${createFormErrors.mitre_tactic ? 'error' : ''}`}
-                        value={createFormData.mitre_tactic}
-                        onChange={(e) => handleCreateFormChange('mitre_tactic', e.target.value)}
-                      >
-                        <option value="">Select a tactic</option>
-                        <option value="initial-access">Initial Access</option>
-                        <option value="execution">Execution</option>
-                        <option value="persistence">Persistence</option>
-                        <option value="privilege-escalation">Privilege Escalation</option>
-                        <option value="defense-evasion">Defense Evasion</option>
-                        <option value="credential-access">Credential Access</option>
-                        <option value="discovery">Discovery</option>
-                        <option value="lateral-movement">Lateral Movement</option>
-                        <option value="collection">Collection</option>
-                        <option value="command-and-control">Command and Control</option>
-                        <option value="exfiltration">Exfiltration</option>
-                        <option value="impact">Impact</option>
-                      </select>
-                      {createFormErrors.mitre_tactic && (
-                        <span className="error-text">{createFormErrors.mitre_tactic}</span>
-                      )}
-                    </div>
-
-                    <div className="form-group">
-                      <label className="form-label">
-                        Sub-technique (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={createFormData.mitre_subtechnique}
-                        onChange={(e) => handleCreateFormChange('mitre_subtechnique', e.target.value)}
-                        placeholder="Sub-technique name if applicable"
-                      />
-                      <small className="form-help">
-                        Specific variant or sub-category of the main technique
-                      </small>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Form Actions */}
-                <div className="form-actions">
-                  <button 
-                    type="button" 
-                    className="btn btn-outline" 
-                    onClick={closeCreateTTPModal}
-                    disabled={isCreating}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    className="btn btn-primary"
-                    disabled={isCreating}
-                  >
-                    {isCreating ? (
-                      <>
-                        <i className="fas fa-spinner fa-spin"></i> Creating TTP...
-                      </>
-                    ) : (
-                      <>
-                        <i className="fas fa-plus"></i> Create TTP
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* TTP Export Modal */}
       {showExportModal && (
