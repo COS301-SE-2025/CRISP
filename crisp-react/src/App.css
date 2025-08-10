@@ -429,6 +429,70 @@ div.pagination-wrapper {
   color: #0056b3 !important;
 }
 
+/* Filter Panel Styles */
+.filter-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.filters-panel .form-control {
+  font-size: 0.85rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  padding: 0.375rem 0.75rem;
+}
+
+.filters-panel .form-control:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Severity Badge Styles */
+.severity-critical {
+  background: #dc3545;
+  color: white;
+}
+
+.severity-high {
+  background: #fd7e14;
+  color: white;
+}
+
+.severity-medium {
+  background: #ffc107;
+  color: #212529;
+}
+
+.severity-low {
+  background: #28a745;
+  color: white;
+}
+
+/* Filter Button Active State */
+.btn.active {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+/* Checkbox Items */
+.checkbox-item {
+  cursor: pointer;
+}
+
+.checkbox-item input[type="checkbox"] {
+  cursor: pointer;
+}
+
 .data-table td {
   vertical-align: middle;
   border-bottom: 1px solid #dee2e6;

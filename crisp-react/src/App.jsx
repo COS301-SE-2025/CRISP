@@ -4806,6 +4806,22 @@ function TTPAnalysis({ active }) {
   const [hasNext, setHasNext] = useState(false);
   const [hasPrevious, setHasPrevious] = useState(false);
   
+  // Table filtering state
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterOptions, setFilterOptions] = useState(null);
+  const [filters, setFilters] = useState({
+    search: '',
+    tactics: [],
+    techniques: [],
+    severity_levels: [],
+    date_from: '',
+    date_to: '',
+    threat_feed_ids: [],
+    anonymized_only: '',
+    has_subtechniques: ''
+  });
+  const [activeFiltersCount, setActiveFiltersCount] = useState(0);
+  
   // TTP Detail Modal state
   const [showTTPModal, setShowTTPModal] = useState(false);
   const [selectedTTP, setSelectedTTP] = useState(null);
@@ -4864,10 +4880,11 @@ function TTPAnalysis({ active }) {
       fetchTTPData();
       fetchTTPTrendsData();
       fetchMatrixData();
+      fetchFilterOptions();
     }
   }, [active]);
   
-  const fetchTTPData = async (sortByField = null, sortOrderValue = null, pageNumber = null, pageSizeValue = null) => {
+  const fetchTTPData = async (sortByField = null, sortOrderValue = null, pageNumber = null, pageSizeValue = null, filtersOverride = null) => {
     setLoading(true);
     try {
       // Use provided parameters or current state
@@ -4875,13 +4892,43 @@ function TTPAnalysis({ active }) {
       const currentSortOrder = sortOrderValue || sortOrder;
       const currentPageNumber = pageNumber || currentPage;
       const currentPageSize = pageSizeValue || pageSize;
+      const currentFilters = filtersOverride || filters;
       
-      // Build API URL with sorting and pagination parameters
+      // Build API URL with sorting, pagination, and filtering parameters
       const params = new URLSearchParams();
       params.append('sort_by', currentSortBy);
       params.append('sort_order', currentSortOrder);
       params.append('page', currentPageNumber.toString());
       params.append('page_size', currentPageSize.toString());
+      
+      // Add filtering parameters
+      if (currentFilters.search && currentFilters.search.trim()) {
+        params.append('search', currentFilters.search.trim());
+      }
+      if (currentFilters.tactics && currentFilters.tactics.length > 0) {
+        params.append('tactics', currentFilters.tactics.join(','));
+      }
+      if (currentFilters.techniques && currentFilters.techniques.length > 0) {
+        params.append('techniques', currentFilters.techniques.join(','));
+      }
+      if (currentFilters.severity_levels && currentFilters.severity_levels.length > 0) {
+        params.append('severity_levels', currentFilters.severity_levels.join(','));
+      }
+      if (currentFilters.date_from && currentFilters.date_from.trim()) {
+        params.append('created_after', currentFilters.date_from.trim());
+      }
+      if (currentFilters.date_to && currentFilters.date_to.trim()) {
+        params.append('created_before', currentFilters.date_to.trim());
+      }
+      if (currentFilters.threat_feed_ids && currentFilters.threat_feed_ids.length > 0) {
+        params.append('threat_feed_ids', currentFilters.threat_feed_ids.join(','));
+      }
+      if (currentFilters.anonymized_only && currentFilters.anonymized_only !== '') {
+        params.append('anonymized_only', currentFilters.anonymized_only);
+      }
+      if (currentFilters.has_subtechniques && currentFilters.has_subtechniques !== '') {
+        params.append('has_subtechniques', currentFilters.has_subtechniques);
+      }
       
       const response = await api.get(`/api/ttps/?${params.toString()}`);
       if (response && response.success) {
@@ -4908,6 +4955,18 @@ function TTPAnalysis({ active }) {
     setLoading(false);
   };
 
+  // Fetch filter options for dropdowns
+  const fetchFilterOptions = async () => {
+    try {
+      const response = await api.get('/api/ttps/filter-options/');
+      if (response && response.success) {
+        setFilterOptions(response.options);
+      }
+    } catch (error) {
+      console.error('Error fetching filter options:', error);
+    }
+  };
+
   // Handle column sorting
   const handleSort = (column) => {
     let newSortOrder = 'asc';
@@ -4927,7 +4986,7 @@ function TTPAnalysis({ active }) {
     setCurrentPage(1);
     
     // Fetch data with new sorting and reset pagination
-    fetchTTPData(column, newSortOrder, 1, pageSize);
+    fetchTTPData(column, newSortOrder, 1, pageSize, filters);
   };
 
   // Get sort icon for column headers
@@ -4944,14 +5003,14 @@ function TTPAnalysis({ active }) {
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages && newPage !== currentPage) {
       setCurrentPage(newPage);
-      fetchTTPData(sortBy, sortOrder, newPage, pageSize);
+      fetchTTPData(sortBy, sortOrder, newPage, pageSize, filters);
     }
   };
 
   const handlePageSizeChange = (newPageSize) => {
     setPageSize(newPageSize);
     setCurrentPage(1); // Reset to first page when page size changes
-    fetchTTPData(sortBy, sortOrder, 1, newPageSize);
+    fetchTTPData(sortBy, sortOrder, 1, newPageSize, filters);
   };
 
   // Generate page numbers for pagination display
@@ -4985,6 +5044,99 @@ function TTPAnalysis({ active }) {
     }
     
     return pages;
+  };
+
+  // Handle filter changes
+  const handleFilterChange = (filterKey, value) => {
+    const newFilters = { ...filters, [filterKey]: value };
+    setFilters(newFilters);
+    
+    // Reset to first page when filters change
+    setCurrentPage(1);
+    
+    // Count active filters
+    const activeCount = countActiveFilters(newFilters);
+    setActiveFiltersCount(activeCount);
+    
+    // For search, use debounced fetch; for others, fetch immediately
+    if (filterKey === 'search') {
+      debouncedFetchTTPData(sortBy, sortOrder, 1, pageSize, newFilters);
+    } else {
+      fetchTTPData(sortBy, sortOrder, 1, pageSize, newFilters);
+    }
+  };
+
+  // Debounced search for better performance
+  const debouncedFetchTTPData = useRef(
+    debounce((sortBy, sortOrder, page, pageSize, filters) => {
+      fetchTTPData(sortBy, sortOrder, page, pageSize, filters);
+    }, 500)
+  ).current;
+
+  // Simple debounce utility
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+
+  // Handle multi-select filter changes (for arrays)
+  const handleMultiSelectFilter = (filterKey, value, isChecked) => {
+    const currentValues = filters[filterKey] || [];
+    let newValues;
+    
+    if (isChecked) {
+      newValues = [...currentValues, value];
+    } else {
+      newValues = currentValues.filter(v => v !== value);
+    }
+    
+    handleFilterChange(filterKey, newValues);
+  };
+
+  // Count active filters
+  const countActiveFilters = (filtersToCount) => {
+    let count = 0;
+    
+    if (filtersToCount.search && filtersToCount.search.trim()) count++;
+    if (filtersToCount.tactics && filtersToCount.tactics.length > 0) count++;
+    if (filtersToCount.techniques && filtersToCount.techniques.length > 0) count++;
+    if (filtersToCount.severity_levels && filtersToCount.severity_levels.length > 0) count++;
+    if (filtersToCount.date_from && filtersToCount.date_from.trim()) count++;
+    if (filtersToCount.date_to && filtersToCount.date_to.trim()) count++;
+    if (filtersToCount.threat_feed_ids && filtersToCount.threat_feed_ids.length > 0) count++;
+    if (filtersToCount.anonymized_only && filtersToCount.anonymized_only !== '') count++;
+    if (filtersToCount.has_subtechniques && filtersToCount.has_subtechniques !== '') count++;
+    
+    return count;
+  };
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    const clearedFilters = {
+      search: '',
+      tactics: [],
+      techniques: [],
+      severity_levels: [],
+      date_from: '',
+      date_to: '',
+      threat_feed_ids: [],
+      anonymized_only: '',
+      has_subtechniques: ''
+    };
+    
+    setFilters(clearedFilters);
+    setActiveFiltersCount(0);
+    setCurrentPage(1);
+    
+    // Fetch data without filters
+    fetchTTPData(sortBy, sortOrder, 1, pageSize, clearedFilters);
   };
 
   const fetchTTPTrendsData = async () => {
@@ -6153,8 +6305,363 @@ function TTPAnalysis({ active }) {
       {(activeTab === 'matrix' || activeTab === 'list') && (
         <div className="card mt-4">
           <div className="card-header">
-            <h2 className="card-title"><i className="fas fa-tasks card-icon"></i> Recent TTP Analyses</h2>
+            <div className="filters-header">
+              <h2 className="card-title"><i className="fas fa-tasks card-icon"></i> Recent TTP Analyses</h2>
+              <div className="filter-actions">
+                {loading && (
+                  <span style={{fontSize: '0.85rem', color: '#6c757d'}}>
+                    <i className="fas fa-spinner fa-spin" style={{marginRight: '5px'}}></i>
+                    Filtering...
+                  </span>
+                )}
+                {activeFiltersCount > 0 && (
+                  <span className="filtered-count">
+                    {activeFiltersCount} filter{activeFiltersCount !== 1 ? 's' : ''} applied
+                  </span>
+                )}
+                <button 
+                  className={`btn btn-outline btn-sm ${showFilters ? 'active' : ''}`}
+                  onClick={() => setShowFilters(!showFilters)}
+                  disabled={loading}
+                >
+                  <i className="fas fa-filter"></i> Filters
+                </button>
+                {activeFiltersCount > 0 && (
+                  <button 
+                    className="btn btn-outline btn-sm text-danger"
+                    onClick={clearAllFilters}
+                    title="Clear all filters"
+                  >
+                    <i className="fas fa-times"></i> Clear
+                  </button>
+                )}
+              </div>
+            </div>
         </div>
+
+          {/* Filter Panel */}
+          {showFilters && (
+            <div className="filters-panel" style={{borderBottom: '1px solid #e9ecef', padding: '1.5rem', background: '#f8f9fa'}}>
+              <div className="filters-grid" style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem'}}>
+                
+                {/* Search Filter */}
+                <div className="filter-group">
+                  <label className="filter-label">
+                    <i className="fas fa-search" style={{marginRight: '5px'}}></i> Search
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search TTPs, techniques, descriptions..."
+                    value={filters.search}
+                    onChange={(e) => handleFilterChange('search', e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        // Force immediate search on Enter key
+                        e.preventDefault();
+                        fetchTTPData(sortBy, sortOrder, 1, pageSize, filters);
+                      }
+                    }}
+                    disabled={loading}
+                  />
+                </div>
+
+                {/* Tactic Filter */}
+                <div className="filter-group">
+                  <label className="filter-label">
+                    <i className="fas fa-crosshairs" style={{marginRight: '5px'}}></i> MITRE Tactics
+                  </label>
+                  <select 
+                    className="form-control"
+                    multiple 
+                    size="4"
+                    value={filters.tactics}
+                    onChange={(e) => {
+                      const values = Array.from(e.target.selectedOptions, option => option.value);
+                      handleFilterChange('tactics', values);
+                    }}
+                    style={{fontSize: '0.85rem'}}
+                    disabled={loading}
+                  >
+                    {filterOptions?.tactics?.map(tactic => (
+                      <option key={tactic.value} value={tactic.value}>
+                        {tactic.label} ({tactic.count || 0})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Severity Filter */}
+                <div className="filter-group">
+                  <label className="filter-label">
+                    <i className="fas fa-exclamation-triangle" style={{marginRight: '5px'}}></i> Severity Levels
+                  </label>
+                  <div className="checkbox-group" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem'}}>
+                    {['critical', 'high', 'medium', 'low'].map(severity => (
+                      <label key={severity} className="checkbox-item" style={{display: 'flex', alignItems: 'center', fontSize: '0.85rem'}}>
+                        <input
+                          type="checkbox"
+                          checked={filters.severity_levels.includes(severity)}
+                          onChange={(e) => handleMultiSelectFilter('severity_levels', severity, e.target.checked)}
+                          style={{marginRight: '5px'}}
+                          disabled={loading}
+                        />
+                        <span className={`severity-badge severity-${severity}`} style={{
+                          padding: '2px 8px', 
+                          borderRadius: '12px', 
+                          fontSize: '0.75rem',
+                          fontWeight: '500',
+                          textTransform: 'capitalize'
+                        }}>
+                          {severity}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Date Range Filter */}
+                <div className="filter-group">
+                  <label className="filter-label">
+                    <i className="fas fa-calendar-alt" style={{marginRight: '5px'}}></i> Date Range
+                  </label>
+                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem'}}>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={filters.date_from}
+                      onChange={(e) => handleFilterChange('date_from', e.target.value)}
+                      placeholder="From"
+                      title="From date"
+                      disabled={loading}
+                    />
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={filters.date_to}
+                      onChange={(e) => handleFilterChange('date_to', e.target.value)}
+                      placeholder="To"
+                      title="To date"
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
+                {/* Threat Feed Filter */}
+                <div className="filter-group">
+                  <label className="filter-label">
+                    <i className="fas fa-rss" style={{marginRight: '5px'}}></i> Threat Feeds
+                  </label>
+                  <select 
+                    className="form-control"
+                    multiple 
+                    size="3"
+                    value={filters.threat_feed_ids}
+                    onChange={(e) => {
+                      const values = Array.from(e.target.selectedOptions, option => option.value);
+                      handleFilterChange('threat_feed_ids', values);
+                    }}
+                    style={{fontSize: '0.85rem'}}
+                  >
+                    {filterOptions?.threat_feeds?.map(feed => (
+                      <option key={feed.id} value={feed.id.toString()}>
+                        {feed.name} ({feed.ttp_count || 0})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Status Filters */}
+                <div className="filter-group">
+                  <label className="filter-label">
+                    <i className="fas fa-toggle-on" style={{marginRight: '5px'}}></i> Status Filters
+                  </label>
+                  <div style={{display: 'grid', gap: '0.5rem'}}>
+                    <select
+                      className="form-control"
+                      value={filters.anonymized_only}
+                      onChange={(e) => handleFilterChange('anonymized_only', e.target.value)}
+                      style={{fontSize: '0.85rem'}}
+                    >
+                      <option value="">All TTPs</option>
+                      <option value="true">Anonymized Only</option>
+                      <option value="false">Active Only</option>
+                    </select>
+                    <select
+                      className="form-control"
+                      value={filters.has_subtechniques}
+                      onChange={(e) => handleFilterChange('has_subtechniques', e.target.value)}
+                      style={{fontSize: '0.85rem'}}
+                    >
+                      <option value="">All Techniques</option>
+                      <option value="true">With Sub-techniques</option>
+                      <option value="false">Without Sub-techniques</option>
+                    </select>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* Active Filters Summary */}
+          {activeFiltersCount > 0 && (
+            <div className="active-filters-summary" style={{padding: '1rem', borderBottom: '1px solid #e9ecef', background: '#fff'}}>
+              <div style={{display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem'}}>
+                <span style={{fontSize: '0.875rem', fontWeight: '600', color: '#495057'}}>
+                  Active Filters:
+                </span>
+                
+                {filters.search && (
+                  <span className="filter-badge" style={{
+                    background: '#e3f2fd', 
+                    color: '#1976d2', 
+                    padding: '2px 8px', 
+                    borderRadius: '12px', 
+                    fontSize: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    Search: "{filters.search}"
+                    <button 
+                      onClick={() => handleFilterChange('search', '')}
+                      style={{
+                        background: 'none', 
+                        border: 'none', 
+                        color: '#1976d2', 
+                        cursor: 'pointer', 
+                        padding: '0',
+                        fontSize: '0.75rem'
+                      }}
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+                
+                {filters.tactics.length > 0 && (
+                  <span className="filter-badge" style={{
+                    background: '#f3e5f5', 
+                    color: '#7b1fa2', 
+                    padding: '2px 8px', 
+                    borderRadius: '12px', 
+                    fontSize: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    {filters.tactics.length} Tactic{filters.tactics.length !== 1 ? 's' : ''}
+                    <button 
+                      onClick={() => handleFilterChange('tactics', [])}
+                      style={{
+                        background: 'none', 
+                        border: 'none', 
+                        color: '#7b1fa2', 
+                        cursor: 'pointer', 
+                        padding: '0',
+                        fontSize: '0.75rem'
+                      }}
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+                
+                {filters.severity_levels.length > 0 && (
+                  <span className="filter-badge" style={{
+                    background: '#ffebee', 
+                    color: '#c62828', 
+                    padding: '2px 8px', 
+                    borderRadius: '12px', 
+                    fontSize: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    {filters.severity_levels.length} Severity Level{filters.severity_levels.length !== 1 ? 's' : ''}
+                    <button 
+                      onClick={() => handleFilterChange('severity_levels', [])}
+                      style={{
+                        background: 'none', 
+                        border: 'none', 
+                        color: '#c62828', 
+                        cursor: 'pointer', 
+                        padding: '0',
+                        fontSize: '0.75rem'
+                      }}
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+                
+                {(filters.date_from || filters.date_to) && (
+                  <span className="filter-badge" style={{
+                    background: '#e8f5e8', 
+                    color: '#2e7d32', 
+                    padding: '2px 8px', 
+                    borderRadius: '12px', 
+                    fontSize: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    Date Range
+                    <button 
+                      onClick={() => {
+                        const clearedFilters = { ...filters, date_from: '', date_to: '' };
+                        setFilters(clearedFilters);
+                        setCurrentPage(1);
+                        const activeCount = countActiveFilters(clearedFilters);
+                        setActiveFiltersCount(activeCount);
+                        fetchTTPData(sortBy, sortOrder, 1, pageSize, clearedFilters);
+                      }}
+                      style={{
+                        background: 'none', 
+                        border: 'none', 
+                        color: '#2e7d32', 
+                        cursor: 'pointer', 
+                        padding: '0',
+                        fontSize: '0.75rem'
+                      }}
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+                
+                {filters.threat_feed_ids.length > 0 && (
+                  <span className="filter-badge" style={{
+                    background: '#fff3e0', 
+                    color: '#ef6c00', 
+                    padding: '2px 8px', 
+                    borderRadius: '12px', 
+                    fontSize: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    {filters.threat_feed_ids.length} Feed{filters.threat_feed_ids.length !== 1 ? 's' : ''}
+                    <button 
+                      onClick={() => handleFilterChange('threat_feed_ids', [])}
+                      style={{
+                        background: 'none', 
+                        border: 'none', 
+                        color: '#ef6c00', 
+                        cursor: 'pointer', 
+                        padding: '0',
+                        fontSize: '0.75rem'
+                      }}
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
         <div className="card-content">
           <table className="data-table">
             <thead>
