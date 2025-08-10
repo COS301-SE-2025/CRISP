@@ -1207,17 +1207,40 @@ def threat_activity_chart_data(request):
 @permission_classes([AllowAny])
 def ttps_list(request):
     """
-    GET: Get list of TTPs with filtering and pagination.
+    GET: Get list of TTPs with advanced filtering and pagination using TTPFilterService.
     POST: Create a new TTP with validation.
     
     GET Query Parameters:
-    - page: Page number (default: 1)
-    - page_size: Items per page (default: 20, max: 100)
-    - tactic: Filter by MITRE tactic
-    - technique_id: Filter by MITRE technique ID
-    - search: Search in name and description
-    - feed_id: Filter by threat feed ID
-    - ordering: Sort by field (default: -created_at)
+    - Basic pagination:
+      * page: Page number (default: 1)
+      * page_size: Items per page (default: 20, max: 100)
+    
+    - Filter parameters:
+      * tactics: Comma-separated list of MITRE tactics
+      * techniques: Comma-separated list of technique IDs
+      * technique_search: Partial technique ID search
+      * severity_levels: Comma-separated severity levels (critical,high,medium,low,info)
+      * date_from: Start date (ISO format)
+      * date_to: End date (ISO format) 
+      * created_after: Created after date (ISO format)
+      * created_before: Created before date (ISO format)
+      * threat_feed_ids: Comma-separated threat feed IDs
+      * external_feeds_only: true/false - filter by external feeds only
+      * active_feeds_only: true/false - filter by active feeds only
+      * search: Search query across multiple fields
+      * search_fields: Comma-separated fields to search (name,description,mitre_technique_id,mitre_subtechnique)
+      * has_subtechniques: true/false - filter by presence of subtechniques
+      * anonymized_only: true/false - filter by anonymization status
+    
+    - Sorting parameters:
+      * sort_by: Field to sort by (name,mitre_technique_id,mitre_tactic,created_at,updated_at,severity_score)
+      * sort_order: asc/desc (default: desc)
+    
+    - Legacy parameters (backward compatibility):
+      * tactic: Single MITRE tactic filter
+      * technique_id: Single technique ID filter
+      * feed_id: Single threat feed ID filter
+      * ordering: Sort field with direction prefix
     
     POST Body Parameters:
     - name: TTP name (required)
@@ -1232,104 +1255,99 @@ def ttps_list(request):
     if request.method == 'POST':
         return _create_ttp(request)
     
-    # Handle GET request (existing list functionality)
+    # Handle GET request with new filter service
     try:
-        from core.repositories.ttp_repository import TTPRepository
-        from django.core.paginator import Paginator
-        from django.db.models import Q
+        from core.services.ttp_filter_service import TTPFilterService
         
-        # Get query parameters
+        # Initialize filter service
+        filter_service = TTPFilterService()
+        
+        # Check if using legacy parameters for backward compatibility
+        legacy_params = ['tactic', 'technique_id', 'feed_id', 'ordering']
+        is_legacy_request = any(param in request.GET for param in legacy_params)
+        
+        if is_legacy_request:
+            # Handle legacy request format
+            return _handle_legacy_ttp_request(request, filter_service)
+        
+        # Build filter criteria from request
+        criteria = filter_service.build_criteria_from_request(request)
+        
+        # Apply filters and get results
+        result = filter_service.filter_ttps(criteria)
+        
+        # Build response in expected format
+        response_data = {
+            'success': True,
+            'count': result.total_count,
+            'filtered_count': result.filtered_count,
+            'num_pages': result.total_pages,
+            'current_page': result.page,
+            'page_size': result.page_size,
+            'has_next': result.has_next,
+            'has_previous': result.has_previous,
+            'next_page': result.page + 1 if result.has_next else None,
+            'previous_page': result.page - 1 if result.has_previous else None,
+            'results': result.ttps,
+            'filters_applied': result.filters_applied,
+            'statistics': result.statistics
+        }
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error getting TTPs list with filters: {str(e)}")
+        return Response(
+            {"error": "Failed to get TTPs list", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+def _handle_legacy_ttp_request(request, filter_service):
+    """Handle legacy TTP request format for backward compatibility"""
+    try:
+        # Convert legacy parameters to new format
         page = int(request.GET.get('page', 1))
-        page_size = min(int(request.GET.get('page_size', 20)), 100)  # Max 100 items per page
+        page_size = min(int(request.GET.get('page_size', 20)), 100)
         tactic = request.GET.get('tactic', '').strip()
         technique_id = request.GET.get('technique_id', '').strip()
         search = request.GET.get('search', '').strip()
         feed_id = request.GET.get('feed_id', '').strip()
         ordering = request.GET.get('ordering', '-created_at')
         
-        # Start with all TTPs
-        queryset = TTPData.objects.select_related('threat_feed').all()
+        # Build criteria using legacy parameters
+        from core.services.ttp_filter_service import FilterCriteria, SortOrder
+        
+        # Parse ordering
+        sort_by = ordering.lstrip('-')
+        sort_order = SortOrder.DESC if ordering.startswith('-') else SortOrder.ASC
+        
+        criteria = FilterCriteria(
+            tactics=[tactic] if tactic else None,
+            technique_search=technique_id if technique_id else None,
+            search_query=search if search else None,
+            threat_feed_ids=[int(feed_id)] if feed_id and feed_id.isdigit() else None,
+            page=page,
+            page_size=page_size,
+            sort_by=sort_by,
+            sort_order=sort_order
+        )
         
         # Apply filters
-        if tactic:
-            queryset = queryset.filter(mitre_tactic=tactic)
-            
-        if technique_id:
-            queryset = queryset.filter(mitre_technique_id__icontains=technique_id)
-            
-        if search:
-            queryset = queryset.filter(
-                Q(name__icontains=search) | 
-                Q(description__icontains=search) |
-                Q(mitre_technique_id__icontains=search)
-            )
-            
-        if feed_id:
-            try:
-                feed_id_int = int(feed_id)
-                queryset = queryset.filter(threat_feed_id=feed_id_int)
-            except ValueError:
-                pass  # Invalid feed_id, ignore filter
+        result = filter_service.filter_ttps(criteria)
         
-        # Apply ordering
-        valid_ordering_fields = [
-            'name', '-name', 'mitre_technique_id', '-mitre_technique_id',
-            'mitre_tactic', '-mitre_tactic', 'created_at', '-created_at',
-            'updated_at', '-updated_at'
-        ]
-        if ordering in valid_ordering_fields:
-            queryset = queryset.order_by(ordering)
-        else:
-            queryset = queryset.order_by('-created_at')  # Default ordering
-        
-        # Paginate results
-        paginator = Paginator(queryset, page_size)
-        
-        # Validate page number
-        if page < 1:
-            page = 1
-        elif page > paginator.num_pages and paginator.num_pages > 0:
-            page = paginator.num_pages
-            
-        page_obj = paginator.get_page(page)
-        
-        # Serialize TTP data
-        ttps_data = []
-        for ttp in page_obj:
-            # Get tactic display name
-            tactic_display = dict(TTPData.MITRE_TACTIC_CHOICES).get(ttp.mitre_tactic, ttp.mitre_tactic)
-            
-            ttps_data.append({
-                'id': ttp.id,
-                'name': ttp.name,
-                'description': ttp.description,
-                'mitre_technique_id': ttp.mitre_technique_id,
-                'mitre_tactic': ttp.mitre_tactic,
-                'mitre_tactic_display': tactic_display,
-                'mitre_subtechnique': ttp.mitre_subtechnique,
-                'stix_id': ttp.stix_id,
-                'threat_feed': {
-                    'id': ttp.threat_feed.id,
-                    'name': ttp.threat_feed.name,
-                    'is_external': ttp.threat_feed.is_external
-                } if ttp.threat_feed else None,
-                'is_anonymized': ttp.is_anonymized,
-                'created_at': ttp.created_at.isoformat(),
-                'updated_at': ttp.updated_at.isoformat(),
-            })
-        
-        # Build response
+        # Return in legacy format
         response_data = {
             'success': True,
-            'count': paginator.count,
-            'num_pages': paginator.num_pages,
-            'current_page': page,
-            'page_size': page_size,
-            'has_next': page_obj.has_next(),
-            'has_previous': page_obj.has_previous(),
-            'next_page': page + 1 if page_obj.has_next() else None,
-            'previous_page': page - 1 if page_obj.has_previous() else None,
-            'results': ttps_data,
+            'count': result.filtered_count,
+            'num_pages': result.total_pages,
+            'current_page': result.page,
+            'page_size': result.page_size,
+            'has_next': result.has_next,
+            'has_previous': result.has_previous,
+            'next_page': result.page + 1 if result.has_next else None,
+            'previous_page': result.page - 1 if result.has_previous else None,
+            'results': result.ttps,
             'filters': {
                 'tactic': tactic,
                 'technique_id': technique_id,
@@ -1342,9 +1360,9 @@ def ttps_list(request):
         return Response(response_data, status=status.HTTP_200_OK)
         
     except Exception as e:
-        logger.error(f"Error getting TTPs list: {str(e)}")
+        logger.error(f"Error handling legacy TTP request: {str(e)}")
         return Response(
-            {"error": "Failed to get TTPs list", "details": str(e)},
+            {"error": "Failed to process legacy TTP request", "details": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
@@ -3506,5 +3524,305 @@ def ttp_clear_aggregation_cache(request):
         logger.error(f"Error clearing aggregation cache: {str(e)}")
         return Response(
             {"error": "Failed to clear aggregation cache", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def ttp_filter_options(request):
+    """
+    GET: Get available filter options for TTP search and filtering
+    
+    Returns all available filter options including:
+    - Available tactics with counts
+    - Top techniques with usage counts
+    - Available threat feeds with TTP counts
+    - Severity levels
+    - Valid sort fields
+    - Searchable fields
+    """
+    try:
+        from core.services.ttp_filter_service import TTPFilterService
+        
+        # Initialize filter service
+        filter_service = TTPFilterService()
+        
+        # Get filter options
+        options = filter_service.get_filter_options()
+        
+        return Response({
+            "success": True,
+            "filter_options": options,
+            "timestamp": timezone.now().isoformat()
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error getting filter options: {str(e)}")
+        return Response(
+            {"error": "Failed to get filter options", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def ttp_advanced_search(request):
+    """
+    POST: Perform advanced TTP search with complex filtering criteria
+    
+    Request Body:
+    {
+        "filters": {
+            "tactics": ["initial_access", "execution"],
+            "techniques": ["T1566", "T1059"],
+            "technique_search": "T15",
+            "severity_levels": ["critical", "high"],
+            "date_from": "2024-01-01T00:00:00Z",
+            "date_to": "2024-12-31T23:59:59Z",
+            "threat_feed_ids": [1, 2, 3],
+            "external_feeds_only": true,
+            "active_feeds_only": true,
+            "search_query": "malware phishing",
+            "search_fields": ["name", "description"],
+            "has_subtechniques": true,
+            "anonymized_only": false
+        },
+        "sorting": {
+            "sort_by": "severity_score",
+            "sort_order": "desc"
+        },
+        "pagination": {
+            "page": 1,
+            "page_size": 50
+        }
+    }
+    
+    Returns filtered and paginated TTP results with statistics.
+    """
+    try:
+        from core.services.ttp_filter_service import TTPFilterService, FilterCriteria, SeverityLevel, SortOrder
+        from datetime import datetime
+        
+        # Parse request body
+        data = request.data if request.data else {}
+        filters = data.get('filters', {})
+        sorting = data.get('sorting', {})
+        pagination = data.get('pagination', {})
+        
+        # Parse severity levels
+        severity_levels = None
+        if filters.get('severity_levels'):
+            try:
+                severity_levels = [
+                    SeverityLevel(level) for level in filters['severity_levels']
+                    if level in [s.value for s in SeverityLevel]
+                ]
+            except ValueError:
+                pass
+        
+        # Parse date parameters
+        date_from = None
+        date_to = None
+        if filters.get('date_from'):
+            try:
+                date_from = datetime.fromisoformat(filters['date_from'].replace('Z', '+00:00'))
+            except:
+                pass
+        if filters.get('date_to'):
+            try:
+                date_to = datetime.fromisoformat(filters['date_to'].replace('Z', '+00:00'))
+            except:
+                pass
+        
+        # Parse sort order
+        sort_order = SortOrder.DESC
+        if sorting.get('sort_order', '').lower() == 'asc':
+            sort_order = SortOrder.ASC
+        
+        # Build filter criteria
+        criteria = FilterCriteria(
+            tactics=filters.get('tactics'),
+            techniques=filters.get('techniques'),
+            technique_search=filters.get('technique_search'),
+            severity_levels=severity_levels,
+            date_from=date_from,
+            date_to=date_to,
+            created_after=datetime.fromisoformat(filters['created_after'].replace('Z', '+00:00')) if filters.get('created_after') else None,
+            created_before=datetime.fromisoformat(filters['created_before'].replace('Z', '+00:00')) if filters.get('created_before') else None,
+            updated_after=datetime.fromisoformat(filters['updated_after'].replace('Z', '+00:00')) if filters.get('updated_after') else None,
+            updated_before=datetime.fromisoformat(filters['updated_before'].replace('Z', '+00:00')) if filters.get('updated_before') else None,
+            threat_feed_ids=filters.get('threat_feed_ids'),
+            external_feeds_only=filters.get('external_feeds_only'),
+            active_feeds_only=filters.get('active_feeds_only'),
+            search_query=filters.get('search_query'),
+            search_fields=filters.get('search_fields'),
+            has_subtechniques=filters.get('has_subtechniques'),
+            anonymized_only=filters.get('anonymized_only'),
+            page=pagination.get('page', 1),
+            page_size=min(pagination.get('page_size', 20), 100),
+            sort_by=sorting.get('sort_by', 'created_at'),
+            sort_order=sort_order
+        )
+        
+        # Initialize filter service and apply filters
+        filter_service = TTPFilterService()
+        result = filter_service.filter_ttps(criteria)
+        
+        # Build response
+        response_data = {
+            "success": True,
+            "query": {
+                "filters": filters,
+                "sorting": sorting,
+                "pagination": pagination
+            },
+            "results": {
+                "ttps": result.ttps,
+                "total_count": result.total_count,
+                "filtered_count": result.filtered_count,
+                "page": result.page,
+                "page_size": result.page_size,
+                "total_pages": result.total_pages,
+                "has_next": result.has_next,
+                "has_previous": result.has_previous
+            },
+            "filters_applied": result.filters_applied,
+            "statistics": result.statistics,
+            "timestamp": timezone.now().isoformat()
+        }
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error performing advanced TTP search: {str(e)}")
+        return Response(
+            {"error": "Failed to perform advanced search", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def ttp_search_suggestions(request):
+    """
+    GET: Get search suggestions for TTP search autocomplete
+    
+    Query Parameters:
+    - q: Search query (minimum 2 characters)
+    - type: Suggestion type (technique, tactic, name, description) - default: all
+    - limit: Maximum suggestions to return (default: 10, max: 50)
+    
+    Returns search suggestions based on existing TTP data.
+    """
+    try:
+        from django.db.models import Q
+        from core.models.models import TTPData
+        
+        # Get query parameters
+        query = request.GET.get('q', '').strip()
+        suggestion_type = request.GET.get('type', 'all')
+        limit = min(int(request.GET.get('limit', 10)), 50)
+        
+        if len(query) < 2:
+            return Response({
+                "success": True,
+                "suggestions": [],
+                "message": "Query must be at least 2 characters long"
+            }, status=status.HTTP_200_OK)
+        
+        suggestions = []
+        
+        # Technique ID suggestions
+        if suggestion_type in ['all', 'technique']:
+            technique_suggestions = TTPData.objects.filter(
+                mitre_technique_id__icontains=query
+            ).values('mitre_technique_id').distinct()[:limit]
+            
+            for item in technique_suggestions:
+                suggestions.append({
+                    'type': 'technique',
+                    'value': item['mitre_technique_id'],
+                    'label': f"Technique: {item['mitre_technique_id']}",
+                    'category': 'MITRE Technique'
+                })
+        
+        # Tactic suggestions
+        if suggestion_type in ['all', 'tactic']:
+            tactic_suggestions = TTPData.objects.filter(
+                mitre_tactic__icontains=query
+            ).values('mitre_tactic').distinct()[:limit]
+            
+            for item in tactic_suggestions:
+                tactic_display = dict(TTPData.MITRE_TACTIC_CHOICES).get(
+                    item['mitre_tactic'], item['mitre_tactic']
+                )
+                suggestions.append({
+                    'type': 'tactic',
+                    'value': item['mitre_tactic'],
+                    'label': f"Tactic: {tactic_display}",
+                    'category': 'MITRE Tactic'
+                })
+        
+        # Name suggestions
+        if suggestion_type in ['all', 'name']:
+            name_suggestions = TTPData.objects.filter(
+                name__icontains=query
+            ).values('name').distinct()[:limit]
+            
+            for item in name_suggestions:
+                suggestions.append({
+                    'type': 'name',
+                    'value': item['name'],
+                    'label': f"Name: {item['name'][:50]}{'...' if len(item['name']) > 50 else ''}",
+                    'category': 'TTP Name'
+                })
+        
+        # Subtechnique suggestions
+        if suggestion_type in ['all', 'subtechnique']:
+            subtechnique_suggestions = TTPData.objects.filter(
+                mitre_subtechnique__icontains=query
+            ).exclude(
+                mitre_subtechnique__isnull=True
+            ).exclude(
+                mitre_subtechnique=''
+            ).values('mitre_subtechnique').distinct()[:limit]
+            
+            for item in subtechnique_suggestions:
+                suggestions.append({
+                    'type': 'subtechnique',
+                    'value': item['mitre_subtechnique'],
+                    'label': f"Subtechnique: {item['mitre_subtechnique']}",
+                    'category': 'MITRE Subtechnique'
+                })
+        
+        # Sort suggestions by relevance (exact matches first, then partial)
+        def suggestion_score(suggestion):
+            value = suggestion['value'].lower()
+            query_lower = query.lower()
+            if value.startswith(query_lower):
+                return 0  # Exact prefix match
+            elif query_lower in value:
+                return 1  # Contains match
+            else:
+                return 2  # Other match
+        
+        suggestions.sort(key=suggestion_score)
+        
+        # Limit total suggestions
+        suggestions = suggestions[:limit]
+        
+        return Response({
+            "success": True,
+            "suggestions": suggestions,
+            "query": query,
+            "total_suggestions": len(suggestions),
+            "timestamp": timezone.now().isoformat()
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error getting search suggestions: {str(e)}")
+        return Response(
+            {"error": "Failed to get search suggestions", "details": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
