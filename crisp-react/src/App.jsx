@@ -4798,6 +4798,14 @@ function TTPAnalysis({ active }) {
   const [sortBy, setSortBy] = useState('created_at');
   const [sortOrder, setSortOrder] = useState('desc');
   
+  // Table pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrevious, setHasPrevious] = useState(false);
+  
   // TTP Detail Modal state
   const [showTTPModal, setShowTTPModal] = useState(false);
   const [selectedTTP, setSelectedTTP] = useState(null);
@@ -4859,28 +4867,43 @@ function TTPAnalysis({ active }) {
     }
   }, [active]);
   
-  const fetchTTPData = async (sortByField = null, sortOrderValue = null) => {
+  const fetchTTPData = async (sortByField = null, sortOrderValue = null, pageNumber = null, pageSizeValue = null) => {
     setLoading(true);
     try {
-      // Use provided sort parameters or current state
+      // Use provided parameters or current state
       const currentSortBy = sortByField || sortBy;
       const currentSortOrder = sortOrderValue || sortOrder;
+      const currentPageNumber = pageNumber || currentPage;
+      const currentPageSize = pageSizeValue || pageSize;
       
-      // Build API URL with sorting parameters
+      // Build API URL with sorting and pagination parameters
       const params = new URLSearchParams();
       params.append('sort_by', currentSortBy);
       params.append('sort_order', currentSortOrder);
-      params.append('page_size', '50'); // Reasonable page size for table
+      params.append('page', currentPageNumber.toString());
+      params.append('page_size', currentPageSize.toString());
       
       const response = await api.get(`/api/ttps/?${params.toString()}`);
-      if (response && response.results) {
-        setTtpData(response.results);
+      if (response && response.success) {
+        setTtpData(response.results || []);
+        setTotalCount(response.count || 0);
+        setTotalPages(response.num_pages || 0);
+        setHasNext(response.has_next || false);
+        setHasPrevious(response.has_previous || false);
       } else {
         setTtpData([]);
+        setTotalCount(0);
+        setTotalPages(0);
+        setHasNext(false);
+        setHasPrevious(false);
       }
     } catch (error) {
       console.error('Error fetching TTP data:', error);
       setTtpData([]);
+      setTotalCount(0);
+      setTotalPages(0);
+      setHasNext(false);
+      setHasPrevious(false);
     }
     setLoading(false);
   };
@@ -4900,8 +4923,11 @@ function TTPAnalysis({ active }) {
     setSortBy(column);
     setSortOrder(newSortOrder);
     
-    // Fetch data with new sorting
-    fetchTTPData(column, newSortOrder);
+    // Reset to first page when sorting changes
+    setCurrentPage(1);
+    
+    // Fetch data with new sorting and reset pagination
+    fetchTTPData(column, newSortOrder, 1, pageSize);
   };
 
   // Get sort icon for column headers
@@ -4912,6 +4938,53 @@ function TTPAnalysis({ active }) {
     
     const iconClass = sortOrder === 'asc' ? 'fa-sort-up' : 'fa-sort-down';
     return <i className={`fas ${iconClass}`} style={{color: '#0056b3', marginLeft: '5px'}}></i>;
+  };
+
+  // Handle pagination
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages && newPage !== currentPage) {
+      setCurrentPage(newPage);
+      fetchTTPData(sortBy, sortOrder, newPage, pageSize);
+    }
+  };
+
+  const handlePageSizeChange = (newPageSize) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Reset to first page when page size changes
+    fetchTTPData(sortBy, sortOrder, 1, newPageSize);
+  };
+
+  // Generate page numbers for pagination display
+  const generatePageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      // Show all pages if total is small
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Show first, last, and pages around current
+      const startPage = Math.max(1, currentPage - 2);
+      const endPage = Math.min(totalPages, currentPage + 2);
+      
+      if (startPage > 1) {
+        pages.push(1);
+        if (startPage > 2) pages.push('...');
+      }
+      
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(i);
+      }
+      
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+    
+    return pages;
   };
 
   const fetchTTPTrendsData = async () => {
@@ -5913,6 +5986,88 @@ function TTPAnalysis({ active }) {
               </tbody>
             </table>
           </div>
+          
+          {/* TTP Pagination Controls */}
+          {(totalPages > 0 || loading) && (
+            <div className="pagination-wrapper" style={{marginTop: '1.5rem'}}>
+              <div className="pagination-info-detailed">
+                <span className="pagination-summary">
+                  {loading ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin" style={{marginRight: '5px'}}></i>
+                      Loading TTPs...
+                    </>
+                  ) : (
+                    <>
+                      Showing <strong>{Math.min((currentPage - 1) * pageSize + 1, totalCount)}</strong> to <strong>{Math.min(currentPage * pageSize, totalCount)}</strong> of <strong>{totalCount}</strong> TTPs
+                    </>
+                  )}
+                </span>
+              </div>
+              
+              {totalPages > 1 && (
+                <div className="pagination-controls-enhanced">
+                  {/* Page Size Selector */}
+                  <div className="items-per-page-selector" style={{marginRight: '1rem'}}>
+                    <label htmlFor="ttp-page-size" style={{fontSize: '0.85rem', marginRight: '0.5rem'}}>
+                      Items per page:
+                    </label>
+                    <select
+                      id="ttp-page-size"
+                      className="form-control-sm"
+                      value={pageSize}
+                      onChange={(e) => handlePageSizeChange(parseInt(e.target.value))}
+                      style={{minWidth: '70px'}}
+                      disabled={loading}
+                    >
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                  </div>
+
+                  {/* Previous Button */}
+                  <button
+                    className={`btn btn-outline btn-sm ${!hasPrevious || loading ? 'disabled' : ''}`}
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={!hasPrevious || loading}
+                    style={{marginRight: '0.25rem'}}
+                  >
+                    <i className="fas fa-chevron-left"></i>
+                  </button>
+
+                  {/* Page Numbers */}
+                  <div className="pagination-pages">
+                    {generatePageNumbers().map((page, index) => (
+                      page === '...' ? (
+                        <span key={`ellipsis-${index}`} className="pagination-ellipsis">...</span>
+                      ) : (
+                        <button
+                          key={page}
+                          className={`btn btn-sm ${page === currentPage ? 'btn-primary' : 'btn-outline'}`}
+                          onClick={() => handlePageChange(page)}
+                          disabled={loading}
+                        >
+                          {page}
+                        </button>
+                      )
+                    ))}
+                  </div>
+
+                  {/* Next Button */}
+                  <button
+                    className={`btn btn-outline btn-sm ${!hasNext || loading ? 'disabled' : ''}`}
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={!hasNext || loading}
+                    style={{marginLeft: '0.25rem'}}
+                  >
+                    <i className="fas fa-chevron-right"></i>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
