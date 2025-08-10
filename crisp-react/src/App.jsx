@@ -4878,8 +4878,81 @@ function TTPAnalysis({ active }) {
       fetchTTPTrendsData();
       fetchMatrixData();
       fetchFilterOptions();
+      fetchAvailableFeeds();
+      fetchAggregationData();
     }
   }, [active]);
+  
+  // Fetch available threat feeds
+  const fetchAvailableFeeds = async () => {
+    try {
+      const response = await api.get('/api/threat-feeds/');
+      if (response && response.success) {
+        setAvailableFeeds(response.results || []);
+      }
+    } catch (error) {
+      console.error('Error fetching available feeds:', error);
+    }
+  };
+
+  // Fetch aggregation data for feed analysis
+  const fetchAggregationData = async () => {
+    setAggregationLoading(true);
+    try {
+      // Fetch multiple aggregation endpoints in parallel
+      const [feedComparison, techniqueFreq, seasonalPatterns] = await Promise.all([
+        api.get('/api/ttps/feed-comparison/?days=30'),
+        api.get('/api/ttps/technique-frequencies/?days=30'),
+        api.get('/api/ttps/seasonal-patterns/?days=180')
+      ]);
+
+      if (feedComparison && feedComparison.success) {
+        setFeedComparisonData(feedComparison);
+      }
+      if (techniqueFreq && techniqueFreq.success) {
+        setFrequencyData(techniqueFreq);
+      }
+      if (seasonalPatterns && seasonalPatterns.success) {
+        setSeasonalData(seasonalPatterns);
+      }
+    } catch (error) {
+      console.error('Error fetching aggregation data:', error);
+    }
+    setAggregationLoading(false);
+  };
+
+  // Trigger feed consumption
+  const consumeFeed = async () => {
+    if (!selectedFeedForConsumption) {
+      alert('Please select a threat feed to consume');
+      return;
+    }
+
+    setConsumptionInProgress(true);
+    setConsumptionStatus('Initiating feed consumption...');
+
+    try {
+      const response = await api.post(`/api/threat-feeds/${selectedFeedForConsumption}/consume/`, {
+        force_days: 7,
+        batch_size: 100
+      });
+
+      if (response && response.success) {
+        setConsumptionStatus(`Successfully consumed ${response.indicators_processed || 0} indicators and ${response.ttps_processed || 0} TTPs`);
+        // Refresh data after consumption
+        fetchTTPData();
+        fetchMatrixData();
+        fetchAggregationData();
+      } else {
+        setConsumptionStatus('Feed consumption failed: ' + (response.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error consuming feed:', error);
+      setConsumptionStatus('Feed consumption failed: ' + error.message);
+    }
+
+    setConsumptionInProgress(false);
+  };
   
   const fetchTTPData = async (sortByField = null, sortOrderValue = null, pageNumber = null, pageSizeValue = null, filtersOverride = null) => {
     setLoading(true);
@@ -5936,19 +6009,59 @@ function TTPAnalysis({ active }) {
       <div className="page-header">
         <div>
           <h1 className="page-title">TTP Analysis</h1>
-          <p className="page-subtitle">Track and analyze tactics, techniques, and procedures</p>
+          <p className="page-subtitle">Track and analyze tactics, techniques, and procedures from threat intelligence feeds</p>
         </div>
         <div className="action-buttons">
+          <div className="feed-consumption-controls">
+            <select 
+              value={selectedFeedForConsumption} 
+              onChange={(e) => setSelectedFeedForConsumption(e.target.value)}
+              className="form-control"
+              disabled={consumptionInProgress}
+            >
+              <option value="">Select Feed to Consume</option>
+              {availableFeeds.map(feed => (
+                <option key={feed.id} value={feed.id}>
+                  {feed.name} {feed.is_external ? '(External)' : '(Internal)'}
+                </option>
+              ))}
+            </select>
+            <button 
+              className="btn btn-primary" 
+              onClick={consumeFeed}
+              disabled={!selectedFeedForConsumption || consumptionInProgress}
+            >
+              {consumptionInProgress ? (
+                <>
+                  <i className="fas fa-spinner fa-spin"></i> Consuming...
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-sync-alt"></i> Consume Feed
+                </>
+              )}
+            </button>
+          </div>
           <button className="btn btn-outline" onClick={openExportModal}>
             <i className="fas fa-download"></i> Export Analysis
-          </button>
-          <button className="btn btn-primary" onClick={openCreateTTPModal}>
-            <i className="fas fa-plus"></i> New TTP
           </button>
         </div>
       </div>
 
+      {consumptionStatus && (
+        <div className={`alert ${consumptionStatus.includes('failed') ? 'alert-error' : 'alert-success'}`}>
+          <i className={`fas ${consumptionStatus.includes('failed') ? 'fa-exclamation-triangle' : 'fa-check-circle'}`}></i>
+          {consumptionStatus}
+        </div>
+      )}
+
       <div className="tabs">
+        <div 
+          className={`tab ${activeTab === 'overview' ? 'active' : ''}`}
+          onClick={() => handleTabChange('overview')}
+        >
+          Feed Overview
+        </div>
         <div 
           className={`tab ${activeTab === 'matrix' ? 'active' : ''}`}
           onClick={() => handleTabChange('matrix')}
@@ -5959,19 +6072,13 @@ function TTPAnalysis({ active }) {
           className={`tab ${activeTab === 'list' ? 'active' : ''}`}
           onClick={() => handleTabChange('list')}
         >
-          TTP List
+          TTP Intelligence
         </div>
         <div 
-          className={`tab ${activeTab === 'actors' ? 'active' : ''}`}
-          onClick={() => handleTabChange('actors')}
+          className={`tab ${activeTab === 'trends' ? 'active' : ''}`}
+          onClick={() => handleTabChange('trends')}
         >
-          Threat Actors
-        </div>
-        <div 
-          className={`tab ${activeTab === 'campaigns' ? 'active' : ''}`}
-          onClick={() => handleTabChange('campaigns')}
-        >
-          Campaigns
+          Trends & Patterns
         </div>
       </div>
 
