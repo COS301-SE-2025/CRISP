@@ -3129,3 +3129,382 @@ def ttp_auto_map_existing(request):
             {"error": "Failed to auto-map existing TTPs", "details": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def ttp_technique_frequencies(request):
+    """
+    GET: Get technique frequency statistics
+    
+    Query Parameters:
+    - days: Number of days to analyze (default: 30, max: 365)
+    - threat_feed_id: Filter by specific threat feed ID (optional)
+    - include_subtechniques: Include sub-techniques in counts (default: true)
+    - min_occurrences: Minimum occurrences to include (default: 1)
+    
+    Returns frequency statistics for MITRE techniques.
+    """
+    try:
+        from core.services.ttp_aggregation_service import TTPAggregationService
+        
+        # Get and validate query parameters
+        days = min(int(request.GET.get('days', 30)), 365)
+        threat_feed_id = request.GET.get('threat_feed_id')
+        include_subtechniques = request.GET.get('include_subtechniques', 'true').lower() == 'true'
+        min_occurrences = max(int(request.GET.get('min_occurrences', 1)), 1)
+        
+        if threat_feed_id:
+            try:
+                threat_feed_id = int(threat_feed_id)
+            except ValueError:
+                return Response(
+                    {"error": "Invalid threat_feed_id parameter. Must be an integer."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Get frequency statistics
+        aggregation_service = TTPAggregationService()
+        frequencies = aggregation_service.get_technique_frequencies(
+            days=days,
+            threat_feed_id=threat_feed_id,
+            include_subtechniques=include_subtechniques,
+            min_occurrences=min_occurrences
+        )
+        
+        # Format response
+        response_data = {
+            'success': True,
+            'analysis_period': {
+                'days': days,
+                'threat_feed_id': threat_feed_id,
+                'include_subtechniques': include_subtechniques,
+                'min_occurrences': min_occurrences
+            },
+            'total_techniques': len(frequencies),
+            'techniques': {
+                technique_id: {
+                    'count': stats.count,
+                    'percentage': stats.percentage,
+                    'rank': stats.rank,
+                    'first_seen': stats.first_seen.isoformat() if stats.first_seen else None,
+                    'last_seen': stats.last_seen.isoformat() if stats.last_seen else None
+                }
+                for technique_id, stats in frequencies.items()
+            }
+        }
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error getting technique frequencies: {str(e)}")
+        return Response(
+            {"error": "Failed to get technique frequencies", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def ttp_tactic_frequencies(request):
+    """
+    GET: Get tactic frequency statistics
+    
+    Query Parameters:
+    - days: Number of days to analyze (default: 30, max: 365)
+    - threat_feed_id: Filter by specific threat feed ID (optional)
+    - min_occurrences: Minimum occurrences to include (default: 1)
+    
+    Returns frequency statistics for MITRE tactics.
+    """
+    try:
+        from core.services.ttp_aggregation_service import TTPAggregationService
+        
+        # Get and validate query parameters
+        days = min(int(request.GET.get('days', 30)), 365)
+        threat_feed_id = request.GET.get('threat_feed_id')
+        min_occurrences = max(int(request.GET.get('min_occurrences', 1)), 1)
+        
+        if threat_feed_id:
+            try:
+                threat_feed_id = int(threat_feed_id)
+            except ValueError:
+                return Response(
+                    {"error": "Invalid threat_feed_id parameter. Must be an integer."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Get frequency statistics
+        aggregation_service = TTPAggregationService()
+        frequencies = aggregation_service.get_tactic_frequencies(
+            days=days,
+            threat_feed_id=threat_feed_id,
+            min_occurrences=min_occurrences
+        )
+        
+        # Format response
+        response_data = {
+            'success': True,
+            'analysis_period': {
+                'days': days,
+                'threat_feed_id': threat_feed_id,
+                'min_occurrences': min_occurrences
+            },
+            'total_tactics': len(frequencies),
+            'tactics': {
+                tactic_id: {
+                    'count': stats.count,
+                    'percentage': stats.percentage,
+                    'rank': stats.rank,
+                    'first_seen': stats.first_seen.isoformat() if stats.first_seen else None,
+                    'last_seen': stats.last_seen.isoformat() if stats.last_seen else None
+                }
+                for tactic_id, stats in frequencies.items()
+            }
+        }
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error getting tactic frequencies: {str(e)}")
+        return Response(
+            {"error": "Failed to get tactic frequencies", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def ttp_technique_trends(request):
+    """
+    GET: Get time-based trends for a specific technique
+    
+    Query Parameters:
+    - technique_id: MITRE technique ID (required)
+    - days: Number of days to analyze (default: 90, max: 365)
+    - granularity: Time granularity - 'day', 'week', 'month' (default: 'day')
+    - threat_feed_id: Filter by specific threat feed ID (optional)
+    - moving_average_window: Window size for moving average (default: 7)
+    - include_analysis: Include trend analysis (default: true)
+    
+    Returns time-based trend data for the specified technique.
+    """
+    try:
+        from core.services.ttp_aggregation_service import TTPAggregationService
+        
+        # Get and validate query parameters
+        technique_id = request.GET.get('technique_id', '').strip()
+        if not technique_id:
+            return Response(
+                {"error": "technique_id parameter is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        days = min(int(request.GET.get('days', 90)), 365)
+        granularity = request.GET.get('granularity', 'day').lower()
+        threat_feed_id = request.GET.get('threat_feed_id')
+        moving_average_window = max(int(request.GET.get('moving_average_window', 7)), 1)
+        include_analysis = request.GET.get('include_analysis', 'true').lower() == 'true'
+        
+        if granularity not in ['day', 'week', 'month']:
+            return Response(
+                {"error": "Invalid granularity. Must be 'day', 'week', or 'month'"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if threat_feed_id:
+            try:
+                threat_feed_id = int(threat_feed_id)
+            except ValueError:
+                return Response(
+                    {"error": "Invalid threat_feed_id parameter. Must be an integer."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Get trend data
+        aggregation_service = TTPAggregationService()
+        trend_points = aggregation_service.get_technique_trends(
+            technique_id=technique_id,
+            days=days,
+            granularity=granularity,
+            threat_feed_id=threat_feed_id,
+            moving_average_window=moving_average_window
+        )
+        
+        # Format trend points for response
+        formatted_trends = [
+            {
+                'date': point.date,
+                'value': point.value,
+                'percentage_change': point.percentage_change,
+                'moving_average': point.moving_average
+            }
+            for point in trend_points
+        ]
+        
+        # Prepare response
+        response_data = {
+            'success': True,
+            'technique_id': technique_id,
+            'analysis_period': {
+                'days': days,
+                'granularity': granularity,
+                'threat_feed_id': threat_feed_id,
+                'moving_average_window': moving_average_window
+            },
+            'trend_points': formatted_trends,
+            'total_data_points': len(formatted_trends),
+            'summary': {
+                'total_occurrences': sum(point.value for point in trend_points),
+                'peak_value': max((point.value for point in trend_points), default=0),
+                'average_value': round(sum(point.value for point in trend_points) / len(trend_points), 2) if trend_points else 0
+            }
+        }
+        
+        # Add trend analysis if requested
+        if include_analysis and trend_points:
+            trend_analysis = aggregation_service.analyze_trend_direction(trend_points)
+            response_data['trend_analysis'] = {
+                'direction': trend_analysis.direction,
+                'strength': trend_analysis.strength,
+                'confidence': trend_analysis.confidence,
+                'slope': trend_analysis.slope,
+                'r_squared': trend_analysis.r_squared,
+                'volatility': trend_analysis.volatility
+            }
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error getting technique trends: {str(e)}")
+        return Response(
+            {"error": "Failed to get technique trends", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def ttp_feed_comparison(request):
+    """
+    GET: Compare TTP statistics across different threat feeds
+    
+    Query Parameters:
+    - days: Number of days to analyze (default: 30, max: 365)
+    - top_n: Number of top feeds to include (default: 10, max: 50)
+    
+    Returns comparative statistics across threat feeds.
+    """
+    try:
+        from core.services.ttp_aggregation_service import TTPAggregationService
+        
+        # Get and validate query parameters
+        days = min(int(request.GET.get('days', 30)), 365)
+        top_n = min(int(request.GET.get('top_n', 10)), 50)
+        
+        # Get comparison statistics
+        aggregation_service = TTPAggregationService()
+        comparison_stats = aggregation_service.get_feed_comparison_stats(
+            days=days,
+            top_n=top_n
+        )
+        
+        if not comparison_stats:
+            return Response(
+                {"error": "No data available for feed comparison"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        return Response(comparison_stats, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error getting feed comparison stats: {str(e)}")
+        return Response(
+            {"error": "Failed to get feed comparison statistics", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def ttp_seasonal_patterns(request):
+    """
+    GET: Analyze seasonal patterns in TTP occurrence
+    
+    Query Parameters:
+    - technique_id: Optional specific technique to analyze
+    - days: Number of days to analyze (default: 365, minimum: 90)
+    - granularity: Time granularity - 'week', 'month' (default: 'week')
+    
+    Returns seasonal pattern analysis.
+    """
+    try:
+        from core.services.ttp_aggregation_service import TTPAggregationService
+        
+        # Get and validate query parameters
+        technique_id = request.GET.get('technique_id', '').strip() or None
+        days = max(int(request.GET.get('days', 365)), 90)  # Minimum 90 days for seasonal analysis
+        granularity = request.GET.get('granularity', 'week').lower()
+        
+        if granularity not in ['week', 'month']:
+            return Response(
+                {"error": "Invalid granularity. Must be 'week' or 'month'"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get seasonal pattern analysis
+        aggregation_service = TTPAggregationService()
+        seasonal_analysis = aggregation_service.get_seasonal_patterns(
+            technique_id=technique_id,
+            days=days,
+            granularity=granularity
+        )
+        
+        if 'error' in seasonal_analysis:
+            return Response(seasonal_analysis, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response(seasonal_analysis, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error getting seasonal patterns: {str(e)}")
+        return Response(
+            {"error": "Failed to get seasonal patterns", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def ttp_clear_aggregation_cache(request):
+    """
+    POST: Clear TTP aggregation cache
+    
+    Request Body (optional):
+    {
+        "pattern": "technique_freq"  // Optional pattern to match specific cache keys
+    }
+    
+    Returns cache clearing confirmation.
+    """
+    try:
+        from core.services.ttp_aggregation_service import TTPAggregationService
+        
+        # Get optional pattern from request
+        pattern = request.data.get('pattern', '').strip() or None
+        
+        # Clear cache
+        aggregation_service = TTPAggregationService()
+        aggregation_service.clear_cache(pattern)
+        
+        return Response({
+            "success": True,
+            "message": f"Cache cleared successfully{f' with pattern: {pattern}' if pattern else ''}",
+            "timestamp": timezone.now().isoformat()
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error clearing aggregation cache: {str(e)}")
+        return Response(
+            {"error": "Failed to clear aggregation cache", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
