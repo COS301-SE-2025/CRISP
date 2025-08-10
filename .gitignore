@@ -1,9 +1,12 @@
+
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+env/
 build/
 develop-eggs/
 dist/
@@ -16,34 +19,46 @@ parts/
 sdist/
 var/
 wheels/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 MANIFEST
 
-# Virtual environments
+# Virtual Environments
 venv/
+.venv/
 env/
 ENV/
-.venv/
-.env
+env.bak/
+venv.bak/
+fresh_venv/
 
 # Django
 *.log
-local_settings.py
+
 db.sqlite3
+db.sqlite3-journal
 media/
 staticfiles/
-static/
 
+# Environment Variables
+.env
+.env.local
+.env.production
+.env.staging
+.env.development.local
+.env.test.local
+.env.production.local
+.claude/
 # IDE
-.vscode/
 .idea/
+.vscode/
 *.swp
 *.swo
 *~
 
-# OS
+# OS specific
 .DS_Store
 .DS_Store?
 ._*
@@ -53,14 +68,14 @@ ehthumbs.db
 Thumbs.db
 
 # Testing
-.coverage
 .pytest_cache/
+.coverage
 htmlcov/
 .tox/
-.cache
-nosetests.xml
+.nox/
 coverage.xml
 *.cover
+*.py,cover
 .hypothesis/
 
 # Celery
@@ -70,39 +85,73 @@ celerybeat.pid
 # Redis
 dump.rdb
 
-# Jupyter
-.ipynb_checkpoints
+# Logs
+logs/
+*.log
 
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
+# Temporary files
+*.tmp
+*.temp
 
-# Environment variables
-.env
+# Node.js & React
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+
+
+# React Build Files
+build/
+dist/
+*.tgz
+*.tar.gz
+
+# React Dev Files
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# Secret keys and sensitive data
-*.key
+# Package Lock Files (optional - some teams commit these)
+package-lock.json
+yarn.lock
+
+# Django Migration Files (optional - depends on team preference)
+# */migrations/0*.py
+# !*/migrations/__init__.py
+
+# Security & Keys
 *.pem
+*.key
+*.crt
 *.p12
-secrets.json
-local_config.py
+secrets/
+keys/
+credentials/
 
-# Database
-*.db
-*.sqlite
+# Database Files
 *.sqlite3
+*.sqlite
+*.db
 
-# Temporary files
-*.tmp
-*.temp
-temp/
-tmp/
+# Cache & Session Files
+.cache/
+sessions/
 
-# CRISP specific
-crisp_threat_intel.log
-*.pid
+# JWT Secrets
+jwt_secret.txt
+secret_key.txt
+
+# Email Testing Files
+emails/
+email_test/
+
+# STIX/TAXII Data Files
+*.stix
+*.stix2
+taxii_data/
+threat_feeds/
+
+# Project-specific ignores
+# (Add project-specific patterns below this line)
