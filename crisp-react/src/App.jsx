@@ -4831,6 +4831,19 @@ function TTPAnalysis({ active }) {
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState('');
   
+  // Matrix Cell Details Modal state
+  const [showMatrixCellModal, setShowMatrixCellModal] = useState(false);
+  const [matrixCellData, setMatrixCellData] = useState(null);
+  const [matrixCellLoading, setMatrixCellLoading] = useState(false);
+  const [selectedTactic, setSelectedTactic] = useState('');
+  const [selectedTechnique, setSelectedTechnique] = useState('');
+  
+  // Technique Details Modal state
+  const [showTechniqueModal, setShowTechniqueModal] = useState(false);
+  const [techniqueData, setTechniqueData] = useState(null);
+  const [techniqueLoading, setTechniqueLoading] = useState(false);
+  const [selectedTechniqueId, setSelectedTechniqueId] = useState('');
+  
   const ttpChartRef = useRef(null);
   
   // Fetch TTP data from backend
@@ -4895,6 +4908,68 @@ function TTPAnalysis({ active }) {
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
+  };
+
+  // Matrix cell click handlers
+  const handleMatrixCellClick = async (tactic, technique = null) => {
+    setSelectedTactic(tactic);
+    setSelectedTechnique(technique || '');
+    setMatrixCellLoading(true);
+    setShowMatrixCellModal(true);
+    
+    try {
+      let url = `/api/ttps/matrix-cell-details/?tactic=${tactic}`;
+      if (technique) {
+        url += `&technique_id=${technique}`;
+      }
+      url += '&include_related=true&page_size=50';
+      
+      const response = await api.get(url);
+      if (response && response.success) {
+        setMatrixCellData(response);
+      } else {
+        setMatrixCellData(null);
+      }
+    } catch (error) {
+      console.error('Error fetching matrix cell details:', error);
+      setMatrixCellData(null);
+    }
+    
+    setMatrixCellLoading(false);
+  };
+
+  const handleTechniqueClick = async (techniqueId) => {
+    setSelectedTechniqueId(techniqueId);
+    setTechniqueLoading(true);
+    setShowTechniqueModal(true);
+    
+    try {
+      const url = `/api/ttps/technique-details/${techniqueId}/`;
+      const response = await api.get(url);
+      if (response && response.success) {
+        setTechniqueData(response);
+      } else {
+        setTechniqueData(null);
+      }
+    } catch (error) {
+      console.error('Error fetching technique details:', error);
+      setTechniqueData(null);
+    }
+    
+    setTechniqueLoading(false);
+  };
+
+  const closeMatrixCellModal = () => {
+    setShowMatrixCellModal(false);
+    setMatrixCellData(null);
+    setSelectedTactic('');
+    setSelectedTechnique('');
+  };
+
+  const closeTechniqueModal = () => {
+    setShowTechniqueModal(false);
+    setTechniqueData(null);
+    setSelectedTechniqueId('');
   };
 
   const refreshMatrixData = () => {
@@ -5210,7 +5285,26 @@ function TTPAnalysis({ active }) {
             const tacticData = matrixData.matrix[tactic.code];
             const count = tacticData ? tacticData.technique_count : 0;
             return (
-              <th key={tactic.code} title={`${count} techniques in ${tactic.name}`}>
+              <th 
+                key={tactic.code} 
+                title={`${count} techniques in ${tactic.name} - Click to view details`}
+                onClick={() => count > 0 && handleMatrixCellClick(tactic.code)}
+                style={{ 
+                  cursor: count > 0 ? 'pointer' : 'default',
+                  backgroundColor: count > 0 ? '#f8f9fa' : 'transparent',
+                  transition: 'background-color 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  if (count > 0) {
+                    e.target.style.backgroundColor = '#e9ecef';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (count > 0) {
+                    e.target.style.backgroundColor = '#f8f9fa';
+                  }
+                }}
+              >
                 {tactic.name}
                 <div className="tactic-count">({count})</div>
               </th>
@@ -5279,29 +5373,61 @@ function TTPAnalysis({ active }) {
       <tbody>
         {rows.map((row, rowIndex) => (
           <tr key={rowIndex}>
-            {row.map((cell, cellIndex) => (
-              <td 
-                key={cellIndex} 
-                className={`matrix-cell ${cell.isActive ? 'active' : ''}`}
-                title={cell.technique ? `${cell.technique.name} (${cell.technique.technique_id})` : ''}
-              >
-                {cell.technique ? (
-                  <>
-                    <div className="technique-name">
-                      {cell.technique.name.length > 20 
-                        ? cell.technique.name.substring(0, 20) + '...'
-                        : cell.technique.name
-                      }
+            {row.map((cell, cellIndex) => {
+              const tacticCode = tacticOrder[cellIndex];
+              return (
+                <td 
+                  key={cellIndex} 
+                  className={`matrix-cell ${cell.isActive ? 'active' : ''} ${cell.technique ? 'clickable' : ''}`}
+                  title={cell.technique ? `${cell.technique.name} (${cell.technique.technique_id}) - Click to view details` : 'No techniques'}
+                  onClick={() => {
+                    if (cell.technique) {
+                      handleTechniqueClick(cell.technique.technique_id);
+                    } else if (cell.isActive && tacticCode) {
+                      // Click on tactic column if no specific technique but tactic has data
+                      handleMatrixCellClick(tacticCode);
+                    }
+                  }}
+                  style={{
+                    cursor: (cell.technique || cell.isActive) ? 'pointer' : 'default',
+                    transition: 'all 0.2s ease',
+                    position: 'relative'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (cell.technique || cell.isActive) {
+                      e.target.style.transform = 'scale(1.02)';
+                      e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+                      e.target.style.zIndex = '1';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (cell.technique || cell.isActive) {
+                      e.target.style.transform = 'scale(1)';
+                      e.target.style.boxShadow = 'none';
+                      e.target.style.zIndex = 'auto';
+                    }
+                  }}
+                >
+                  {cell.technique ? (
+                    <>
+                      <div className="technique-name">
+                        {cell.technique.name.length > 20 
+                          ? cell.technique.name.substring(0, 20) + '...'
+                          : cell.technique.name
+                        }
+                      </div>
+                      {cell.technique.technique_id && (
+                        <div className="technique-id">{cell.technique.technique_id}</div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="empty-cell">
+                      {cell.isActive ? '🔍' : '-'}
                     </div>
-                    {cell.technique.technique_id && (
-                      <div className="technique-id">{cell.technique.technique_id}</div>
-                    )}
-                  </>
-                ) : (
-                  <div className="empty-cell">-</div>
-                )}
-              </td>
-            ))}
+                  )}
+                </td>
+              );
+            })}
           </tr>
         ))}
       </tbody>
@@ -6499,6 +6625,391 @@ function TTPAnalysis({ active }) {
                   </>
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Matrix Cell Details Modal */}
+      {showMatrixCellModal && (
+        <div className="modal-overlay" onClick={closeMatrixCellModal}>
+          <div className="modal-content matrix-cell-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>
+                <i className="fas fa-th-large"></i>
+                {selectedTechnique 
+                  ? `Technique ${selectedTechnique} in ${selectedTactic.replace(/_/g, ' ')}`
+                  : `${selectedTactic.replace(/_/g, ' ')} Tactic Details`
+                }
+              </h3>
+              <button className="modal-close" onClick={closeMatrixCellModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              {matrixCellLoading ? (
+                <div className="loading-state">
+                  <i className="fas fa-spinner fa-spin"></i>
+                  <span>Loading matrix cell details...</span>
+                </div>
+              ) : matrixCellData ? (
+                <div className="matrix-cell-details">
+                  {/* Cell Information */}
+                  <div className="cell-info-section">
+                    <div className="info-grid">
+                      <div className="info-item">
+                        <label>Tactic:</label>
+                        <span>{matrixCellData.cell_info.tactic_display}</span>
+                      </div>
+                      <div className="info-item">
+                        <label>Total TTPs:</label>
+                        <span>{matrixCellData.cell_info.total_ttps_in_cell}</span>
+                      </div>
+                      <div className="info-item">
+                        <label>Unique Techniques:</label>
+                        <span>{matrixCellData.cell_info.unique_techniques}</span>
+                      </div>
+                      <div className="info-item">
+                        <label>Threat Feeds:</label>
+                        <span>{matrixCellData.cell_info.threat_feeds_count}</span>
+                      </div>
+                      <div className="info-item">
+                        <label>Recent Activity (30d):</label>
+                        <span>{matrixCellData.cell_info.recent_activity}</span>
+                      </div>
+                      <div className="info-item">
+                        <label>With Subtechniques:</label>
+                        <span>{matrixCellData.cell_info.has_subtechniques}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Related Techniques */}
+                  {matrixCellData.related_techniques && matrixCellData.related_techniques.length > 0 && (
+                    <div className="related-techniques-section">
+                      <h4><i className="fas fa-sitemap"></i> Top Techniques in this Tactic</h4>
+                      <div className="techniques-grid">
+                        {matrixCellData.related_techniques.map((tech, index) => (
+                          <div 
+                            key={tech.mitre_technique_id || index}
+                            className="technique-card clickable"
+                            onClick={() => handleTechniqueClick(tech.mitre_technique_id)}
+                          >
+                            <div className="technique-id">{tech.mitre_technique_id}</div>
+                            <div className="technique-count">{tech.count} TTPs</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TTPs List */}
+                  <div className="ttps-list-section">
+                    <h4>
+                      <i className="fas fa-list"></i>
+                      TTPs ({matrixCellData.ttps.filtered_count})
+                      {matrixCellData.ttps.has_next && (
+                        <span className="showing-info">
+                          (Showing first {matrixCellData.ttps.page_size})
+                        </span>
+                      )}
+                    </h4>
+                    
+                    {matrixCellData.ttps.results.length > 0 ? (
+                      <div className="ttps-list">
+                        {matrixCellData.ttps.results.map(ttp => (
+                          <div key={ttp.id} className="ttp-item">
+                            <div className="ttp-header">
+                              <div className="ttp-name">{ttp.name}</div>
+                              <div className="ttp-badges">
+                                {ttp.mitre_technique_id && (
+                                  <span className="badge technique-badge">{ttp.mitre_technique_id}</span>
+                                )}
+                                {ttp.severity && (
+                                  <span className={`badge severity-${ttp.severity}`}>{ttp.severity}</span>
+                                )}
+                                {ttp.is_anonymized && (
+                                  <span className="badge anonymized-badge">Anonymized</span>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="ttp-description">
+                              {ttp.description.length > 200 
+                                ? ttp.description.substring(0, 200) + '...'
+                                : ttp.description
+                              }
+                            </div>
+                            
+                            <div className="ttp-meta">
+                              {ttp.threat_feed && (
+                                <div className="feed-info">
+                                  <i className="fas fa-rss"></i>
+                                  <span>{ttp.threat_feed.name}</span>
+                                  {ttp.threat_feed.is_external && (
+                                    <span className="external-indicator">External</span>
+                                  )}
+                                </div>
+                              )}
+                              <div className="created-date">
+                                <i className="fas fa-clock"></i>
+                                {new Date(ttp.created_at).toLocaleDateString()}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="empty-state">
+                        <i className="fas fa-info-circle"></i>
+                        <span>No TTPs found for this matrix cell</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Statistics */}
+                  {matrixCellData.statistics && (
+                    <div className="statistics-section">
+                      <h4><i className="fas fa-chart-bar"></i> Statistics</h4>
+                      <div className="stats-grid">
+                        {matrixCellData.statistics.severity_distribution && (
+                          <div className="stat-item">
+                            <label>Severity Distribution:</label>
+                            <div className="severity-bars">
+                              {Object.entries(matrixCellData.statistics.severity_distribution).map(([severity, count]) => (
+                                <div key={severity} className="severity-bar">
+                                  <span className={`severity-label ${severity}`}>{severity}: {count}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="error-state">
+                  <i className="fas fa-exclamation-triangle"></i>
+                  <span>Failed to load matrix cell details</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={closeMatrixCellModal}>
+                Close
+              </button>
+              {matrixCellData && matrixCellData.ttps.has_next && (
+                <button className="btn btn-primary">
+                  <i className="fas fa-arrow-right"></i> View All TTPs
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Technique Details Modal */}
+      {showTechniqueModal && (
+        <div className="modal-overlay" onClick={closeTechniqueModal}>
+          <div className="modal-content technique-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>
+                <i className="fas fa-bullseye"></i>
+                Technique Details: {selectedTechniqueId}
+              </h3>
+              <button className="modal-close" onClick={closeTechniqueModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              {techniqueLoading ? (
+                <div className="loading-state">
+                  <i className="fas fa-spinner fa-spin"></i>
+                  <span>Loading technique details...</span>
+                </div>
+              ) : techniqueData ? (
+                <div className="technique-details">
+                  {/* Technique Information */}
+                  <div className="technique-info-section">
+                    <div className="info-header">
+                      <div className="technique-title">
+                        <h4>{techniqueData.technique_info.name || selectedTechniqueId}</h4>
+                        <div className="technique-badges">
+                          <span className="badge technique-badge">{selectedTechniqueId}</span>
+                          <span className={`badge severity-${techniqueData.technique_info.severity}`}>
+                            {techniqueData.technique_info.severity}
+                          </span>
+                          {techniqueData.technique_info.is_subtechnique && (
+                            <span className="badge subtechnique-badge">Subtechnique</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="technique-stats">
+                      <div className="stat-item">
+                        <label>Total TTPs:</label>
+                        <span>{techniqueData.statistics.total_ttps}</span>
+                      </div>
+                      <div className="stat-item">
+                        <label>Threat Feeds:</label>
+                        <span>{techniqueData.statistics.unique_threat_feeds}</span>
+                      </div>
+                      <div className="stat-item">
+                        <label>First Seen:</label>
+                        <span>{techniqueData.statistics.first_seen 
+                          ? new Date(techniqueData.statistics.first_seen).toLocaleDateString() 
+                          : 'N/A'}</span>
+                      </div>
+                      <div className="stat-item">
+                        <label>Last Seen:</label>
+                        <span>{techniqueData.statistics.last_seen 
+                          ? new Date(techniqueData.statistics.last_seen).toLocaleDateString() 
+                          : 'N/A'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Associated Tactics */}
+                  {techniqueData.associated_tactics && techniqueData.associated_tactics.length > 0 && (
+                    <div className="tactics-section">
+                      <h4><i className="fas fa-layer-group"></i> Associated Tactics</h4>
+                      <div className="tactics-grid">
+                        {techniqueData.associated_tactics.map(tactic => (
+                          <div 
+                            key={tactic.tactic}
+                            className="tactic-card clickable"
+                            onClick={() => handleMatrixCellClick(tactic.tactic, selectedTechniqueId)}
+                          >
+                            <div className="tactic-name">{tactic.tactic_display}</div>
+                            <div className="tactic-count">{tactic.count} TTPs</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Technique Variants */}
+                  {techniqueData.variants && techniqueData.variants.length > 0 && (
+                    <div className="variants-section">
+                      <h4><i className="fas fa-code-branch"></i> Related Variants</h4>
+                      <div className="variants-grid">
+                        {techniqueData.variants.map(variant => (
+                          <div 
+                            key={variant.mitre_technique_id}
+                            className="variant-card clickable"
+                            onClick={() => handleTechniqueClick(variant.mitre_technique_id)}
+                          >
+                            <div className="variant-id">{variant.mitre_technique_id}</div>
+                            <div className="variant-count">{variant.count} TTPs</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recent Activity */}
+                  {techniqueData.statistics.recent_activity && (
+                    <div className="activity-section">
+                      <h4><i className="fas fa-activity"></i> Recent Activity</h4>
+                      <div className="activity-stats">
+                        <div className="activity-item">
+                          <label>Last 24 hours:</label>
+                          <span>{techniqueData.statistics.recent_activity.last_24h}</span>
+                        </div>
+                        <div className="activity-item">
+                          <label>Last 7 days:</label>
+                          <span>{techniqueData.statistics.recent_activity.last_7d}</span>
+                        </div>
+                        <div className="activity-item">
+                          <label>Last 30 days:</label>
+                          <span>{techniqueData.statistics.recent_activity.last_30d}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TTPs using this technique */}
+                  <div className="technique-ttps-section">
+                    <h4>
+                      <i className="fas fa-list"></i>
+                      TTPs Using This Technique ({techniqueData.ttps.length})
+                    </h4>
+                    
+                    {techniqueData.ttps.length > 0 ? (
+                      <div className="technique-ttps-list">
+                        {techniqueData.ttps.slice(0, 10).map(ttp => (
+                          <div key={ttp.id} className="ttp-item">
+                            <div className="ttp-header">
+                              <div className="ttp-name">{ttp.name}</div>
+                              <div className="ttp-badges">
+                                {ttp.mitre_tactic && (
+                                  <span className="badge tactic-badge">{ttp.mitre_tactic_display}</span>
+                                )}
+                                {ttp.is_anonymized && (
+                                  <span className="badge anonymized-badge">Anonymized</span>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="ttp-description">
+                              {ttp.description.length > 150 
+                                ? ttp.description.substring(0, 150) + '...'
+                                : ttp.description
+                              }
+                            </div>
+                            
+                            <div className="ttp-meta">
+                              {ttp.threat_feed && (
+                                <div className="feed-info">
+                                  <i className="fas fa-rss"></i>
+                                  <span>{ttp.threat_feed.name}</span>
+                                </div>
+                              )}
+                              <div className="created-date">
+                                <i className="fas fa-clock"></i>
+                                {new Date(ttp.created_at).toLocaleDateString()}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {techniqueData.ttps.length > 10 && (
+                          <div className="more-ttps-indicator">
+                            <i className="fas fa-ellipsis-h"></i>
+                            <span>and {techniqueData.ttps.length - 10} more TTPs...</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="empty-state">
+                        <i className="fas fa-info-circle"></i>
+                        <span>No TTPs found for this technique</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="error-state">
+                  <i className="fas fa-exclamation-triangle"></i>
+                  <span>Failed to load technique details</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={closeTechniqueModal}>
+                Close
+              </button>
+              {techniqueData && techniqueData.ttps.length > 10 && (
+                <button className="btn btn-primary">
+                  <i className="fas fa-external-link-alt"></i> View All TTPs
+                </button>
+              )}
             </div>
           </div>
         </div>

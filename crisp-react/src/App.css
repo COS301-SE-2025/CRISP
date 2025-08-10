@@ -2212,3 +2212,436 @@ section#ioc-management .card-actions .btn-sm {
   font-size: 0.75rem;
   margin-right: 0.25rem;
 }
+
+/* TTP Matrix Click Handlers Styles */
+.matrix-cell.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.matrix-cell.clickable:hover {
+  transform: scale(1.02);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  z-index: 10;
+}
+
+.tactic-count {
+  font-size: 0.8em;
+  color: #666;
+  font-weight: normal;
+}
+
+.empty-cell {
+  color: #ccc;
+  font-size: 1.2em;
+}
+
+/* Matrix Cell Details Modal */
+.matrix-cell-modal {
+  max-width: 900px;
+  width: 90%;
+  max-height: 80vh;
+}
+
+.matrix-cell-details {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cell-info-section {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 6px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-item label {
+  font-weight: 600;
+  color: #495057;
+  font-size: 0.9em;
+}
+
+.info-item span {
+  color: #212529;
+  font-weight: 500;
+}
+
+.related-techniques-section,
+.ttps-list-section,
+.statistics-section {
+  border-top: 1px solid #dee2e6;
+  padding-top: 15px;
+}
+
+.techniques-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.technique-card {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 10px;
+  text-align: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.technique-card:hover {
+  border-color: #0056b3;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.technique-id {
+  font-weight: 600;
+  color: #0056b3;
+  font-size: 0.9em;
+}
+
+.technique-count {
+  color: #6c757d;
+  font-size: 0.8em;
+  margin-top: 4px;
+}
+
+.showing-info {
+  font-size: 0.8em;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.ttps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: 10px;
+}
+
+.ttp-item {
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 12px;
+  transition: border-color 0.2s ease;
+}
+
+.ttp-item:hover {
+  border-color: #0056b3;
+}
+
+.ttp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.ttp-name {
+  font-weight: 600;
+  color: #212529;
+  flex: 1;
+}
+
+.ttp-badges {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75em;
+  font-weight: 500;
+  display: inline-block;
+}
+
+.technique-badge {
+  background: #e3f2fd;
+  color: #1565c0;
+  border: 1px solid #bbdefb;
+}
+
+.severity-critical {
+  background: #ffebee;
+  color: #c62828;
+  border: 1px solid #ffcdd2;
+}
+
+.severity-high {
+  background: #fff3e0;
+  color: #ef6c00;
+  border: 1px solid #ffe0b2;
+}
+
+.severity-medium {
+  background: #fff8e1;
+  color: #f57f17;
+  border: 1px solid #fff9c4;
+}
+
+.severity-low {
+  background: #e8f5e8;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+}
+
+.anonymized-badge {
+  background: #f3e5f5;
+  color: #7b1fa2;
+  border: 1px solid #e1bee7;
+}
+
+.external-indicator {
+  font-size: 0.7em;
+  color: #666;
+  font-style: italic;
+  margin-left: 4px;
+}
+
+.ttp-description {
+  color: #6c757d;
+  font-size: 0.9em;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+.ttp-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #6c757d;
+  font-size: 0.8em;
+}
+
+.feed-info,
+.created-date {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.severity-bars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.severity-label.critical {
+  color: #c62828;
+}
+
+.severity-label.high {
+  color: #ef6c00;
+}
+
+.severity-label.medium {
+  color: #f57f17;
+}
+
+.severity-label.low {
+  color: #2e7d32;
+}
+
+/* Technique Details Modal */
+.technique-modal {
+  max-width: 1000px;
+  width: 95%;
+  max-height: 85vh;
+}
+
+.technique-details {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.technique-info-section {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.technique-title {
+  margin-bottom: 15px;
+}
+
+.technique-title h4 {
+  margin: 0 0 10px 0;
+  color: #212529;
+  font-size: 1.2em;
+}
+
+.technique-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.subtechnique-badge {
+  background: #e8f5e8;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+}
+
+.technique-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tactics-section,
+.variants-section,
+.activity-section {
+  border-top: 1px solid #dee2e6;
+  padding-top: 15px;
+}
+
+.tactics-grid,
+.variants-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.tactic-card,
+.variant-card {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 12px;
+  text-align: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.tactic-card:hover,
+.variant-card:hover {
+  border-color: #0056b3;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transform: translateY(-1px);
+}
+
+.tactic-name,
+.variant-id {
+  font-weight: 600;
+  color: #0056b3;
+  margin-bottom: 4px;
+}
+
+.tactic-count,
+.variant-count {
+  color: #6c757d;
+  font-size: 0.8em;
+}
+
+.activity-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.activity-item {
+  background: #fff;
+  padding: 10px;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.activity-item label {
+  font-size: 0.8em;
+  color: #6c757d;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.activity-item span {
+  font-weight: 600;
+  color: #212529;
+  font-size: 1.1em;
+}
+
+.technique-ttps-section {
+  border-top: 1px solid #dee2e6;
+  padding-top: 15px;
+}
+
+.technique-ttps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 350px;
+  overflow-y: auto;
+  margin-top: 10px;
+}
+
+.more-ttps-indicator {
+  text-align: center;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  color: #6c757d;
+  font-style: italic;
+  margin-top: 8px;
+}
+
+.tactic-badge {
+  background: #e1f5fe;
+  color: #01579b;
+  border: 1px solid #b3e5fc;
+}
+
+.loading-state,
+.error-state,
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 20px;
+  text-align: center;
+  color: #6c757d;
+}
+
+.loading-state i {
+  font-size: 1.2em;
+  color: #0056b3;
+}
+
+.error-state {
+  color: #dc3545;
+}
+
+.error-state i {
+  color: #dc3545;
+}

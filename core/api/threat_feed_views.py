@@ -3826,3 +3826,307 @@ def ttp_search_suggestions(request):
             {"error": "Failed to get search suggestions", "details": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def ttp_matrix_cell_details(request):
+    """
+    GET: Get detailed TTP data for a specific matrix cell (tactic/technique combination)
+    
+    Query Parameters:
+    - tactic: MITRE tactic code (required for tactic-based queries)
+    - technique_id: MITRE technique ID (optional for technique-based queries)
+    - feed_id: Filter by specific threat feed ID (optional)
+    - page: Page number (default: 1)
+    - page_size: Items per page (default: 20, max: 100)
+    - include_related: Include related techniques in same tactic (default: false)
+    
+    Returns detailed information about TTPs in the specified matrix cell,
+    including technique details, threat feed information, and statistics.
+    """
+    try:
+        from core.services.ttp_filter_service import TTPFilterService, FilterCriteria, SortOrder
+        from django.db.models import Count, Q
+        
+        # Get query parameters
+        tactic = request.GET.get('tactic', '').strip()
+        technique_id = request.GET.get('technique_id', '').strip()
+        feed_id = request.GET.get('feed_id', '').strip()
+        page = int(request.GET.get('page', 1))
+        page_size = min(int(request.GET.get('page_size', 20)), 100)
+        include_related = request.GET.get('include_related', 'false').lower() == 'true'
+        
+        if not tactic:
+            return Response({
+                "error": "Missing required parameter: 'tactic' is required"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate tactic
+        valid_tactics = [choice[0] for choice in TTPData.MITRE_TACTIC_CHOICES]
+        if tactic not in valid_tactics:
+            return Response({
+                "error": f"Invalid tactic '{tactic}'. Valid tactics: {', '.join(valid_tactics)}"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Build filter criteria
+        criteria = FilterCriteria(
+            tactics=[tactic],
+            techniques=[technique_id] if technique_id else None,
+            threat_feed_ids=[int(feed_id)] if feed_id and feed_id.isdigit() else None,
+            page=page,
+            page_size=page_size,
+            sort_by='created_at',
+            sort_order=SortOrder.DESC
+        )
+        
+        # Use the filter service to get TTPs
+        filter_service = TTPFilterService()
+        result = filter_service.filter_ttps(criteria)
+        
+        # Get tactic display name
+        tactic_display = dict(TTPData.MITRE_TACTIC_CHOICES).get(tactic, tactic)
+        
+        # Get related techniques if requested
+        related_techniques = []
+        if include_related:
+            related_query = TTPData.objects.filter(mitre_tactic=tactic)
+            if feed_id and feed_id.isdigit():
+                related_query = related_query.filter(threat_feed_id=int(feed_id))
+            
+            # Get unique techniques in this tactic
+            unique_techniques = related_query.values('mitre_technique_id').annotate(
+                count=Count('id')
+            ).order_by('-count')[:10]  # Top 10 most common techniques
+            
+            related_techniques = list(unique_techniques)
+        
+        # Calculate additional statistics for the matrix cell
+        cell_stats = {
+            'tactic': tactic,
+            'tactic_display': tactic_display,
+            'technique_filter': technique_id if technique_id else None,
+            'total_ttps_in_cell': result.filtered_count,
+            'unique_techniques': TTPData.objects.filter(
+                mitre_tactic=tactic
+            ).values('mitre_technique_id').distinct().count(),
+            'threat_feeds_count': TTPData.objects.filter(
+                mitre_tactic=tactic
+            ).values('threat_feed_id').distinct().count(),
+            'recent_activity': TTPData.objects.filter(
+                mitre_tactic=tactic,
+                created_at__gte=timezone.now() - timedelta(days=30)
+            ).count(),
+            'has_subtechniques': TTPData.objects.filter(
+                mitre_tactic=tactic
+            ).exclude(
+                Q(mitre_subtechnique__isnull=True) | Q(mitre_subtechnique='')
+            ).count()
+        }
+        
+        # Build comprehensive response
+        response_data = {
+            "success": True,
+            "cell_info": cell_stats,
+            "ttps": {
+                "results": result.ttps,
+                "total_count": result.total_count,
+                "filtered_count": result.filtered_count,
+                "page": result.page,
+                "page_size": result.page_size,
+                "total_pages": result.total_pages,
+                "has_next": result.has_next,
+                "has_previous": result.has_previous
+            },
+            "related_techniques": related_techniques,
+            "filters_applied": result.filters_applied,
+            "statistics": result.statistics,
+            "query_parameters": {
+                "tactic": tactic,
+                "technique_id": technique_id,
+                "feed_id": feed_id,
+                "page": page,
+                "page_size": page_size,
+                "include_related": include_related
+            },
+            "timestamp": timezone.now().isoformat()
+        }
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+        
+    except ValueError as e:
+        return Response({
+            "error": "Invalid parameter value",
+            "details": str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        logger.error(f"Error getting matrix cell details: {str(e)}")
+        return Response(
+            {"error": "Failed to get matrix cell details", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def ttp_technique_details(request, technique_id):
+    """
+    GET: Get detailed information about a specific MITRE technique
+    
+    Path Parameters:
+    - technique_id: MITRE technique ID (e.g., T1566.001)
+    
+    Query Parameters:
+    - feed_id: Filter by specific threat feed ID (optional)
+    - include_variants: Include all variants/subtechniques (default: true)
+    - include_tactics: Include all tactics this technique appears in (default: true)
+    
+    Returns comprehensive information about the specified technique including
+    all TTPs using this technique, associated tactics, and usage statistics.
+    """
+    try:
+        from core.services.ttp_filter_service import TTPFilterService, FilterCriteria, SortOrder
+        from django.db.models import Count, Q
+        from datetime import timedelta
+        
+        # Get query parameters
+        feed_id = request.GET.get('feed_id', '').strip()
+        include_variants = request.GET.get('include_variants', 'true').lower() == 'true'
+        include_tactics = request.GET.get('include_tactics', 'true').lower() == 'true'
+        
+        # Validate technique ID format
+        import re
+        if not re.match(r'^T\d{4}(\.\d{3})?$', technique_id):
+            return Response({
+                "error": f"Invalid technique ID format: '{technique_id}'. Expected format: T1234 or T1234.001"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Build base query
+        base_query = TTPData.objects.filter(mitre_technique_id=technique_id)
+        if feed_id and feed_id.isdigit():
+            base_query = base_query.filter(threat_feed_id=int(feed_id))
+        
+        # Check if technique exists
+        if not base_query.exists():
+            return Response({
+                "error": f"No TTPs found for technique '{technique_id}'"
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Get all TTPs for this technique
+        technique_ttps = list(base_query.select_related('threat_feed').order_by('-created_at'))
+        
+        # Serialize TTP data
+        ttps_data = []
+        for ttp in technique_ttps:
+            ttps_data.append({
+                'id': ttp.id,
+                'name': ttp.name,
+                'description': ttp.description,
+                'mitre_technique_id': ttp.mitre_technique_id,
+                'mitre_tactic': ttp.mitre_tactic,
+                'mitre_tactic_display': dict(TTPData.MITRE_TACTIC_CHOICES).get(
+                    ttp.mitre_tactic, ttp.mitre_tactic
+                ) if ttp.mitre_tactic else None,
+                'mitre_subtechnique': ttp.mitre_subtechnique,
+                'stix_id': ttp.stix_id,
+                'is_anonymized': ttp.is_anonymized,
+                'created_at': ttp.created_at.isoformat(),
+                'updated_at': ttp.updated_at.isoformat(),
+                'threat_feed': {
+                    'id': ttp.threat_feed.id,
+                    'name': ttp.threat_feed.name,
+                    'is_external': ttp.threat_feed.is_external,
+                    'is_active': ttp.threat_feed.is_active
+                } if ttp.threat_feed else None
+            })
+        
+        # Get technique variants/subtechniques if requested
+        variants = []
+        if include_variants:
+            # Get base technique ID (without subtechnique)
+            base_technique = technique_id.split('.')[0]
+            
+            variant_query = TTPData.objects.filter(
+                mitre_technique_id__startswith=f"{base_technique}."
+            ).exclude(mitre_technique_id=technique_id)
+            
+            if feed_id and feed_id.isdigit():
+                variant_query = variant_query.filter(threat_feed_id=int(feed_id))
+            
+            variant_data = variant_query.values('mitre_technique_id').annotate(
+                count=Count('id'),
+                subtechnique_name=Count('mitre_subtechnique')
+            ).order_by('-count')
+            
+            variants = list(variant_data)
+        
+        # Get associated tactics if requested
+        associated_tactics = []
+        if include_tactics:
+            tactic_data = base_query.values('mitre_tactic').annotate(
+                count=Count('id')
+            ).exclude(mitre_tactic__isnull=True).order_by('-count')
+            
+            for item in tactic_data:
+                tactic_display = dict(TTPData.MITRE_TACTIC_CHOICES).get(
+                    item['mitre_tactic'], item['mitre_tactic']
+                )
+                associated_tactics.append({
+                    'tactic': item['mitre_tactic'],
+                    'tactic_display': tactic_display,
+                    'count': item['count']
+                })
+        
+        # Calculate statistics
+        now = timezone.now()
+        statistics = {
+            'total_ttps': len(technique_ttps),
+            'unique_threat_feeds': base_query.values('threat_feed_id').distinct().count(),
+            'first_seen': technique_ttps[-1].created_at.isoformat() if technique_ttps else None,
+            'last_seen': technique_ttps[0].created_at.isoformat() if technique_ttps else None,
+            'recent_activity': {
+                'last_24h': base_query.filter(created_at__gte=now - timedelta(hours=24)).count(),
+                'last_7d': base_query.filter(created_at__gte=now - timedelta(days=7)).count(),
+                'last_30d': base_query.filter(created_at__gte=now - timedelta(days=30)).count()
+            },
+            'anonymized_count': base_query.filter(is_anonymized=True).count(),
+            'with_subtechniques': base_query.exclude(
+                Q(mitre_subtechnique__isnull=True) | Q(mitre_subtechnique='')
+            ).count()
+        }
+        
+        # Determine technique severity using our severity mapping
+        from core.services.ttp_filter_service import TTPFilterService
+        filter_service = TTPFilterService()
+        severity = filter_service._get_technique_severity(technique_id)
+        
+        response_data = {
+            "success": True,
+            "technique_info": {
+                "technique_id": technique_id,
+                "base_technique": technique_id.split('.')[0],
+                "is_subtechnique": '.' in technique_id,
+                "severity": severity.value,
+                "name": technique_ttps[0].name if technique_ttps else None
+            },
+            "ttps": ttps_data,
+            "variants": variants if include_variants else None,
+            "associated_tactics": associated_tactics if include_tactics else None,
+            "statistics": statistics,
+            "query_parameters": {
+                "technique_id": technique_id,
+                "feed_id": feed_id,
+                "include_variants": include_variants,
+                "include_tactics": include_tactics
+            },
+            "timestamp": timezone.now().isoformat()
+        }
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error getting technique details: {str(e)}")
+        return Response(
+            {"error": "Failed to get technique details", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
