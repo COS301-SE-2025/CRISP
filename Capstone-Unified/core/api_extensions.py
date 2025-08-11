@@ -2,32 +2,96 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from django.contrib.auth.models import User
-from core.models.models import Organization, TrustLevel, TrustRelationship, UserProfile
 from django.shortcuts import get_object_or_404
 import json
+import logging
+
+# Import unified decorators for seamless authentication
+from core.middleware.unified_decorators import (
+    api_authentication_required, 
+    preserve_core_functionality,
+    require_admin,
+    require_organization_access
+)
+
+# Import both Core and Trust system models
+from core.models.models import Organization as CoreOrganization, TrustLevel, TrustRelationship, CoreUserProfile
+
+# Try to import Trust system models
+try:
+    from core_ut.user_management.models.user_models import CustomUser, Organization as TrustOrganization
+    TRUST_MODELS_AVAILABLE = True
+except ImportError:
+    from django.contrib.auth.models import User as CustomUser
+    TrustOrganization = None
+    TRUST_MODELS_AVAILABLE = False
+
+logger = logging.getLogger(__name__)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@api_authentication_required
+@preserve_core_functionality
 def list_organizations(request):
-    """Organizations endpoint returning real organizations from database"""
-    from core.models.models import Organization
-    
+    """
+    Unified organizations endpoint that works with both Core and Trust systems.
+    Returns organizations accessible to the authenticated user based on their permissions.
+    """
     organizations = []
-    for org in Organization.objects.all():
-        # Count users belonging to this organization (if we have that relationship)
-        user_count = User.objects.filter(email__icontains=org.name.lower().replace(' ', '')).count()
-        
-        organizations.append({
-            "id": str(org.id),  # Convert UUID to string for frontend
-            "name": org.name,
-            "organization_type": org.organization_type or 'other',
-            "description": org.description or '',
-            "country": "US",  # Default for now
-            "is_active": True,  # Organizations don't have is_active field currently
-            "created_date": "2025-01-01T00:00:00Z",  # Default for now
-            "user_count": user_count
-        })
+    
+    # If Trust system is available, use Trust organizations
+    if TRUST_MODELS_AVAILABLE and TrustOrganization:
+        try:
+            # Get organizations accessible to the user
+            if hasattr(request.user, 'get_accessible_organizations'):
+                accessible_orgs = request.user.get_accessible_organizations()
+            elif hasattr(request.user, 'role') and request.user.role == 'BlueVisionAdmin':
+                # BlueVision admins can see all organizations
+                accessible_orgs = TrustOrganization.objects.all()
+            elif hasattr(request.user, 'organization') and request.user.organization:
+                # Regular users see their own organization
+                accessible_orgs = [request.user.organization]
+            else:
+                accessible_orgs = []
+            
+            for org in accessible_orgs:
+                organizations.append({
+                    "id": str(org.id),
+                    "name": org.name,
+                    "organization_type": org.organization_type or 'educational',
+                    "description": org.description or '',
+                    "domain": getattr(org, 'domain', ''),
+                    "contact_email": getattr(org, 'contact_email', ''),
+                    "is_active": getattr(org, 'is_active', True),
+                    "is_publisher": getattr(org, 'is_publisher', False),
+                    "is_verified": getattr(org, 'is_verified', False),
+                    "created_date": org.created_at.isoformat() if hasattr(org, 'created_at') else "2025-01-01T00:00:00Z",
+                    "user_count": getattr(org, 'user_count', 0),
+                    "source": "trust_system"
+                })
+                
+        except Exception as e:
+            logger.warning(f"Error accessing Trust organizations, falling back to Core: {str(e)}")
+    
+    # Fallback to Core system organizations if Trust not available or failed
+    if not organizations:
+        for org in CoreOrganization.objects.all():
+            # Count users belonging to this organization (if we have that relationship)
+            user_count = CustomUser.objects.filter(email__icontains=org.name.lower().replace(' ', '')).count()
+            
+            organizations.append({
+                "id": str(org.id),  # Convert UUID to string for frontend
+                "name": org.name,
+                "organization_type": org.organization_type or 'other',
+                "description": org.description or '',
+                "domain": getattr(org, 'domain', ''),
+                "contact_email": getattr(org, 'contact_email', ''),
+                "is_active": True,  # Core organizations are active by default
+                "is_publisher": False,  # Core organizations are not publishers by default
+                "is_verified": True,  # Core organizations are verified by default
+                "created_date": org.created_at.isoformat() if hasattr(org, 'created_at') else "2025-01-01T00:00:00Z",
+                "user_count": user_count,
+                "source": "core_system"
+            })
     
     # If no organizations exist, create some defaults
     if not organizations:
@@ -40,7 +104,7 @@ def list_organizations(request):
         ]
         
         for org_data in default_orgs:
-            org, created = Organization.objects.get_or_create(
+            org, created = CoreOrganization.objects.get_or_create(
                 name=org_data["name"],
                 defaults={
                     'organization_type': org_data["type"],

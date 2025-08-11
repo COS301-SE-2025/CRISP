@@ -41,6 +41,11 @@ INSTALLED_APPS = [
     
     # CRISP core applications
     'core',
+    
+    # Trust system integration
+    'core_ut.trust',
+    'core_ut.user_management',
+    'core_ut.alerts',
 ]
 
 MIDDLEWARE = [
@@ -50,11 +55,21 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    
+    # Unified authentication middleware (CRITICAL: Must be after AuthenticationMiddleware)
+    'core.middleware.unified_auth_middleware.UnifiedAuthenticationMiddleware',
+    
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    
+    # Trust system audit middleware
+    'core_ut.middleware.audit_middleware.AuditMiddleware',
 ]
 
 ROOT_URLCONF = 'crisp_settings.urls'
+
+# Custom user model from Trust system
+AUTH_USER_MODEL = 'user_management.CustomUser'
 
 TEMPLATES = [
     {
@@ -123,6 +138,8 @@ REST_FRAMEWORK = {
     ],
 }
 
+# Note: UUID JWT fix will be applied in the auth service
+
 # JWT Configuration
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
@@ -142,6 +159,16 @@ SIMPLE_JWT = {
     
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
+    
+    # Custom token class to handle UUID serialization
+    'TOKEN_CLASS': 'core.middleware.jwt_serializers.UUIDSafeRefreshToken',
+    
+    # Use custom serializer to handle UUID fields
+    'TOKEN_OBTAIN_SERIALIZER': 'core.middleware.jwt_serializers.UnifiedTokenObtainPairSerializer',
+    'TOKEN_REFRESH_SERIALIZER': 'rest_framework_simplejwt.serializers.TokenRefreshSerializer',
+    
+    # JSON encoder for UUID handling - use a more explicit UUID-safe encoder
+    'JSON_ENCODER': 'core.middleware.jwt_serializers.UUIDEncoder',
 }
 
 # CORS Configuration

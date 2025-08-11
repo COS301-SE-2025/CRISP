@@ -2,6 +2,15 @@ from django.utils import timezone
 from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from rest_framework_simplejwt.exceptions import TokenError
+import uuid
+import json
+
+# Apply UUID JWT fix
+try:
+    from core.middleware.uuid_jwt_fix import apply_uuid_jwt_fix
+    apply_uuid_jwt_fix()
+except ImportError:
+    pass
 from typing import Dict, Optional, Tuple
 import hashlib
 from datetime import timedelta
@@ -10,6 +19,25 @@ from .access_control_service import AccessControlService
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+class UUIDSafeRefreshToken(RefreshToken):
+    """Custom RefreshToken that handles UUID serialization properly"""
+    
+    @classmethod
+    def for_user(cls, user):
+        """Override to ensure UUID fields are converted to strings"""
+        token = super().for_user(user)
+        # Override the user_id with string version to prevent JSON serialization issues
+        if hasattr(user, 'id') and isinstance(user.id, uuid.UUID):
+            token.payload['user_id'] = str(user.id)
+        return token
+    
+    def __setitem__(self, key, value):
+        """Override to convert UUID values to strings"""
+        if isinstance(value, uuid.UUID):
+            value = str(value)
+        super().__setitem__(key, value)
 
 
 class AuthenticationService:
@@ -157,11 +185,15 @@ class AuthenticationService:
             if remember_device and not is_trusted_device:
                 self._add_trusted_device(user, device_fingerprint, user_agent)
             
+            # Ensure all UUID objects are converted to strings in the final result
+            auth_result = self._ensure_json_serializable(auth_result)
             return auth_result
             
         except Exception as e:
             logger.error(f"Authentication error for {username}: {str(e)}")
             auth_result['message'] = 'Authentication system error'
+            # Ensure error result is also JSON serializable
+            auth_result = self._ensure_json_serializable(auth_result)
             return auth_result
     
     def _format_user_info(self, user: CustomUser) -> Dict:
@@ -204,8 +236,8 @@ class AuthenticationService:
                     'id': str(org.id),
                     'name': org.name,
                     'domain': org.domain,
-                    'is_own': org.id == user.organization.id if user.organization else False,
-                    'access_level': 'full' if (user.organization and org.id == user.organization.id) else 'trust_based'
+                    'is_own': str(org.id) == str(user.organization.id) if user.organization else False,
+                    'access_level': 'full' if (user.organization and str(org.id) == str(user.organization.id)) else 'trust_based'
                 }
                 result.append(org_data)
             return result
@@ -538,22 +570,76 @@ class AuthenticationService:
         except (TokenError, CustomUser.DoesNotExist) as e:
             return {'success': False, 'message': 'Invalid token'}
     
+    def _ensure_json_serializable(self, obj):
+        """Convert UUID and other non-serializable objects to JSON-safe formats"""
+        if isinstance(obj, uuid.UUID):
+            return str(obj)
+        elif hasattr(obj, 'isoformat'):  # datetime objects
+            return obj.isoformat()
+        return obj
+    
     def _generate_tokens(self, user: CustomUser, request=None) -> Dict:
         """Generate JWT access and refresh tokens with custom claims"""
-        refresh = RefreshToken.for_user(user)
-        
-        # Add custom claims - safely handle organization
-        refresh['role'] = user.role
-        refresh['organization'] = user.organization.name if user.organization else None
-        refresh['organization_id'] = str(user.organization.id) if user.organization else None
-        refresh['is_publisher'] = user.is_publisher
-        refresh['is_verified'] = user.is_verified
-        
-        access_token = refresh.access_token
-        access_token['role'] = user.role
-        access_token['organization'] = user.organization.name if user.organization else None
-        access_token['organization_id'] = str(user.organization.id) if user.organization else None
-        access_token['is_publisher'] = user.is_publisher
+        try:
+            # Create a JSON-safe user representation for token generation
+            # Temporarily override user.id to be string for JWT creation
+            original_user_id = user.id
+            if isinstance(user.id, uuid.UUID):
+                # Create a temporary copy of the user for token generation
+                import copy
+                temp_user = copy.copy(user)
+                temp_user.id = str(user.id)
+                
+                # Create refresh token with string user ID
+                refresh = RefreshToken.for_user(temp_user)
+                
+                # Restore original user ID
+                user.id = original_user_id
+            else:
+                refresh = RefreshToken.for_user(user)
+            
+            # Add custom claims - safely handle organization and UUID serialization
+            refresh['role'] = user.role if hasattr(user, 'role') else 'viewer'
+            refresh['organization'] = user.organization.name if user.organization else None
+            refresh['organization_id'] = str(user.organization.id) if user.organization else None
+            refresh['is_publisher'] = user.is_publisher if hasattr(user, 'is_publisher') else False
+            refresh['is_verified'] = user.is_verified if hasattr(user, 'is_verified') else True
+            # Ensure user_id is string for JSON serialization
+            refresh['user_id'] = str(user.id)
+            
+            # Create access token from refresh token
+            access_token = refresh.access_token
+            access_token['role'] = user.role if hasattr(user, 'role') else 'viewer'
+            access_token['organization'] = user.organization.name if user.organization else None
+            access_token['organization_id'] = str(user.organization.id) if user.organization else None
+            access_token['is_publisher'] = user.is_publisher if hasattr(user, 'is_publisher') else False
+            # Ensure user_id is string for JSON serialization
+            access_token['user_id'] = str(user.id)
+            
+        except Exception as token_error:
+            logger.error(f"Token generation error: {str(token_error)}")
+            logger.error(f"User object: {user}, User ID: {user.id}, User type: {type(user.id)}")
+            # Try alternative approach - create token with minimal data
+            try:
+                from rest_framework_simplejwt.tokens import UntypedToken
+                refresh = RefreshToken()
+                refresh['user_id'] = str(user.id)
+                refresh['role'] = getattr(user, 'role', 'viewer')
+                refresh['organization'] = user.organization.name if user.organization else None
+                refresh['organization_id'] = str(user.organization.id) if user.organization else None
+                refresh['is_publisher'] = getattr(user, 'is_publisher', False)
+                refresh['is_verified'] = getattr(user, 'is_verified', True)
+                
+                access_token = refresh.access_token
+                access_token['user_id'] = str(user.id)
+                access_token['role'] = getattr(user, 'role', 'viewer')
+                access_token['organization'] = user.organization.name if user.organization else None
+                access_token['organization_id'] = str(user.organization.id) if user.organization else None
+                access_token['is_publisher'] = getattr(user, 'is_publisher', False)
+                
+            except Exception as fallback_error:
+                logger.error(f"Fallback token generation also failed: {str(fallback_error)}")
+                raise Exception(f"Failed to generate JWT tokens: {str(token_error)}")
         
         return {
             'access': str(access_token),
@@ -612,7 +698,7 @@ class AuthenticationService:
         }
         
         import json
-        fingerprint_string = json.dumps(fingerprint_data, sort_keys=True)
+        fingerprint_string = json.dumps(fingerprint_data, sort_keys=True, default=str)
         return hashlib.sha256(fingerprint_string.encode()).hexdigest()
     
     def _handle_failed_login(self, user: CustomUser, ip_address: str, user_agent: str, reason: str) -> None:
@@ -685,6 +771,37 @@ class AuthenticationService:
             logger.info(f"Cleaned up {count} expired sessions")
         
         return count
+    
+    def _ensure_json_serializable(self, obj):
+        """
+        Recursively convert any UUID objects to strings to ensure JSON serialization works.
+        This is a safety net to prevent UUID serialization errors.
+        """
+        import uuid
+        import json
+        
+        def convert_uuids(item):
+            if isinstance(item, uuid.UUID):
+                return str(item)
+            elif isinstance(item, dict):
+                return {key: convert_uuids(value) for key, value in item.items()}
+            elif isinstance(item, list):
+                return [convert_uuids(value) for value in item]
+            elif isinstance(item, tuple):
+                return tuple(convert_uuids(value) for value in item)
+            else:
+                return item
+        
+        try:
+            # Convert any UUID objects to strings
+            converted_obj = convert_uuids(obj)
+            # Test JSON serialization to make sure it works
+            json.dumps(converted_obj, default=str)
+            return converted_obj
+        except Exception as e:
+            logger.warning(f"Failed to ensure JSON serialization: {str(e)}")
+            # Fallback: convert everything to string using default=str
+            return json.loads(json.dumps(obj, default=str))
     
     def get_user_sessions(self, user: CustomUser) -> list:
         """Get active sessions for a user"""
