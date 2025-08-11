@@ -11,7 +11,7 @@ try:
     apply_uuid_jwt_fix()
 except ImportError:
     pass
-from typing import Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple 
 import hashlib
 from datetime import timedelta
 from ..models import CustomUser, UserSession, AuthenticationLog
