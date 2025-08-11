@@ -280,12 +280,17 @@ export const getUserStatistics = async () => {
 // Organization Management API functions
 export const getOrganizations = async () => {
   try {
+    console.log('DEBUG: Making organizations API call...');
     const response = await fetch(`${API_URL}organizations/list_organizations/`, {
       method: 'GET',
       headers: { ...authHeader() }
     });
     
+    console.log('DEBUG: Organizations API response status:', response.status);
+    console.log('DEBUG: Organizations API response ok:', response.ok);
+    
     if (!response.ok) {
+      console.error('DEBUG: Organizations API failed with status:', response.status);
       if (response.status === 403) {
         console.warn('Access denied to organizations list');
         return { data: { organizations: [] } };
@@ -294,15 +299,25 @@ export const getOrganizations = async () => {
         console.warn('Organizations service temporarily unavailable');
         return { data: { organizations: [] } };
       }
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
     const result = await handleResponse(response);
+    console.log('DEBUG: handleResponse result:', result);
+    console.log('DEBUG: result.data:', result.data);
+    console.log('DEBUG: result.data.organizations:', result.data?.organizations);
+    
     // The response structure is { success: true, data: { organizations: [...] } }
-    return {
+    const finalResult = {
       data: {
         organizations: result.data?.organizations || []
       }
     };
+    
+    console.log('DEBUG: Final organizations result:', finalResult);
+    console.log('DEBUG: Final organizations count:', finalResult.data.organizations.length);
+    
+    return finalResult;
   } catch (error) {
     console.error('Failed to fetch organizations:', error);
     return { data: { organizations: [] } };

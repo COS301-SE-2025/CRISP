@@ -62,6 +62,65 @@ def login_view(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_organizations_simple(request):
+    """Get organizations list (simplified version)"""
+    try:
+        # Debug logging
+        print(f"DEBUG: Organizations request from user: {request.user}")
+        print(f"DEBUG: Authorization header: {request.META.get('HTTP_AUTHORIZATION', 'No auth header')}")
+        
+        # Return mock organizations for now
+        mock_organizations = [
+            {
+                "id": "1",
+                "name": "BlueVision Security",
+                "organization_type": "security_vendor",
+                "description": "Security vendor organization",
+                "is_active": True,
+                "created_date": timezone.now().isoformat()
+            },
+            {
+                "id": "2", 
+                "name": "University Research Lab",
+                "organization_type": "educational",
+                "description": "Educational research organization",
+                "is_active": True,
+                "created_date": timezone.now().isoformat()
+            },
+            {
+                "id": "3",
+                "name": "Financial Corp",
+                "organization_type": "financial", 
+                "description": "Financial services organization",
+                "is_active": True,
+                "created_date": timezone.now().isoformat()
+            },
+            {
+                "id": "4",
+                "name": "Tech Industries",
+                "organization_type": "technology",
+                "description": "Technology company",
+                "is_active": True,
+                "created_date": timezone.now().isoformat()
+            }
+        ]
+        
+        return Response({
+            'success': True,
+            'data': {
+                'organizations': mock_organizations,
+                'total_count': len(mock_organizations)
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Failed to get organizations: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
 def system_health(request):
     return Response({
         'status': 'healthy',
@@ -122,6 +181,123 @@ def send_test_email(request):
         return Response({
             'success': False,
             'message': f'Failed to send test email: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated])
+def get_user_profile(request):
+    """Get or update current user profile"""
+    try:
+        user = request.user
+        
+        if request.method == 'GET':
+            user_data = {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'full_name': f"{user.first_name} {user.last_name}".strip() or user.username,
+                'organization': 'BlueVision Security',  # Default organization
+                'organization_id': '1',
+                'is_staff': user.is_staff,
+                'is_superuser': user.is_superuser,
+                'is_active': user.is_active,
+                'date_joined': user.date_joined.isoformat() if user.date_joined else None,
+                'last_login': user.last_login.isoformat() if user.last_login else None,
+                'role': 'BlueVisionAdmin' if user.is_superuser else 'user'
+            }
+            
+            return Response({
+                'success': True,
+                'data': {
+                    'profile': user_data
+                },
+                'user': user_data  # Keep both formats for compatibility
+            }, status=status.HTTP_200_OK)
+            
+        elif request.method == 'PUT':
+            data = json.loads(request.body) if request.body else {}
+            
+            # Update user fields
+            if 'first_name' in data:
+                user.first_name = data['first_name']
+            if 'last_name' in data:
+                user.last_name = data['last_name']
+            if 'email' in data:
+                user.email = data['email']
+            
+            user.save()
+            
+            user_data = {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'full_name': f"{user.first_name} {user.last_name}".strip() or user.username,
+                'organization': 'BlueVision Security',  # Default organization
+                'organization_id': '1',
+                'is_staff': user.is_staff,
+                'is_superuser': user.is_superuser,
+                'is_active': user.is_active,
+                'date_joined': user.date_joined.isoformat() if user.date_joined else None,
+                'last_login': user.last_login.isoformat() if user.last_login else None,
+                'role': 'BlueVisionAdmin' if user.is_superuser else 'user'
+            }
+            
+            return Response({
+                'success': True,
+                'data': {
+                    'profile': user_data
+                },
+                'user': user_data,  # Keep both formats for compatibility
+                'message': 'Profile updated successfully'
+            }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Failed to process user profile: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_statistics(request):
+    """Get user statistics"""
+    try:
+        # Basic user statistics
+        total_users = User.objects.count()
+        active_users = User.objects.filter(is_active=True).count()
+        staff_users = User.objects.filter(is_staff=True).count()
+        superusers = User.objects.filter(is_superuser=True).count()
+        
+        return Response({
+            'success': True,
+            'statistics': {
+                'total_users': total_users,
+                'active_users': active_users,
+                'staff_users': staff_users,
+                'superusers': superusers,
+                'inactive_users': total_users - active_users,
+                'regular_users': total_users - staff_users,
+                'current_user': {
+                    'username': request.user.username,
+                    'role': 'BlueVisionAdmin' if request.user.is_superuser else 'user',
+                    'permissions': {
+                        'is_staff': request.user.is_staff,
+                        'is_superuser': request.user.is_superuser,
+                        'can_manage_users': request.user.is_staff,
+                        'can_view_statistics': request.user.is_staff
+                    }
+                }
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Failed to get user statistics: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])

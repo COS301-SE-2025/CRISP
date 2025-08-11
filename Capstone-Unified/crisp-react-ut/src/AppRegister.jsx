@@ -3102,8 +3102,10 @@ function AccountSettings({ active, user }) {
       
       let organizationsData = [];
       
-      // Handle different response formats
-      if (response && Array.isArray(response.data)) {
+      // Handle different response formats - fix for backend structure
+      if (response && response.data && Array.isArray(response.data.organizations)) {
+        organizationsData = response.data.organizations;
+      } else if (response && Array.isArray(response.data)) {
         organizationsData = response.data;
       } else if (response && Array.isArray(response)) {
         organizationsData = response;

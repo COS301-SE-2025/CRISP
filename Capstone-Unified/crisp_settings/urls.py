@@ -5,7 +5,7 @@ from django.shortcuts import redirect
 from rest_framework import routers
 from core.api.threat_feed_views import ThreatFeedViewSet
 from core.viewing.home import home
-from core.simple_auth_views import login_view, system_health, alert_statistics, send_test_email, test_gmail_connection, send_alert_test_email
+from core.simple_auth_views import login_view, system_health, alert_statistics, send_test_email, test_gmail_connection, send_alert_test_email, get_user_profile, get_user_statistics, get_organizations_simple
 from core.api_extensions import (
     list_organizations, organization_types, create_organization, organization_detail,
     deactivate_organization, reactivate_organization,
@@ -34,9 +34,11 @@ urlpatterns = [
     path('api/v1/alerts/test-connection/', test_gmail_connection, name='test-gmail-connection'),
     path('api/v1/alerts/test-email/', send_alert_test_email, name='send-alert-test-email'),
     path('api/v1/email/send-test/', send_test_email, name='send-test-email'),
+    path('api/v1/users/profile/', get_user_profile, name='user-profile'),
+    path('api/v1/users/statistics/', get_user_statistics, name='user-statistics'),
     
     # Organizations endpoints
-    path('api/v1/organizations/list_organizations/', list_organizations, name='list-organizations'),
+    path('api/v1/organizations/list_organizations/', get_organizations_simple, name='list-organizations'),
     path('api/v1/organizations/types/', organization_types, name='organization-types'),
     path('api/v1/organizations/create_organization/', create_organization, name='create-organization'),
     path('api/v1/organizations/<str:organization_id>/get_organization/', organization_detail, name='get-organization'),
