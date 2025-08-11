@@ -5,7 +5,7 @@ from django.shortcuts import redirect
 from rest_framework import routers
 from core.api.threat_feed_views import ThreatFeedViewSet
 from core.viewing.home import home
-from core.simple_auth_views import login_view, system_health, alert_statistics
+from core.simple_auth_views import login_view, system_health, alert_statistics, send_test_email, test_gmail_connection, send_alert_test_email
 from core.api_extensions import (
     list_organizations, organization_types, create_organization, organization_detail,
     deactivate_organization, reactivate_organization,
@@ -31,6 +31,9 @@ urlpatterns = [
     path('api/v1/auth/login/', login_view, name='api-login'),
     path('api/v1/admin/system_health/', system_health, name='system-health'),
     path('api/v1/alerts/statistics/', alert_statistics, name='alert-statistics'),
+    path('api/v1/alerts/test-connection/', test_gmail_connection, name='test-gmail-connection'),
+    path('api/v1/alerts/test-email/', send_alert_test_email, name='send-alert-test-email'),
+    path('api/v1/email/send-test/', send_test_email, name='send-test-email'),
     
     # Organizations endpoints
     path('api/v1/organizations/list_organizations/', list_organizations, name='list-organizations'),
@@ -63,6 +66,6 @@ urlpatterns = [
     
     
     # Temporarily disabled until imports are fixed
-    # path('api/v1/', include('core_ut.urls_ut')),  # User management and trust APIs
+    # path('api/v1/', include('core_ut.user_management.urls_ut')),
     path('taxii2/', include('core.taxii.urls')),
 ]
