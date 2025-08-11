@@ -298,6 +298,55 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
             'previous': f'/api/threat-feeds/{pk}/indicators/?page={page - 1}&page_size={page_size}' if page > 1 else None,
             'results': results
         })
+    
+    @action(detail=True, methods=['get'])
+    def ttps(self, request, pk=None):
+        """Get TTPs for a specific threat feed."""
+        try:
+            feed = get_object_or_404(ThreatFeed, pk=pk)
+        except Http404 as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Get TTPs for this feed
+        ttps = TTPData.objects.filter(threat_feed_id=pk).order_by('-created_at')
+        
+        # Get pagination parameters
+        page = int(request.query_params.get('page', 1))
+        page_size = int(request.query_params.get('page_size', 20))
+        
+        # Calculate pagination
+        start = (page - 1) * page_size
+        end = start + page_size
+        total_count = ttps.count()
+        
+        ttps_page = ttps[start:end]
+        
+        # Format the response
+        results = []
+        for ttp in ttps_page:
+            results.append({
+                'id': ttp.id,
+                'stix_id': ttp.stix_id,
+                'title': ttp.name,
+                'description': ttp.description,
+                'technique_id': ttp.mitre_technique_id,
+                'tactic': ttp.mitre_tactic,
+                'technique': ttp.mitre_technique_id,  # Use technique_id for technique field
+                'sub_technique': ttp.mitre_subtechnique,
+                'confidence': None,  # Field doesn't exist in model
+                'created_at': ttp.created_at,
+                'source': feed.name
+            })
+        
+        return Response({
+            'count': total_count,
+            'next': f'/api/threat-feeds/{pk}/ttps/?page={page + 1}&page_size={page_size}' if end < total_count else None,
+            'previous': f'/api/threat-feeds/{pk}/ttps/?page={page - 1}&page_size={page_size}' if page > 1 else None,
+            'results': results
+        })
         
     def handle_exception(self, exc):
         # Let DRF handle known exceptions

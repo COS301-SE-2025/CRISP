@@ -2719,3 +2719,66 @@ section#ioc-management .card-actions .btn-sm {
 .error-state i {
   color: #dc3545;
 }
+
+/* Admin controls styling for TTP Analysis */
+.admin-controls {
+  position: relative;
+}
+
+.admin-controls summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.admin-controls summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-panel {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 16px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  min-width: 320px;
+  margin-top: 4px;
+}
+
+.admin-note {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 12px;
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  border-left: 3px solid #ffc107;
+}
+
+.feed-filter-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.feed-filter {
+  min-width: 200px;
+}
+
+.filter-info {
+  font-size: 11px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.analysis-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+EOF < /dev/null

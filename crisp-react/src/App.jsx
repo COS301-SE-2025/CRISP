@@ -3046,6 +3046,7 @@ function IoCManagement({ active }) {
                 <th><input type="checkbox" /></th>
                 <th>Type</th>
                 <th>Value</th>
+                <th>Description</th>
                 <th>Severity</th>
                 <th>Source</th>
                 <th>Date Added</th>
@@ -3056,7 +3057,7 @@ function IoCManagement({ active }) {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="8" style={{textAlign: 'center', padding: '2rem'}}>
+                  <td colSpan="9" style={{textAlign: 'center', padding: '2rem'}}>
                     <i className="fas fa-spinner fa-spin"></i> Loading indicators...
                   </td>
                 </tr>
@@ -3073,6 +3074,15 @@ function IoCManagement({ active }) {
                       {indicator.value.length > 50 ? 
                         `${indicator.value.substring(0, 50)}...` : 
                         indicator.value
+                      }
+                    </td>
+                    <td className="indicator-description" title={indicator.description || ''}>
+                      {indicator.description ? 
+                        (indicator.description.length > 40 ? 
+                          `${indicator.description.substring(0, 40)}...` : 
+                          indicator.description
+                        ) : 
+                        <em className="text-muted">No description</em>
                       }
                     </td>
                     <td>
@@ -3107,7 +3117,7 @@ function IoCManagement({ active }) {
                 ))
               ) : filteredIndicators.length === 0 && indicators.length > 0 ? (
                 <tr>
-                  <td colSpan="8" style={{textAlign: 'center', padding: '2rem'}}>
+                  <td colSpan="9" style={{textAlign: 'center', padding: '2rem'}}>
                     <i className="fas fa-filter"></i> No indicators match the current filters.
                     <br />
                     <button className="btn btn-outline btn-sm mt-2" onClick={resetFilters}>
@@ -3117,7 +3127,7 @@ function IoCManagement({ active }) {
                 </tr>
               ) : (
                 <tr>
-                  <td colSpan="8" style={{textAlign: 'center', padding: '2rem'}}>
+                  <td colSpan="9" style={{textAlign: 'center', padding: '2rem'}}>
                     <i className="fas fa-info-circle"></i> No indicators found. 
                     Try consuming threat feeds to populate data.
                   </td>
@@ -4832,6 +4842,8 @@ function TTPAnalysis({ active }) {
   const [showTTPModal, setShowTTPModal] = useState(false);
   const [selectedTTP, setSelectedTTP] = useState(null);
   const [ttpDetailLoading, setTtpDetailLoading] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editFormData, setEditFormData] = useState({});
   
   // Feed consumption state
   const [availableFeeds, setAvailableFeeds] = useState([]);
@@ -4875,7 +4887,6 @@ function TTPAnalysis({ active }) {
   useEffect(() => {
     if (active) {
       fetchTTPData();
-      fetchTTPTrendsData();
       fetchMatrixData();
       fetchFilterOptions();
       fetchAvailableFeeds();
@@ -4887,11 +4898,15 @@ function TTPAnalysis({ active }) {
   const fetchAvailableFeeds = async () => {
     try {
       const response = await api.get('/api/threat-feeds/');
-      if (response && response.success) {
-        setAvailableFeeds(response.results || []);
+      if (response && response.results) {
+        setAvailableFeeds(response.results);
+      } else {
+        console.log('No threat feeds found or invalid response:', response);
+        setAvailableFeeds([]);
       }
     } catch (error) {
       console.error('Error fetching available feeds:', error);
+      setAvailableFeeds([]);
     }
   };
 
@@ -4922,36 +4937,81 @@ function TTPAnalysis({ active }) {
   };
 
   // Trigger feed consumption
-  const consumeFeed = async () => {
+  // Load TTPs from selected feed (like IoC Management)
+  const loadFeedTTPs = async () => {
     if (!selectedFeedForConsumption) {
-      alert('Please select a threat feed to consume');
+      alert('Please select a threat feed to analyze');
       return;
     }
 
     setConsumptionInProgress(true);
-    setConsumptionStatus('Initiating feed consumption...');
+    setConsumptionStatus('Loading TTPs from feed...');
 
     try {
-      const response = await api.post(`/api/threat-feeds/${selectedFeedForConsumption}/consume/`, {
-        force_days: 7,
-        batch_size: 100
-      });
+      // First get the feed name for display
+      const selectedFeed = availableFeeds.find(feed => feed.id == selectedFeedForConsumption);
+      const feedName = selectedFeed ? selectedFeed.name : 'Selected Feed';
 
-      if (response && response.success) {
-        setConsumptionStatus(`Successfully consumed ${response.indicators_processed || 0} indicators and ${response.ttps_processed || 0} TTPs`);
-        // Refresh data after consumption
-        fetchTTPData();
-        fetchMatrixData();
-        fetchAggregationData();
-      } else {
-        setConsumptionStatus('Feed consumption failed: ' + (response.error || 'Unknown error'));
-      }
+      // Load TTPs from the specific feed using the same pattern as IoC Management
+      await loadAllFeedTTPs(selectedFeedForConsumption, feedName);
+      
     } catch (error) {
-      console.error('Error consuming feed:', error);
-      setConsumptionStatus('Feed consumption failed: ' + error.message);
+      console.error('Error loading feed TTPs:', error);
+      setConsumptionStatus(`❌ Failed to load TTPs: ${error.message || 'Unknown error'}`);
+      
+      // Clear error status after 10 seconds
+      setTimeout(() => {
+        setConsumptionStatus('');
+      }, 10000);
+    } finally {
+      setConsumptionInProgress(false);
+    }
+  };
+
+  // Load all TTPs from feed with pagination (like IoC Management)
+  const loadAllFeedTTPs = async (feedId, feedName) => {
+    let allTTPs = [];
+    let page = 1;
+    let hasMore = true;
+    const pageSize = 100;
+
+    while (hasMore) {
+      try {
+        const response = await api.get(`/api/threat-feeds/${feedId}/ttps/?page=${page}&page_size=${pageSize}`);
+        
+        if (response && response.results) {
+          // Add results from this page (even if 0 results)
+          allTTPs = [...allTTPs, ...response.results];
+          setConsumptionStatus(`Loading TTPs from "${feedName}"... (${allTTPs.length} loaded)`);
+          
+          // Continue pagination based on 'next' field, like IoC Management
+          hasMore = response.next !== null;
+          page++;
+        } else {
+          hasMore = false;
+        }
+      } catch (error) {
+        console.error(`Error loading page ${page} of TTPs:`, error);
+        hasMore = false;
+        throw error;
+      }
     }
 
-    setConsumptionInProgress(false);
+    // Update the TTP data display
+    setTtpData(allTTPs);
+    setTotalCount(allTTPs.length);
+    
+    // Update status
+    setConsumptionStatus(`✅ Loaded ${allTTPs.length} TTPs from "${feedName}"`);
+    
+    // Also refresh other data
+    fetchMatrixData();
+    fetchAggregationData();
+
+    // Clear status after 5 seconds
+    setTimeout(() => {
+      setConsumptionStatus('');
+    }, 5000);
   };
   
   const fetchTTPData = async (sortByField = null, sortOrderValue = null, pageNumber = null, pageSizeValue = null, filtersOverride = null) => {
@@ -5389,120 +5449,7 @@ function TTPAnalysis({ active }) {
     }
   };
 
-  // TTP Creation Modal functions
-  const openCreateTTPModal = () => {
-    setShowCreateTTPModal(true);
-    setCreateFormData({
-      name: '',
-      description: '',
-      mitre_technique_id: '',
-      mitre_tactic: '',
-      mitre_subtechnique: '',
-      threat_feed_id: ''
-    });
-    setCreateFormErrors({});
-  };
 
-  const closeCreateTTPModal = () => {
-    setShowCreateTTPModal(false);
-    setCreateFormData({
-      name: '',
-      description: '',
-      mitre_technique_id: '',
-      mitre_tactic: '',
-      mitre_subtechnique: '',
-      threat_feed_id: ''
-    });
-    setCreateFormErrors({});
-  };
-
-  const handleCreateFormChange = (field, value) => {
-    setCreateFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-    
-    // Clear error for this field when user starts typing
-    if (createFormErrors[field]) {
-      setCreateFormErrors(prev => ({
-        ...prev,
-        [field]: ''
-      }));
-    }
-  };
-
-  const validateCreateForm = () => {
-    const errors = {};
-    
-    // Required field validation
-    if (!createFormData.name.trim()) {
-      errors.name = 'TTP name is required';
-    }
-    
-    if (!createFormData.description.trim()) {
-      errors.description = 'Description is required';
-    }
-    
-    if (!createFormData.mitre_technique_id.trim()) {
-      errors.mitre_technique_id = 'MITRE technique ID is required';
-    } else {
-      // Validate MITRE technique ID format (T####.### or T####)
-      const mitreIdPattern = /^T\d{4}(\.\d{3})?$/;
-      if (!mitreIdPattern.test(createFormData.mitre_technique_id.trim())) {
-        errors.mitre_technique_id = 'Invalid MITRE technique ID format (e.g., T1566.001 or T1566)';
-      }
-    }
-    
-    if (!createFormData.mitre_tactic) {
-      errors.mitre_tactic = 'MITRE tactic is required';
-    }
-    
-    setCreateFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const createNewTTP = async () => {
-    if (!validateCreateForm()) {
-      return;
-    }
-    
-    setIsCreating(true);
-    
-    try {
-      const response = await api.post('/api/ttps/', createFormData);
-      
-      if (response && response.success) {
-        // Add the new TTP to local state
-        const newTTP = response.ttp;
-        setTtpData(prevData => [newTTP, ...prevData]);
-        
-        // Close modal and show success message
-        closeCreateTTPModal();
-        alert('TTP created successfully!');
-        
-        // Refresh matrix data and trends data to include new TTP
-        fetchMatrixData();
-        fetchTTPTrendsData();
-      } else {
-        // Handle API validation errors
-        if (response && response.errors) {
-          setCreateFormErrors(response.errors);
-        } else {
-          alert('Failed to create TTP. Please try again.');
-        }
-      }
-    } catch (error) {
-      console.error('Error creating TTP:', error);
-      
-      if (error.response && error.response.data && error.response.data.errors) {
-        setCreateFormErrors(error.response.data.errors);
-      } else {
-        alert('Error creating TTP: ' + (error.message || 'Unknown error'));
-      }
-    }
-    
-    setIsCreating(false);
-  };
 
   // Export Modal functions
   const openExportModal = () => {
@@ -6013,37 +5960,54 @@ function TTPAnalysis({ active }) {
         </div>
         <div className="action-buttons">
           <div className="feed-consumption-controls">
-            <select 
-              value={selectedFeedForConsumption} 
-              onChange={(e) => setSelectedFeedForConsumption(e.target.value)}
-              className="form-control"
-              disabled={consumptionInProgress}
-            >
-              <option value="">Select Feed to Consume</option>
-              {availableFeeds.map(feed => (
-                <option key={feed.id} value={feed.id}>
-                  {feed.name} {feed.is_external ? '(External)' : '(Internal)'}
-                </option>
-              ))}
-            </select>
+            <div className="feed-selection-wrapper">
+              <select 
+                value={selectedFeedForConsumption} 
+                onChange={(e) => setSelectedFeedForConsumption(e.target.value)}
+                className="form-control feed-selector"
+                disabled={consumptionInProgress}
+              >
+                <option value="">Select Threat Feed to Analyze</option>
+                {availableFeeds.length === 0 ? (
+                  <option disabled>No threat feeds available</option>
+                ) : (
+                  availableFeeds.map(feed => (
+                    <option key={feed.id} value={feed.id}>
+                      {feed.name} - {feed.is_external ? 'External TAXII' : 'Internal'} 
+                      {feed.is_active ? ' ✓' : ' (Inactive)'}
+                      {feed.description ? ` - ${feed.description}` : ''}
+                    </option>
+                  ))
+                )}
+              </select>
+              {selectedFeedForConsumption && (
+                <div className="consumption-options">
+                  <small className="consumption-info">
+                    <i className="fas fa-info-circle"></i>
+                    Will show TTPs from this feed
+                  </small>
+                </div>
+              )}
+            </div>
             <button 
-              className="btn btn-primary" 
-              onClick={consumeFeed}
+              className="btn btn-primary consume-btn" 
+              onClick={loadFeedTTPs}
               disabled={!selectedFeedForConsumption || consumptionInProgress}
+              title={selectedFeedForConsumption ? 'Load TTPs from selected feed' : 'Select a feed first'}
             >
               {consumptionInProgress ? (
                 <>
-                  <i className="fas fa-spinner fa-spin"></i> Consuming...
+                  <i className="fas fa-spinner fa-spin"></i> Loading...
                 </>
               ) : (
                 <>
-                  <i className="fas fa-sync-alt"></i> Consume Feed
+                  <i className="fas fa-download"></i> Load Feed TTPs
                 </>
               )}
             </button>
           </div>
           <button className="btn btn-outline" onClick={openExportModal}>
-            <i className="fas fa-download"></i> Export Analysis
+            <i className="fas fa-upload"></i> Export Analysis
           </button>
         </div>
       </div>
@@ -10493,6 +10457,513 @@ function CSSStyles() {
 
             .modal-actions {
                 flex-direction: column;
+            }
+        }
+
+        /* Feed Consumption Controls */
+        .feed-consumption-controls {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-right: 1rem;
+        }
+
+        .feed-selection-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            min-width: 280px;
+        }
+
+        .feed-selector {
+            font-size: 0.875rem;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            color: var(--text-dark);
+            transition: border-color 0.2s ease;
+        }
+
+        .feed-selector:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 2px rgba(0, 86, 179, 0.1);
+        }
+
+        .feed-selector:disabled {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .consumption-options {
+            margin-top: 0.25rem;
+        }
+
+        .consumption-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            background: rgba(0, 86, 179, 0.05);
+            border-radius: 4px;
+            border: 1px solid rgba(0, 86, 179, 0.1);
+        }
+
+        .consumption-info i {
+            color: var(--primary-blue);
+            font-size: 0.7rem;
+        }
+
+        .consume-btn {
+            align-self: flex-start;
+            white-space: nowrap;
+            padding: 0.5rem 1rem;
+            min-height: 36px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .consume-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Feed Analysis Overview Styles */
+        .feed-analysis-overview {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .overview-cards {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .feed-comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .feed-stat-card {
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            transition: box-shadow 0.2s ease;
+        }
+
+        .feed-stat-card:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .feed-name {
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+        .feed-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+        }
+
+        .feed-stats .stat-item {
+            text-align: center;
+        }
+
+        .feed-stats .stat-value {
+            display: block;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary-blue);
+        }
+
+        .feed-stats .stat-label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .feed-type {
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .feed-type.external {
+            background: rgba(255, 193, 7, 0.1);
+            color: #ff8800;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        .feed-type.internal {
+            background: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+            border: 1px solid rgba(40, 167, 69, 0.3);
+        }
+
+        /* Technique Frequency List */
+        .technique-frequency-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .frequency-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+
+        .technique-rank {
+            font-weight: 700;
+            color: var(--primary-blue);
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .technique-details {
+            flex: 1;
+        }
+
+        .technique-id {
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .technique-stats {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .frequency-bar {
+            flex: 0 0 100px;
+            height: 8px;
+            background: #eee;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .frequency-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-blue), #4CAF50);
+            transition: width 0.3s ease;
+        }
+
+        /* Seasonal Analysis */
+        .seasonal-analysis {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .seasonal-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+        }
+
+        .seasonal-stats .stat-card {
+            text-align: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .seasonal-stats .stat-card .stat-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary-blue);
+        }
+
+        .seasonal-stats .stat-card .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+        }
+
+        .seasonal-interpretation {
+            padding: 1rem;
+            background: rgba(0, 86, 179, 0.05);
+            border-left: 4px solid var(--primary-blue);
+            border-radius: 0 8px 8px 0;
+        }
+
+        .seasonal-interpretation p {
+            margin: 0;
+            color: var(--text-dark);
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+
+        /* Intelligence Status Badges */
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .status-badge.anonymized {
+            background: rgba(255, 193, 7, 0.1);
+            color: #ff8800;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        .status-badge.raw {
+            background: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+            border: 1px solid rgba(40, 167, 69, 0.3);
+        }
+
+        .technique-badge, .tactic-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            background: rgba(0, 86, 179, 0.1);
+            color: var(--primary-blue);
+            border: 1px solid rgba(0, 86, 179, 0.2);
+        }
+
+        /* Intelligence Summary */
+        .intelligence-summary {
+            padding: 1rem;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .summary-stats {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .intelligence-summary .summary-stats .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-dark);
+        }
+
+        .intelligence-summary .summary-stats .stat-item i {
+            color: var(--primary-blue);
+        }
+
+        /* TTP Name Cell */
+        .ttp-name-cell .ttp-title {
+            font-weight: 500;
+            color: var(--text-dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .ttp-name-cell .ttp-subtechnique {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* Feed Source Cell */
+        .feed-source-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .feed-source-cell .feed-name {
+            font-weight: 500;
+            color: var(--text-dark);
+            margin-bottom: 0;
+        }
+
+        /* Trends Analysis */
+        .trends-analysis {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .trends-content {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .trend-charts-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+        }
+
+        .chart-container h3, .tactic-distribution h3 {
+            margin: 0 0 1rem 0;
+            color: var(--text-dark);
+            font-size: 1.1rem;
+        }
+
+        .tactic-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .tactic-bar-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .tactic-label {
+            min-width: 120px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-dark);
+            text-transform: capitalize;
+        }
+
+        .bar-container {
+            flex: 1;
+            height: 20px;
+            background: #eee;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-blue), #4CAF50);
+            transition: width 0.3s ease;
+        }
+
+        .bar-value {
+            min-width: 30px;
+            text-align: right;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        /* Trend Insights */
+        .trend-insights h3 {
+            margin: 0 0 1rem 0;
+            color: var(--text-dark);
+            font-size: 1.1rem;
+        }
+
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .insight-card {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            transition: box-shadow 0.2s ease;
+        }
+
+        .insight-card:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .insight-card i {
+            color: var(--primary-blue);
+            font-size: 1.5rem;
+            margin-top: 0.25rem;
+        }
+
+        .insight-card h4 {
+            margin: 0 0 0.5rem 0;
+            color: var(--text-dark);
+            font-size: 0.95rem;
+        }
+
+        .insight-card p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.825rem;
+            line-height: 1.4;
+        }
+
+        /* Alert improvements */
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+
+        .alert.alert-success {
+            background: rgba(40, 167, 69, 0.1);
+            color: #155724;
+            border: 1px solid rgba(40, 167, 69, 0.2);
+        }
+
+        .alert.alert-error {
+            background: rgba(220, 53, 69, 0.1);
+            color: #721c24;
+            border: 1px solid rgba(220, 53, 69, 0.2);
+        }
+
+        .alert i {
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 768px) {
+            .feed-consumption-controls {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .feed-selection-wrapper {
+                min-width: auto;
+            }
+
+            .overview-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .trend-charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-stats {
+                gap: 1rem;
             }
         }
       `}
