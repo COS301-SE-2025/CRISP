@@ -17,6 +17,12 @@ import PhoneNumberInput from './components/PhoneNumberInput.jsx';
 import Pagination from './components/Pagination.jsx';
 import { NotificationProvider, useNotifications } from './components/NotificationManager.jsx';
 import NotificationWatcher from './components/NotificationWatcher';
+// Threat Intelligence Components
+import ThreatFeedList from './components/ThreatFeedList.jsx';
+import ThreatFeedDetail from './components/ThreatFeedDetail.jsx';
+import IndicatorTable from './components/IndicatorTable.jsx';
+import STIXViewer from './components/STIXViewer.jsx';
+import ThreatDashboard from './components/ThreatDashboard.jsx';
 
 
 function AppRegister({ user, onLogout, isAdmin }) { // Updated props to match what AuthWrapper passes
@@ -294,16 +300,52 @@ function AppRegister({ user, onLogout, isAdmin }) { // Updated props to match wh
       {/* Main Content */}
       <main className="main-content">
         <div className="container">
-          {/* Dashboard */}
-          <Dashboard active={activePage === 'dashboard'} />
+          {/* Threat Intelligence Dashboard */}
+          <ErrorBoundary>
+            <ThreatDashboard 
+              active={activePage === 'dashboard'} 
+              userRole={userRole}
+              userOrganization={userOrganization}
+              onNavigate={showPage}
+            />
+          </ErrorBoundary>
 
           {/* Threat Feeds - All users can access */}
-          <ThreatFeeds active={activePage === 'threat-feeds'} />
+          <ErrorBoundary>
+            <ThreatFeedList 
+              active={activePage === 'threat-feeds'} 
+              userRole={userRole}
+              onNavigate={showPage}
+            />
+          </ErrorBoundary>
 
-          {/* IoC Management - Publisher permissions required */}
-          {isPublisher && (
-            <IoCManagement active={activePage === 'ioc-management'} />
-          )}
+          {/* Threat Feed Detail View */}
+          <ErrorBoundary>
+            <ThreatFeedDetail 
+              active={activePage === 'threat-feed-detail'} 
+              feedId={getUrlParams().feedId}
+              userRole={userRole}
+              onNavigate={showPage}
+            />
+          </ErrorBoundary>
+
+          {/* IoC Management - All users can access, with role-based permissions */}
+          <ErrorBoundary>
+            <IndicatorTable 
+              active={activePage === 'ioc-management'} 
+              userRole={userRole}
+              searchQuery={getUrlParams().search}
+            />
+          </ErrorBoundary>
+
+          {/* STIX Viewer */}
+          <ErrorBoundary>
+            <STIXViewer 
+              active={activePage === 'stix-viewer'} 
+              stixId={getUrlParams().stixId}
+              userRole={userRole}
+            />
+          </ErrorBoundary>
 
           {/* TTP Analysis - Publisher/Admin only */}
           {(isPublisher || isBlueVisionAdmin) && (
