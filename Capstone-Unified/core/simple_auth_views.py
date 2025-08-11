@@ -198,6 +198,7 @@ def get_user_profile(request):
                 'first_name': user.first_name,
                 'last_name': user.last_name,
                 'full_name': f"{user.first_name} {user.last_name}".strip() or user.username,
+                'job_title': 'Security Administrator',  # Default job title
                 'organization': 'BlueVision Security',  # Default organization
                 'organization_id': '1',
                 'is_staff': user.is_staff,
@@ -229,6 +230,9 @@ def get_user_profile(request):
             
             user.save()
             
+            # For now, store job_title in session or use default
+            job_title = data.get('job_title', 'Security Administrator')
+            
             user_data = {
                 'id': user.id,
                 'username': user.username,
@@ -236,6 +240,7 @@ def get_user_profile(request):
                 'first_name': user.first_name,
                 'last_name': user.last_name,
                 'full_name': f"{user.first_name} {user.last_name}".strip() or user.username,
+                'job_title': job_title,
                 'organization': 'BlueVision Security',  # Default organization
                 'organization_id': '1',
                 'is_staff': user.is_staff,

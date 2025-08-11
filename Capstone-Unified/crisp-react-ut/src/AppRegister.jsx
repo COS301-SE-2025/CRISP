@@ -3025,11 +3025,22 @@ function AccountSettings({ active, user }) {
   });
 
   useEffect(() => {
+    console.log('DEBUG: AccountSettings useEffect - active:', active);
     if (active) {
+      console.log('DEBUG: AccountSettings is active, fetching data...');
       fetchOrganizations();
       fetchActualProfile();
+    } else {
+      console.log('DEBUG: AccountSettings is not active, skipping data fetch');
     }
   }, [active]);
+
+  // Also fetch profile data when component mounts (regardless of active state)
+  useEffect(() => {
+    console.log('DEBUG: AccountSettings mounted, force fetching profile...');
+    fetchActualProfile();
+    fetchOrganizations();
+  }, []);
 
   // Effect to match organization when both profile data and organizations are loaded
   useEffect(() => {

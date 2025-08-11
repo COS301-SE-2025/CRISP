@@ -248,13 +248,23 @@ export const createUser = async (userData) => {
 };
 
 export const getUserProfile = async () => {
+  console.log('DEBUG: getUserProfile() called');
   const response = await fetch(`${API_URL}users/profile/`, {
     method: 'GET',
     headers: { ...authHeader() }
   });
   
+  console.log('DEBUG: getUserProfile response status:', response.status);
   const result = await handleResponse(response);
-  return result.data?.profile || result.data || result;
+  console.log('DEBUG: getUserProfile handleResponse result:', result);
+  console.log('DEBUG: result.data?.profile:', result.data?.profile);
+  console.log('DEBUG: result.data:', result.data);
+  console.log('DEBUG: result.user:', result.user);
+  
+  const finalResult = result.data?.profile || result.user || result.data || result;
+  console.log('DEBUG: getUserProfile final result:', finalResult);
+  
+  return finalResult;
 };
 
 export const updateUserProfile = async (profileData) => {
