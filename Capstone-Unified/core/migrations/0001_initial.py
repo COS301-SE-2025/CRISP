@@ -299,11 +299,77 @@ class Migration(migrations.Migration):
             ],
             options={
                 "ordering": ["name"],
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
             name="STIXObject",
+            name="STIXObject",
             fields=[
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("stix_id", models.CharField(max_length=255, unique=True)),
+                (
+                    "stix_type",
+                    models.CharField(
+                        choices=[
+                            ("indicator", "Indicator"),
+                            ("malware", "Malware"),
+                            ("attack-pattern", "Attack Pattern"),
+                            ("threat-actor", "Threat Actor"),
+                            ("identity", "Identity"),
+                            ("relationship", "Relationship"),
+                            ("tool", "Tool"),
+                            ("vulnerability", "Vulnerability"),
+                            ("observed-data", "Observed Data"),
+                            ("report", "Report"),
+                            ("course-of-action", "Course of Action"),
+                            ("campaign", "Campaign"),
+                            ("intrusion-set", "Intrusion Set"),
+                            ("infrastructure", "Infrastructure"),
+                            ("location", "Location"),
+                            ("note", "Note"),
+                            ("opinion", "Opinion"),
+                            ("marking-definition", "Marking Definition"),
+                        ],
+                        max_length=100,
+                    ),
+                ),
+                ("spec_version", models.CharField(default="2.1", max_length=20)),
+                ("created", models.DateTimeField()),
+                ("modified", models.DateTimeField()),
+                (
+                    "created_by_ref",
+                    models.CharField(blank=True, max_length=255, null=True),
+                ),
+                ("revoked", models.BooleanField(default=False)),
+                ("labels", models.JSONField(default=list)),
+                ("confidence", models.IntegerField(default=0)),
+                ("external_references", models.JSONField(default=list)),
+                ("object_marking_refs", models.JSONField(default=list)),
+                ("granular_markings", models.JSONField(default=list)),
+                ("raw_data", models.JSONField()),
+                ("original_data", models.JSONField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("anonymized", models.BooleanField(default=False)),
+                (
+                    "anonymization_strategy",
+                    models.CharField(blank=True, max_length=50, null=True),
+                ),
+                ("anonymization_trust_level", models.FloatField(blank=True, null=True)),
+                (
+                    "original_object_ref",
+                    models.CharField(blank=True, max_length=255, null=True),
+                ),
+            ],
                 (
                     "id",
                     models.UUIDField(
@@ -371,7 +437,54 @@ class Migration(migrations.Migration):
         ),
         migrations.CreateModel(
             name="ThreatFeed",
+            name="ThreatFeed",
             fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255, unique=True)),
+                ("description", models.TextField(blank=True, null=True)),
+                ("taxii_server_url", models.URLField(blank=True, null=True)),
+                (
+                    "taxii_api_root",
+                    models.CharField(blank=True, max_length=255, null=True),
+                ),
+                (
+                    "taxii_collection_id",
+                    models.CharField(blank=True, max_length=255, null=True),
+                ),
+                (
+                    "taxii_username",
+                    models.CharField(blank=True, max_length=255, null=True),
+                ),
+                (
+                    "taxii_password",
+                    models.CharField(blank=True, max_length=255, null=True),
+                ),
+                ("is_external", models.BooleanField(default=True)),
+                ("is_public", models.BooleanField(default=False)),
+                ("last_sync", models.DateTimeField(blank=True, null=True)),
+                ("sync_interval_hours", models.IntegerField(default=24)),
+                ("is_active", models.BooleanField(default=True)),
+                ("last_error", models.TextField(blank=True, null=True)),
+                ("sync_count", models.IntegerField(default=0)),
+                ("last_published_time", models.DateTimeField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "owner",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="owned_threat_feeds",
+                        to="core.organization",
+                    ),
+                ),
                 (
                     "id",
                     models.BigAutoField(
@@ -421,11 +534,28 @@ class Migration(migrations.Migration):
             ],
             options={
                 "ordering": ["name"],
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
             name="TrustLevel",
+            name="TrustLevel",
             fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=50, unique=True)),
+                ("description", models.TextField(blank=True, null=True)),
+                ("level", models.FloatField(default=0.0)),
+                ("numerical_value", models.IntegerField(default=50, unique=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
                 (
                     "id",
                     models.BigAutoField(
@@ -444,11 +574,66 @@ class Migration(migrations.Migration):
             ],
             options={
                 "ordering": ["-numerical_value"],
+                "ordering": ["-numerical_value"],
             },
         ),
         migrations.CreateModel(
             name="TTPData",
+            name="TTPData",
             fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255)),
+                ("description", models.TextField()),
+                ("mitre_technique_id", models.CharField(max_length=20)),
+                (
+                    "mitre_tactic",
+                    models.CharField(
+                        blank=True,
+                        choices=[
+                            ("reconnaissance", "Reconnaissance"),
+                            ("resource_development", "Resource Development"),
+                            ("initial_access", "Initial Access"),
+                            ("execution", "Execution"),
+                            ("persistence", "Persistence"),
+                            ("privilege_escalation", "Privilege Escalation"),
+                            ("defense_evasion", "Defense Evasion"),
+                            ("credential_access", "Credential Access"),
+                            ("discovery", "Discovery"),
+                            ("lateral_movement", "Lateral Movement"),
+                            ("collection", "Collection"),
+                            ("command_and_control", "Command and Control"),
+                            ("exfiltration", "Exfiltration"),
+                            ("impact", "Impact"),
+                        ],
+                        max_length=50,
+                        null=True,
+                    ),
+                ),
+                (
+                    "mitre_subtechnique",
+                    models.CharField(blank=True, max_length=255, null=True),
+                ),
+                ("stix_id", models.CharField(max_length=255, unique=True)),
+                ("is_anonymized", models.BooleanField(default=False)),
+                ("original_data", models.JSONField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "threat_feed",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="ttps",
+                        to="core.threatfeed",
+                    ),
+                ),
                 (
                     "id",
                     models.BigAutoField(
@@ -510,7 +695,60 @@ class Migration(migrations.Migration):
         ),
         migrations.CreateModel(
             name="TrustRelationship",
+            name="TrustRelationship",
             fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "relationship_type",
+                    models.CharField(
+                        choices=[
+                            ("partnership", "Partnership"),
+                            ("vendor", "Vendor Relationship"),
+                            ("educational", "Educational Partnership"),
+                            ("research", "Research Collaboration"),
+                            ("institutional", "Institutional Trust"),
+                            ("government", "Government Agency"),
+                        ],
+                        default="partnership",
+                        max_length=50,
+                    ),
+                ),
+                ("is_active", models.BooleanField(default=True)),
+                ("notes", models.TextField(blank=True, null=True)),
+                ("created_by", models.CharField(default="System", max_length=255)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "source_organization",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="trust_relationships_as_source",
+                        to="core.organization",
+                    ),
+                ),
+                (
+                    "target_organization",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="trust_relationships_as_target",
+                        to="core.organization",
+                    ),
+                ),
+                (
+                    "trust_level",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="core.trustlevel",
+                    ),
+                ),
                 (
                     "id",
                     models.BigAutoField(
@@ -568,6 +806,46 @@ class Migration(migrations.Migration):
                 "ordering": ["-created_at"],
             },
         ),
+        migrations.CreateModel(
+            name="TrustNetwork",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255)),
+                ("description", models.TextField()),
+                ("default_trust_level", models.FloatField(default=0.6)),
+                (
+                    "default_anonymization_level",
+                    models.CharField(
+                        choices=[
+                            ("none", "None"),
+                            ("low", "Low"),
+                            ("medium", "Medium"),
+                            ("high", "High"),
+                            ("full", "Full"),
+                        ],
+                        default="medium",
+                        max_length=20,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "members",
+                    models.ManyToManyField(
+                        related_name="trust_networks",
+                        through="core.NetworkMembership",
+                        to="core.organization",
+                    ),
+                ),
+            ],
         migrations.CreateModel(
             name="TrustNetwork",
             fields=[
