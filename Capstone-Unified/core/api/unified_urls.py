@@ -20,6 +20,13 @@ from .unified_views import (
 
 # Import existing views to preserve backward compatibility
 from ..api.threat_feed_views import ThreatFeedViewSet
+from ..simple_auth_views import login_view, system_health, alert_statistics
+from ..api_extensions import (
+    list_organizations, organization_types, create_organization, organization_detail,
+    deactivate_organization, reactivate_organization,
+    trust_groups, trust_levels, trust_metrics, trust_relationships, trust_relationships_detail, 
+    trust_overview, list_users, create_user, user_detail, change_username
+)
 
 # Import Trust system views (if available)
 try:
@@ -163,38 +170,38 @@ legacy_preserved_patterns = [
     # These patterns preserve the exact URLs from crisp_settings/urls.py
     
     # Simple auth endpoints for frontend (PRESERVED)
-    path('v1/auth/login/', include('core.simple_auth_views')),  # Will be handled by view import
+    path('v1/auth/login/', login_view, name='preserved-login'),
     
     # Organizations endpoints (PRESERVED - keep exact URLs)
-    path('v1/organizations/list_organizations/', include('core.api_extensions')),
-    path('v1/organizations/types/', include('core.api_extensions')),
-    path('v1/organizations/create_organization/', include('core.api_extensions')),
-    path('v1/organizations/<str:organization_id>/get_organization/', include('core.api_extensions')),
-    path('v1/organizations/<str:organization_id>/update_organization/', include('core.api_extensions')),
-    path('v1/organizations/<str:organization_id>/delete_organization/', include('core.api_extensions')),
-    path('v1/organizations/<str:organization_id>/', include('core.api_extensions')),
-    path('v1/organizations/<str:organization_id>/deactivate_organization/', include('core.api_extensions')),
-    path('v1/organizations/<str:organization_id>/reactivate_organization/', include('core.api_extensions')),
+    path('v1/organizations/list_organizations/', list_organizations, name='preserved-list-organizations'),
+    path('v1/organizations/types/', organization_types, name='preserved-organization-types'),
+    path('v1/organizations/create_organization/', create_organization, name='preserved-create-organization'),
+    path('v1/organizations/<str:organization_id>/get_organization/', organization_detail, name='preserved-get-organization'),
+    path('v1/organizations/<str:organization_id>/update_organization/', organization_detail, name='preserved-update-organization'),
+    path('v1/organizations/<str:organization_id>/delete_organization/', organization_detail, name='preserved-delete-organization'),
+    path('v1/organizations/<str:organization_id>/', organization_detail, name='preserved-organization-detail'),
+    path('v1/organizations/<str:organization_id>/deactivate_organization/', deactivate_organization, name='preserved-deactivate-organization'),
+    path('v1/organizations/<str:organization_id>/reactivate_organization/', reactivate_organization, name='preserved-reactivate-organization'),
     
     # Trust management endpoints (PRESERVED)
-    path('v1/trust/groups/', include('core.api_extensions')),
-    path('v1/trust/levels/', include('core.api_extensions')),
-    path('v1/trust/metrics/', include('core.api_extensions')),
-    path('v1/trust/relationships/', include('core.api_extensions')),
-    path('v1/trust/relationships/<int:relationship_id>/', include('core.api_extensions')),
+    path('v1/trust/groups/', trust_groups, name='preserved-trust-groups'),
+    path('v1/trust/levels/', trust_levels, name='preserved-trust-levels'),
+    path('v1/trust/metrics/', trust_metrics, name='preserved-trust-metrics'),
+    path('v1/trust/relationships/', trust_relationships, name='preserved-trust-relationships'),
+    path('v1/trust/relationships/<int:relationship_id>/', trust_relationships_detail, name='preserved-trust-relationship-detail'),
     
     # Admin endpoints (PRESERVED)
-    path('v1/admin/trust_overview/', include('core.api_extensions')),
-    path('v1/admin/system_health/', include('core.simple_auth_views')),
-    path('v1/alerts/statistics/', include('core.simple_auth_views')),
-    path('v1/users/list/', include('core.api_extensions')),
+    path('v1/admin/trust_overview/', trust_overview, name='preserved-trust-overview'),
+    path('v1/admin/system_health/', system_health, name='preserved-system-health'),
+    path('v1/alerts/statistics/', alert_statistics, name='preserved-alert-statistics'),
+    path('v1/users/list/', list_users, name='preserved-list-users'),
     
     # User management endpoints (PRESERVED)
-    path('v1/users/create_user/', include('core.api_extensions')),
-    path('v1/users/<int:user_id>/get_user/', include('core.api_extensions')),
-    path('v1/users/<int:user_id>/update_user/', include('core.api_extensions')),
-    path('v1/users/<int:user_id>/delete_user/', include('core.api_extensions')),
-    path('v1/users/<int:user_id>/change_username/', include('core.api_extensions')),
+    path('v1/users/create_user/', create_user, name='preserved-create-user'),
+    path('v1/users/<int:user_id>/get_user/', user_detail, name='preserved-get-user'),
+    path('v1/users/<int:user_id>/update_user/', user_detail, name='preserved-update-user'),
+    path('v1/users/<int:user_id>/delete_user/', user_detail, name='preserved-delete-user'),
+    path('v1/users/<int:user_id>/change_username/', change_username, name='preserved-change-username'),
 ]
 
 
