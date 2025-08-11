@@ -262,13 +262,13 @@ class TrustRelationship(models.Model):
     
     # Organizations involved in the trust relationship
     source_organization = models.ForeignKey(
-        'user_management.Organization',
+        'ut_user_management.Organization',
         on_delete=models.CASCADE,
         related_name='trust_relationships_as_source',
         help_text="Source organization in the trust relationship"
     )
     target_organization = models.ForeignKey(
-        'user_management.Organization',
+        'ut_user_management.Organization',
         on_delete=models.CASCADE,
         related_name='trust_relationships_as_target',
         help_text="Target organization in the trust relationship"
@@ -350,7 +350,7 @@ class TrustRelationship(models.Model):
         help_text="Whether target organization has approved"
     )
     approved_by_source_user = models.ForeignKey(
-        'user_management.CustomUser',
+        'ut_user_management.Organization',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -358,7 +358,7 @@ class TrustRelationship(models.Model):
         help_text="User who approved on behalf of source organization"
     )
     approved_by_target_user = models.ForeignKey(
-        'user_management.CustomUser',
+        'ut_user_management.Organization',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -404,7 +404,7 @@ class TrustRelationship(models.Model):
     
     # Audit fields
     created_by = models.ForeignKey(
-        'user_management.CustomUser',
+        'ut_user_management.Organization',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -412,7 +412,7 @@ class TrustRelationship(models.Model):
         help_text="User who created this relationship"
     )
     last_modified_by = models.ForeignKey(
-        'user_management.CustomUser',
+        'ut_user_management.Organization',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -420,7 +420,7 @@ class TrustRelationship(models.Model):
         help_text="User who last modified this relationship"
     )
     revoked_by = models.ForeignKey(
-        'user_management.CustomUser',
+        'ut_user_management.Organization',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -569,7 +569,7 @@ class TrustGroupMembership(models.Model):
         related_name='group_memberships'
     )
     organization = models.ForeignKey(
-        'user_management.Organization',
+        'ut_user_management.Organization',
         on_delete=models.CASCADE,
         related_name='trust_group_memberships',
         help_text="Organization that is a member of this trust group"
@@ -650,7 +650,7 @@ class TrustLog(models.Model):
         help_text="Type of trust action performed"
     )
     source_organization = models.ForeignKey(
-        'user_management.Organization',
+        'ut_user_management.Organization',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -658,7 +658,7 @@ class TrustLog(models.Model):
         help_text="Organization that initiated the action"
     )
     target_organization = models.ForeignKey(
-        'user_management.Organization',
+        'ut_user_management.Organization',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -680,7 +680,7 @@ class TrustLog(models.Model):
         related_name='trust_logs_as_user'
     )
     user = models.ForeignKey(
-        'user_management.CustomUser',
+        'ut_user_management.Organization',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

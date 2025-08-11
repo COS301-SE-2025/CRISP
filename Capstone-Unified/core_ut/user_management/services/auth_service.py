@@ -2,7 +2,7 @@ from django.utils import timezone
 from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from rest_framework_simplejwt.exceptions import TokenError
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple 
 import hashlib
 from datetime import timedelta
 from ..models import CustomUser, UserSession, AuthenticationLog
@@ -167,7 +167,8 @@ class AuthenticationService:
     def _format_user_info(self, user: CustomUser) -> Dict:
         """Format user information for authentication response"""
         user_info = {
-            'id': str(user.id),
+            'id': str(user.id),            
+            'organization_id': str(user.organization.id) if user.organization else None, 
             'username': user.username,
             'email': user.email,
             'first_name': user.first_name,
@@ -194,24 +195,25 @@ class AuthenticationService:
             
         return user_info
     
-    def _format_accessible_organizations(self, user: CustomUser) -> list:
-        """Format accessible organizations for authentication response"""
-        try:
-            accessible_orgs = self.access_control.get_accessible_organizations(user)
-            result = []
-            for org in accessible_orgs:
-                org_data = {
-                    'id': str(org.id),
-                    'name': org.name,
-                    'domain': org.domain,
-                    'is_own': org.id == user.organization.id if user.organization else False,
-                    'access_level': 'full' if (user.organization and org.id == user.organization.id) else 'trust_based'
-                }
-                result.append(org_data)
-            return result
-        except Exception as e:
-            logger.error(f"Error formatting accessible organizations: {str(e)}")
-            return []
+    def _format_accessible_organizations(self, user: CustomUser) -> List[str]:
+        """Format accessible organizations with UUID conversion"""
+        accessible_orgs = []
+        
+        if user.organization:
+            accessible_orgs.append(str(user.organization.id))  # Convert UUID to string
+        
+        # Add trusted organizations
+        from core_ut.trust.models import TrustRelationship
+        trusted_orgs = TrustRelationship.objects.filter(
+            source_organization=user.organization,
+            is_active=True,
+            status='active'
+        ).values_list('target_organization__id', flat=True)
+        
+        # Convert UUIDs to strings
+        accessible_orgs.extend([str(org_id) for org_id in trusted_orgs])
+        
+        return list(set(accessible_orgs))  # Remove duplicates
     
     def _get_user_trust_context(self, user: CustomUser) -> Dict:
         """Get trust context information for the user"""
@@ -229,36 +231,44 @@ class AuthenticationService:
                     'trust_aware_access': False
                 }
             
-            # Get basic trust metrics
             outgoing_relationships = TrustRelationship.objects.filter(
-                source_organization=str(user.organization.id),
+                source_organization=user.organization,
                 is_active=True,
                 status='active'
             ).count()
             
             incoming_relationships = TrustRelationship.objects.filter(
-                target_organization=str(user.organization.id),
+                target_organization=user.organization,
                 is_active=True,
                 status='active'
             ).count()
+            
+            can_manage_trust = user.role in ['admin', 'BlueVisionAdmin', 'publisher']
             
             return {
                 'organization_id': str(user.organization.id) if user.organization else None,
                 'organization_name': user.organization.name if user.organization else None,
                 'outgoing_trust_relationships': outgoing_relationships,
                 'incoming_trust_relationships': incoming_relationships,
-                'can_manage_trust': user.can_manage_trust_relationships,
-                'trust_aware_access': True
+                'can_manage_trust': can_manage_trust,
+                'trust_aware_access': True,
+                'trust_metrics': {
+                    'total_relationships': outgoing_relationships + incoming_relationships,
+                    'bidirectional_relationships': min(outgoing_relationships, incoming_relationships)
+                }
             }
+            
         except Exception as e:
-            logger.error(f"Error getting trust context: {str(e)}")
+            logger.error(f"Error getting user trust context: {str(e)}")
+            # Return basic context on error instead of empty dict
             return {
                 'organization_id': str(user.organization.id) if user.organization else None,
                 'organization_name': user.organization.name if user.organization else None,
                 'outgoing_trust_relationships': 0,
                 'incoming_trust_relationships': 0,
                 'can_manage_trust': False,
-                'trust_aware_access': False
+                'trust_aware_access': False,
+                'error': 'Failed to load complete trust context'
             }
     
     def _validate_totp_code(self, user: CustomUser, totp_code: str) -> bool:

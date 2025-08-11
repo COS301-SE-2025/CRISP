@@ -113,6 +113,7 @@ class Organization(models.Model):
     )
 
     class Meta:
+        db_table = 'user_management_organization'
         verbose_name = 'Organization'
         verbose_name_plural = 'Organizations'
         ordering = ['name']
@@ -242,6 +243,7 @@ class CustomUser(AbstractUser):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        db_table = 'user_management_customuser'
         verbose_name = 'User'
         verbose_name_plural = 'Users'
         ordering = ['username']

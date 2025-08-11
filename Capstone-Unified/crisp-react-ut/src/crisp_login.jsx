@@ -55,7 +55,7 @@ function CrispLogin({ onLoginSuccess, switchView }) {
       // Call the onLoginSuccess callback with user data
       onLoginSuccess({
         user: userData.user,
-        token: userData.tokens.access
+        token: userData.token
       });
     } catch (error) {
       setError(error.message || 'Invalid username or password');

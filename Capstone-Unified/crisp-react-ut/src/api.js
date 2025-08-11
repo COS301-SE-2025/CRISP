@@ -90,12 +90,20 @@ export const loginUser = async (username, password) => {
   
   const data = await handleResponse(response);
   
-  // Save auth data to localStorage - match main.jsx format
+  console.log('API Response Data:', data); // Keep for debugging
+  
+  // Save auth data to localStorage and TRANSFORM the response
   if (data.success && data.tokens) {
     localStorage.setItem('crisp_auth_token', data.tokens.access);
     localStorage.setItem('crisp_user', JSON.stringify(data.user));
-    // Also store refresh token for later use
     localStorage.setItem('crisp_refresh_token', data.tokens.refresh);
+    
+    return {
+      success: true,
+      token: data.tokens.access,  
+      user: data.user,
+      message: data.message
+    };
   }
   
   return data;
