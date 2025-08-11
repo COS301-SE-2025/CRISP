@@ -603,6 +603,7 @@ class Indicator(models.Model):
     hash_type = models.CharField(max_length=10, choices=HASH_TYPES, blank=True, null=True)
     
     # Metadata
+    name = models.TextField(blank=True, null=True)  # Title/name of the indicator
     description = models.TextField(blank=True, null=True)
     confidence = models.IntegerField(default=50)  # 0-100
     threat_feed = models.ForeignKey(ThreatFeed, on_delete=models.CASCADE, related_name='indicators')

@@ -4353,6 +4353,7 @@ Only patterns and techniques, no indicators</option>
       const indicatorsToImport = importPreview.map(indicator => ({
         type: indicator.rawType || indicator.type.toLowerCase().replace(' ', '_'),
         value: indicator.value.trim(),
+        name: indicator.name || '',
         description: indicator.description || '',
         confidence: parseInt(indicator.confidence) || 50
       }));
@@ -4552,6 +4553,8 @@ Only patterns and techniques, no indicators</option>
       const indicator = {
         type: getColumnValue(headers, values, ['type', 'ioc_type', 'indicator_type']) || 'Unknown',
         value: getColumnValue(headers, values, ['value', 'ioc_value', 'indicator']) || '',
+        name: getColumnValue(headers, values, ['name', 'title', 'indicator_name']) || '',
+        description: getColumnValue(headers, values, ['description', 'desc', 'details']) || '',
         severity: getColumnValue(headers, values, ['severity', 'priority', 'threat_level']) || 'Medium',
         source: getColumnValue(headers, values, ['source', 'origin', 'feed']) || 'Import',
         status: getColumnValue(headers, values, ['status', 'state']) || 'Active'
@@ -4572,6 +4575,8 @@ Only patterns and techniques, no indicators</option>
       return data.indicators.map(ind => ({
         type: ind.type || 'Unknown',
         value: ind.value || '',
+        name: ind.name || '',
+        description: ind.description || '',
         severity: ind.severity || 'Medium',
         source: ind.source || 'Import',
         status: ind.status || 'Active'
@@ -4582,6 +4587,8 @@ Only patterns and techniques, no indicators</option>
       return data.map(ind => ({
         type: ind.type || 'Unknown',
         value: ind.value || '',
+        name: ind.name || '',
+        description: ind.description || '',
         severity: ind.severity || 'Medium',
         source: ind.source || 'Import',
         status: ind.status || 'Active'
@@ -4603,6 +4610,8 @@ Only patterns and techniques, no indicators</option>
     return indicators.map(ind => ({
       type: extractTypeFromPattern(ind.pattern),
       value: extractValueFromPattern(ind.pattern),
+      name: ind.name || '',
+      description: ind.description || '',
       severity: mapConfidenceToSeverity(ind.confidence || 50),
       source: ind.x_crisp_source || 'STIX Import',
       status: ind.x_crisp_status || 'Active'

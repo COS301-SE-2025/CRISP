@@ -309,6 +309,7 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
                 'type': indicator.type,
                 'value': indicator.value,
                 'stix_id': indicator.stix_id,
+                'name': indicator.name,
                 'description': indicator.description,
                 'confidence': indicator.confidence,
                 'first_seen': indicator.first_seen,
@@ -426,6 +427,7 @@ def indicators_list(request):
                     'type': indicator.type,
                     'value': indicator.value,
                     'stix_id': indicator.stix_id,
+                    'name': indicator.name,
                     'description': indicator.description,
                     'confidence': indicator.confidence,
                     'first_seen': indicator.first_seen,
@@ -489,6 +491,7 @@ def indicators_list(request):
             indicator_data = {
                 'value': data['value'].strip(),
                 'type': data['type'],
+                'name': data.get('name', ''),
                 'description': data.get('description', ''),
                 'confidence': int(data.get('confidence', 50)),
                 'stix_id': f'indicator--{uuid.uuid4()}',
@@ -527,6 +530,7 @@ def indicators_list(request):
                 'type': indicator.type,
                 'value': indicator.value,
                 'stix_id': indicator.stix_id,
+                'name': indicator.name,
                 'description': indicator.description,
                 'confidence': indicator.confidence,
                 'first_seen': indicator.first_seen,
@@ -661,6 +665,11 @@ def indicators_bulk_import(request):
                     errors.append(f"Indicator {idx + 1}: Potentially malicious content detected")
                     return None, errors
             
+            # Sanitize name
+            name = str(indicator_data.get('name', '')).strip()
+            if len(name) > 500:  # Max 500 chars for name
+                name = name[:500]
+            
             # Sanitize description
             description = str(indicator_data.get('description', '')).strip()
             if len(description) > 1000:  # Max 1KB description
@@ -677,6 +686,7 @@ def indicators_bulk_import(request):
             return {
                 'type': indicator_type,
                 'value': value,
+                'name': name,
                 'description': description,
                 'confidence': confidence
             }, errors
@@ -709,6 +719,7 @@ def indicators_bulk_import(request):
                 indicator_create_data = {
                     'value': sanitized_data['value'],
                     'type': sanitized_data['type'],
+                    'name': sanitized_data.get('name', ''),
                     'description': sanitized_data['description'],
                     'confidence': sanitized_data['confidence'],
                     'stix_id': f'indicator--{uuid.uuid4()}',
@@ -730,6 +741,7 @@ def indicators_bulk_import(request):
                     'type': indicator.type,
                     'value': indicator.value,
                     'stix_id': indicator.stix_id,
+                    'name': indicator.name,
                     'description': indicator.description,
                     'confidence': indicator.confidence,
                     'first_seen': indicator.first_seen,
@@ -792,7 +804,7 @@ def indicator_update(request, indicator_id):
         
         # Prepare update data (only allow certain fields to be updated)
         update_data = {}
-        updatable_fields = ['value', 'type', 'description', 'confidence']
+        updatable_fields = ['value', 'type', 'name', 'description', 'confidence']
         
         for field in updatable_fields:
             if field in data:
@@ -820,6 +832,7 @@ def indicator_update(request, indicator_id):
             'type': updated_indicator.type,
             'value': updated_indicator.value,
             'stix_id': updated_indicator.stix_id,
+            'name': updated_indicator.name,
             'description': updated_indicator.description,
             'confidence': updated_indicator.confidence,
             'first_seen': updated_indicator.first_seen,
