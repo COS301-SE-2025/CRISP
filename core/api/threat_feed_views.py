@@ -44,6 +44,32 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
             }
         )
     
+    def destroy(self, request, *args, **kwargs):
+        """Custom destroy method with logging"""
+        feed = self.get_object()
+        feed_name = feed.name
+        
+        # Log activity before deletion
+        activity_title = f"Threat feed deleted: {feed_name}"
+        activity_description = f"{'External' if feed.is_external else 'Internal'} threat feed '{feed_name}' has been removed from the system"
+        SystemActivity.log_activity(
+            activity_type='feed_deleted',
+            title=activity_title,
+            description=activity_description,
+            threat_feed=feed,
+            metadata={
+                'feed_type': 'external' if feed.is_external else 'internal',
+                'had_indicators': feed.indicators.count() > 0,
+                'had_ttps': feed.ttps.count() > 0
+            }
+        )
+        
+        # Perform the actual deletion
+        response = super().destroy(request, *args, **kwargs)
+        
+        logger.info(f"Threat feed '{feed_name}' successfully deleted")
+        return response
+    
     @action(detail=False, methods=['get'])
     def external(self, request):
         """

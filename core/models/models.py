@@ -787,6 +787,7 @@ class SystemActivity(models.Model):
     ACTIVITY_TYPES = [
         ('feed_added', 'Feed Added'),
         ('feed_consumed', 'Feed Consumed'),
+        ('feed_deleted', 'Feed Deleted'),
         ('indicator_added', 'Indicator Added'),
         ('indicators_bulk_added', 'Bulk Indicators Added'),
         ('feed_updated', 'Feed Updated'),
@@ -825,6 +826,7 @@ class SystemActivity(models.Model):
         icon_map = {
             'feed_added': 'fas fa-plus',
             'feed_consumed': 'fas fa-sync-alt',
+            'feed_deleted': 'fas fa-trash',
             'indicator_added': 'fas fa-shield-alt',
             'indicators_bulk_added': 'fas fa-upload',
             'feed_updated': 'fas fa-edit',
@@ -839,6 +841,7 @@ class SystemActivity(models.Model):
         badge_map = {
             'feed_added': 'badge-active',
             'feed_consumed': 'badge-active',
+            'feed_deleted': 'badge-error',
             'indicator_added': 'badge-active',
             'indicators_bulk_added': 'badge-active',
             'feed_updated': 'badge-warning',
@@ -853,6 +856,7 @@ class SystemActivity(models.Model):
         category_map = {
             'feed_added': 'feed',
             'feed_consumed': 'feed',
+            'feed_deleted': 'feed',
             'feed_updated': 'feed',
             'feed_error': 'feed',
             'indicator_added': 'indicator',

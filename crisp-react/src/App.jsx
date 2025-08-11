@@ -104,7 +104,15 @@ const api = {
         headers: { 'Content-Type': 'application/json' }
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return await response.json();
+      
+      // For DELETE requests, we might get 204 No Content with no response body
+      if (response.status === 204) {
+        return { success: true };
+      }
+      
+      // Try to parse JSON, but handle empty responses
+      const text = await response.text();
+      return text ? JSON.parse(text) : { success: true };
     } catch (error) {
       console.error(`API Error: ${endpoint}`, error);
       return null;
@@ -599,6 +607,7 @@ function Dashboard({ active, showPage }) {
       displayType: typeMapping[indicator.type] || indicator.type.charAt(0).toUpperCase() + indicator.type.slice(1),
       typeIcon: typeIcons[indicator.type] || 'fa-question-circle',
       rawType: indicator.type,
+      title: indicator.name || '',
       value: indicator.value,
       truncatedValue: formatValue(indicator.value, indicator.type),
       source: indicator.threat_feed?.name || indicator.source || 'Internal',
@@ -2061,6 +2070,12 @@ function ThreatFeeds({ active, navigationState, setNavigationState }) {
     taxii_username: '',
     taxii_password: ''
   });
+
+  // Feed consumption and deletion states
+  const [consumingFeeds, setConsumingFeeds] = useState(new Set());
+  const [showDeleteFeedModal, setShowDeleteFeedModal] = useState(false);
+  const [feedToDelete, setFeedToDelete] = useState(null);
+  const [deletingFeed, setDeletingFeed] = useState(false);
   
   // Fetch threat feeds from backend
   useEffect(() => {
@@ -2091,12 +2106,60 @@ function ThreatFeeds({ active, navigationState, setNavigationState }) {
   };
   
   const handleConsumeFeed = async (feedId) => {
-    const result = await api.post(`/api/threat-feeds/${feedId}/consume/`);
-    if (result) {
-      console.log('Feed consumption started:', result);
-      // Refresh feeds after consumption
-      fetchThreatFeeds();
+    // Add feed to consuming set
+    setConsumingFeeds(prev => new Set([...prev, feedId]));
+    
+    try {
+      const result = await api.post(`/api/threat-feeds/${feedId}/consume/`);
+      if (result) {
+        console.log('Feed consumption started:', result);
+        // Refresh feeds after consumption
+        await fetchThreatFeeds();
+      }
+    } catch (error) {
+      console.error('Error consuming feed:', error);
+      alert('Failed to consume feed. Please try again.');
+    } finally {
+      // Remove feed from consuming set
+      setConsumingFeeds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(feedId);
+        return newSet;
+      });
     }
+  };
+
+  const handleDeleteFeed = (feed) => {
+    setFeedToDelete(feed);
+    setShowDeleteFeedModal(true);
+  };
+
+  const confirmDeleteFeed = async () => {
+    if (!feedToDelete) return;
+
+    setDeletingFeed(true);
+    try {
+      const result = await api.delete(`/api/threat-feeds/${feedToDelete.id}/`);
+      if (result !== null) {
+        console.log('Feed deleted successfully:', feedToDelete.name);
+        // Refresh feeds list
+        await fetchThreatFeeds();
+        // Close modal
+        closeDeleteFeedModal();
+      } else {
+        alert('Failed to delete threat feed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error deleting feed:', error);
+      alert('Error deleting threat feed. Please try again.');
+    } finally {
+      setDeletingFeed(false);
+    }
+  };
+
+  const closeDeleteFeedModal = () => {
+    setShowDeleteFeedModal(false);
+    setFeedToDelete(null);
   };
 
   const handleAddFeed = () => {
@@ -2342,8 +2405,25 @@ function ThreatFeeds({ active, navigationState, setNavigationState }) {
                         <button 
                           className="btn btn-sm btn-primary"
                           onClick={() => handleConsumeFeed(feed.id)}
+                          disabled={consumingFeeds.has(feed.id)}
                         >
-                          <i className="fas fa-download"></i> Consume
+                          {consumingFeeds.has(feed.id) ? (
+                            <>
+                              <i className="fas fa-spinner fa-spin"></i> Consuming...
+                            </>
+                          ) : (
+                            <>
+                              <i className="fas fa-download"></i> Consume
+                            </>
+                          )}
+                        </button>
+                        <button 
+                          className="btn btn-sm btn-danger"
+                          onClick={() => handleDeleteFeed(feed)}
+                          disabled={consumingFeeds.has(feed.id)}
+                          title={consumingFeeds.has(feed.id) ? "Cannot delete while consuming" : "Delete this threat feed"}
+                        >
+                          <i className="fas fa-trash"></i>
                         </button>
                       </div>
                     </div>
@@ -2494,6 +2574,78 @@ function ThreatFeeds({ active, navigationState, setNavigationState }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Feed Confirmation Modal */}
+      {showDeleteFeedModal && (
+        <div className="modal-overlay" onClick={closeDeleteFeedModal}>
+          <div className="modal-content delete-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>
+                <i className="fas fa-exclamation-triangle" style={{color: '#dc3545'}}></i>
+                Delete Threat Feed
+              </h2>
+              <button className="modal-close" onClick={closeDeleteFeedModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="delete-confirmation">
+                <p>
+                  Are you sure you want to delete the threat feed <strong>"{feedToDelete?.name}"</strong>?
+                </p>
+                <div className="warning-text">
+                  <i className="fas fa-warning"></i>
+                  <span>This action cannot be undone. All associated indicators and TTP data will also be removed.</span>
+                </div>
+                
+                {feedToDelete && (
+                  <div className="feed-info">
+                    <div className="info-row">
+                      <strong>Type:</strong> {feedToDelete.is_external ? 'External TAXII' : 'Internal'}
+                    </div>
+                    <div className="info-row">
+                      <strong>Collection:</strong> {feedToDelete.taxii_collection_id || 'N/A'}
+                    </div>
+                    <div className="info-row">
+                      <strong>Last Sync:</strong> {feedToDelete.last_sync ? new Date(feedToDelete.last_sync).toLocaleString() : 'Never'}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <div className="modal-actions">
+                <button 
+                  type="button" 
+                  className="btn btn-outline" 
+                  onClick={closeDeleteFeedModal}
+                  disabled={deletingFeed}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-danger" 
+                  onClick={confirmDeleteFeed}
+                  disabled={deletingFeed}
+                >
+                  {deletingFeed ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin"></i> Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-trash"></i> Delete Feed
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -2688,6 +2840,7 @@ function IoCManagement({ active }) {
                         indicator.type === 'mutex' ? 'Mutex' :
                         indicator.type === 'process' ? 'Process' : indicator.type,
                   rawType: indicator.type,
+                  title: indicator.name || '',
                   value: indicator.value,
                   severity: indicator.confidence >= 75 ? 'High' : 
                            indicator.confidence >= 50 ? 'Medium' : 'Low',
@@ -2757,12 +2910,14 @@ function IoCManagement({ active }) {
       );
     }
 
-    // Filter by search term (searches in value and description)
+    // Filter by search term (searches in title, value, and description)
     if (filters.searchTerm) {
       const searchTerm = filters.searchTerm.toLowerCase();
       filtered = filtered.filter(indicator => 
         indicator.value.toLowerCase().includes(searchTerm) ||
-        indicator.description.toLowerCase().includes(searchTerm)
+        indicator.description.toLowerCase().includes(searchTerm) ||
+        (indicator.title && indicator.title.toLowerCase().includes(searchTerm)) ||
+        (indicator.name && indicator.name.toLowerCase().includes(searchTerm))
       );
     }
 
@@ -3045,6 +3200,7 @@ function IoCManagement({ active }) {
               <tr>
                 <th><input type="checkbox" /></th>
                 <th>Type</th>
+                <th>Title</th>
                 <th>Value</th>
                 <th>Description</th>
                 <th>Severity</th>
@@ -3057,7 +3213,7 @@ function IoCManagement({ active }) {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="9" style={{textAlign: 'center', padding: '2rem'}}>
+                  <td colSpan="10" style={{textAlign: 'center', padding: '2rem'}}>
                     <i className="fas fa-spinner fa-spin"></i> Loading indicators...
                   </td>
                 </tr>
@@ -3069,6 +3225,15 @@ function IoCManagement({ active }) {
                       <span className={`type-badge type-${indicator.rawType}`}>
                         {indicator.type}
                       </span>
+                    </td>
+                    <td className="indicator-title" title={indicator.title || ''}>
+                      {indicator.title ? 
+                        (indicator.title.length > 30 ? 
+                          `${indicator.title.substring(0, 30)}...` : 
+                          indicator.title
+                        ) : 
+                        <em className="text-muted">No title</em>
+                      }
                     </td>
                     <td className="indicator-value" title={indicator.value}>
                       {indicator.value.length > 50 ? 
@@ -3117,7 +3282,7 @@ function IoCManagement({ active }) {
                 ))
               ) : filteredIndicators.length === 0 && indicators.length > 0 ? (
                 <tr>
-                  <td colSpan="9" style={{textAlign: 'center', padding: '2rem'}}>
+                  <td colSpan="10" style={{textAlign: 'center', padding: '2rem'}}>
                     <i className="fas fa-filter"></i> No indicators match the current filters.
                     <br />
                     <button className="btn btn-outline btn-sm mt-2" onClick={resetFilters}>
@@ -3127,7 +3292,7 @@ function IoCManagement({ active }) {
                 </tr>
               ) : (
                 <tr>
-                  <td colSpan="9" style={{textAlign: 'center', padding: '2rem'}}>
+                  <td colSpan="10" style={{textAlign: 'center', padding: '2rem'}}>
                     <i className="fas fa-info-circle"></i> No indicators found. 
                     Try consuming threat feeds to populate data.
                   </td>
@@ -3604,7 +3769,9 @@ function IoCManagement({ active }) {
                       <thead>
                         <tr>
                           <th>Type</th>
+                          <th>Title</th>
                           <th>Value</th>
+                          <th>Description</th>
                           <th>Severity</th>
                           <th>Source</th>
                           <th>Status</th>
@@ -3614,7 +3781,9 @@ function IoCManagement({ active }) {
                         {importPreview.slice(0, 10).map((indicator, index) => (
                           <tr key={index}>
                             <td>{indicator.type}</td>
+                            <td className="truncate" title={indicator.name || ''}>{indicator.name || <em>No title</em>}</td>
                             <td className="truncate">{indicator.value}</td>
+                            <td className="truncate" title={indicator.description || ''}>{indicator.description || <em>No description</em>}</td>
                             <td>
                               <span className={`badge badge-${indicator.severity?.toLowerCase()}`}>
                                 {indicator.severity}
@@ -4198,6 +4367,7 @@ Only patterns and techniques, no indicators</option>
         const formattedIndicators = response.created_indicators.map(indicator => ({
           ...indicator,
           rawType: indicator.type,
+          title: indicator.name || '',
           type: indicator.type === 'ip' ? 'IP Address' : 
                 indicator.type === 'domain' ? 'Domain' :
                 indicator.type === 'url' ? 'URL' :
@@ -4763,6 +4933,7 @@ Only patterns and techniques, no indicators</option>
         const formattedIndicator = {
           ...response,
           rawType: response.type,
+          title: response.name || '',
           type: response.type === 'ip' ? 'IP Address' : 
                 response.type === 'domain' ? 'Domain' :
                 response.type === 'url' ? 'URL' :
@@ -4844,6 +5015,7 @@ function TTPAnalysis({ active }) {
   const [ttpDetailLoading, setTtpDetailLoading] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editFormData, setEditFormData] = useState({});
+
   
   // Feed consumption state
   const [availableFeeds, setAvailableFeeds] = useState([]);
@@ -4914,11 +5086,26 @@ function TTPAnalysis({ active }) {
   const fetchAggregationData = async () => {
     setAggregationLoading(true);
     try {
-      // Fetch multiple aggregation endpoints in parallel
+      // Fetch multiple aggregation endpoints individually to handle failures gracefully
+      const feedComparisonPromise = api.get('/api/ttps/feed-comparison/?days=30').catch(err => {
+        console.warn('Feed comparison endpoint not available:', err);
+        return null;
+      });
+      
+      const techniqueFreqPromise = api.get('/api/ttps/technique-frequencies/?days=30').catch(err => {
+        console.warn('Technique frequencies endpoint not available:', err);
+        return null;
+      });
+      
+      const seasonalPatternsPromise = api.get('/api/ttps/seasonal-patterns/?days=180').catch(err => {
+        console.warn('Seasonal patterns endpoint not available:', err);
+        return null;
+      });
+
       const [feedComparison, techniqueFreq, seasonalPatterns] = await Promise.all([
-        api.get('/api/ttps/feed-comparison/?days=30'),
-        api.get('/api/ttps/technique-frequencies/?days=30'),
-        api.get('/api/ttps/seasonal-patterns/?days=180')
+        feedComparisonPromise,
+        techniqueFreqPromise,
+        seasonalPatternsPromise
       ]);
 
       if (feedComparison && feedComparison.success) {
@@ -9622,6 +9809,62 @@ function CSSStyles() {
             width: 90vw;
             max-height: 85vh;
             overflow-y: auto;
+        }
+
+        /* Delete Confirmation Modal */
+        .delete-modal {
+            max-width: 500px;
+            width: 90vw;
+        }
+
+        .delete-confirmation p {
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+            color: #333;
+        }
+
+        .warning-text {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            color: #856404;
+        }
+
+        .warning-text i {
+            color: #f39c12;
+            font-size: 1.1rem;
+            margin-top: 0.1rem;
+            flex-shrink: 0;
+        }
+
+        .feed-info {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            border: 1px solid #e9ecef;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-row strong {
+            color: #495057;
+            font-weight: 600;
         }
 
         .create-form-grid {
