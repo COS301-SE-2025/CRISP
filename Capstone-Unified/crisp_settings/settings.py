@@ -27,7 +27,10 @@ DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
-# Application definition
+# =============================================================================
+# APPLICATION DEFINITION
+# =============================================================================
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -35,26 +38,20 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
+    # Third-party apps
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
-    'celery',
     
-    # Publication System (core)
+    # Publication System (core) - Main threat intelligence system
     'core',
     
-    # Trust Users System - Use AppConfig classes to get custom labels
+    # Trust Users Management System - Using AppConfig classes with custom labels
     'core_ut.user_management.apps_ut.UserManagementConfig',
     'core_ut.trust.apps_ut.TrustConfig', 
     'core_ut.alerts.apps_ut.AlertsConfig',
-    
-    # Trust system integration
-    'core_ut.trust',
-    'core_ut.user_management',
-    'core_ut.alerts',
 ]
-
-
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -63,27 +60,17 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    
-    # Unified authentication middleware (CRITICAL: Must be after AuthenticationMiddleware)
-    'core.middleware.unified_auth_middleware.UnifiedAuthenticationMiddleware',
-    
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     
     # Custom CRISP middleware (from Trust Users)
     # 'core_ut.middleware.audit_middleware.AuditMiddleware',  # Enable after testing
-    
-    # Trust system audit middleware
-    'core_ut.middleware.audit_middleware.AuditMiddleware',
 ]
 
 ROOT_URLCONF = 'crisp_settings.urls'
 
 # Custom User Model (from Trust Users System)
 AUTH_USER_MODEL = 'ut_user_management.CustomUser'
-
-# Custom user model from Trust system
-AUTH_USER_MODEL = 'user_management.CustomUser'
 
 TEMPLATES = [
     {
@@ -103,13 +90,16 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'crisp_settings.wsgi.application'
 
-# Database
+# =============================================================================
+# DATABASE CONFIGURATION
+# =============================================================================
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.getenv('DB_NAME', 'crisp_unified'),
         'USER': os.getenv('DB_USER', 'crisp_user'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'your_password'),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'password'),
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': os.getenv('DB_PORT', '5432'),
         'OPTIONS': {
@@ -119,7 +109,10 @@ DATABASES = {
     }
 }
 
-# Password validation
+# =============================================================================
+# PASSWORD VALIDATION
+# =============================================================================
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -135,25 +128,44 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Internationalization
+# =============================================================================
+# INTERNATIONALIZATION
+# =============================================================================
+
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
+# =============================================================================
+# STATIC FILES AND MEDIA
+# =============================================================================
+
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # =============================================================================
-# REST FRAMEWORK & AUTHENTICATION CONFIGURATION
+# CORS CONFIGURATION
+# =============================================================================
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",   # React default
+    "http://localhost:5173",   # Publication frontend
+    "http://localhost:5174",   # Trust Management frontend
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+# =============================================================================
+# REST FRAMEWORK CONFIGURATION
 # =============================================================================
 
 REST_FRAMEWORK = {
@@ -170,14 +182,15 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
-    'JSON_ENCODER': 'django.core.serializers.json.DjangoJSONEncoder',
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
+    'JSON_ENCODER': 'django.core.serializers.json.DjangoJSONEncoder',
 }
 
-# Note: UUID JWT fix will be applied in the auth service
+# =============================================================================
+# JWT CONFIGURATION (from Trust Users System)
+# =============================================================================
 
-# JWT Configuration (from Trust Users System)
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=int(os.getenv('JWT_ACCESS_TOKEN_LIFETIME_MINUTES', '60'))),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=int(os.getenv('JWT_REFRESH_TOKEN_LIFETIME_DAYS', '7'))),
@@ -205,16 +218,6 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
     'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
-    
-    # Custom token class to handle UUID serialization
-    'TOKEN_CLASS': 'core.middleware.jwt_serializers.UUIDSafeRefreshToken',
-    
-    # Use custom serializer to handle UUID fields
-    'TOKEN_OBTAIN_SERIALIZER': 'core.middleware.jwt_serializers.UnifiedTokenObtainPairSerializer',
-    'TOKEN_REFRESH_SERIALIZER': 'rest_framework_simplejwt.serializers.TokenRefreshSerializer',
-    
-    # JSON encoder for UUID handling - use a more explicit UUID-safe encoder
-    'JSON_ENCODER': 'core.middleware.jwt_serializers.UUIDEncoder',
 }
 
 # =============================================================================
@@ -234,38 +237,7 @@ CRISP_SENDER_NAME = os.getenv('CRISP_SENDER_NAME', 'CRISP Threat Intelligence')
 CRISP_SENDER_EMAIL = os.getenv('CRISP_SENDER_EMAIL', EMAIL_HOST_USER)
 
 # =============================================================================
-# CORS CONFIGURATION
-# =============================================================================
-
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 
-    'http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174'
-).split(',')
-
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = DEBUG  # Only in debug mode
-
-CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding', 
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
-]
-
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://localhost:5174", 
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:5174",
-]
-
-
-# =============================================================================
-# CELERY CONFIGURATION (for Publication System background tasks)
+# CELERY CONFIGURATION (Publication System)
 # =============================================================================
 
 CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
@@ -276,24 +248,173 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
 # =============================================================================
-# TAXII CONFIGURATION (for Publication System)
+# PUBLICATION SYSTEM SETTINGS
+# =============================================================================
+
+# TAXII Configuration
+TAXII_BASE_URL = os.getenv('TAXII_BASE_URL', 'http://localhost:8000/taxii2/')
+TAXII_DISCOVERY_PATH = 'discovery/'
+
+# STIX Configuration
+STIX_VERSION = '2.1'
+DEFAULT_STIX_SOURCES = [
+    'internal',
+    'otx',
+]
+
+# External API Configuration
+OTX_API_KEY = os.getenv('OTX_API_KEY', '')
+OTX_BASE_URL = 'https://otx.alienvault.com/api/v1/'
+
+# =============================================================================
+# LOGGING CONFIGURATION
+# =============================================================================
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs' / 'crisp_unified.log',
+            'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'root': {
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'core': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'core_ut': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
+
+# =============================================================================
+# SECURITY SETTINGS
+# =============================================================================
+
+if not DEBUG:
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_REDIRECT_EXEMPT = []
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+# =============================================================================
+# TESTING CONFIGURATION
+# =============================================================================
+
+if 'test' in os.sys.argv:
+    # Use in-memory database for testing
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': ':memory:'
+    }
+    
+    # Disable migrations during testing for speed
+    class DisableMigrations:
+        def __contains__(self, item):
+            return True
+        def __getitem__(self, item):
+            return None
+    
+    MIGRATION_MODULES = DisableMigrations()
+
+# =============================================================================
+# DEVELOPMENT SETTINGS
+# =============================================================================
+
+if DEBUG:
+    # Create logs directory if it doesn't exist
+    os.makedirs(BASE_DIR / 'logs', exist_ok=True)
+    
+    # Allow all hosts in debug mode
+    ALLOWED_HOSTS.append('*')
+    
+    # Additional CORS origins for development
+    CORS_ALLOWED_ORIGINS.extend([
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+    ])
+
+# =============================================================================
+# TAXII SYSTEM CONFIGURATION
 # =============================================================================
 
 TAXII_SETTINGS = {
-    'DISCOVERY_TITLE': os.getenv('TAXII_SERVER_TITLE', 'CRISP Threat Intelligence Platform'),
-    'DISCOVERY_DESCRIPTION': os.getenv('TAXII_SERVER_DESCRIPTION', 'Educational threat intelligence sharing platform'),
-    'DISCOVERY_CONTACT': os.getenv('TAXII_CONTACT_EMAIL', 'admin@example.com'),
     'MEDIA_TYPE_TAXII': 'application/taxii+json;version=2.1',
     'MEDIA_TYPE_STIX': 'application/stix+json;version=2.1',
-    'API_VERSION': '2.1',
-    'MAX_CONTENT_LENGTH': 10 * 1024 * 1024,  # 10MB
-    'DEFAULT_PAGE_SIZE': 100,
-    'MAX_PAGE_SIZE': 1000,
+    'DISCOVERY_TITLE': 'CRISP TAXII Server',
+    'DISCOVERY_DESCRIPTION': 'CRISP Cyber Risk Information Sharing Platform TAXII 2.1 Server',
+    'DISCOVERY_CONTACT': os.getenv('TAXII_CONTACT', 'admin@crisp.local'),
+    'DEFAULT_MAX_CONTENT_LENGTH': 10485760,  # 10MB
+    'API_ROOT_TITLE': 'CRISP Threat Intelligence',
+    'API_ROOT_DESCRIPTION': 'Threat intelligence sharing via TAXII 2.1',
+    'API_ROOT_VERSIONS': ['2.1'],
+    'API_ROOT_MAX_CONTENT_LENGTH': 10485760,
+    'COLLECTION_TITLE': 'CRISP Threat Feed',
+    'COLLECTION_DESCRIPTION': 'Aggregated threat intelligence from multiple sources',
+    'COLLECTION_CAN_READ': True,
+    'COLLECTION_CAN_WRITE': True,
+    'COLLECTION_MEDIA_TYPES': [
+        'application/stix+json;version=2.1',
+        'application/json'
+    ]
 }
 
-# Celery Configuration (for background tasks)
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
+# =============================================================================
+# CRISP PLATFORM SPECIFIC SETTINGS
+# =============================================================================
+
+# Application version
+CRISP_VERSION = '1.0.0'
+
+# Feature flags
+CRISP_FEATURES = {
+    'publication_system': True,
+    'trust_management': True,
+    'email_alerts': True,
+    'audit_logging': True,
+    'advanced_analytics': DEBUG,  # Only in development
+}
+
+# Trust Management settings
+TRUST_DEFAULT_LEVEL = 'MEDIUM'
+TRUST_LEVELS = ['NONE', 'LOW', 'MEDIUM', 'HIGH']
+
+# Publication system settings
+PUBLICATION_MAX_FEED_SIZE = 1000000  # 1MB
+PUBLICATION_BATCH_SIZE = 100
