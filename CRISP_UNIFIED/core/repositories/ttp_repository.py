@@ -103,4 +103,21 @@ class TTPRepository:
         """Searches for TTPs by name containing the given query."""
         return TTPData.objects.filter(name__icontains=name_query)
     
+    @staticmethod
+    def get_by_organizations(organization_ids, limit=None):
+        """
+        Get TTPs from specific organizations.
+        
+        Args:
+            organization_ids: List of organization IDs to filter by
+            limit: Maximum number of TTPs to return
+            
+        Returns:
+            QuerySet of TTPs from the specified organizations
+        """
+        queryset = TTPData.objects.filter(organization_id__in=organization_ids)
+        if limit:
+            queryset = queryset[:limit]
+        return queryset
+    
   
