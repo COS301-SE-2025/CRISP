@@ -1,5 +1,5 @@
 """
-Django app configuration
+Django app configurations
 """
 from django.apps import AppConfig
 
