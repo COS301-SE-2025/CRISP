@@ -2,9 +2,7 @@ from django.utils import timezone
 from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from rest_framework_simplejwt.exceptions import TokenError
-import uuid
-import json
-from typing import List, Dict, Optional, Tuple 
+from typing import Dict, Optional, Tuple
 import hashlib
 from datetime import timedelta
 from ..models import CustomUser, UserSession, AuthenticationLog
@@ -12,37 +10,6 @@ from .access_control_service import AccessControlService
 import logging
 
 logger = logging.getLogger(__name__)
-
-# Apply UUID JWT fix
-try:
-    from core.middleware.uuid_jwt_fix import apply_uuid_jwt_fix
-    fix_applied = apply_uuid_jwt_fix()
-    if fix_applied:
-        logger.info("UUID JWT fix applied successfully")
-    else:
-        logger.warning("UUID JWT fix could not be applied")
-except ImportError as e:
-    logger.warning(f"UUID JWT fix import failed: {e}")
-    pass
-
-
-class UUIDSafeRefreshToken(RefreshToken):
-    """Custom RefreshToken that handles UUID serialization properly"""
-    
-    @classmethod
-    def for_user(cls, user):
-        """Override to ensure UUID fields are converted to strings"""
-        token = super().for_user(user)
-        # Override the user_id with string version to prevent JSON serialization issues
-        if hasattr(user, 'id') and isinstance(user.id, uuid.UUID):
-            token.payload['user_id'] = str(user.id)
-        return token
-    
-    def __setitem__(self, key, value):
-        """Override to convert UUID values to strings"""
-        if isinstance(value, uuid.UUID):
-            value = str(value)
-        super().__setitem__(key, value)
 
 
 class AuthenticationService:
@@ -190,37 +157,17 @@ class AuthenticationService:
             if remember_device and not is_trusted_device:
                 self._add_trusted_device(user, device_fingerprint, user_agent)
             
-            # Ensure all UUID objects are converted to strings in the final result
-            auth_result = self._ensure_json_serializable(auth_result)
             return auth_result
             
         except Exception as e:
             logger.error(f"Authentication error for {username}: {str(e)}")
             auth_result['message'] = 'Authentication system error'
-            # Ensure error result is also JSON serializable
-            auth_result = self._ensure_json_serializable(auth_result)
             return auth_result
     
     def _format_user_info(self, user: CustomUser) -> Dict:
-        """Format user information for API responses, ensuring UUIDs are strings."""
-        profile_info = {}
-        try:
-            profile = user.profile
-            profile_info = {
-                'bio': profile.bio,
-                'department': profile.department,
-                'job_title': profile.job_title,
-                'phone': profile.phone_number,
-                'email_notifications': profile.email_notifications,
-                'threat_alerts': profile.threat_alerts,
-                'security_notifications': profile.security_notifications,
-                'profile_visibility': profile.profile_visibility,
-            }
-        except UserProfile.DoesNotExist:
-            pass
-
+        """Format user information for authentication response"""
         user_info = {
-            'id': str(user.id),  # Ensure UUID is a string
+            'id': str(user.id),
             'username': user.username,
             'email': user.email,
             'first_name': user.first_name,
@@ -237,35 +184,37 @@ class AuthenticationService:
         # Safely handle organization data
         if user.organization:
             user_info['organization'] = {
-                'id': str(user.organization.id),  # Ensure UUID is a string
+                'id': str(user.organization.id),
                 'name': user.organization.name,
                 'domain': user.organization.domain,
-                'is_publisher': user.organization.is_publisher,
+                'is_publisher': user.organization.is_publisher
             }
         else:
             user_info['organization'] = None
             
         return user_info
-
-    def _format_accessible_organizations(self, user: CustomUser) -> List[Dict]:
-        """Format accessible organizations for API responses, ensuring UUIDs are strings."""
-        accessible_orgs = self.access_control.get_accessible_organizations(user)
-        
-        formatted_orgs = [
-            {
-                'id': str(org.id),  # Ensure UUID is a string
-                'name': org.name,
-                'domain': org.domain,
-                'is_publisher': org.is_publisher,
-                'is_verified': org.is_verified,
-                'is_active': org.is_active,
-            }
-            for org in accessible_orgs
-        ]
-        return formatted_orgs
-
+    
+    def _format_accessible_organizations(self, user: CustomUser) -> list:
+        """Format accessible organizations for authentication response"""
+        try:
+            accessible_orgs = self.access_control.get_accessible_organizations(user)
+            result = []
+            for org in accessible_orgs:
+                org_data = {
+                    'id': str(org.id),
+                    'name': org.name,
+                    'domain': org.domain,
+                    'is_own': org.id == user.organization.id if user.organization else False,
+                    'access_level': 'full' if (user.organization and org.id == user.organization.id) else 'trust_based'
+                }
+                result.append(org_data)
+            return result
+        except Exception as e:
+            logger.error(f"Error formatting accessible organizations: {str(e)}")
+            return []
+    
     def _get_user_trust_context(self, user: CustomUser) -> Dict:
-        """Get user's trust context, ensuring UUIDs are strings."""
+        """Get trust context information for the user"""
         try:
             from core_ut.trust.models import TrustRelationship
             
@@ -280,44 +229,36 @@ class AuthenticationService:
                     'trust_aware_access': False
                 }
             
+            # Get basic trust metrics
             outgoing_relationships = TrustRelationship.objects.filter(
-                source_organization=user.organization,
+                source_organization=str(user.organization.id),
                 is_active=True,
                 status='active'
             ).count()
             
             incoming_relationships = TrustRelationship.objects.filter(
-                target_organization=user.organization,
+                target_organization=str(user.organization.id),
                 is_active=True,
                 status='active'
             ).count()
             
-            can_manage_trust = user.role in ['admin', 'BlueVisionAdmin', 'publisher']
-            
             return {
-                'organization_id': str(user.organization.id),
-                'organization_name': user.organization.name,
+                'organization_id': str(user.organization.id) if user.organization else None,
+                'organization_name': user.organization.name if user.organization else None,
                 'outgoing_trust_relationships': outgoing_relationships,
                 'incoming_trust_relationships': incoming_relationships,
-                'can_manage_trust': can_manage_trust,
-                'trust_aware_access': True,
-                'trust_metrics': {
-                    'total_relationships': outgoing_relationships + incoming_relationships,
-                    'bidirectional_relationships': min(outgoing_relationships, incoming_relationships)
-                }
+                'can_manage_trust': user.can_manage_trust_relationships,
+                'trust_aware_access': True
             }
-            
         except Exception as e:
-            logger.error(f"Error getting user trust context: {str(e)}")
-            # Return basic context on error instead of empty dict
+            logger.error(f"Error getting trust context: {str(e)}")
             return {
                 'organization_id': str(user.organization.id) if user.organization else None,
                 'organization_name': user.organization.name if user.organization else None,
                 'outgoing_trust_relationships': 0,
                 'incoming_trust_relationships': 0,
                 'can_manage_trust': False,
-                'trust_aware_access': False,
-                'error': 'Failed to load complete trust context'
+                'trust_aware_access': False
             }
     
     def _validate_totp_code(self, user: CustomUser, totp_code: str) -> bool:
@@ -597,43 +538,22 @@ class AuthenticationService:
         except (TokenError, CustomUser.DoesNotExist) as e:
             return {'success': False, 'message': 'Invalid token'}
     
-    def _ensure_json_serializable(self, obj):
-        """Convert UUID and other non-serializable objects to JSON-safe formats"""
-        if isinstance(obj, uuid.UUID):
-            return str(obj)
-        elif hasattr(obj, 'isoformat'):  # datetime objects
-            return obj.isoformat()
-        return obj
-    
     def _generate_tokens(self, user: CustomUser, request=None) -> Dict:
         """Generate JWT access and refresh tokens with custom claims"""
-        try:
-            # Use the patched RefreshToken.for_user method
-            refresh = RefreshToken.for_user(user)
-            
-            # Add custom claims using the UUID-safe setitem method
-            refresh['role'] = getattr(user, 'role', 'viewer')
-            refresh['organization'] = user.organization.name if user.organization else None
-            refresh['organization_id'] = str(user.organization.id) if user.organization else None
-            refresh['is_publisher'] = getattr(user, 'is_publisher', False)
-            refresh['is_verified'] = getattr(user, 'is_verified', True)
-            
-            # Create access token from refresh token
-            access_token = refresh.access_token
-            access_token['role'] = getattr(user, 'role', 'viewer')
-            access_token['organization'] = user.organization.name if user.organization else None
-            access_token['organization_id'] = str(user.organization.id) if user.organization else None
-            access_token['is_publisher'] = getattr(user, 'is_publisher', False)
-            
-            logger.info(f"Successfully generated tokens for user {user.username}")
-            
-        except Exception as token_error:
-            logger.error(f"Token generation error: {str(token_error)}")
-            logger.error(f"User object: {user}, User ID: {user.id}, User type: {type(user.id)}")
-            logger.error(f"Authentication error for {user.username}: {str(token_error)}")
-            import traceback
-            logger.error(f"Full traceback: {traceback.format_exc()}")
-            raise Exception(f"Failed to generate JWT tokens: {str(token_error)}")
+        refresh = RefreshToken.for_user(user)
+        
+        # Add custom claims - safely handle organization
+        refresh['role'] = user.role
+        refresh['organization'] = user.organization.name if user.organization else None
+        refresh['organization_id'] = str(user.organization.id) if user.organization else None
+        refresh['is_publisher'] = user.is_publisher
+        refresh['is_verified'] = user.is_verified
+        
+        access_token = refresh.access_token
+        access_token['role'] = user.role
+        access_token['organization'] = user.organization.name if user.organization else None
+        access_token['organization_id'] = str(user.organization.id) if user.organization else None
+        access_token['is_publisher'] = user.is_publisher
         
         return {
             'access': str(access_token),
@@ -692,7 +612,7 @@ class AuthenticationService:
         }
         
         import json
-        fingerprint_string = json.dumps(fingerprint_data, sort_keys=True, default=str)
+        fingerprint_string = json.dumps(fingerprint_data, sort_keys=True)
         return hashlib.sha256(fingerprint_string.encode()).hexdigest()
     
     def _handle_failed_login(self, user: CustomUser, ip_address: str, user_agent: str, reason: str) -> None:
@@ -765,37 +685,6 @@ class AuthenticationService:
             logger.info(f"Cleaned up {count} expired sessions")
         
         return count
-    
-    def _ensure_json_serializable(self, obj):
-        """
-        Recursively convert any UUID objects to strings to ensure JSON serialization works.
-        This is a safety net to prevent UUID serialization errors.
-        """
-        import uuid
-        import json
-        
-        def convert_uuids(item):
-            if isinstance(item, uuid.UUID):
-                return str(item)
-            elif isinstance(item, dict):
-                return {key: convert_uuids(value) for key, value in item.items()}
-            elif isinstance(item, list):
-                return [convert_uuids(value) for value in item]
-            elif isinstance(item, tuple):
-                return tuple(convert_uuids(value) for value in item)
-            else:
-                return item
-        
-        try:
-            # Convert any UUID objects to strings
-            converted_obj = convert_uuids(obj)
-            # Test JSON serialization to make sure it works
-            json.dumps(converted_obj, default=str)
-            return converted_obj
-        except Exception as e:
-            logger.warning(f"Failed to ensure JSON serialization: {str(e)}")
-            # Fallback: convert everything to string using default=str
-            return json.loads(json.dumps(obj, default=str))
     
     def get_user_sessions(self, user: CustomUser) -> list:
         """Get active sessions for a user"""

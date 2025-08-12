@@ -6,7 +6,7 @@ from django.apps import AppConfig
 
 class CrispThreatIntelConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'core'
+    name = 'crisp_threat_intel'
     verbose_name = 'CRISP Threat Intelligence Platform'
     
     def ready(self):

@@ -90,20 +90,12 @@ export const loginUser = async (username, password) => {
   
   const data = await handleResponse(response);
   
-  console.log('API Response Data:', data); // Keep for debugging
-  
-  // Save auth data to localStorage and TRANSFORM the response
+  // Save auth data to localStorage - match main.jsx format
   if (data.success && data.tokens) {
     localStorage.setItem('crisp_auth_token', data.tokens.access);
     localStorage.setItem('crisp_user', JSON.stringify(data.user));
+    // Also store refresh token for later use
     localStorage.setItem('crisp_refresh_token', data.tokens.refresh);
-    
-    return {
-      success: true,
-      token: data.tokens.access,  
-      user: data.user,
-      message: data.message
-    };
   }
   
   return data;
@@ -256,13 +248,23 @@ export const createUser = async (userData) => {
 };
 
 export const getUserProfile = async () => {
+  console.log('DEBUG: getUserProfile() called');
   const response = await fetch(`${API_URL}users/profile/`, {
     method: 'GET',
     headers: { ...authHeader() }
   });
   
+  console.log('DEBUG: getUserProfile response status:', response.status);
   const result = await handleResponse(response);
-  return result.data?.profile || result.data || result;
+  console.log('DEBUG: getUserProfile handleResponse result:', result);
+  console.log('DEBUG: result.data?.profile:', result.data?.profile);
+  console.log('DEBUG: result.data:', result.data);
+  console.log('DEBUG: result.user:', result.user);
+  
+  const finalResult = result.data?.profile || result.user || result.data || result;
+  console.log('DEBUG: getUserProfile final result:', finalResult);
+  
+  return finalResult;
 };
 
 export const updateUserProfile = async (profileData) => {
@@ -288,12 +290,17 @@ export const getUserStatistics = async () => {
 // Organization Management API functions
 export const getOrganizations = async () => {
   try {
+    console.log('DEBUG: Making organizations API call...');
     const response = await fetch(`${API_URL}organizations/list_organizations/`, {
       method: 'GET',
       headers: { ...authHeader() }
     });
     
+    console.log('DEBUG: Organizations API response status:', response.status);
+    console.log('DEBUG: Organizations API response ok:', response.ok);
+    
     if (!response.ok) {
+      console.error('DEBUG: Organizations API failed with status:', response.status);
       if (response.status === 403) {
         console.warn('Access denied to organizations list');
         return { data: { organizations: [] } };
@@ -302,15 +309,25 @@ export const getOrganizations = async () => {
         console.warn('Organizations service temporarily unavailable');
         return { data: { organizations: [] } };
       }
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
     const result = await handleResponse(response);
+    console.log('DEBUG: handleResponse result:', result);
+    console.log('DEBUG: result.data:', result.data);
+    console.log('DEBUG: result.data.organizations:', result.data?.organizations);
+    
     // The response structure is { success: true, data: { organizations: [...] } }
-    return {
+    const finalResult = {
       data: {
         organizations: result.data?.organizations || []
       }
     };
+    
+    console.log('DEBUG: Final organizations result:', finalResult);
+    console.log('DEBUG: Final organizations count:', finalResult.data.organizations.length);
+    
+    return finalResult;
   } catch (error) {
     console.error('Failed to fetch organizations:', error);
     return { data: { organizations: [] } };
@@ -761,13 +778,24 @@ export const getTrustMetrics = async () => {
 };
 
 export const updateTrustRelationship = async (relationshipId, updateData) => {
+  console.log('🔧 API - updateTrustRelationship called:', {
+    relationshipId,
+    updateData,
+    endpoint: `${API_URL}trust/relationships/${relationshipId}/`
+  });
+  
   const response = await fetch(`${API_URL}trust/relationships/${relationshipId}/`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(updateData)
   });
   
-  return await handleResponse(response);
+  console.log('📡 API - Response status:', response.status);
+  
+  const result = await handleResponse(response);
+  console.log('✅ API - Update result:', result);
+  
+  return result;
 };
 
 export const deleteTrustRelationship = async (relationshipId) => {

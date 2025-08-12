@@ -51,14 +51,11 @@ class AuthenticationViewSet(viewsets.ViewSet):
     
     def _get_client_ip(self, request):
         """Get client IP address from request."""
-        if request is None:
-            return '127.0.0.1'
-            
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0].strip()
+            ip = x_forwarded_for.split(',')[0]
         else:
-            ip = request.META.get('REMOTE_ADDR', '127.0.0.1')
+            ip = request.META.get('REMOTE_ADDR')
         return ip
     
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])

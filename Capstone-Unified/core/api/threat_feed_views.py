@@ -13,46 +13,24 @@ from core.models.models import ThreatFeed
 from core.services.otx_taxii_service import OTXTaxiiService
 from core.serializers.threat_feed_serializer import ThreatFeedSerializer
 from core.models.models import Indicator  
-from core.models.models import TTPData  
-
-# Import unified authentication
-from core.api.permissions import ThreatIntelligencePermission
-from core.api.response_utils import filter_by_organization
+from core.models.models import TTPData     
 
 logger = logging.getLogger(__name__)
 
 class ThreatFeedViewSet(viewsets.ModelViewSet):
     """
-    ViewSet for ThreatFeed operations with unified authentication.
-    Preserves ALL existing Core system functionality while adding Trust system security.
+    ViewSet for ThreatFeed operations
     """
     queryset = ThreatFeed.objects.all()
     serializer_class = ThreatFeedSerializer
-    permission_classes = [ThreatIntelligencePermission]
-    
-    def get_queryset(self):
-        """Filter queryset based on user's organization and permissions"""
-        queryset = super().get_queryset()
-        
-        # Apply organization-based filtering for authenticated users
-        if hasattr(self.request, 'user') and self.request.user.is_authenticated:
-            try:
-                return filter_by_organization(queryset, self.request.user, "owner")
-            except AttributeError:
-                # Fallback for Core system compatibility
-                pass
-        
-        # Preserve original behavior for unauthenticated access (if allowed by permissions)
-        return queryset
+    permission_classes = [AllowAny]
     
     @action(detail=False, methods=['get'])
     def external(self, request):
         """
-        Get all external threat feeds with organization-aware filtering.
-        Preserves exact Core system API response format.
+        Get all external threat feeds
         """
-        # Use filtered queryset for organization-aware access
-        external_feeds = self.get_queryset().filter(is_external=True)
+        external_feeds = ThreatFeed.objects.filter(is_external=True)
         serializer = self.get_serializer(external_feeds, many=True)
         return Response(serializer.data)
     
@@ -80,12 +58,11 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
         logger.info(f"CONSUME API CALLED for feed ID: {pk}")
         
         try:
-            # Use filtered queryset for organization-aware access
             try:
-                feed = get_object_or_404(self.get_queryset(), pk=pk)
+                feed = get_object_or_404(ThreatFeed, pk=pk)
             except Http404 as e:
                 return Response(
-                    {"error": "Threat feed not found or not accessible"},
+                    {"error": str(e)},
                     status=status.HTTP_404_NOT_FOUND
                 )
             logger.info(f"Found feed: {feed.name}, collection: {feed.taxii_collection_id}")
@@ -179,12 +156,12 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
         
     @action(detail=True, methods=['get'])
     def status(self, request, pk=None):
-        """Get the status of the threat feed with organization-aware access."""
+        """Get the status of the threat feed."""
         try:
-            feed = get_object_or_404(self.get_queryset(), pk=pk)
+            feed = get_object_or_404(ThreatFeed, pk=pk)
         except Http404 as e:
             return Response(
-                {"error": "Threat feed not found or not accessible"},
+                {"error": str(e)},
                 status=status.HTTP_404_NOT_FOUND
             )
 
@@ -208,13 +185,13 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['get'])
     def test_connection(self, request, pk=None):
-        """Test TAXII connection without consuming with organization-aware access."""
+        """Test TAXII connection without consuming."""
         try:
             try:
-                feed = get_object_or_404(self.get_queryset(), pk=pk)
+                feed = get_object_or_404(ThreatFeed, pk=pk)
             except Http404 as e:
                 return Response(
-                    {"error": "Threat feed not found or not accessible"},
+                    {"error": str(e)},
                     status=status.HTTP_404_NOT_FOUND
                 )
             service = OTXTaxiiService()

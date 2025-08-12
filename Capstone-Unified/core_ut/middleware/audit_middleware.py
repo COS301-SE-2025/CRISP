@@ -129,7 +129,8 @@ class AuditMiddleware(MiddlewareMixin):
             ip_address=self._get_client_ip(request),
             user_agent=request.META.get('HTTP_USER_AGENT', ''),
             success=True,
-            additional_data=additional_data
+            additional_data=additional_data,
+            request=request
         )
     
     def _log_request_complete(self, request, response):
@@ -171,7 +172,8 @@ class AuditMiddleware(MiddlewareMixin):
             user_agent=request.META.get('HTTP_USER_AGENT', ''),
             success=success,
             failure_reason=f"HTTP {response.status_code}" if not success else None,
-            additional_data=additional_data
+            additional_data=additional_data,
+            request=request
         )
     
     def _log_request_exception(self, request, exception):
@@ -203,7 +205,8 @@ class AuditMiddleware(MiddlewareMixin):
             user_agent=request.META.get('HTTP_USER_AGENT', ''),
             success=False,
             failure_reason=f"{type(exception).__name__}: {str(exception)}",
-            additional_data=additional_data
+            additional_data=additional_data,
+            request=request
         )
     
     def _get_action_from_request(self, request, response):

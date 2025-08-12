@@ -17,12 +17,6 @@ import PhoneNumberInput from './components/PhoneNumberInput.jsx';
 import Pagination from './components/Pagination.jsx';
 import { NotificationProvider, useNotifications } from './components/NotificationManager.jsx';
 import NotificationWatcher from './components/NotificationWatcher';
-// Threat Intelligence Components
-import ThreatFeedList from './components/ThreatFeedList.jsx';
-import ThreatFeedDetail from './components/ThreatFeedDetail.jsx';
-import IndicatorTable from './components/IndicatorTable.jsx';
-import STIXViewer from './components/STIXViewer.jsx';
-import ThreatDashboard from './components/ThreatDashboard.jsx';
 
 
 function AppRegister({ user, onLogout, isAdmin }) { // Updated props to match what AuthWrapper passes
@@ -300,52 +294,16 @@ function AppRegister({ user, onLogout, isAdmin }) { // Updated props to match wh
       {/* Main Content */}
       <main className="main-content">
         <div className="container">
-          {/* Threat Intelligence Dashboard */}
-          <ErrorBoundary>
-            <ThreatDashboard 
-              active={activePage === 'dashboard'} 
-              userRole={userRole}
-              userOrganization={userOrganization}
-              onNavigate={showPage}
-            />
-          </ErrorBoundary>
+          {/* Dashboard */}
+          <Dashboard active={activePage === 'dashboard'} />
 
           {/* Threat Feeds - All users can access */}
-          <ErrorBoundary>
-            <ThreatFeedList 
-              active={activePage === 'threat-feeds'} 
-              userRole={userRole}
-              onNavigate={showPage}
-            />
-          </ErrorBoundary>
+          <ThreatFeeds active={activePage === 'threat-feeds'} />
 
-          {/* Threat Feed Detail View */}
-          <ErrorBoundary>
-            <ThreatFeedDetail 
-              active={activePage === 'threat-feed-detail'} 
-              feedId={getUrlParams().feedId}
-              userRole={userRole}
-              onNavigate={showPage}
-            />
-          </ErrorBoundary>
-
-          {/* IoC Management - All users can access, with role-based permissions */}
-          <ErrorBoundary>
-            <IndicatorTable 
-              active={activePage === 'ioc-management'} 
-              userRole={userRole}
-              searchQuery={getUrlParams().search}
-            />
-          </ErrorBoundary>
-
-          {/* STIX Viewer */}
-          <ErrorBoundary>
-            <STIXViewer 
-              active={activePage === 'stix-viewer'} 
-              stixId={getUrlParams().stixId}
-              userRole={userRole}
-            />
-          </ErrorBoundary>
+          {/* IoC Management - Publisher permissions required */}
+          {isPublisher && (
+            <IoCManagement active={activePage === 'ioc-management'} />
+          )}
 
           {/* TTP Analysis - Publisher/Admin only */}
           {(isPublisher || isBlueVisionAdmin) && (
@@ -3067,11 +3025,22 @@ function AccountSettings({ active, user }) {
   });
 
   useEffect(() => {
+    console.log('DEBUG: AccountSettings useEffect - active:', active);
     if (active) {
+      console.log('DEBUG: AccountSettings is active, fetching data...');
       fetchOrganizations();
       fetchActualProfile();
+    } else {
+      console.log('DEBUG: AccountSettings is not active, skipping data fetch');
     }
   }, [active]);
+
+  // Also fetch profile data when component mounts (regardless of active state)
+  useEffect(() => {
+    console.log('DEBUG: AccountSettings mounted, force fetching profile...');
+    fetchActualProfile();
+    fetchOrganizations();
+  }, []);
 
   // Effect to match organization when both profile data and organizations are loaded
   useEffect(() => {
@@ -3144,8 +3113,10 @@ function AccountSettings({ active, user }) {
       
       let organizationsData = [];
       
-      // Handle different response formats
-      if (response && Array.isArray(response.data)) {
+      // Handle different response formats - fix for backend structure
+      if (response && response.data && Array.isArray(response.data.organizations)) {
+        organizationsData = response.data.organizations;
+      } else if (response && Array.isArray(response.data)) {
         organizationsData = response.data;
       } else if (response && Array.isArray(response)) {
         organizationsData = response;

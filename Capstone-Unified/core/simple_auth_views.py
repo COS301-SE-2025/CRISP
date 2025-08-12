@@ -1,141 +1,35 @@
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth.models import User
+from django.core.mail import send_mail
+from django.conf import settings
+from django.utils import timezone
 import json
-import logging
-
-# Import Trust system authentication service
-try:
-    from core_ut.user_management.services.auth_service import AuthenticationService
-    TRUST_AUTH_AVAILABLE = True
-except ImportError:
-    TRUST_AUTH_AVAILABLE = False
-
-# Import unified decorators
-from core.middleware.unified_decorators import api_authentication_required, preserve_core_functionality
-
-logger = logging.getLogger(__name__)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_view(request):
-    """
-    Unified login view that works with both Core and Trust authentication systems.
-    Preserves all existing Core functionality while adding Trust system features.
-    """
     try:
         data = json.loads(request.body) if request.body else {}
         username = data.get('username')
         password = data.get('password')
-        remember_device = data.get('remember_device', False)
-        totp_code = data.get('totp_code')
         
         if not username or not password:
             return Response({
                 'error': 'Username and password required'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Try Trust system authentication first if available
-        if TRUST_AUTH_AVAILABLE:
-            try:
-                auth_service = AuthenticationService()
-                auth_result = auth_service.authenticate_user(
-                    username=username,
-                    password=password,
-                    request=request,
-                    remember_device=remember_device,
-                    totp_code=totp_code
-                )
-                
-                if auth_result['success']:
-                    # Trust system authentication successful
-                    response_data = {
-                        'success': True,
-                        'message': auth_result['message'],
-                        'tokens': auth_result['tokens'],
-                        'user': auth_result['user'],
-                        'trust_context': auth_result.get('trust_context', {}),
-                        'permissions': auth_result.get('permissions', []),
-                        'accessible_organizations': auth_result.get('accessible_organizations', []),
-                        'authentication_method': 'trust_system'
-                    }
-                    
-                    # Add additional flags for special cases
-                    if auth_result.get('requires_2fa'):
-                        response_data['requires_2fa'] = True
-                        return Response(response_data, status=status.HTTP_200_OK)
-                    
-                    if auth_result.get('requires_device_trust'):
-                        response_data['requires_device_trust'] = True
-                    
-                    return Response(response_data, status=status.HTTP_200_OK)
-                else:
-                    # Trust system authentication failed
-                    error_response = {
-                        'success': False,
-                        'error': 'Authentication failed',
-                        'message': auth_result.get('message', 'Invalid credentials')
-                    }
-                    
-                    # Add specific error flags
-                    if auth_result.get('requires_2fa'):
-                        error_response['requires_2fa'] = True
-                        error_response['message'] = 'Two-factor authentication required'
-                        return Response(error_response, status=status.HTTP_200_OK)  # Not an error, just needs 2FA
-                    
-                    return Response(error_response, status=status.HTTP_401_UNAUTHORIZED)
-                    
-            except Exception as e:
-                logger.warning(f"Trust system authentication failed, falling back to Core system: {str(e)}")
-        
-        # Fallback to Core system authentication (Django's built-in)
+        # Authenticate user
         user = authenticate(username=username, password=password)
         
         if user is not None:
-            # Check if user is active
-            if not user.is_active:
-                return Response({
-                    'error': 'Account is inactive'
-                }, status=status.HTTP_401_UNAUTHORIZED)
-            
-            # Create JWT tokens using Core system method
+            # Create JWT tokens
             refresh = RefreshToken.for_user(user)
             access_token = refresh.access_token
-            
-            # Build user info with Core system compatibility
-            user_info = {
-                'id': str(user.id),  # Ensure string format for consistency
-                'username': user.username,
-                'email': user.email,
-                'first_name': getattr(user, 'first_name', ''),
-                'last_name': getattr(user, 'last_name', ''),
-                'is_staff': user.is_staff,
-                'is_admin': user.is_superuser,
-                'role': 'BlueVisionAdmin' if user.is_superuser else ('staff' if user.is_staff else 'user'),
-                'is_verified': True,  # Core system users are considered verified
-                'two_factor_enabled': False  # Core system doesn't have 2FA by default
-            }
-            
-            # Add organization info if available
-            if hasattr(user, 'organization') and user.organization:
-                user_info['organization'] = {
-                    'id': str(user.organization.id),
-                    'name': user.organization.name,
-                    'domain': getattr(user.organization, 'domain', ''),
-                    'is_publisher': getattr(user.organization, 'is_publisher', False)
-                }
-            elif hasattr(user, 'profile') and user.profile and user.profile.organization:
-                user_info['organization'] = {
-                    'id': str(user.profile.organization.id),
-                    'name': user.profile.organization.name,
-                    'domain': getattr(user.profile.organization, 'domain', ''),
-                    'is_publisher': False
-                }
-            else:
-                user_info['organization'] = None
             
             return Response({
                 'success': True,
@@ -144,103 +38,369 @@ def login_view(request):
                     'access': str(access_token),
                     'refresh': str(refresh)
                 },
-                'user': user_info,
-                'trust_context': {},  # Empty for Core system users
-                'permissions': ['core_access'],  # Basic Core system permission
-                'accessible_organizations': [],  # To be populated by middleware
-                'authentication_method': 'core_system'
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'is_staff': user.is_staff,
+                    'is_admin': user.is_superuser,
+                    'role': 'BlueVisionAdmin' if user.is_superuser else 'user'
+                }
             }, status=status.HTTP_200_OK)
         else:
             return Response({
-                'success': False,
-                'error': 'Invalid credentials',
-                'message': 'Username or password is incorrect'
+                'error': 'Invalid credentials'
             }, status=status.HTTP_401_UNAUTHORIZED)
             
     except json.JSONDecodeError:
         return Response({
-            'error': 'Invalid JSON',
-            'message': 'Request body must contain valid JSON'
+            'error': 'Invalid JSON'
         }, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
-        logger.error(f"Login error: {str(e)}")
         return Response({
-            'error': 'Authentication system error',
-            'message': 'An error occurred during authentication'
+            'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
-@preserve_core_functionality
-def system_health(request):
-    """
-    System health check endpoint.
-    Preserves Core system functionality while adding Trust system integration.
-    """
-    health_data = {
-        'status': 'healthy',
-        'version': '1.0.0',
-        'timestamp': '2025-08-09T10:00:00Z',
-        'authentication': {
-            'trust_system_available': TRUST_AUTH_AVAILABLE,
-            'core_system_available': True,
-            'unified_auth_enabled': True
-        }
-    }
-    
-    # Add user context if authenticated
-    if hasattr(request, 'user') and request.user.is_authenticated:
-        health_data['user_authenticated'] = True
-        health_data['authentication_method'] = (
-            'trust_system' if hasattr(request.user, 'role') else 'core_system'
-        )
-    else:
-        health_data['user_authenticated'] = False
-    
-    return Response(health_data)
-
-@api_view(['GET'])
-@api_authentication_required
-@preserve_core_functionality
-def alert_statistics(request):
-    """
-    Alert statistics endpoint with authentication required.
-    Integrates with Trust system alerts if available.
-    """
+@permission_classes([IsAuthenticated])
+def get_organizations_simple(request):
+    """Get organizations list (simplified version)"""
     try:
-        # Try to get Trust system alert statistics
-        if TRUST_AUTH_AVAILABLE:
-            try:
-                from core_ut.alerts.models_ut import Alert
-                
-                total_alerts = Alert.objects.count()
-                critical_alerts = Alert.objects.filter(severity='critical').count()
-                recent_alerts = list(
-                    Alert.objects.order_by('-created_at')[:5].values(
-                        'id', 'title', 'severity', 'status', 'created_at'
-                    )
-                )
-                
-                return Response({
-                    'total_alerts': total_alerts,
-                    'critical_alerts': critical_alerts,
-                    'recent_alerts': recent_alerts,
-                    'source': 'trust_system'
-                })
-                
-            except ImportError:
-                pass
+        # Debug logging
+        print(f"DEBUG: Organizations request from user: {request.user}")
+        print(f"DEBUG: Authorization header: {request.META.get('HTTP_AUTHORIZATION', 'No auth header')}")
         
-        # Fallback to Core system (mock data for now)
+        # Return mock organizations for now
+        mock_organizations = [
+            {
+                "id": "1",
+                "name": "BlueVision Security",
+                "organization_type": "security_vendor",
+                "description": "Security vendor organization",
+                "is_active": True,
+                "created_date": timezone.now().isoformat()
+            },
+            {
+                "id": "2", 
+                "name": "University Research Lab",
+                "organization_type": "educational",
+                "description": "Educational research organization",
+                "is_active": True,
+                "created_date": timezone.now().isoformat()
+            },
+            {
+                "id": "3",
+                "name": "Financial Corp",
+                "organization_type": "financial", 
+                "description": "Financial services organization",
+                "is_active": True,
+                "created_date": timezone.now().isoformat()
+            },
+            {
+                "id": "4",
+                "name": "Tech Industries",
+                "organization_type": "technology",
+                "description": "Technology company",
+                "is_active": True,
+                "created_date": timezone.now().isoformat()
+            }
+        ]
+        
         return Response({
-            'total_alerts': 0,
-            'critical_alerts': 0,
-            'recent_alerts': [],
-            'source': 'core_system'
-        })
+            'success': True,
+            'data': {
+                'organizations': mock_organizations,
+                'total_count': len(mock_organizations)
+            }
+        }, status=status.HTTP_200_OK)
         
     except Exception as e:
-        logger.error(f"Error getting alert statistics: {str(e)}")
         return Response({
-            'error': 'Failed to retrieve alert statistics',
-            'message': str(e)
+            'success': False,
+            'message': f'Failed to get organizations: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+def system_health(request):
+    return Response({
+        'status': 'healthy',
+        'version': '1.0.0',
+        'timestamp': '2025-08-09T10:00:00Z'
+    })
+
+@api_view(['GET'])
+def alert_statistics(request):
+    return Response({
+        'total_alerts': 0,
+        'critical_alerts': 0,
+        'recent_alerts': []
+    })
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_test_email(request):
+    """Send a test email to verify email configuration"""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        recipient_email = data.get('email', request.user.email)
+        
+        if not recipient_email:
+            return Response({
+                'success': False,
+                'message': 'No email address provided'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Send test email
+        subject = 'CRISP System - Test Email'
+        message = f'''
+        This is a test email from the CRISP Threat Intelligence Platform.
+        
+        Sent to: {recipient_email}
+        Sent at: {timezone.now()}
+        From user: {request.user.username}
+        
+        If you received this email, your email configuration is working correctly.
+        '''
+        
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@crisp-system.example.com')
+        
+        send_mail(
+            subject,
+            message,
+            from_email,
+            [recipient_email],
+            fail_silently=False,
+        )
+        
+        return Response({
+            'success': True,
+            'message': f'Test email sent successfully to {recipient_email}'
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Failed to send test email: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated])
+def get_user_profile(request):
+    """Get or update current user profile"""
+    try:
+        user = request.user
+        
+        if request.method == 'GET':
+            user_data = {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'full_name': f"{user.first_name} {user.last_name}".strip() or user.username,
+                'job_title': 'Security Administrator',  # Default job title
+                'organization': 'BlueVision Security',  # Default organization
+                'organization_id': '1',
+                'is_staff': user.is_staff,
+                'is_superuser': user.is_superuser,
+                'is_active': user.is_active,
+                'date_joined': user.date_joined.isoformat() if user.date_joined else None,
+                'last_login': user.last_login.isoformat() if user.last_login else None,
+                'role': 'BlueVisionAdmin' if user.is_superuser else 'user'
+            }
+            
+            return Response({
+                'success': True,
+                'data': {
+                    'profile': user_data
+                },
+                'user': user_data  # Keep both formats for compatibility
+            }, status=status.HTTP_200_OK)
+            
+        elif request.method == 'PUT':
+            data = json.loads(request.body) if request.body else {}
+            
+            # Handle full_name field - split into first_name and last_name
+            if 'full_name' in data:
+                full_name = data['full_name'].strip()
+                if full_name:
+                    # Split full name into first and last name
+                    name_parts = full_name.split()
+                    if len(name_parts) >= 2:
+                        data['first_name'] = name_parts[0]
+                        data['last_name'] = ' '.join(name_parts[1:])
+                    elif len(name_parts) == 1:
+                        data['first_name'] = name_parts[0]
+                        data['last_name'] = ''
+                    else:
+                        data['first_name'] = ''
+                        data['last_name'] = ''
+                else:
+                    data['first_name'] = ''
+                    data['last_name'] = ''
+            
+            # Update user fields
+            if 'first_name' in data:
+                user.first_name = data['first_name']
+            if 'last_name' in data:
+                user.last_name = data['last_name']
+            if 'email' in data:
+                user.email = data['email']
+            
+            user.save()
+            
+            # For now, store job_title in session or use default
+            job_title = data.get('job_title', 'Security Administrator')
+            
+            user_data = {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'full_name': f"{user.first_name} {user.last_name}".strip() or user.username,
+                'job_title': job_title,
+                'organization': 'BlueVision Security',  # Default organization
+                'organization_id': '1',
+                'is_staff': user.is_staff,
+                'is_superuser': user.is_superuser,
+                'is_active': user.is_active,
+                'date_joined': user.date_joined.isoformat() if user.date_joined else None,
+                'last_login': user.last_login.isoformat() if user.last_login else None,
+                'role': 'BlueVisionAdmin' if user.is_superuser else 'user'
+            }
+            
+            return Response({
+                'success': True,
+                'data': {
+                    'profile': user_data
+                },
+                'user': user_data,  # Keep both formats for compatibility
+                'message': 'Profile updated successfully'
+            }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Failed to process user profile: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_statistics(request):
+    """Get user statistics"""
+    try:
+        # Basic user statistics
+        total_users = User.objects.count()
+        active_users = User.objects.filter(is_active=True).count()
+        staff_users = User.objects.filter(is_staff=True).count()
+        superusers = User.objects.filter(is_superuser=True).count()
+        
+        return Response({
+            'success': True,
+            'statistics': {
+                'total_users': total_users,
+                'active_users': active_users,
+                'staff_users': staff_users,
+                'superusers': superusers,
+                'inactive_users': total_users - active_users,
+                'regular_users': total_users - staff_users,
+                'current_user': {
+                    'username': request.user.username,
+                    'role': 'BlueVisionAdmin' if request.user.is_superuser else 'user',
+                    'permissions': {
+                        'is_staff': request.user.is_staff,
+                        'is_superuser': request.user.is_superuser,
+                        'can_manage_users': request.user.is_staff,
+                        'can_view_statistics': request.user.is_staff
+                    }
+                }
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Failed to get user statistics: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def test_gmail_connection(request):
+    """Test Gmail SMTP connection"""
+    try:
+        from django.core.mail import get_connection
+        
+        # Test the email connection
+        connection = get_connection()
+        connection.open()
+        connection.close()
+        
+        return Response({
+            'success': True,
+            'message': 'Gmail connection successful',
+            'email_backend': settings.EMAIL_BACKEND,
+            'email_host': getattr(settings, 'EMAIL_HOST', 'Not configured'),
+            'email_port': getattr(settings, 'EMAIL_PORT', 'Not configured'),
+            'timestamp': timezone.now().isoformat()
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Gmail connection failed: {str(e)}',
+            'error_type': type(e).__name__
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_alert_test_email(request):
+    """Send test email for alerts system"""
+    try:
+        data = json.loads(request.body) if request.body else {}
+        recipient_email = data.get('recipient_email') or data.get('email')
+        
+        if not recipient_email:
+            return Response({
+                'success': False,
+                'message': 'No email address provided'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Send test email
+        subject = 'CRISP Alert System - Test Email'
+        message = f'''
+This is a test email from the CRISP Threat Intelligence Alert System.
+
+Recipient: {recipient_email}
+Sent at: {timezone.now()}
+From user: {request.user.username}
+
+If you received this email, your email configuration is working correctly.
+The CRISP system can now send threat intelligence alerts and notifications.
+
+Best regards,
+CRISP Threat Intelligence Platform
+        '''
+        
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@crisp-system.example.com')
+        
+        send_mail(
+            subject,
+            message,
+            from_email,
+            [recipient_email],
+            fail_silently=False,
+        )
+        
+        return Response({
+            'success': True,
+            'message': f'Test email sent successfully to {recipient_email}',
+            'recipient': recipient_email,
+            'timestamp': timezone.now().isoformat()
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Failed to send test email: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

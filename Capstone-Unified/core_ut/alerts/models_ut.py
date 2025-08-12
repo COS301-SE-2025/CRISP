@@ -4,7 +4,6 @@ Email tracking models for CRISP alerts system
 
 from django.db import models
 from django.utils import timezone
-from django.conf import settings
 import uuid
 
 
@@ -44,14 +43,14 @@ class EmailLog(models.Model):
     
     # User context
     sent_by = models.ForeignKey(
-        'settings.AUTH_USER_MODEL', 
+        'user_management.CustomUser', 
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True,
         related_name='sent_emails'
     )
     organization = models.ForeignKey(
-        'ut_user_management.Organization',
+        'user_management.Organization',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

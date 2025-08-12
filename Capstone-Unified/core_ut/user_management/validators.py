@@ -347,7 +347,7 @@ def validate_json_field(value):
     """
     try:
         import json
-        json.dumps(value, default=str)
+        json.dumps(value)
     except (TypeError, ValueError) as e:
         raise ValidationError(f"Value must be JSON serializable: {str(e)}")
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { changePassword } from '../api.js';
-import LoadingSpinner from './LoadingSpinner.jsx';
+import LoadingSpinner from './LoadingSpinner';
 
 function ChangePassword({ isOpen, onClose, onPasswordChanged }) {
   const [formData, setFormData] = useState({

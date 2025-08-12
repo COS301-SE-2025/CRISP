@@ -33,7 +33,7 @@ class UserInvitation(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(max_length=255, help_text="Email address of the invitee")
     organization = models.ForeignKey(
-        'ut_user_management.Organization', 
+        'user_management.Organization', 
         on_delete=models.CASCADE,
         related_name='invitations',
         help_text="Organization extending the invitation"
