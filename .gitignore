@@ -1,12 +1,20 @@
+# ===================================
+# CRISP PROJECT GITIGNORE
+# Covers Django backend + React frontend
+# ===================================
 
+# =====================================
+# PYTHON & DJANGO
+# =====================================
 
-# Python
+# Python bytecode
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+
+# Distribution / packaging
 .Python
-env/
 build/
 develop-eggs/
 dist/
@@ -25,13 +33,34 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# Virtual Environments
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Virtual environments
 venv/
-.venv/
 env/
 ENV/
 env.bak/
 venv.bak/
+.venv/
+.env/
+pyvenv.cfg
 fresh_venv/
 
 # Django
@@ -41,117 +70,458 @@ db.sqlite3
 db.sqlite3-journal
 media/
 staticfiles/
+static/
+crisp_settings.log
 
-# Environment Variables
+# Django migrations (keep structure but ignore auto-generated)
+**/migrations/__pycache__/
+**/migrations/*.pyc
+
+# =====================================
+# ENVIRONMENT & SECRETS
+# =====================================
+
+# Environment files
 .env
-.env.local
-.env.production
-.env.staging
-.env.development.local
-.env.test.local
-.env.production.local
-.claude/
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
+.env.*
+!.env.example
+.envrc
 
-# OS specific
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+# Secret keys and sensitive config
+secrets.py
+secrets.json
+config.json
+config.local.json
+settings.json
+settings.local.json
+.settings/
+settings/
+configuration.py
+configuration.json
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.nox/
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
+# API keys and tokens
+*.key
+*.pem
+*.crt
+*.p12
+api_keys.txt
+tokens.txt
+
+# =====================================
+# DATABASE
+# =====================================
+
+# PostgreSQL
+*.sql
+*.dump
+*.backup
+
+# SQLite
+*.sqlite
+*.sqlite3
+*.db
+
+# Database backups
+backup_*.sql
+dump_*.sql
+
+# =====================================
+# NODE.JS & REACT
+# =====================================
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Build outputs
+dist/
+build/
+out/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# node-waf configuration
+.lock-wscript
+
+# Compiled binary addons
+build/Release
+
+# Dependency directories
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+
+# Nuxt.js build / generate output
+.nuxt
+
+# Storybook build outputs
+.out
+.storybook-out
+
+# Temporary folders
+tmp/
+temp/
+
+# =====================================
+# LOGS & MONITORING
+# =====================================
+
+# Log files
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# CRISP specific logs
+audit.log
+security.log
+trust_management.log
+crisp_threat_intel.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# =====================================
+# CACHING & TEMPORARY FILES
+# =====================================
+
+# Redis dumps
+dump.rdb
 
 # Celery
 celerybeat-schedule
 celerybeat.pid
 
-# Redis
-dump.rdb
-
-# Logs
-logs/
-*.log
+# Cache directories
+.cache/
+.tmp/
 
 # Temporary files
 *.tmp
 *.temp
+.temporary
 
-# Node.js & React
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# =====================================
+# IDE & EDITORS
+# =====================================
 
+# Visual Studio Code
+.vscode/
+*.code-workspace
 
+# PyCharm
+.idea/
+*.iml
+*.ipr
+*.iws
 
-# React Build Files
-build/
-dist/
-*.tgz
-*.tar.gz
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
 
-# React Dev Files
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# Vim
+*.swp
+*.swo
+*~
+.netrwhist
 
-# Package Lock Files (optional - some teams commit these)
-package-lock.json
-yarn.lock
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
 
-# Django Migration Files (optional - depends on team preference)
-# */migrations/0*.py
-# !*/migrations/__init__.py
+# =====================================
+# OPERATING SYSTEM
+# =====================================
 
-# Security & Keys
-*.pem
-*.key
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# =====================================
+# SECURITY & CERTIFICATES
+# =====================================
+
+# SSL certificates
 *.crt
+*.csr
+*.key
+*.pem
 *.p12
-secrets/
-keys/
-credentials/
+*.pfx
 
-# Database Files
-*.sqlite3
-*.sqlite
-*.db
+# SSH keys
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
 
-# Cache & Session Files
-.cache/
-sessions/
+# =====================================
+# CRISP PROJECT SPECIFIC
+# =====================================
 
-# JWT Secrets
-jwt_secret.txt
-secret_key.txt
+# CRISP data directories
+data/
+exports/
+imports/
+uploads/
 
-# Email Testing Files
-emails/
-email_test/
+# CRISP backup files
+backup_*
+*.backup
+*.bak
 
-# STIX/TAXII Data Files
-*.stix
-*.stix2
-taxii_data/
-threat_feeds/
+# CRISP testing data
+test_data/
+mock_data/
+sample_data/
 
-# Project-specific ignores
-# (Add project-specific patterns below this line)
+# CRISP temporary processing files
+processing/
+temp_stix/
+temp_taxii/
+
+# CRISP log directories
+logs/
+log/
+
+# CRISP configuration overrides
+local_config.py
+dev_config.py
+prod_config.py
+
+# CRISP development files
+dev.py
+development.py
+*.dev
+*.development
+
+# CRISP integration planning (sensitive internal docs)
+INTEGRATION_PLAN.md
+
+# =====================================
+# INTEGRATION ARTIFACTS
+# =====================================
+
+# Integration plan artifacts
+integration_backup/
+migration_scripts/
+data_migration/
+archived_systems/
+
+# Old system backups
+*_ARCHIVED_*
+*_OLD_*
+*_BACKUP_*
+
+# Migration temp files
+migrate_*.py
+migration_*.sql
+data_export_*.json
+
+# =====================================
+# DOCUMENTATION BUILD
+# =====================================
+
+# Sphinx documentation
+docs/_build/
+docs/build/
+
+# MkDocs
+site/
+
+# =====================================
+# MISC
+# =====================================
+
+# Archives
+*.zip
+*.tar.gz
+*.tar.bz2
+*.rar
+*.7z
+
+# Binary files
+*.exe
+*.dll
+*.bin
+*.deb
+*.rpm
+*.dmg
+
+# Large files that shouldn't be in repo
+*.iso
+*.img
+*.vmdk
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# PEP 582
+__pypackages__/
+
+# Scrapy stuff
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# =====================================
+# EDITOR SPECIFIC
+# =====================================
+
+# Nano
+*.save
+*.swp
+
+# Eclipse
+.metadata
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.settings/
+.loadpath
+.recommenders
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# =====================================
+# PACKAGE MANAGERS
+# =====================================
+
+# Yarn
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# pnpm
+.pnpm-debug.log*
+
+# Stores
+.nx/cache
+
+# =====================================
+# END OF GITIGNORE
+# ===================================

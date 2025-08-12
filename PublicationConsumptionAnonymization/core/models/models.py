@@ -615,6 +615,7 @@ class Indicator(models.Model):
     hash_type = models.CharField(max_length=10, choices=HASH_TYPES, blank=True, null=True)
     
     # Metadata
+    name = models.TextField(blank=True, null=True)  # Title/name of the indicator
     description = models.TextField(blank=True, null=True)
     confidence = models.IntegerField(default=50)  # 0-100
     threat_feed = models.ForeignKey(ThreatFeed, on_delete=models.CASCADE, related_name='indicators')
@@ -790,3 +791,100 @@ class TrustRelationship(models.Model):
     class Meta:
         unique_together = ['source_organization', 'target_organization']
         ordering = ['-created_at']
+
+
+class SystemActivity(models.Model):
+    """
+    Track system activities for dashboard recent activity feed
+    """
+    ACTIVITY_TYPES = [
+        ('feed_added', 'Feed Added'),
+        ('feed_consumed', 'Feed Consumed'),
+        ('feed_deleted', 'Feed Deleted'),
+        ('indicator_added', 'Indicator Added'),
+        ('indicators_bulk_added', 'Bulk Indicators Added'),
+        ('feed_updated', 'Feed Updated'),
+        ('feed_error', 'Feed Error'),
+        ('system_event', 'System Event'),
+    ]
+    
+    ACTIVITY_CATEGORIES = [
+        ('feed', 'Feed Activity'),
+        ('indicator', 'Indicator Activity'),
+        ('system', 'System Activity'),
+        ('user', 'User Activity'),
+    ]
+    
+    activity_type = models.CharField(max_length=50, choices=ACTIVITY_TYPES)
+    category = models.CharField(max_length=20, choices=ACTIVITY_CATEGORIES)
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    
+    # Related objects (optional)
+    threat_feed = models.ForeignKey(ThreatFeed, on_delete=models.CASCADE, null=True, blank=True)
+    indicator = models.ForeignKey(Indicator, on_delete=models.CASCADE, null=True, blank=True)
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, null=True, blank=True)
+    
+    # Activity metadata
+    metadata = models.JSONField(default=dict, blank=True)  # Store additional data like counts, etc.
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.get_activity_type_display()}: {self.title}"
+    
+    @property
+    def icon(self):
+        """Return FontAwesome icon class based on activity type"""
+        icon_map = {
+            'feed_added': 'fas fa-plus',
+            'feed_consumed': 'fas fa-sync-alt',
+            'feed_deleted': 'fas fa-trash',
+            'indicator_added': 'fas fa-shield-alt',
+            'indicators_bulk_added': 'fas fa-upload',
+            'feed_updated': 'fas fa-edit',
+            'feed_error': 'fas fa-exclamation-triangle',
+            'system_event': 'fas fa-cog',
+        }
+        return icon_map.get(self.activity_type, 'fas fa-info')
+    
+    @property
+    def badge_type(self):
+        """Return badge type for styling"""
+        badge_map = {
+            'feed_added': 'badge-active',
+            'feed_consumed': 'badge-active',
+            'feed_deleted': 'badge-error',
+            'indicator_added': 'badge-active',
+            'indicators_bulk_added': 'badge-active',
+            'feed_updated': 'badge-warning',
+            'feed_error': 'badge-error',
+            'system_event': 'badge-info',
+        }
+        return badge_map.get(self.activity_type, 'badge-info')
+    
+    @classmethod
+    def log_activity(cls, activity_type, title, description=None, **kwargs):
+        """Helper method to log activities"""
+        category_map = {
+            'feed_added': 'feed',
+            'feed_consumed': 'feed',
+            'feed_deleted': 'feed',
+            'feed_updated': 'feed',
+            'feed_error': 'feed',
+            'indicator_added': 'indicator',
+            'indicators_bulk_added': 'indicator',
+            'system_event': 'system',
+        }
+        
+        return cls.objects.create(
+            activity_type=activity_type,
+            category=category_map.get(activity_type, 'system'),
+            title=title,
+            description=description,
+            **kwargs
+        )
+    
+    class Meta:
+        ordering = ['-created_at']
+        db_table = 'system_activities'
