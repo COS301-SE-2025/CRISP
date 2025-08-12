@@ -220,6 +220,25 @@ def get_user_profile(request):
         elif request.method == 'PUT':
             data = json.loads(request.body) if request.body else {}
             
+            # Handle full_name field - split into first_name and last_name
+            if 'full_name' in data:
+                full_name = data['full_name'].strip()
+                if full_name:
+                    # Split full name into first and last name
+                    name_parts = full_name.split()
+                    if len(name_parts) >= 2:
+                        data['first_name'] = name_parts[0]
+                        data['last_name'] = ' '.join(name_parts[1:])
+                    elif len(name_parts) == 1:
+                        data['first_name'] = name_parts[0]
+                        data['last_name'] = ''
+                    else:
+                        data['first_name'] = ''
+                        data['last_name'] = ''
+                else:
+                    data['first_name'] = ''
+                    data['last_name'] = ''
+            
             # Update user fields
             if 'first_name' in data:
                 user.first_name = data['first_name']
