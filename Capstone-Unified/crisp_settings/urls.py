@@ -38,7 +38,7 @@ urlpatterns = [
     path('api/v1/users/statistics/', get_user_statistics, name='user-statistics'),
     
     # Organizations endpoints
-    path('api/v1/organizations/list_organizations/', get_organizations_simple, name='list-organizations'),
+    path('api/v1/organizations/list_organizations/', list_organizations, name='list-organizations'),
     path('api/v1/organizations/types/', organization_types, name='organization-types'),
     path('api/v1/organizations/create_organization/', create_organization, name='create-organization'),
     path('api/v1/organizations/<str:organization_id>/get_organization/', organization_detail, name='get-organization'),

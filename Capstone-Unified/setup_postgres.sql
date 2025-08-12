@@ -2,23 +2,23 @@
 -- Run this with: psql -U postgres -h localhost -f setup_postgres.sql
 
 -- Create database
-CREATE DATABASE crisp_trust_db;
+CREATE DATABASE crisp;
 
 -- Create user with password
-CREATE USER crisp_user WITH PASSWORD 'your-secure-database-password';
+CREATE USER admin WITH PASSWORD 'AdminPassword';
 
 -- Grant privileges
-GRANT ALL PRIVILEGES ON DATABASE crisp_trust_db TO crisp_user;
+GRANT ALL PRIVILEGES ON DATABASE crisp TO admin;
 
 -- Allow user to create databases (needed for Django tests)
-ALTER USER crisp_user CREATEDB;
+ALTER USER admin CREATEDB;
 
 -- Connect to the new database and grant schema privileges
-\c crisp_trust_db;
-GRANT ALL PRIVILEGES ON SCHEMA public TO crisp_user;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO crisp_user;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO crisp_user;
+\c crisp;
+GRANT ALL PRIVILEGES ON SCHEMA public TO admin;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO admin;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO admin;
 
 -- Verify setup
-\du crisp_user;
-\l crisp_trust_db;
+\du admin;
+\l crisp;

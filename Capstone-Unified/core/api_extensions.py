@@ -13,12 +13,17 @@ def list_organizations(request):
     """Organizations endpoint returning real organizations from database"""
     from core.models.models import Organization
     
+    print(f"DEBUG: Organizations request from user: {request.user.username}")
+    
     organizations = []
-    for org in Organization.objects.all():
+    db_orgs = Organization.objects.all()
+    print(f"DEBUG: Found {db_orgs.count()} organizations in database")
+    
+    for org in db_orgs:
         # Count users belonging to this organization (if we have that relationship)
         user_count = User.objects.filter(email__icontains=org.name.lower().replace(' ', '')).count()
         
-        organizations.append({
+        org_data = {
             "id": str(org.id),  # Convert UUID to string for frontend
             "name": org.name,
             "organization_type": org.organization_type or 'other',
@@ -27,7 +32,9 @@ def list_organizations(request):
             "is_active": True,  # Organizations don't have is_active field currently
             "created_date": "2025-01-01T00:00:00Z",  # Default for now
             "user_count": user_count
-        })
+        }
+        organizations.append(org_data)
+        print(f"DEBUG: Added org: {org.name} (ID: {org.id})")
     
     # If no organizations exist, create some defaults
     if not organizations:
@@ -57,6 +64,8 @@ def list_organizations(request):
                 "created_date": "2025-01-01T00:00:00Z",
                 "user_count": 0
             })
+    
+    print(f"DEBUG: Returning {len(organizations)} organizations")
     
     return Response({
         "success": True,

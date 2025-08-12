@@ -3,7 +3,7 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 import json
 
-from core.models.models import Organization, STIXObject, Collection, CollectionObject, Feed, Identity
+from core.models.models import Organization, STIXObject, Collection, CollectionObject, Feed, Identity, TrustLevel, TrustRelationship, TrustNetwork, NetworkMembership, UserProfile
 
 try:
     from core.models.models import Institution, Indicator, ThreatFeed, TTPData
@@ -246,3 +246,64 @@ if EXTENDED_MODELS_AVAILABLE:
         list_display = ['name', 'mitre_technique_id', 'mitre_tactic', 'threat_feed']
         list_filter = ['mitre_tactic', 'threat_feed', 'is_anonymized']
         search_fields = ['name', 'description', 'mitre_technique_id']
+
+
+# Trust Management Admin Classes
+@admin.register(TrustLevel)
+class TrustLevelAdmin(admin.ModelAdmin):
+    list_display = ['name', 'numerical_value', 'description', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['name', 'description']
+    readonly_fields = ['created_at', 'updated_at']
+    ordering = ['-numerical_value']
+
+
+@admin.register(TrustRelationship)
+class TrustRelationshipAdmin(admin.ModelAdmin):
+    list_display = ['source_organization', 'target_organization', 'trust_level', 'relationship_type', 'is_active', 'created_at']
+    list_filter = ['trust_level', 'relationship_type', 'is_active', 'created_at']
+    search_fields = ['source_organization__name', 'target_organization__name', 'notes']
+    readonly_fields = ['created_at', 'updated_at']
+    raw_id_fields = ['source_organization', 'target_organization']
+    
+    fieldsets = (
+        ('Relationship', {
+            'fields': ('source_organization', 'target_organization', 'trust_level', 'relationship_type')
+        }),
+        ('Status & Notes', {
+            'fields': ('is_active', 'notes', 'created_by')
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(TrustNetwork)
+class TrustNetworkAdmin(admin.ModelAdmin):
+    list_display = ['name', 'default_trust_level', 'default_anonymization_level', 'get_member_count', 'created_at']
+    list_filter = ['default_anonymization_level', 'created_at']
+    search_fields = ['name', 'description']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    def get_member_count(self, obj):
+        return obj.members.count()
+    get_member_count.short_description = 'Members'
+
+
+@admin.register(NetworkMembership)
+class NetworkMembershipAdmin(admin.ModelAdmin):
+    list_display = ['organization', 'network', 'membership_level', 'joined_at']
+    list_filter = ['membership_level', 'network', 'joined_at']
+    search_fields = ['organization__name', 'network__name']
+    raw_id_fields = ['organization', 'network']
+
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ['user', 'organization', 'created_at']
+    list_filter = ['organization', 'created_at']
+    search_fields = ['user__username', 'user__email', 'organization__name']
+    raw_id_fields = ['user', 'organization']
+    readonly_fields = ['created_at', 'updated_at']

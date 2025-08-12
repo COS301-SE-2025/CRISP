@@ -286,9 +286,9 @@ class Feed(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     alias = models.SlugField(max_length=50, unique=True)
-    name = models.CharField(max_length=255)
-    status = models.CharField(max_length=50)
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    name = models.CharField(max_length=255, default='Default Feed')
+    status = models.CharField(max_length=50, default='active')
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     
     # Relationships
     collection = models.ForeignKey(Collection, on_delete=models.CASCADE, related_name='feeds')

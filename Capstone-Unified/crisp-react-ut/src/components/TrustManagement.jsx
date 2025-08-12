@@ -190,9 +190,10 @@ function TrustManagement({ active, initialTab = null }) {
         const trustLevelId = trustData.trustLevels.find(
           level => level.name.toLowerCase().trim() === item.trust_level.toLowerCase().trim() ||
                    level.name.toUpperCase().trim() === item.trust_level.toUpperCase().trim() ||
-                   level.id.toLowerCase().trim() === item.trust_level.toLowerCase().trim() ||
+                   String(level.id).toLowerCase().trim() === item.trust_level.toLowerCase().trim() ||
                    level.name === item.trust_level ||
-                   level.id === item.trust_level
+                   level.id === item.trust_level ||
+                   String(level.id) === String(item.trust_level)
         )?.id || item.trust_level.toLowerCase() || '';
         
         console.log('🔍 TRUST LEVEL MAPPING:', {
@@ -277,6 +278,7 @@ function TrustManagement({ active, initialTab = null }) {
       });
     }
     
+    // Show the modal
     setShowModal(true);
   };
 
