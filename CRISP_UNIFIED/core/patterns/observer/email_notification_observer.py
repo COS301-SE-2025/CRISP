@@ -348,7 +348,14 @@ class EmailNotificationObserver:
     
     def __init__(self, email_service: Optional[EmailNotificationService] = None):
         """Initialize with email service"""
-        self.email_service = email_service or EmailNotificationService()
+        # Use the legacy service if provided, otherwise use the new unified service
+        if email_service:
+            self.email_service = email_service
+        else:
+            # Import and use the new unified email service
+            from core.services.email_service import UnifiedEmailService
+            self.unified_email_service = UnifiedEmailService()
+            self.email_service = EmailNotificationService()  # Keep for backward compatibility
         self.notification_preferences = {}
         
     def update(self, subject, event_data: Dict[str, Any]):

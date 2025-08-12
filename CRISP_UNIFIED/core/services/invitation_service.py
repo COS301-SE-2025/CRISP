@@ -71,29 +71,71 @@ class UserInvitationService:
                     message=message
                 )
                 
-                # Log invitation creation
-                AuthenticationLog.log_authentication_event(
-                    user=inviter,
-                    action='user_created',
-                    success=True,
-                    additional_data={
-                        'action_type': 'invitation_sent',
-                        'invited_email': email,
-                        'organization_id': str(organization.id),
-                        'invited_role': role,
-                        'invitation_id': str(invitation.id)
-                    }
+                # Send invitation email using unified email service
+                from .email_service import UnifiedEmailService
+                unified_email = UnifiedEmailService()
+                email_result = unified_email.send_user_invitation_email(
+                    email=email,
+                    organization=organization,
+                    inviter=inviter,
+                    invitation_token=invitation_token
                 )
                 
-                logger.info(f"Invitation sent by {inviter.username} to {email} for {organization.name}")
-                
-                return {
-                    'success': True,
-                    'message': 'Invitation sent successfully',
-                    'invitation_id': str(invitation.id),
-                    'invitation_token': invitation_token,
-                    'expires_at': invitation.expires_at.isoformat()
-                }
+                if email_result.get('success'):
+                    # Log invitation creation
+                    AuthenticationLog.log_authentication_event(
+                        user=inviter,
+                        action='user_created',
+                        success=True,
+                        additional_data={
+                            'action_type': 'invitation_sent',
+                            'invited_email': email,
+                            'organization_id': str(organization.id),
+                            'invited_role': role,
+                            'invitation_id': str(invitation.id),
+                            'email_sent': True
+                        }
+                    )
+                    
+                    logger.info(f"Invitation sent by {inviter.username} to {email} for {organization.name}")
+                    
+                    return {
+                        'success': True,
+                        'message': 'Invitation sent successfully with email notification',
+                        'invitation_id': str(invitation.id),
+                        'invitation_token': invitation_token,
+                        'expires_at': invitation.expires_at.isoformat(),
+                        'email_sent': True
+                    }
+                else:
+                    # Email failed but invitation was created
+                    logger.warning(f"Invitation created but email failed: {email_result.get('message')}")
+                    
+                    # Log invitation creation with email failure
+                    AuthenticationLog.log_authentication_event(
+                        user=inviter,
+                        action='user_created',
+                        success=True,
+                        additional_data={
+                            'action_type': 'invitation_sent',
+                            'invited_email': email,
+                            'organization_id': str(organization.id),
+                            'invited_role': role,
+                            'invitation_id': str(invitation.id),
+                            'email_sent': False,
+                            'email_error': email_result.get('message')
+                        }
+                    )
+                    
+                    return {
+                        'success': True,
+                        'message': f'Invitation created but email notification failed: {email_result.get("message")}',
+                        'invitation_id': str(invitation.id),
+                        'invitation_token': invitation_token,
+                        'expires_at': invitation.expires_at.isoformat(),
+                        'email_sent': False,
+                        'email_error': email_result.get('message')
+                    }
                 
         except Exception as e:
             logger.error(f"Error sending invitation: {e}")

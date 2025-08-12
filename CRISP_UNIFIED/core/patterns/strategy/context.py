@@ -33,21 +33,33 @@ except ImportError:
         """Raised when data doesn't match the expected format"""
         pass
 
+# Trust-based anonymization level mapping
+TRUST_TO_ANONYMIZATION_MAPPING = {
+    'none': AnonymizationLevel.NONE,
+    'minimal': AnonymizationLevel.LOW,
+    'moderate': AnonymizationLevel.MEDIUM,
+    'standard': AnonymizationLevel.HIGH,
+    'full': AnonymizationLevel.FULL
+}
+
 
 class AnonymizationContext:
     """
-    Context class that uses different anonymization strategies
-    Implements the Strategy pattern for flexible anonymization
+    Context class that uses different anonymization strategies with trust-aware capabilities
+    Implements the Strategy pattern for flexible anonymization with trust level integration
     """
     
-    def __init__(self):
-        """Initialize the anonymization context with default strategies"""
+    def __init__(self, trust_context: Optional[Dict[str, Any]] = None):
+        """Initialize the anonymization context with default strategies and optional trust context"""
         self._strategies: Dict[DataType, AnonymizationStrategy] = {}
         self._default_strategy: Optional[AnonymizationStrategy] = None
         
         # Value mappings for consistent anonymization
         self._value_mappings: Dict[str, str] = {}
         self._id_mappings: Dict[str, str] = {}
+        
+        # Trust context for determining anonymization levels
+        self._trust_context = trust_context or {}
         
         # Register default strategies
         self.register_strategy(DataType.IP_ADDRESS, IPAddressAnonymizationStrategy())
@@ -941,3 +953,185 @@ class AnonymizationContext:
                 attack_pattern['description'] = "Attack pattern details anonymized"
         
         return attack_pattern
+    
+    # Trust-aware anonymization methods
+    def set_trust_context(self, trust_context: Dict[str, Any]):
+        """
+        Set the trust context for anonymization decisions
+        
+        Args:
+            trust_context: Dictionary containing trust relationship information
+        """
+        self._trust_context = trust_context
+    
+    def get_trust_anonymization_level(self, trust_level: str = None) -> AnonymizationLevel:
+        """
+        Get the anonymization level based on trust relationship
+        
+        Args:
+            trust_level: Trust level string ('none', 'minimal', 'moderate', 'standard', 'full')
+            
+        Returns:
+            AnonymizationLevel enum value
+        """
+        if trust_level is None:
+            # Use trust context if available
+            trust_level = self._trust_context.get('anonymization_level', 'full')
+        
+        return TRUST_TO_ANONYMIZATION_MAPPING.get(trust_level, AnonymizationLevel.FULL)
+    
+    def anonymize_with_trust_context(self, data: str, data_type: DataType = None, 
+                                   trust_access_info: Dict[str, Any] = None) -> str:
+        """
+        Anonymize data using trust context information
+        
+        Args:
+            data: The data to anonymize
+            data_type: The type of data (auto-detected if None)
+            trust_access_info: Trust access information from access control service
+            
+        Returns:
+            The anonymized data based on trust level
+        """
+        # Determine trust level
+        if trust_access_info:
+            trust_level = trust_access_info.get('anonymization_level', 'full')
+        else:
+            trust_level = self._trust_context.get('anonymization_level', 'full')
+        
+        anonymization_level = self.get_trust_anonymization_level(trust_level)
+        
+        # Auto-detect data type if not provided
+        if data_type is None:
+            data_type = self._detect_data_type(data)
+        
+        return self.execute_anonymization(data, data_type, anonymization_level)
+    
+    def anonymize_stix_with_trust(self, stix_object: Dict[str, Any], 
+                                 trust_access_info: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        Anonymize STIX objects based on trust relationship
+        
+        Args:
+            stix_object: STIX object to anonymize
+            trust_access_info: Trust access information from access control service
+            
+        Returns:
+            Anonymized STIX object
+        """
+        # Determine trust level
+        if trust_access_info:
+            trust_level = trust_access_info.get('anonymization_level', 'full')
+        else:
+            trust_level = self._trust_context.get('anonymization_level', 'full')
+        
+        anonymization_level = self.get_trust_anonymization_level(trust_level)
+        
+        # Handle different STIX object types
+        if stix_object.get('type') == 'indicator':
+            return self.anonymize_stix_indicator(stix_object, anonymization_level)
+        elif stix_object.get('type') == 'attack-pattern':
+            return self.anonymize_stix_attack_pattern(stix_object, anonymization_level)
+        elif stix_object.get('type') == 'observed-data':
+            return self.anonymize_stix_observed_data(stix_object, anonymization_level)
+        else:
+            # Generic STIX object anonymization
+            return self._anonymize_generic_stix_object(stix_object, anonymization_level)
+    
+    def _anonymize_generic_stix_object(self, stix_object: Dict[str, Any], 
+                                      level: AnonymizationLevel) -> Dict[str, Any]:
+        """
+        Anonymize generic STIX objects based on trust level
+        
+        Args:
+            stix_object: STIX object to anonymize
+            level: Anonymization level to apply
+            
+        Returns:
+            Anonymized STIX object
+        """
+        anonymized = stix_object.copy()
+        
+        # Apply anonymization based on level
+        if level == AnonymizationLevel.NONE:
+            # No anonymization
+            return anonymized
+        
+        # Remove or anonymize sensitive fields based on level
+        sensitive_fields = ['confidence', 'external_references', 'object_marking_refs']
+        moderate_fields = ['description', 'labels']
+        basic_fields = ['name', 'pattern']
+        
+        if level == AnonymizationLevel.FULL:
+            # Keep only essential fields
+            essential_fields = ['type', 'id', 'created', 'modified', 'spec_version']
+            anonymized = {k: v for k, v in anonymized.items() if k in essential_fields}
+        elif level == AnonymizationLevel.HIGH:
+            # Remove sensitive and moderate fields
+            for field in sensitive_fields + moderate_fields:
+                anonymized.pop(field, None)
+        elif level == AnonymizationLevel.MEDIUM:
+            # Remove only sensitive fields
+            for field in sensitive_fields:
+                anonymized.pop(field, None)
+            # Anonymize description if present
+            if 'description' in anonymized:
+                anonymized['description'] = self._anonymize_text_content(
+                    anonymized['description'], level
+                )
+        elif level == AnonymizationLevel.LOW:
+            # Light anonymization - reduce confidence if present
+            if 'confidence' in anonymized and isinstance(anonymized['confidence'], (int, float)):
+                anonymized['confidence'] = max(anonymized['confidence'] - 20, 0)
+        
+        return anonymized
+    
+    def create_trust_aware_context(self, source_org_id: str, target_org_id: str, 
+                                  trust_level: str) -> 'AnonymizationContext':
+        """
+        Create a new anonymization context with trust information
+        
+        Args:
+            source_org_id: Source organization ID
+            target_org_id: Target organization ID
+            trust_level: Trust level between organizations
+            
+        Returns:
+            New AnonymizationContext with trust context set
+        """
+        trust_context = {
+            'source_organization': source_org_id,
+            'target_organization': target_org_id,
+            'anonymization_level': trust_level,
+            'trust_aware': True
+        }
+        
+        return AnonymizationContext(trust_context=trust_context)
+    
+    def anonymize_indicator(self, indicator_data: Dict[str, Any], 
+                           trust_access_info: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        Anonymize indicator data with trust-aware processing
+        
+        Args:
+            indicator_data: Indicator data to anonymize
+            trust_access_info: Trust access information
+            
+        Returns:
+            Anonymized indicator data
+        """
+        return self.anonymize_stix_with_trust(indicator_data, trust_access_info)
+    
+    def anonymize_ttp(self, ttp_data: Dict[str, Any], 
+                     trust_access_info: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        Anonymize TTP data with trust-aware processing
+        
+        Args:
+            ttp_data: TTP/Attack Pattern data to anonymize
+            trust_access_info: Trust access information
+            
+        Returns:
+            Anonymized TTP data
+        """
+        return self.anonymize_stix_with_trust(ttp_data, trust_access_info)
