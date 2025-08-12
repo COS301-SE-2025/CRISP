@@ -18,7 +18,12 @@ def redirect_to_admin(request):
 urlpatterns = [
     path('', home, name='home'),  # Home page
     path('admin/', admin.site.urls),
-    path('api/', include(router.urls)),
+    
+    # Unified API endpoints
+    path('api/', include('core.urls')),
+    
+    # Legacy threat feed API endpoints
+    path('api/threat-feeds/', include(router.urls)),
     path('api/indicators/', indicators_list, name='indicators-list'),
     path('api/indicators/bulk-import/', indicators_bulk_import, name='indicators-bulk-import'),
     path('api/indicators/<int:indicator_id>/update/', indicator_update, name='indicator-update'),
@@ -46,6 +51,7 @@ urlpatterns = [
     path('api/ttps/matrix-cell-details/', ttp_matrix_cell_details, name='ttp-matrix-cell-details'),
     path('api/ttps/technique-details/<str:technique_id>/', ttp_technique_details, name='ttp-technique-details'),
     path('api/ttps/<int:ttp_id>/', ttp_detail, name='ttp-detail'),
-    path('api/status/', include('core.urls')),
+    
+    # TAXII endpoints
     path('taxii2/', include('core.taxii.urls')),
 ]
