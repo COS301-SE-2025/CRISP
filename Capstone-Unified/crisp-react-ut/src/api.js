@@ -778,13 +778,24 @@ export const getTrustMetrics = async () => {
 };
 
 export const updateTrustRelationship = async (relationshipId, updateData) => {
+  console.log('🔧 API - updateTrustRelationship called:', {
+    relationshipId,
+    updateData,
+    endpoint: `${API_URL}trust/relationships/${relationshipId}/`
+  });
+  
   const response = await fetch(`${API_URL}trust/relationships/${relationshipId}/`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(updateData)
   });
   
-  return await handleResponse(response);
+  console.log('📡 API - Response status:', response.status);
+  
+  const result = await handleResponse(response);
+  console.log('✅ API - Update result:', result);
+  
+  return result;
 };
 
 export const deleteTrustRelationship = async (relationshipId) => {
