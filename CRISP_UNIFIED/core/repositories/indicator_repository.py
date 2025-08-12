@@ -89,3 +89,20 @@ class IndicatorRepository:
         """Retrieves all indicators from the database."""
         return Indicator.objects.all()
     
+    @staticmethod
+    def get_by_organizations(organization_ids, limit=None):
+        """
+        Get indicators from specific organizations.
+        
+        Args:
+            organization_ids: List of organization IDs to filter by
+            limit: Maximum number of indicators to return
+            
+        Returns:
+            QuerySet of indicators from the specified organizations
+        """
+        queryset = Indicator.objects.filter(organization_id__in=organization_ids)
+        if limit:
+            queryset = queryset[:limit]
+        return queryset
+    
