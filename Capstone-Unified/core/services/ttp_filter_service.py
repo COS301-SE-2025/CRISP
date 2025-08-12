@@ -356,10 +356,12 @@ class TTPFilterService:
             # Determine severity based on technique
             severity = self._get_technique_severity(ttp.mitre_technique_id)
             
-            # Get tactic display name
-            tactic_display = dict(TTPData.MITRE_TACTIC_CHOICES).get(
-                ttp.mitre_tactic, ttp.mitre_tactic
-            ) if ttp.mitre_tactic else None
+            # Get tactic display name - try to get from model choices
+            tactic_display = ttp.mitre_tactic
+            if hasattr(TTPData, 'MITRE_TACTIC_CHOICES'):
+                tactic_display = dict(TTPData.MITRE_TACTIC_CHOICES).get(
+                    ttp.mitre_tactic, ttp.mitre_tactic
+                ) if ttp.mitre_tactic else None
             
             serialized_ttps.append({
                 'id': ttp.id,
@@ -368,20 +370,20 @@ class TTPFilterService:
                 'mitre_technique_id': ttp.mitre_technique_id,
                 'mitre_tactic': ttp.mitre_tactic,
                 'mitre_tactic_display': tactic_display,
-                'mitre_subtechnique': ttp.mitre_subtechnique,
+                'mitre_subtechnique': getattr(ttp, 'mitre_subtechnique', ''),
                 'stix_id': ttp.stix_id,
-                'is_anonymized': ttp.is_anonymized,
+                'is_anonymized': getattr(ttp, 'is_anonymized', False),
                 'created_at': ttp.created_at.isoformat() if ttp.created_at else None,
                 'updated_at': ttp.updated_at.isoformat() if ttp.updated_at else None,
                 'threat_feed': {
                     'id': ttp.threat_feed.id,
                     'name': ttp.threat_feed.name,
-                    'is_external': ttp.threat_feed.is_external,
-                    'is_active': ttp.threat_feed.is_active
+                    'is_external': getattr(ttp.threat_feed, 'is_external', False),
+                    'is_active': getattr(ttp.threat_feed, 'is_active', True)
                 } if ttp.threat_feed else None,
                 'severity': severity.value,
                 'severity_score': getattr(ttp, 'severity_score', 2),
-                'has_subtechnique': bool(ttp.mitre_subtechnique and ttp.mitre_subtechnique.strip())
+                'has_subtechnique': bool(getattr(ttp, 'mitre_subtechnique', '') and getattr(ttp, 'mitre_subtechnique', '').strip())
             })
         
         return serialized_ttps
@@ -422,7 +424,7 @@ class TTPFilterService:
             
             # Feed distribution
             feed_stats = queryset.values(
-                'threat_feed__id', 'threat_feed__name', 'threat_feed__is_external'
+                'threat_feed__id', 'threat_feed__name'
             ).annotate(
                 count=Count('id')
             ).order_by('-count')[:10]
@@ -444,7 +446,7 @@ class TTPFilterService:
                 'has_subtechniques_count': queryset.exclude(
                     Q(mitre_subtechnique__isnull=True) | Q(mitre_subtechnique='')
                 ).count(),
-                'anonymized_count': queryset.filter(is_anonymized=True).count()
+                'anonymized_count': queryset.filter(is_anonymized=True).count() if queryset.filter(is_anonymized=True).exists() else 0
             }
             
         except Exception as e:
@@ -497,7 +499,11 @@ class TTPFilterService:
             
             tactic_choices = []
             for tactic in tactics:
-                display_name = dict(TTPData.MITRE_TACTIC_CHOICES).get(tactic, tactic)
+                # Try to get display name from choices if available
+                display_name = tactic
+                if hasattr(TTPData, 'MITRE_TACTIC_CHOICES'):
+                    display_name = dict(TTPData.MITRE_TACTIC_CHOICES).get(tactic, tactic)
+                
                 tactic_choices.append({
                     'value': tactic,
                     'label': display_name,
@@ -513,7 +519,7 @@ class TTPFilterService:
             
             # Get available threat feeds
             threat_feeds = list(ThreatFeed.objects.values(
-                'id', 'name', 'is_external', 'is_active'
+                'id', 'name'
             ).annotate(
                 ttp_count=Count('ttps')
             ).filter(ttp_count__gt=0).order_by('name'))

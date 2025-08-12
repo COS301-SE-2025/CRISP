@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 import uuid
 import json
 from django.utils import timezone
@@ -47,17 +47,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class UserProfile(models.Model):
-    """
-    User profile to extend the default Django User with organization relationship
-    """
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    organization = models.ForeignKey('Organization', on_delete=models.SET_NULL, null=True, blank=True, related_name='user_profiles')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    def __str__(self):
-        return f"{self.user.username} - {self.organization.name if self.organization else 'No Organization'}"
 
 
 class Organization(models.Model):
@@ -86,7 +75,7 @@ class Organization(models.Model):
     stix_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_organizations')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_organizations')
 
     def __str__(self):
         return self.name
@@ -139,7 +128,7 @@ class STIXObject(models.Model):
     # System metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_stix_objects')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_stix_objects')
     source_organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='stix_objects')
     anonymized = models.BooleanField(default=False)
     anonymization_strategy = models.CharField(max_length=50, blank=True, null=True)
@@ -288,7 +277,7 @@ class Feed(models.Model):
     alias = models.SlugField(max_length=50, unique=True)
     name = models.CharField(max_length=255, default='Default Feed')
     status = models.CharField(max_length=50, default='active')
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
     
     # Relationships
     collection = models.ForeignKey(Collection, on_delete=models.CASCADE, related_name='feeds')
@@ -428,7 +417,7 @@ class Identity(models.Model):
     identity_class = models.CharField(max_length=100)
     organization = models.OneToOneField('Organization', on_delete=models.CASCADE, related_name='stix_identity')
     raw_data = models.TextField()
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
 
     class Meta:
         verbose_name_plural = "Identities"

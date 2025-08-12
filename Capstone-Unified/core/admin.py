@@ -3,7 +3,7 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 import json
 
-from core.models.models import Organization, STIXObject, Collection, CollectionObject, Feed, Identity, TrustLevel, TrustRelationship, TrustNetwork, NetworkMembership, UserProfile
+from core.models.models import Organization, STIXObject, Collection, CollectionObject, Feed, Identity, TrustLevel, TrustRelationship, TrustNetwork, NetworkMembership
 
 try:
     from core.models.models import Institution, Indicator, ThreatFeed, TTPData
@@ -300,10 +300,3 @@ class NetworkMembershipAdmin(admin.ModelAdmin):
     raw_id_fields = ['organization', 'network']
 
 
-@admin.register(UserProfile)
-class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ['user', 'organization', 'created_at']
-    list_filter = ['organization', 'created_at']
-    search_fields = ['user__username', 'user__email', 'organization__name']
-    raw_id_fields = ['user', 'organization']
-    readonly_fields = ['created_at', 'updated_at']

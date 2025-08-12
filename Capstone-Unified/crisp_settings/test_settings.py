@@ -2,14 +2,22 @@ from .settings import *
 import tempfile
 import os
 
-# Use in-memory database for complete isolation
+# Use PostgreSQL test database for complete isolation
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': ':memory:',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('TEST_DB_NAME', 'test_crisp_unified'),
+        'USER': os.getenv('DB_USER', 'admin'),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'AdminPassword'),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '5432'),
         'TEST': {
-            'NAME': ':memory:',
-        }
+            'NAME': 'test_crisp_unified_temp',
+        },
+        'OPTIONS': {
+            'connect_timeout': 60,
+        },
+        'CONN_MAX_AGE': 60,
     }
 }
 
