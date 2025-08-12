@@ -4,13 +4,6 @@ from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from rest_framework_simplejwt.exceptions import TokenError
 import uuid
 import json
-
-# Apply UUID JWT fix
-try:
-    from core.middleware.uuid_jwt_fix import apply_uuid_jwt_fix
-    apply_uuid_jwt_fix()
-except ImportError:
-    pass
 from typing import List, Dict, Optional, Tuple 
 import hashlib
 from datetime import timedelta
@@ -19,6 +12,18 @@ from .access_control_service import AccessControlService
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Apply UUID JWT fix
+try:
+    from core.middleware.uuid_jwt_fix import apply_uuid_jwt_fix
+    fix_applied = apply_uuid_jwt_fix()
+    if fix_applied:
+        logger.info("UUID JWT fix applied successfully")
+    else:
+        logger.warning("UUID JWT fix could not be applied")
+except ImportError as e:
+    logger.warning(f"UUID JWT fix import failed: {e}")
+    pass
 
 
 class UUIDSafeRefreshToken(RefreshToken):
@@ -197,10 +202,25 @@ class AuthenticationService:
             return auth_result
     
     def _format_user_info(self, user: CustomUser) -> Dict:
-        """Format user information for authentication response"""
+        """Format user information for API responses, ensuring UUIDs are strings."""
+        profile_info = {}
+        try:
+            profile = user.profile
+            profile_info = {
+                'bio': profile.bio,
+                'department': profile.department,
+                'job_title': profile.job_title,
+                'phone': profile.phone_number,
+                'email_notifications': profile.email_notifications,
+                'threat_alerts': profile.threat_alerts,
+                'security_notifications': profile.security_notifications,
+                'profile_visibility': profile.profile_visibility,
+            }
+        except UserProfile.DoesNotExist:
+            pass
+
         user_info = {
-            'id': str(user.id),            
-            'organization_id': str(user.organization.id) if user.organization else None, 
+            'id': str(user.id),  # Ensure UUID is a string
             'username': user.username,
             'email': user.email,
             'first_name': user.first_name,
@@ -217,38 +237,35 @@ class AuthenticationService:
         # Safely handle organization data
         if user.organization:
             user_info['organization'] = {
-                'id': str(user.organization.id),
+                'id': str(user.organization.id),  # Ensure UUID is a string
                 'name': user.organization.name,
                 'domain': user.organization.domain,
-                'is_publisher': user.organization.is_publisher
+                'is_publisher': user.organization.is_publisher,
             }
         else:
             user_info['organization'] = None
             
         return user_info
-    
-    def _format_accessible_organizations(self, user: CustomUser) -> List[str]:
-        """Format accessible organizations with UUID conversion"""
-        accessible_orgs = []
+
+    def _format_accessible_organizations(self, user: CustomUser) -> List[Dict]:
+        """Format accessible organizations for API responses, ensuring UUIDs are strings."""
+        accessible_orgs = self.access_control.get_accessible_organizations(user)
         
-        if user.organization:
-            accessible_orgs.append(str(user.organization.id))  # Convert UUID to string
-        
-        # Add trusted organizations
-        from core_ut.trust.models import TrustRelationship
-        trusted_orgs = TrustRelationship.objects.filter(
-            source_organization=user.organization,
-            is_active=True,
-            status='active'
-        ).values_list('target_organization__id', flat=True)
-        
-        # Convert UUIDs to strings
-        accessible_orgs.extend([str(org_id) for org_id in trusted_orgs])
-        
-        return list(set(accessible_orgs))  # Remove duplicates
-    
+        formatted_orgs = [
+            {
+                'id': str(org.id),  # Ensure UUID is a string
+                'name': org.name,
+                'domain': org.domain,
+                'is_publisher': org.is_publisher,
+                'is_verified': org.is_verified,
+                'is_active': org.is_active,
+            }
+            for org in accessible_orgs
+        ]
+        return formatted_orgs
+
     def _get_user_trust_context(self, user: CustomUser) -> Dict:
-        """Get trust context information for the user"""
+        """Get user's trust context, ensuring UUIDs are strings."""
         try:
             from core_ut.trust.models import TrustRelationship
             
@@ -278,8 +295,8 @@ class AuthenticationService:
             can_manage_trust = user.role in ['admin', 'BlueVisionAdmin', 'publisher']
             
             return {
-                'organization_id': str(user.organization.id) if user.organization else None,
-                'organization_name': user.organization.name if user.organization else None,
+                'organization_id': str(user.organization.id),
+                'organization_name': user.organization.name,
                 'outgoing_trust_relationships': outgoing_relationships,
                 'incoming_trust_relationships': incoming_relationships,
                 'can_manage_trust': can_manage_trust,
@@ -591,65 +608,32 @@ class AuthenticationService:
     def _generate_tokens(self, user: CustomUser, request=None) -> Dict:
         """Generate JWT access and refresh tokens with custom claims"""
         try:
-            # Create a JSON-safe user representation for token generation
-            # Temporarily override user.id to be string for JWT creation
-            original_user_id = user.id
-            if isinstance(user.id, uuid.UUID):
-                # Create a temporary copy of the user for token generation
-                import copy
-                temp_user = copy.copy(user)
-                temp_user.id = str(user.id)
-                
-                # Create refresh token with string user ID
-                refresh = RefreshToken.for_user(temp_user)
-                
-                # Restore original user ID
-                user.id = original_user_id
-            else:
-                refresh = RefreshToken.for_user(user)
+            # Use the patched RefreshToken.for_user method
+            refresh = RefreshToken.for_user(user)
             
-            # Add custom claims - safely handle organization and UUID serialization
-            refresh['role'] = user.role if hasattr(user, 'role') else 'viewer'
+            # Add custom claims using the UUID-safe setitem method
+            refresh['role'] = getattr(user, 'role', 'viewer')
             refresh['organization'] = user.organization.name if user.organization else None
             refresh['organization_id'] = str(user.organization.id) if user.organization else None
-            refresh['is_publisher'] = user.is_publisher if hasattr(user, 'is_publisher') else False
-            refresh['is_verified'] = user.is_verified if hasattr(user, 'is_verified') else True
-            # Ensure user_id is string for JSON serialization
-            refresh['user_id'] = str(user.id)
+            refresh['is_publisher'] = getattr(user, 'is_publisher', False)
+            refresh['is_verified'] = getattr(user, 'is_verified', True)
             
             # Create access token from refresh token
             access_token = refresh.access_token
-            access_token['role'] = user.role if hasattr(user, 'role') else 'viewer'
+            access_token['role'] = getattr(user, 'role', 'viewer')
             access_token['organization'] = user.organization.name if user.organization else None
             access_token['organization_id'] = str(user.organization.id) if user.organization else None
-            access_token['is_publisher'] = user.is_publisher if hasattr(user, 'is_publisher') else False
-            # Ensure user_id is string for JSON serialization
-            access_token['user_id'] = str(user.id)
+            access_token['is_publisher'] = getattr(user, 'is_publisher', False)
+            
+            logger.info(f"Successfully generated tokens for user {user.username}")
             
         except Exception as token_error:
             logger.error(f"Token generation error: {str(token_error)}")
             logger.error(f"User object: {user}, User ID: {user.id}, User type: {type(user.id)}")
-            # Try alternative approach - create token with minimal data
-            try:
-                from rest_framework_simplejwt.tokens import UntypedToken
-                refresh = RefreshToken()
-                refresh['user_id'] = str(user.id)
-                refresh['role'] = getattr(user, 'role', 'viewer')
-                refresh['organization'] = user.organization.name if user.organization else None
-                refresh['organization_id'] = str(user.organization.id) if user.organization else None
-                refresh['is_publisher'] = getattr(user, 'is_publisher', False)
-                refresh['is_verified'] = getattr(user, 'is_verified', True)
-                
-                access_token = refresh.access_token
-                access_token['user_id'] = str(user.id)
-                access_token['role'] = getattr(user, 'role', 'viewer')
-                access_token['organization'] = user.organization.name if user.organization else None
-                access_token['organization_id'] = str(user.organization.id) if user.organization else None
-                access_token['is_publisher'] = getattr(user, 'is_publisher', False)
-                
-            except Exception as fallback_error:
-                logger.error(f"Fallback token generation also failed: {str(fallback_error)}")
-                raise Exception(f"Failed to generate JWT tokens: {str(token_error)}")
+            logger.error(f"Authentication error for {user.username}: {str(token_error)}")
+            import traceback
+            logger.error(f"Full traceback: {traceback.format_exc()}")
+            raise Exception(f"Failed to generate JWT tokens: {str(token_error)}")
         
         return {
             'access': str(access_token),

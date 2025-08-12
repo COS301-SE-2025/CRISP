@@ -40,30 +40,88 @@ def uuid_safe_encode_payload(self):
     return json.dumps(safe_payload, cls=UUIDJSONEncoder).encode('utf-8')
 
 
+def uuid_safe_setitem(self, key, value):
+    """UUID-safe version of Token.__setitem__"""
+    if isinstance(value, uuid.UUID):
+        value = str(value)
+    self.payload[key] = value
+
+
+def uuid_safe_init(self, token=None, verify=True):
+    """UUID-safe version of Token.__init__"""
+    # Call original init logic manually
+    from rest_framework_simplejwt import settings as jwt_settings
+    from rest_framework_simplejwt.exceptions import TokenError
+    from rest_framework_simplejwt.utils import aware_utcnow, datetime_to_epoch, make_utc
+    
+    if token is None:
+        # Generate new token
+        self.payload = {jwt_settings.TOKEN_TYPE_CLAIM: self.token_type}
+        
+        # Set expiration time
+        self.set_exp(
+            from_time=aware_utcnow(),
+            lifetime=self.lifetime
+        )
+        
+        # Set JTI (JSON Token Identifier)
+        self.set_jti()
+    else:
+        # Decode existing token
+        if verify:
+            self.payload = self.token_backend.decode(token, verify=verify)
+        else:
+            self.payload = self.token_backend.decode(token, verify=False)
+    
+    # Convert any UUID values in payload to strings
+    for key, value in list(self.payload.items()):
+        if isinstance(value, uuid.UUID):
+            self.payload[key] = str(value)
+
+
 def apply_uuid_jwt_fix():
-    """Apply the UUID fix to the JWT Token class"""
+    """Apply comprehensive UUID fix to the JWT Token class"""
     try:
         # Import here to avoid Django app registry issues
-        from rest_framework_simplejwt.tokens import Token
+        from rest_framework_simplejwt.tokens import Token, RefreshToken, AccessToken
+        from rest_framework_simplejwt import settings as jwt_settings
         
-        # Monkey patch the Token class to use our UUID-safe encoder
-        Token._encode_payload = uuid_safe_encode_payload
-        
-        # Also patch the user ID handling in for_user method
+        # Store original methods
+        original_encode_payload = Token._encode_payload
+        original_setitem = Token.__setitem__
+        original_init = Token.__init__
         original_for_user = Token.for_user
         
+        # Monkey patch the Token class methods
+        Token._encode_payload = uuid_safe_encode_payload
+        Token.__setitem__ = uuid_safe_setitem
+        Token.__init__ = uuid_safe_init
+        
+        # Patch for_user method with comprehensive UUID handling
         @classmethod
         def uuid_safe_for_user(cls, user):
             """UUID-safe version of for_user method"""
-            token = original_for_user(user)
-            # Ensure user_id is string
-            if 'user_id' in token.payload and isinstance(token.payload['user_id'], uuid.UUID):
-                token.payload['user_id'] = str(token.payload['user_id'])
+            # Create token manually to ensure UUID safety
+            token = cls()
+            
+            # Set user_id as string
+            user_id = str(user.id) if hasattr(user, 'id') else str(user.pk)
+            token[jwt_settings.USER_ID_CLAIM] = user_id
+            
             return token
         
         Token.for_user = uuid_safe_for_user
+        
+        # Also patch specific token types
+        RefreshToken.for_user = uuid_safe_for_user
+        AccessToken.for_user = uuid_safe_for_user
+        
+        print("✅ Comprehensive UUID JWT fix applied successfully")
         return True
         
     except ImportError as e:
-        print(f"Could not apply UUID JWT fix: {e}")
+        print(f"❌ Could not apply UUID JWT fix: {e}")
+        return False
+    except Exception as e:
+        print(f"❌ Error applying UUID JWT fix: {e}")
         return False
