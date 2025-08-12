@@ -1,0 +1,1026 @@
+    ttp_matrix_cell_details, ttp_technique_details
+
+    # Set up REST API router
+    router = routers.DefaultRouter()
+    router.register(r'threat-feeds', ThreatFeedViewSet, basename='threat-feed')     
+
+    # Redirect to admin by default
+    def redirect_to_admin(request):
+        return redirect('/admin/')
+
+    urlpatterns = [
+        path('', home, name='home'),  # Home page
+        path('admin/', admin.site.urls),
+        path('api/', include(router.urls)),
+        path('api/indicators/', indicators_list, name='indicators-list'),
+        path('api/indicators/bulk-import/', indicators_bulk_import,
+    name='indicators-bulk-import'),
+        path('api/indicators/<int:indicator_id>/update/', indicator_update,
+    name='indicator-update'),
+        path('api/indicators/<int:indicator_id>/share/', indicator_share,
+    name='indicator-share'),
+        path('api/threat-activity-chart/', threat_activity_chart_data,
+    name='threat-activity-chart'),
+        path('api/system-health/', system_health, name='system-health'),
+        path('api/recent-activities/', recent_activities,
+    name='recent-activities'),
+        path('api/ttps/', ttps_list, name='ttps-list'),
+        path('api/ttps/mitre-matrix/', mitre_matrix, name='mitre-matrix'),
+        path('api/ttps/trends/', ttp_trends, name='ttp-trends'),
+        path('api/ttps/export/', ttp_export, name='ttp-export'),
+        path('api/ttps/mitre-mapping/', ttp_mitre_mapping,
+    name='ttp-mitre-mapping'),
+        path('api/ttps/bulk-mapping/', ttp_bulk_mapping,
+    name='ttp-bulk-mapping'),
+        path('api/ttps/mapping-validation/', ttp_mapping_validation,
+    name='ttp-mapping-validation'),
+        path('api/ttps/auto-map-existing/', ttp_auto_map_existing,
+    name='ttp-auto-map-existing'),
+        path('api/ttps/technique-frequencies/', ttp_technique_frequencies,
+    name='ttp-technique-frequencies'),
+        path('api/ttps/tactic-frequencies/', ttp_tactic_frequencies,
+    name='ttp-tactic-frequencies'),
+        path('api/ttps/technique-trends/', ttp_technique_trends,
+    name='ttp-technique-trends'),
+        path('api/ttps/feed-comparison/', ttp_feed_comparison,
+    name='ttp-feed-comparison'),
+        path('api/ttps/seasonal-patterns/', ttp_seasonal_patterns,
+    name='ttp-seasonal-patterns'),
+        path('api/ttps/clear-aggregation-cache/', ttp_clear_aggregation_cache,      
+    name='ttp-clear-aggregation-cache'),
+        path('api/ttps/filter-options/', ttp_filter_options,
+    name='ttp-filter-options'),
+        path('api/ttps/advanced-search/', ttp_advanced_search,
+    name='ttp-advanced-search'),
+        path('api/ttps/search-suggestions/', ttp_search_suggestions,
+    name='ttp-search-suggestions'),
+        path('api/ttps/matrix-cell-details/', ttp_matrix_cell_details,
+    name='ttp-matrix-cell-details'),
+        path('api/ttps/technique-details/<str:technique_id>/',
+    ttp_technique_details, name='ttp-technique-details'),
+        path('api/ttps/<int:ttp_id>/', ttp_detail, name='ttp-detail'),
+        path('api/status/', include('core.urls')),
+        path('taxii2/', include('core.taxii.urls')),
+    ]
+
+
+
+● Now I'll update the main project URLs to include the unified API endpoints:       
+
+
+● Update(/mnt/c/Users/arman/OneDrive/Documents/GitHub/CRISP/CRISP_UNIFIED/crisp     
+        _unified/urls.py)
+
+  ⎿  Updated /mnt/c/Users/arman/OneDrive/Documents/GitHub/CRISP/CRISP_UNIFIED/c     
+     isp_unified/urls.py with 8 additions and 2 removals
+       18    urlpatterns = [
+       19        path('', home, name='home'),  # Home page
+       20        path('admin/', admin.site.urls),
+       21 -      path('api/', include(router.urls)),
+       21 +      
+       22 +      # Unified API endpoints
+       23 +      path('api/', include('core.urls')),
+       24 +      
+       25 +      # Legacy threat feed API endpoints
+       26 +      path('api/threat-feeds/', include(router.urls)),
+       27        path('api/indicators/', indicators_list,
+            name='indicators-list'),
+       28        path('api/indicators/bulk-import/', indicators_bulk_import,        
+            name='indicators-bulk-import'),
+       29        path('api/indicators/<int:indicator_id>/update/',
+            indicator_update, name='indicator-update'),
+     ...
+       46        path('api/ttps/matrix-cell-details/', ttp_matrix_cell_details,     
+            name='ttp-matrix-cell-details'),
+       47        path('api/ttps/technique-details/<str:technique_id>/',
+            ttp_technique_details, name='ttp-technique-details'),
+       48        path('api/ttps/<int:ttp_id>/', ttp_detail, name='ttp-detail'),     
+       49 -      path('api/status/', include('core.urls')),
+       49 +      
+       50 +      # TAXII endpoints
+       51        path('taxii2/', include('core.taxii.urls')),
+       52    ]
+       53   \ No newline at end of file
+
+
+● Now let me update the todo list to mark Phase 7 as completed and continue
+  with Phase 8: Feature Integration:
+
+
+● Update Todos
+
+  ⎿  ☒ Create trust services
+     ☒ Create user services
+     ☒ Create organization service
+     ☒ Create auth service
+     ☒ Create invitation service
+     ☒ Create access control service
+     ☒ Create audit service
+     ☒ Update indicator service to be trust-aware
+     ☒ Update TTP service to be trust-aware
+     ☒ Update STIX/TAXII service to use trust levels
+     ☒ Create unified email service
+     ☒ Update anonymization strategies for trust integration
+     ☒ Create authentication APIs
+     ☒ Create user management APIs
+     ☒ Create trust management APIs
+     ☒ Create organization management APIs
+     ☒ Create audit middleware
+     ☒ Create trust-aware middleware
+     ☒ Update Django settings for unified system
+     ☒ Create unified URL configuration
+     ☐ Create management commands for system administration
+
+
+● Now I'll create management commands for the unified system. First, let me
+  create a command to initialize the system with default data:
+
+
+● Write(/mnt/c/Users/arman/OneDrive/Documents/GitHub/CRISP/CRISP_UNIFIED/core/m     
+       anagement/commands/initialize_system.py)
+
+  ⎿  Wrote 323 lines to /mnt/c/Users/arman/OneDrive/Documents/GitHub/CRISP/CRIS     
+     _UNIFIED/core/management/commands/initialize_system.py
+     """
+     Management command to initialize the unified CRISP system with default data    
+     Creates default organizations, users, and system configuration
+     """
+
+     import os
+     from django.core.management.base import BaseCommand
+     from django.contrib.auth import get_user_model
+     from django.db import transaction
+     from core.models.models import Organization, CustomUser
+     from core.services.organization_service import OrganizationService
+     from core.services.user_service import UserService
+
+     User = get_user_model()
+
+     class Command(BaseCommand):
+         help = 'Initialize the CRISP unified system with default data'
+
+         def add_arguments(self, parser):
+             parser.add_argument(
+                 '--skip-superuser',
+                 action='store_true',
+                 help='Skip creating superuser if one already exists',
+             )
+             parser.add_argument(
+                 '--admin-email',
+                 type=str,
+                 default='admin@crisp-system.org',
+                 help='Email for the admin user',
+             )
+             parser.add_argument(
+                 '--admin-username',
+                 type=str,
+                 default='admin',
+                 help='Username for the admin user',
+             )
+             parser.add_argument(
+                 '--admin-password',
+                 type=str,
+                 help='Password for the admin user (will prompt if not
+     provided)',
+             )
+
+         def handle(self, *args, **options):
+             self.stdout.write(
+                 self.style.SUCCESS('Starting CRISP Unified System
+     initialization...')
+             )
+
+             try:
+                 with transaction.atomic():
+                     # Create BlueVision organization
+                     bluevision_org = self._create_bluevision_organization()        
+
+                     # Create admin user
+                     admin_user = self._create_admin_user(
+                         organization=bluevision_org,
+                         username=options['admin_username'],
+                         email=options['admin_email'],
+                         password=options['admin_password'],
+                         skip_if_exists=options['skip_superuser']
+                     )
+
+                     # Create sample organizations
+                     sample_orgs = self._create_sample_organizations()
+
+                     # Create sample users for each organization
+                     self._create_sample_users(sample_orgs, admin_user)
+
+                     # Set up system configuration
+                     self._setup_system_configuration()
+
+                     self.stdout.write(
+                         self.style.SUCCESS('System initialization completed        
+     successfully!')
+                     )
+
+                     self._display_summary(admin_user, bluevision_org,
+     sample_orgs)
+
+             except Exception as e:
+                 self.stdout.write(
+                     self.style.ERROR(f'System initialization failed: {str(e)}')    
+                 )
+                 raise
+
+         def _create_bluevision_organization(self):
+             """Create the BlueVision administrative organization"""
+             self.stdout.write('Creating BlueVision organization...')
+
+             org_service = OrganizationService()
+
+             # Check if BlueVision org already exists
+             existing_org =
+     Organization.objects.filter(domain='bluevision.tech').first()
+             if existing_org:
+                 self.stdout.write(
+                     self.style.WARNING('BlueVision organization already
+     exists')
+                 )
+                 return existing_org
+
+             result = org_service.create_organization(
+                 name='BlueVision Technologies',
+                 domain='bluevision.tech',
+                 organization_type='technology_vendor',
+                 description='BlueVision Technologies - CRISP Platform
+     Administrator',
+                 contact_email='admin@bluevision.tech',
+                 contact_phone='+1-555-CRISP-01',
+                 created_by=None  # System creation
+             )
+
+             if result['success']:
+                 org = Organization.objects.get(id=result['organization_id'])       
+                 self.stdout.write(
+                     self.style.SUCCESS(f'Created BlueVision organization:
+     {org.name}')
+                 )
+                 return org
+             else:
+                 raise Exception(f"Failed to create BlueVision organization:        
+     {result['message']}")
+
+         def _create_admin_user(self, organization, username, email, password,      
+     skip_if_exists):
+             """Create the system administrator user"""
+             self.stdout.write('Creating admin user...')
+
+             # Check if admin user already exists
+             existing_user =
+     CustomUser.objects.filter(username=username).first()
+             if existing_user:
+                 if skip_if_exists:
+                     self.stdout.write(
+                         self.style.WARNING(f'Admin user {username} already
+     exists, skipping')
+                     )
+                     return existing_user
+                 else:
+                     raise Exception(f'Admin user {username} already exists')       
+
+             # Get password if not provided
+             if not password:
+                 import getpass
+                 password = getpass.getpass('Enter password for admin user: ')      
+                 if not password:
+                     raise Exception('Password is required for admin user')
+
+             user_service = UserService()
+             result = user_service.create_user(
+                 username=username,
+                 email=email,
+                 password=password,
+                 first_name='System',
+                 last_name='Administrator',
+                 role='BlueVisionAdmin',
+                 organization_id=str(organization.id),
+                 created_by=None  # System creation
+             )
+
+             if result['success']:
+                 user = CustomUser.objects.get(id=result['user_id'])
+                 user.is_staff = True
+                 user.is_superuser = True
+                 user.is_verified = True
+                 user.save()
+
+                 self.stdout.write(
+                     self.style.SUCCESS(f'Created admin user: {user.username}')     
+                 )
+                 return user
+             else:
+                 raise Exception(f"Failed to create admin user:
+     {result['message']}")
+
+         def _create_sample_organizations(self):
+             """Create sample organizations for demonstration"""
+             self.stdout.write('Creating sample organizations...')
+
+             org_service = OrganizationService()
+             sample_orgs = []
+
+             organizations_data = [
+                 {
+                     'name': 'TechCorp Security',
+                     'domain': 'techcorp.com',
+                     'organization_type': 'private_sector',
+                     'description': 'Technology company focused on cybersecurity    
+      solutions',
+                     'contact_email': 'security@techcorp.com'
+                 },
+                 {
+                     'name': 'Federal Cyber Defense',
+                     'domain': 'fedcyber.gov',
+                     'organization_type': 'government',
+                     'description': 'Federal government cybersecurity agency',      
+                     'contact_email': 'contact@fedcyber.gov'
+                 },
+                 {
+                     'name': 'University Research Lab',
+                     'domain': 'cyberlab.edu',
+                     'organization_type': 'academic',
+                     'description': 'Academic cybersecurity research
+     laboratory',
+                     'contact_email': 'research@cyberlab.edu'
+                 }
+             ]
+
+             for org_data in organizations_data:
+                 # Check if organization already exists
+                 existing_org =
+     Organization.objects.filter(domain=org_data['domain']).first()
+                 if existing_org:
+                     self.stdout.write(
+                         self.style.WARNING(f'Organization {org_data["name"]}       
+     already exists')
+                     )
+                     sample_orgs.append(existing_org)
+                     continue
+
+                 result = org_service.create_organization(
+                     name=org_data['name'],
+                     domain=org_data['domain'],
+                     organization_type=org_data['organization_type'],
+                     description=org_data['description'],
+                     contact_email=org_data['contact_email'],
+                     created_by=None  # System creation
+                 )
+
+                 if result['success']:
+                     org =
+     Organization.objects.get(id=result['organization_id'])
+                     sample_orgs.append(org)
+                     self.stdout.write(
+                         self.style.SUCCESS(f'Created organization: {org.name}')    
+                     )
+                 else:
+                     self.stdout.write(
+                         self.style.ERROR(f'Failed to create organization
+     {org_data["name"]}: {result["message"]}')
+                     )
+
+             return sample_orgs
+
+         def _create_sample_users(self, sample_orgs, admin_user):
+             """Create sample users for each organization"""
+             self.stdout.write('Creating sample users...')
+
+             user_service = UserService()
+
+             for org in sample_orgs:
+                 # Create a publisher for each organization
+                 publisher_username = f'{org.domain.split(".")[0]}_publisher'       
+
+                 # Check if user already exists
+                 if
+     CustomUser.objects.filter(username=publisher_username).exists():
+                     self.stdout.write(
+                         self.style.WARNING(f'User {publisher_username} already     
+     exists')
+                     )
+                     continue
+
+                 result = user_service.create_user(
+                     username=publisher_username,
+                     email=f'publisher@{org.domain}',
+                     password='DefaultPassword123!',  # Should be changed on        
+     first login
+                     first_name='Organization',
+                     last_name='Publisher',
+                     role='publisher',
+                     organization_id=str(org.id),
+                     created_by=admin_user
+                 )
+
+                 if result['success']:
+                     user = CustomUser.objects.get(id=result['user_id'])
+                     user.is_verified = True
+                     user.save()
+
+                     self.stdout.write(
+                         self.style.SUCCESS(f'Created publisher user:
+     {user.username} for {org.name}')
+                     )
+                 else:
+                     self.stdout.write(
+                         self.style.ERROR(f'Failed to create publisher for
+     {org.name}: {result["message"]}')
+                     )
+
+         def _setup_system_configuration(self):
+             """Set up initial system configuration"""
+             self.stdout.write('Setting up system configuration...')
+
+             # Create necessary directories
+             import os
+             from django.conf import settings
+
+             directories = [
+                 'logs',
+                 'uploads',
+                 'static',
+                 'media'
+             ]
+
+             for directory in directories:
+                 dir_path = os.path.join(settings.BASE_DIR, directory)
+                 if not os.path.exists(dir_path):
+                     os.makedirs(dir_path)
+                     self.stdout.write(f'Created directory: {directory}')
+
+             self.stdout.write(
+                 self.style.SUCCESS('System configuration completed')
+             )
+
+         def _display_summary(self, admin_user, bluevision_org, sample_orgs):       
+             """Display initialization summary"""
+             self.stdout.write('\n' + '='*50)
+             self.stdout.write(
+                 self.style.SUCCESS('CRISP UNIFIED SYSTEM INITIALIZATION
+     SUMMARY')
+             )
+             self.stdout.write('='*50)
+
+             self.stdout.write(f'Admin User: {admin_user.username}
+     ({admin_user.email})')
+             self.stdout.write(f'BlueVision Org: {bluevision_org.name}')
+
+             self.stdout.write('\nSample Organizations:')
+             for org in sample_orgs:
+                 user_count =
+     CustomUser.objects.filter(organization=org).count()
+                 self.stdout.write(f'  - {org.name} ({org.domain}) -
+     {user_count} users')
+
+             self.stdout.write('\nNext Steps:')
+             self.stdout.write('1. Change default passwords for all sample
+     users')
+             self.stdout.write('2. Configure email settings in .env file')
+             self.stdout.write('3. Set up trust relationships between
+     organizations')
+             self.stdout.write('4. Import threat intelligence feeds')
+             self.stdout.write('5. Configure STIX/TAXII endpoints')
+
+             self.stdout.write('\nAPI Endpoints:')
+             self.stdout.write('  Authentication: /api/auth/')
+             self.stdout.write('  Users: /api/users/')
+             self.stdout.write('  Organizations: /api/organizations/')
+             self.stdout.write('  Trust: /api/trust/')
+             self.stdout.write('  System Status: /api/')
+
+             self.stdout.write('\n' + '='*50)
+
+
+
+
+
+● Now I'll create a management command for system health checks:
+
+
+● Write(/mnt/c/Users/arman/OneDrive/Documents/GitHub/CRISP/CRISP_UNIFIED/core/m     
+       anagement/commands/system_health_check.py)
+
+  ⎿  Wrote 449 lines to /mnt/c/Users/arman/OneDrive/Documents/GitHub/CRISP/CRIS     
+     _UNIFIED/core/management/commands/system_health_check.py
+     """
+     Management command to perform comprehensive system health checks
+     Validates database connectivity, service integrity, and configuration
+     """
+
+     import os
+     import sys
+     from django.core.management.base import BaseCommand
+     from django.db import connection
+     from django.conf import settings
+     from django.core.mail import send_mail
+     from core.models.models import (
+         CustomUser, Organization, BilateralTrust, ThreatFeed,
+         Indicator, TTPData, AuditLog
+     )
+     from core.services.trust_service import TrustService
+     from core.services.access_control_service import AccessControlService
+     from core.services.audit_service import AuditService
+
+     class Command(BaseCommand):
+         help = 'Perform comprehensive system health check'
+
+         def add_arguments(self, parser):
+             parser.add_argument(
+                 '--verbose',
+                 action='store_true',
+                 help='Enable verbose output',
+             )
+             parser.add_argument(
+                 '--email-test',
+                 action='store_true',
+                 help='Test email configuration',
+             )
+             parser.add_argument(
+                 '--fix-issues',
+                 action='store_true',
+                 help='Attempt to fix minor issues automatically',
+             )
+
+         def handle(self, *args, **options):
+             self.verbose = options['verbose']
+             self.email_test = options['email_test']
+             self.fix_issues = options['fix_issues']
+
+             self.stdout.write(
+                 self.style.SUCCESS('Starting CRISP System Health Check...')        
+             )
+
+             checks_passed = 0
+             checks_failed = 0
+             warnings = 0
+
+             # Database connectivity check
+             result = self._check_database()
+             if result['status'] == 'pass':
+                 checks_passed += 1
+             elif result['status'] == 'fail':
+                 checks_failed += 1
+             else:
+                 warnings += 1
+
+             # Model integrity check
+             result = self._check_models()
+             if result['status'] == 'pass':
+                 checks_passed += 1
+             elif result['status'] == 'fail':
+                 checks_failed += 1
+             else:
+                 warnings += 1
+
+             # Service functionality check
+             result = self._check_services()
+             if result['status'] == 'pass':
+                 checks_passed += 1
+             elif result['status'] == 'fail':
+                 checks_failed += 1
+             else:
+                 warnings += 1
+
+             # Configuration check
+             result = self._check_configuration()
+             if result['status'] == 'pass':
+                 checks_passed += 1
+             elif result['status'] == 'fail':
+                 checks_failed += 1
+             else:
+                 warnings += 1
+
+             # File system check
+             result = self._check_filesystem()
+             if result['status'] == 'pass':
+                 checks_passed += 1
+             elif result['status'] == 'fail':
+                 checks_failed += 1
+             else:
+                 warnings += 1
+
+             # Security check
+             result = self._check_security()
+             if result['status'] == 'pass':
+                 checks_passed += 1
+             elif result['status'] == 'fail':
+                 checks_failed += 1
+             else:
+                 warnings += 1
+
+             # Email test (optional)
+             if self.email_test:
+                 result = self._check_email()
+                 if result['status'] == 'pass':
+                     checks_passed += 1
+                 elif result['status'] == 'fail':
+                     checks_failed += 1
+                 else:
+                     warnings += 1
+
+             # Performance check
+             result = self._check_performance()
+             if result['status'] == 'pass':
+                 checks_passed += 1
+             elif result['status'] == 'fail':
+                 checks_failed += 1
+             else:
+                 warnings += 1
+
+             # Display summary
+             self._display_summary(checks_passed, checks_failed, warnings)
+
+             # Exit with appropriate code
+             if checks_failed > 0:
+                 sys.exit(1)
+             elif warnings > 0:
+                 sys.exit(2)
+             else:
+                 sys.exit(0)
+
+         def _check_database(self):
+             """Check database connectivity and basic operations"""
+             self.stdout.write('Checking database connectivity...')
+
+             try:
+                 # Test basic connection
+                 with connection.cursor() as cursor:
+                     cursor.execute("SELECT 1")
+                     result = cursor.fetchone()
+
+                 if result[0] != 1:
+                     return {
+                         'status': 'fail',
+                         'message': 'Database query returned unexpected result'     
+                     }
+
+                 # Test model operations
+                 user_count = CustomUser.objects.count()
+                 org_count = Organization.objects.count()
+
+                 if self.verbose:
+                     self.stdout.write(f'  - Users: {user_count}')
+                     self.stdout.write(f'  - Organizations: {org_count}')
+
+                 self.stdout.write(self.style.SUCCESS('✓ Database connectivity:     
+     PASS'))
+                 return {'status': 'pass', 'message': 'Database is accessible'}     
+
+             except Exception as e:
+                 self.stdout.write(self.style.ERROR(f'✗ Database connectivity:      
+     FAIL - {str(e)}'))
+                 return {'status': 'fail', 'message': str(e)}
+
+         def _check_models(self):
+             """Check model integrity and relationships"""
+             self.stdout.write('Checking model integrity...')
+
+             try:
+                 issues = []
+
+                 # Check for users without organizations
+                 users_without_org =
+     CustomUser.objects.filter(organization__isnull=True).count()
+                 if users_without_org > 0:
+                     issues.append(f'{users_without_org} users without
+     organization')
+                     if self.fix_issues:
+                         # Could attempt to fix by assigning to default org
+                         pass
+
+                 # Check for orphaned trust relationships
+                 orphaned_trusts = BilateralTrust.objects.filter(
+                     requesting_organization__isnull=True
+                 ).count()
+                 if orphaned_trusts > 0:
+                     issues.append(f'{orphaned_trusts} orphaned trust
+     relationships')
+
+                 # Check for invalid trust levels
+                 invalid_trusts = BilateralTrust.objects.exclude(
+                     trust_level__in=['none', 'minimal', 'moderate', 'standard',    
+      'full']
+                 ).count()
+                 if invalid_trusts > 0:
+                     issues.append(f'{invalid_trusts} trust relationships with      
+     invalid levels')
+
+                 if issues:
+                     message = '; '.join(issues)
+                     self.stdout.write(self.style.WARNING(f'⚠ Model integrity:      
+     WARNING - {message}'))
+                     return {'status': 'warning', 'message': message}
+                 else:
+                     self.stdout.write(self.style.SUCCESS('✓ Model integrity:       
+     PASS'))
+                     return {'status': 'pass', 'message': 'All models are
+     consistent'}
+
+             except Exception as e:
+                 self.stdout.write(self.style.ERROR(f'✗ Model integrity: FAIL -     
+     {str(e)}'))
+                 return {'status': 'fail', 'message': str(e)}
+
+         def _check_services(self):
+             """Check service functionality"""
+             self.stdout.write('Checking service functionality...')
+
+             try:
+                 # Test TrustService
+                 trust_service = TrustService()
+                 if not hasattr(trust_service, 'get_trust_level'):
+                     raise Exception('TrustService missing required methods')       
+
+                 # Test AccessControlService
+                 access_control = AccessControlService()
+                 if not hasattr(access_control, 'can_view_user'):
+                     raise Exception('AccessControlService missing required
+     methods')
+
+                 # Test AuditService
+                 audit_service = AuditService()
+                 if not hasattr(audit_service, 'log_security_event'):
+                     raise Exception('AuditService missing required methods')       
+
+                 self.stdout.write(self.style.SUCCESS('✓ Service functionality:     
+     PASS'))
+                 return {'status': 'pass', 'message': 'All services are
+     functional'}
+
+             except Exception as e:
+                 self.stdout.write(self.style.ERROR(f'✗ Service functionality:      
+     FAIL - {str(e)}'))
+                 return {'status': 'fail', 'message': str(e)}
+
+         def _check_configuration(self):
+             """Check system configuration"""
+             self.stdout.write('Checking configuration...')
+
+             warnings = []
+             errors = []
+
+             # Check required settings
+             required_settings = [
+                 'SECRET_KEY',
+                 'DATABASES',
+                 'AUTH_USER_MODEL',
+                 'REST_FRAMEWORK',
+                 'SIMPLE_JWT'
+             ]
+
+             for setting in required_settings:
+                 if not hasattr(settings, setting):
+                     errors.append(f'Missing required setting: {setting}')
+
+             # Check environment variables
+             env_vars = [
+                 'DJANGO_SECRET_KEY',
+                 'DB_NAME',
+                 'DB_USER',
+                 'DB_PASSWORD'
+             ]
+
+             for var in env_vars:
+                 if not os.getenv(var):
+                     warnings.append(f'Environment variable not set: {var}')        
+
+             # Check DEBUG setting in production
+             if settings.DEBUG and os.getenv('ENVIRONMENT', 'development') ==       
+     'production':
+                 warnings.append('DEBUG is enabled in production environment')      
+
+             if errors:
+                 message = '; '.join(errors)
+                 self.stdout.write(self.style.ERROR(f'✗ Configuration: FAIL -       
+     {message}'))
+                 return {'status': 'fail', 'message': message}
+             elif warnings:
+                 message = '; '.join(warnings)
+                 self.stdout.write(self.style.WARNING(f'⚠ Configuration:
+     WARNING - {message}'))
+                 return {'status': 'warning', 'message': message}
+             else:
+                 self.stdout.write(self.style.SUCCESS('✓ Configuration: PASS'))     
+                 return {'status': 'pass', 'message': 'Configuration is valid'}     
+
+         def _check_filesystem(self):
+             """Check file system permissions and directories"""
+             self.stdout.write('Checking file system...')
+
+             try:
+                 issues = []
+
+                 # Check required directories
+                 required_dirs = [
+                     settings.STATIC_ROOT or os.path.join(settings.BASE_DIR,        
+     'static'),
+                     os.path.join(settings.BASE_DIR, 'logs'),
+                     os.path.join(settings.BASE_DIR, 'uploads')
+                 ]
+
+                 for directory in required_dirs:
+                     if not os.path.exists(directory):
+                         if self.fix_issues:
+                             try:
+                                 os.makedirs(directory, exist_ok=True)
+                                 self.stdout.write(f'  Created directory:
+     {directory}')
+                             except Exception as e:
+                                 issues.append(f'Cannot create directory
+     {directory}: {str(e)}')
+                         else:
+                             issues.append(f'Missing directory: {directory}')       
+                     elif not os.access(directory, os.W_OK):
+                         issues.append(f'No write permission for directory:
+     {directory}')
+
+                 # Check log file
+                 log_file = os.path.join(settings.BASE_DIR, 'crisp_unified.log')    
+                 if os.path.exists(log_file) and not os.access(log_file,
+     os.W_OK):
+                     issues.append(f'No write permission for log file:
+     {log_file}')
+
+                 if issues:
+                     message = '; '.join(issues)
+                     self.stdout.write(self.style.WARNING(f'⚠ File system:
+     WARNING - {message}'))
+                     return {'status': 'warning', 'message': message}
+                 else:
+                     self.stdout.write(self.style.SUCCESS('✓ File system:
+     PASS'))
+                     return {'status': 'pass', 'message': 'File system is
+     accessible'}
+
+             except Exception as e:
+                 self.stdout.write(self.style.ERROR(f'✗ File system: FAIL -
+     {str(e)}'))
+                 return {'status': 'fail', 'message': str(e)}
+
+         def _check_security(self):
+             """Check security configuration"""
+             self.stdout.write('Checking security configuration...')
+
+             warnings = []
+
+             # Check SECRET_KEY
+             if settings.SECRET_KEY == 'django-insecure-default-key-for-dev':       
+                 warnings.append('Using default SECRET_KEY')
+
+             # Check ALLOWED_HOSTS
+             if '*' in settings.ALLOWED_HOSTS and not settings.DEBUG:
+                 warnings.append('ALLOWED_HOSTS allows all hosts in production')    
+
+             # Check CORS settings
+             if hasattr(settings, 'CORS_ALLOW_ALL_ORIGINS') and
+     settings.CORS_ALLOW_ALL_ORIGINS:
+                 warnings.append('CORS allows all origins')
+
+             # Check middleware
+             required_middleware = [
+                 'core.middleware.audit_middleware.AuditMiddleware',
+                 'core.middleware.trust_middleware.TrustMiddleware'
+             ]
+
+             for middleware in required_middleware:
+                 if middleware not in settings.MIDDLEWARE:
+                     warnings.append(f'Missing security middleware:
+     {middleware}')
+
+             if warnings:
+                 message = '; '.join(warnings)
+                 self.stdout.write(self.style.WARNING(f'⚠ Security: WARNING -       
+     {message}'))
+                 return {'status': 'warning', 'message': message}
+             else:
+                 self.stdout.write(self.style.SUCCESS('✓ Security: PASS'))
+                 return {'status': 'pass', 'message': 'Security configuration is    
+      adequate'}
+
+         def _check_email(self):
+             """Test email configuration"""
+             self.stdout.write('Testing email configuration...')
+
+             try:
+                 test_email = os.getenv('TEST_EMAIL', 'test@example.com')
+
+                 send_mail(
+                     'CRISP System Health Check',
+                     'This is a test email from the CRISP system health check.',    
+                     settings.DEFAULT_FROM_EMAIL,
+                     [test_email],
+                     fail_silently=False,
+                 )
+
+                 self.stdout.write(self.style.SUCCESS('✓ Email: PASS'))
+                 return {'status': 'pass', 'message': f'Test email sent to
+     {test_email}'}
+
+             except Exception as e:
+                 self.stdout.write(self.style.ERROR(f'✗ Email: FAIL -
+     {str(e)}'))
+                 return {'status': 'fail', 'message': str(e)}
+
+         def _check_performance(self):
+             """Check system performance metrics"""
+             self.stdout.write('Checking performance metrics...')
+
+             try:
+                 warnings = []
+
+                 # Check database query performance
+                 import time
+                 start_time = time.time()
+                 CustomUser.objects.count()
+                 query_time = time.time() - start_time
+
+                 if query_time > 1.0:
+                     warnings.append(f'Slow database queries
+     (>{query_time:.2f}s)')
+
+                 # Check large table sizes
+                 if ThreatFeed.objects.count() > 10000:
+                     warnings.append('Large number of threat feeds may impact       
+     performance')
+
+                 if Indicator.objects.count() > 100000:
+                     warnings.append('Large number of indicators may impact
+     performance')
+
+                 # Check audit log size
+                 if AuditLog.objects.count() > 1000000:
+                     warnings.append('Large audit log may impact performance')      
+
+                 if warnings:
+                     message = '; '.join(warnings)
+                     self.stdout.write(self.style.WARNING(f'⚠ Performance:
+     WARNING - {message}'))
+                     return {'status': 'warning', 'message': message}
+                 else:
+                     self.stdout.write(self.style.SUCCESS('✓ Performance:
+     PASS'))
+                     return {'status': 'pass', 'message': 'Performance metrics      
+     are acceptable'}
+
+             except Exception as e:
+                 self.stdout.write(self.style.ERROR(f'✗ Performance: FAIL -
+     {str(e)}'))
+                 return {'status': 'fail', 'message': str(e)}
+
+         def _display_summary(self, checks_passed, checks_failed, warnings):        
+             """Display health check summary"""
+             self.stdout.write('\n' + '='*50)
+             self.stdout.write(
+                 self.style.SUCCESS('SYSTEM HEALTH CHECK SUMMARY')
+             )
+             self.stdout.write('='*50)
+
+             total_checks = checks_passed + checks_failed + warnings
+
+             self.stdout.write(f'Total Checks: {total_checks}')
+             self.stdout.write(self.style.SUCCESS(f'Passed: {checks_passed}'))      
+             if warnings > 0:
+                 self.stdout.write(self.style.WARNING(f'Warnings: {warnings}'))     
+             if checks_failed > 0:
+                 self.stdout.write(self.style.ERROR(f'Failed: {checks_failed}'))    
+
+             if checks_failed == 0 and warnings == 0:
+                 self.stdout.write('\n' + self.style.SUCCESS('✓ All checks
+     passed - System is healthy'))
+             elif checks_failed == 0:
+                 self.stdout.write('\n' + self.style.WARNING('⚠ Some warnings       
+     found - Review recommended'))
+             else:
+                 self.stdout.write('\n' + self.style.ERROR('✗ Critical issues       
+     found - Immediate attention required'))
+
+             self.stdout.write('\n' + '='*50)
+
+
+
+
+
+  ⎿  Claude usage limit reached. Your limit will reset at 5am
+     (Africa/Johannesburg).
+
+      • /upgrade to increase your usage limit.
+
+======================= Previous Conversation Compacted =======================     
+● Compact summary
+  ⎿ This session is being continued from a previous conversation that ran out       
+    of context. The conversation is summarized below:
+    Claude AI usage limit reached|1755054000.
+  ⎿  Read core/management/commands/system_health_check.py (449 lines)
+  ⎿  Read core/management/commands/initialize_system.py (323 lines)
+  ⎿  Read crisp_unified/urls.py (57 lines)
+  ⎿  Read core/urls.py (84 lines)
+  ⎿  Read crisp_unified/settings.py (365 lines)
+  ⎿  Todo list read (21 items)
+
+> /compact
+  ⎿  Compacted. ctrl+r to see full summary
