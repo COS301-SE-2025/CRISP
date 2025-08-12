@@ -22,7 +22,6 @@ DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
-# For development in Docker/WSL, allow all hosts when DEBUG is True
 if DEBUG:
     ALLOWED_HOSTS.append('*')
 
@@ -41,7 +40,13 @@ INSTALLED_APPS = [
     
     # CRISP core applications
     'core',
+    'core_ut.user_management',
+    'core_ut.trust',
+    'core_ut.alerts',
 ]
+
+# Custom user model
+AUTH_USER_MODEL = 'user_management.CustomUser'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -210,3 +215,196 @@ CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+
+# Session Configuration
+SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Strict'
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_AGE = int(os.getenv('SESSION_COOKIE_AGE_SECONDS', '3600'))  # 1 hour
+
+# CSRF Configuration
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Strict'
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+    }
+}
+
+CRISP_SETTINGS = {
+    # Trust system configuration
+    'TRUST_SYSTEM': {
+        'DEFAULT_TRUST_LEVEL': 'restricted',
+        'AUTO_APPROVE_TRUST_RELATIONSHIPS': False,
+        'TRUST_RELATIONSHIP_EXPIRY_DAYS': int(os.getenv('TRUST_RELATIONSHIP_EXPIRY_DAYS', '365')),
+        'MAX_TRUST_GROUPS_PER_ORG': int(os.getenv('MAX_TRUST_GROUPS_PER_ORG', '10')),
+        'ENABLE_TRUST_INHERITANCE': True,
+    },
+    
+    # User management configuration
+    'USER_MANAGEMENT': {
+        'REQUIRE_EMAIL_VERIFICATION': True,
+        'PASSWORD_RESET_TIMEOUT_DAYS': 1,
+        'ACCOUNT_LOCKOUT_THRESHOLD': int(os.getenv('ACCOUNT_LOCKOUT_THRESHOLD', '5')),
+        'ACCOUNT_LOCKOUT_DURATION_MINUTES': int(os.getenv('ACCOUNT_LOCKOUT_DURATION_MINUTES', '30')),
+        'ENABLE_TWO_FACTOR_AUTH': True,
+        'REQUIRE_STRONG_PASSWORDS': True,
+        'PASSWORD_HISTORY_COUNT': 5,
+        'TRUSTED_DEVICE_EXPIRY_DAYS': int(os.getenv('TRUSTED_DEVICE_EXPIRY_DAYS', '30')),
+    },
+    
+    # Security configuration
+    'SECURITY': {
+        'ENABLE_AUDIT_LOGGING': True,
+        'AUDIT_LOG_RETENTION_DAYS': int(os.getenv('AUDIT_LOG_RETENTION_DAYS', '90')),
+        'ENABLE_RATE_LIMITING': True,
+        'ENABLE_IP_WHITELISTING': False,
+        'ALLOWED_IP_RANGES': os.getenv('ALLOWED_IP_RANGES', '').split(',') if os.getenv('ALLOWED_IP_RANGES') else [],
+        'ENABLE_GEOLOCATION_BLOCKING': False,
+        'BLOCKED_COUNTRIES': os.getenv('BLOCKED_COUNTRIES', '').split(',') if os.getenv('BLOCKED_COUNTRIES') else [],
+    },
+    
+    # API configuration
+    'API': {
+        'ENABLE_API_VERSIONING': True,
+        'DEFAULT_API_VERSION': 'v1',
+        'ENABLE_API_DOCUMENTATION': DEBUG,
+        'MAX_UPLOAD_SIZE_MB': int(os.getenv('MAX_UPLOAD_SIZE_MB', '50')),
+        'ENABLE_BULK_OPERATIONS': True,
+        'MAX_BULK_OPERATION_SIZE': int(os.getenv('MAX_BULK_OPERATION_SIZE', '100')),
+    },
+    
+    # Organization configuration
+    'ORGANIZATION': {
+        'REQUIRE_DOMAIN_VERIFICATION': True,
+        'AUTO_CREATE_PUBLISHER_ROLE': True,
+        'MAX_USERS_PER_ORG': int(os.getenv('MAX_USERS_PER_ORG', '1000')),
+        'ENABLE_ORG_INVITATIONS': True,
+        'INVITATION_EXPIRY_DAYS': int(os.getenv('INVITATION_EXPIRY_DAYS', '7')),
+    },
+    
+    # Performance and monitoring
+    'PERFORMANCE': {
+        'ENABLE_QUERY_OPTIMIZATION': True,
+        'ENABLE_CACHING': True,
+        'CACHE_TIMEOUT_SECONDS': int(os.getenv('CACHE_TIMEOUT_SECONDS', '300')),
+        'ENABLE_METRICS_COLLECTION': True,
+        'METRICS_RETENTION_DAYS': int(os.getenv('METRICS_RETENTION_DAYS', '30')),
+    }
+}
+
+# File Upload Configuration
+FILE_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024 * int(float(os.getenv('FILE_UPLOAD_MAX_MEMORY_SIZE_MB', '2.5')))  # 2.5 MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = FILE_UPLOAD_MAX_MEMORY_SIZE
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
+
+# Trust Management Secret Key
+TRUST_MANAGEMENT_SECRET_KEY = os.getenv('TRUST_MANAGEMENT_SECRET_KEY', SECRET_KEY)
+
+# JSON encoder configuration for UUID handling
+import json
+from django.core.serializers.json import DjangoJSONEncoder
+from uuid import UUID
+
+JSON_ENCODER = DjangoJSONEncoder
+
+# Patch JSON encoder to handle UUIDs
+from json.encoder import JSONEncoder
+
+_original_default = JSONEncoder.default
+
+def patched_default(self, o):
+    if isinstance(o, UUID):
+        return str(o)
+    return _original_default(self, o)
+
+JSONEncoder.default = patched_default
+
+# Logging Configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs' / 'crisp_unified.log',
+            'formatter': 'verbose',
+        },
+        'audit_file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs' / 'audit.log',
+            'formatter': 'verbose',
+        },
+        'security_file': {
+            'level': 'WARNING',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs' / 'security.log',
+            'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'core': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'core_ut.trust': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'core_ut.user_management': {
+            'handlers': ['file', 'audit_file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'security': {
+            'handlers': ['security_file', 'console'],
+            'level': 'WARNING',
+            'propagate': True,
+        },
+    },
+}
+
+# Create logs directory if it doesn't exist
+logs_dir = BASE_DIR / 'logs'
+logs_dir.mkdir(parents=True, exist_ok=True)
+
+import sys
+if 'runserver' in sys.argv or 'shell' in sys.argv or 'migrate' in sys.argv:
+    try:
+        import core_ut.trust.admin_ut
+        import core_ut.user_management.admin_ut
+    except ImportError:
+        pass
