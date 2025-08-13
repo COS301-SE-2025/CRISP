@@ -1,6 +1,8 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+from django.conf import settings
 import uuid
+
 import json
 from django.utils import timezone
 from datetime import timedelta
@@ -47,52 +49,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class UserProfile(models.Model):
-    """
-    User profile to extend the default Django User with organization relationship
-    """
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    organization = models.ForeignKey('Organization', on_delete=models.SET_NULL, null=True, blank=True, related_name='user_profiles')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    def __str__(self):
-        return f"{self.user.username} - {self.organization.name if self.organization else 'No Organization'}"
-
-
-class Organization(models.Model):
-    """
-    Organization model represents educational institutions or other organizations
-    """
-    TYPE_CHOICES = [
-        ('university', 'University'),
-        ('college', 'College'),
-        ('school', 'School'),
-        ('government', 'Government'),
-        ('commercial', 'Commercial'),
-        ('research', 'Research Institution'),
-        ('ngo', 'Non-Governmental Organization'),
-    ]
-    
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=255, unique=True)
-    description = models.TextField(blank=True, null=True)
-    identity_class = models.CharField(max_length=100, default='organization')
-    organization_type = models.CharField(max_length=50, choices=TYPE_CHOICES, default='university')
-    sectors = models.JSONField(default=list, blank=True, null=True)
-    contact_email = models.EmailField(blank=True, null=True)
-    website = models.URLField(blank=True, null=True)
-    domain = models.CharField(max_length=255, blank=True, null=True)
-    stix_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_organizations')
-
-    def __str__(self):
-        return self.name
-
-    class Meta:
-        ordering = ['name']
 
 
 class STIXObject(models.Model):
@@ -139,8 +95,8 @@ class STIXObject(models.Model):
     # System metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_stix_objects')
-    source_organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='stix_objects')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_stix_objects')
+    source_organization = models.ForeignKey('user_management.Organization', on_delete=models.CASCADE, related_name='stix_objects')
     anonymized = models.BooleanField(default=False)
     anonymization_strategy = models.CharField(max_length=50, blank=True, null=True)
     anonymization_trust_level = models.FloatField(null=True, blank=True)
@@ -228,7 +184,7 @@ class Collection(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     # Collection ownership and trust settings
-    owner = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='owned_collections')
+    owner = models.ForeignKey('user_management.Organization', on_delete=models.CASCADE, related_name='owned_collections')
     default_anonymization_level = models.CharField(
         max_length=20,
         choices=[(level.value, level.value.title()) for level in AnonymizationLevel],
@@ -288,11 +244,11 @@ class Feed(models.Model):
     alias = models.SlugField(max_length=50, unique=True)
     name = models.CharField(max_length=255)
     status = models.CharField(max_length=50)
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     
     # Relationships
     collection = models.ForeignKey(Collection, on_delete=models.CASCADE, related_name='feeds')
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='publication_feeds')
+    organization = models.ForeignKey('user_management.Organization', on_delete=models.CASCADE, related_name='publication_feeds')
     
     # Use string reference to avoid forward reference issues
     threat_feed = models.ForeignKey(
@@ -426,9 +382,9 @@ class Identity(models.Model):
     modified = models.DateTimeField(auto_now=True)
     name = models.CharField(max_length=255)
     identity_class = models.CharField(max_length=100)
-    organization = models.OneToOneField('Organization', on_delete=models.CASCADE, related_name='stix_identity')
+    organization = models.OneToOneField('user_management.Organization', on_delete=models.CASCADE, related_name='stix_identity')
     raw_data = models.TextField()
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
 
     class Meta:
         verbose_name_plural = "Identities"
@@ -457,7 +413,7 @@ class TrustNetwork(models.Model):
         default=AnonymizationLevel.MEDIUM.value
     )
     members = models.ManyToManyField(
-        Organization, 
+        'user_management.Organization', 
         through='NetworkMembership',
         related_name='trust_networks'
     )
@@ -478,7 +434,7 @@ class NetworkMembership(models.Model):
         ('observer', 'Observer'),
     ]
     
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
+    organization = models.ForeignKey('user_management.Organization', on_delete=models.CASCADE)
     network = models.ForeignKey(TrustNetwork, on_delete=models.CASCADE)
     membership_level = models.CharField(max_length=50, choices=MEMBERSHIP_LEVELS)
     joined_at = models.DateTimeField(auto_now_add=True)
@@ -502,7 +458,7 @@ class ThreatFeed(models.Model):
     taxii_password = models.CharField(max_length=255, blank=True, null=True)
     
     # Feed metadata
-    owner = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='owned_threat_feeds')
+    owner = models.ForeignKey('user_management.Organization', on_delete=models.CASCADE, related_name='owned_threat_feeds')
     is_external = models.BooleanField(default=True)
     is_public = models.BooleanField(default=False)
     last_sync = models.DateTimeField(blank=True, null=True)
@@ -710,7 +666,7 @@ class Institution(models.Model):
     contact_name = models.CharField(max_length=255)
     
     # Link to organization
-    organization = models.OneToOneField(Organization, on_delete=models.CASCADE, blank=True, null=True)
+    organization = models.OneToOneField('user_management.Organization', on_delete=models.CASCADE, blank=True, null=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -751,42 +707,3 @@ class TrustLevel(models.Model):
         ordering = ['-numerical_value']
 
 
-class TrustRelationship(models.Model):
-    """
-    Trust relationships between organizations
-    """
-    RELATIONSHIP_TYPES = [
-        ('partnership', 'Partnership'),
-        ('vendor', 'Vendor Relationship'),
-        ('educational', 'Educational Partnership'),
-        ('research', 'Research Collaboration'),
-        ('institutional', 'Institutional Trust'),
-        ('government', 'Government Agency'),
-    ]
-    
-    source_organization = models.ForeignKey(
-        Organization, 
-        on_delete=models.CASCADE, 
-        related_name='trust_relationships_as_source'
-    )
-    target_organization = models.ForeignKey(
-        Organization, 
-        on_delete=models.CASCADE, 
-        related_name='trust_relationships_as_target'
-    )
-    trust_level = models.ForeignKey(TrustLevel, on_delete=models.CASCADE)
-    
-    relationship_type = models.CharField(max_length=50, choices=RELATIONSHIP_TYPES, default='partnership')
-    is_active = models.BooleanField(default=True)
-    notes = models.TextField(blank=True, null=True)
-    created_by = models.CharField(max_length=255, default='System')
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    def __str__(self):
-        return f"{self.source_organization.name} → {self.target_organization.name} ({self.trust_level.name})"
-    
-    class Meta:
-        unique_together = ['source_organization', 'target_organization']
-        ordering = ['-created_at']
