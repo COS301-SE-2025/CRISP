@@ -10,11 +10,12 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
-from core.models.models import BilateralTrust, CommunityTrust, Organization, CustomUser
+from core.models.models import TrustRelationship, TrustGroup, Organization, CustomUser
 from core.services.trust_service import TrustService
 from core.services.access_control_service import AccessControlService
 from core.serializers.trust_serializer import (
-    BilateralTrustSerializer, CommunityTrustSerializer, TrustRelationshipSerializer
+    TrustRelationshipSerializer, TrustGroupSerializer, TrustLevelSerializer,
+    TrustRelationshipSummarySerializer, TrustRelationshipCreateSerializer
 )
 
 logger = logging.getLogger(__name__)
@@ -52,7 +53,7 @@ def list_bilateral_trusts(request):
         # Get base queryset based on user permissions
         if request.user.role == 'BlueVisionAdmin':
             # BlueVision admins can see all trust relationships
-            queryset = BilateralTrust.objects.all()
+            queryset = TrustRelationship.objects.all()
         else:
             # Other users can only see relationships involving their organization
             user_org = request.user.organization
@@ -63,8 +64,8 @@ def list_bilateral_trusts(request):
                     'total_count': 0
                 }, status=status.HTTP_200_OK)
             
-            queryset = BilateralTrust.objects.filter(
-                Q(requesting_organization=user_org) | Q(responding_organization=user_org)
+            queryset = TrustRelationship.objects.filter(
+                Q(source_organization=user_org) | Q(target_organization=user_org)
             )
         
         # Apply filters
@@ -93,13 +94,13 @@ def list_bilateral_trusts(request):
         page = paginator.paginate_queryset(queryset, request)
         
         if page is not None:
-            serializer = BilateralTrustSerializer(page, many=True)
+            serializer = TrustRelationshipSerializer(page, many=True)
             return paginator.get_paginated_response({
                 'success': True,
                 'trusts': serializer.data
             })
         
-        serializer = BilateralTrustSerializer(queryset, many=True)
+        serializer = TrustRelationshipSerializer(queryset, many=True)
         return Response({
             'success': True,
             'trusts': serializer.data,
@@ -166,8 +167,8 @@ def request_bilateral_trust(request):
         )
         
         if result['success']:
-            trust_relationship = BilateralTrust.objects.get(id=result['trust_id'])
-            serializer = BilateralTrustSerializer(trust_relationship)
+            trust_relationship = TrustRelationship.objects.get(id=result['trust_id'])
+            serializer = TrustRelationshipSerializer(trust_relationship)
             
             return Response({
                 'success': True,
@@ -206,10 +207,10 @@ def respond_bilateral_trust(request, trust_id):
         
         # Get trust relationship
         try:
-            trust_relationship = BilateralTrust.objects.select_related(
-                'requesting_organization', 'responding_organization'
+            trust_relationship = TrustRelationship.objects.select_related(
+                'source_organization', 'target_organization', 'trust_level'
             ).get(id=trust_id)
-        except BilateralTrust.DoesNotExist:
+        except TrustRelationship.DoesNotExist:
             return Response({
                 'success': False,
                 'message': 'Trust relationship not found'
@@ -248,7 +249,7 @@ def respond_bilateral_trust(request, trust_id):
         
         if result['success']:
             trust_relationship.refresh_from_db()
-            serializer = BilateralTrustSerializer(trust_relationship)
+            serializer = TrustRelationshipSerializer(trust_relationship)
             
             return Response({
                 'success': True,
@@ -286,8 +287,8 @@ def update_bilateral_trust(request, trust_id):
         
         # Get trust relationship
         try:
-            trust_relationship = BilateralTrust.objects.get(id=trust_id)
-        except BilateralTrust.DoesNotExist:
+            trust_relationship = TrustRelationship.objects.get(id=trust_id)
+        except TrustRelationship.DoesNotExist:
             return Response({
                 'success': False,
                 'message': 'Trust relationship not found'
@@ -318,7 +319,7 @@ def update_bilateral_trust(request, trust_id):
         
         if result['success']:
             trust_relationship.refresh_from_db()
-            serializer = BilateralTrustSerializer(trust_relationship)
+            serializer = TrustRelationshipSerializer(trust_relationship)
             
             return Response({
                 'success': True,
@@ -355,8 +356,8 @@ def revoke_bilateral_trust(request, trust_id):
         
         # Get trust relationship
         try:
-            trust_relationship = BilateralTrust.objects.get(id=trust_id)
-        except BilateralTrust.DoesNotExist:
+            trust_relationship = TrustRelationship.objects.get(id=trust_id)
+        except TrustRelationship.DoesNotExist:
             return Response({
                 'success': False,
                 'message': 'Trust relationship not found'
@@ -469,16 +470,16 @@ def list_community_trusts(request):
             }, status=status.HTTP_403_FORBIDDEN)
         
         # Get queryset
-        queryset = CommunityTrust.objects.all()
+        queryset = TrustGroup.objects.all()
         
         # Apply filters
-        trust_type = request.GET.get('trust_type')
-        if trust_type:
-            queryset = queryset.filter(trust_type=trust_type)
+        group_type = request.GET.get('group_type')
+        if group_type:
+            queryset = queryset.filter(group_type=group_type)
         
-        trust_status = request.GET.get('status')
-        if trust_status:
-            queryset = queryset.filter(status=trust_status)
+        is_active = request.GET.get('is_active')
+        if is_active:
+            queryset = queryset.filter(is_active=is_active.lower() == 'true')
         
         # Order by created_at descending
         queryset = queryset.order_by('-created_at')
@@ -488,13 +489,13 @@ def list_community_trusts(request):
         page = paginator.paginate_queryset(queryset, request)
         
         if page is not None:
-            serializer = CommunityTrustSerializer(page, many=True)
+            serializer = TrustGroupSerializer(page, many=True)
             return paginator.get_paginated_response({
                 'success': True,
                 'community_trusts': serializer.data
             })
         
-        serializer = CommunityTrustSerializer(queryset, many=True)
+        serializer = TrustGroupSerializer(queryset, many=True)
         return Response({
             'success': True,
             'community_trusts': serializer.data,

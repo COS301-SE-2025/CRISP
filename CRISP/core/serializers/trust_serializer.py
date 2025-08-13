@@ -3,7 +3,7 @@ Trust Serializers - Trust relationship model serialization for API responses
 """
 
 from rest_framework import serializers
-from core.models.models import BilateralTrust, CommunityTrust, Organization, CustomUser
+from core.models.models import TrustRelationship, TrustGroup, TrustLevel, Organization, CustomUser
 
 class OrganizationBasicSerializer(serializers.ModelSerializer):
     """Basic organization serializer for trust relationships"""
@@ -26,93 +26,105 @@ class UserBasicSerializer(serializers.ModelSerializer):
     def get_full_name(self, obj):
         return obj.get_full_name()
 
-class BilateralTrustSerializer(serializers.ModelSerializer):
-    """Serializer for BilateralTrust model"""
+class TrustRelationshipSerializer(serializers.ModelSerializer):
+    """Serializer for TrustRelationship model"""
     
-    requesting_organization = OrganizationBasicSerializer(read_only=True)
-    responding_organization = OrganizationBasicSerializer(read_only=True)
-    requested_by = UserBasicSerializer(read_only=True)
-    accepted_by = UserBasicSerializer(read_only=True)
-    rejected_by = UserBasicSerializer(read_only=True)
+    source_organization = OrganizationBasicSerializer(read_only=True)
+    target_organization = OrganizationBasicSerializer(read_only=True)
+    created_by = UserBasicSerializer(read_only=True)
+    last_modified_by = UserBasicSerializer(read_only=True)
     revoked_by = UserBasicSerializer(read_only=True)
+    trust_level = serializers.StringRelatedField(read_only=True)
     
     class Meta:
-        model = BilateralTrust
+        model = TrustRelationship
         fields = [
-            'id', 'requesting_organization', 'responding_organization',
-            'status', 'trust_level', 'requested_at', 'responded_at',
-            'request_message', 'response_message', 'requested_by',
-            'accepted_by', 'rejected_by', 'revoked_by', 'revoked_at',
-            'created_at', 'updated_at'
+            'id', 'source_organization', 'target_organization',
+            'relationship_type', 'trust_level', 'status', 'is_bilateral', 'is_active',
+            'valid_from', 'valid_until', 'sharing_preferences',
+            'anonymization_level', 'access_level', 'approved_by_source', 
+            'approved_by_target', 'created_by', 'last_modified_by', 
+            'revoked_by', 'revoked_at', 'notes', 'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'id', 'requested_at', 'responded_at', 'revoked_at',
-            'created_at', 'updated_at'
+            'id', 'revoked_at', 'created_at', 'updated_at'
         ]
 
-class BilateralTrustCreateSerializer(serializers.ModelSerializer):
-    """Serializer for creating bilateral trust requests"""
+class TrustRelationshipCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating trust relationships"""
     
-    responding_organization_id = serializers.UUIDField(write_only=True)
+    target_organization_id = serializers.UUIDField(write_only=True)
+    trust_level_id = serializers.UUIDField(write_only=True)
     
     class Meta:
-        model = BilateralTrust
-        fields = ['responding_organization_id', 'trust_level', 'request_message']
+        model = TrustRelationship
+        fields = [
+            'target_organization_id', 'trust_level_id', 'relationship_type',
+            'is_bilateral', 'anonymization_level', 'access_level', 'notes'
+        ]
     
-    def validate_trust_level(self, value):
-        """Validate trust level"""
-        valid_levels = ['none', 'minimal', 'moderate', 'standard', 'full']
-        if value not in valid_levels:
-            raise serializers.ValidationError(f"Trust level must be one of: {', '.join(valid_levels)}")
+    def validate_relationship_type(self, value):
+        """Validate relationship type"""
+        valid_types = ['bilateral', 'community', 'hierarchical', 'federation']
+        if value not in valid_types:
+            raise serializers.ValidationError(f"Relationship type must be one of: {', '.join(valid_types)}")
         return value
 
-class BilateralTrustResponseSerializer(serializers.Serializer):
-    """Serializer for responding to bilateral trust requests"""
+class TrustRelationshipResponseSerializer(serializers.Serializer):
+    """Serializer for responding to trust requests"""
     
-    action = serializers.ChoiceField(choices=['accept', 'reject'])
-    trust_level = serializers.CharField(required=False)
+    action = serializers.ChoiceField(choices=['approve', 'deny'])
+    trust_level_id = serializers.UUIDField(required=False)
     message = serializers.CharField(required=False, max_length=500)
     
     def validate(self, attrs):
         """Validate response data"""
-        if attrs['action'] == 'accept' and not attrs.get('trust_level'):
-            raise serializers.ValidationError("Trust level is required when accepting trust request")
+        if attrs['action'] == 'approve' and not attrs.get('trust_level_id'):
+            raise serializers.ValidationError("Trust level is required when approving trust request")
         return attrs
-    
-    def validate_trust_level(self, value):
-        """Validate trust level"""
-        if value:
-            valid_levels = ['none', 'minimal', 'moderate', 'standard', 'full']
-            if value not in valid_levels:
-                raise serializers.ValidationError(f"Trust level must be one of: {', '.join(valid_levels)}")
-        return value
 
-class BilateralTrustUpdateSerializer(serializers.ModelSerializer):
-    """Serializer for updating bilateral trust levels"""
+class TrustRelationshipUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for updating trust relationships"""
+    
+    trust_level_id = serializers.UUIDField(required=False)
     
     class Meta:
-        model = BilateralTrust
-        fields = ['trust_level', 'response_message']
-    
-    def validate_trust_level(self, value):
-        """Validate trust level"""
-        valid_levels = ['none', 'minimal', 'moderate', 'standard', 'full']
-        if value not in valid_levels:
-            raise serializers.ValidationError(f"Trust level must be one of: {', '.join(valid_levels)}")
-        return value
-
-class CommunityTrustSerializer(serializers.ModelSerializer):
-    """Serializer for CommunityTrust model"""
-    
-    class Meta:
-        model = CommunityTrust
+        model = TrustRelationship
         fields = [
-            'id', 'trust_type', 'description', 'trust_level',
-            'status', 'created_by', 'created_at', 'updated_at'
+            'trust_level_id', 'anonymization_level', 'access_level', 
+            'is_bilateral', 'notes', 'sharing_preferences'
+        ]
+
+class TrustGroupSerializer(serializers.ModelSerializer):
+    """Serializer for TrustGroup model"""
+    
+    default_trust_level = serializers.StringRelatedField(read_only=True)
+    member_count = serializers.ReadOnlyField()
+    
+    class Meta:
+        model = TrustGroup
+        fields = [
+            'id', 'name', 'description', 'group_type', 'is_public',
+            'requires_approval', 'default_trust_level', 'group_policies',
+            'is_active', 'created_by', 'administrators', 'member_count',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'member_count']
+
+class TrustLevelSerializer(serializers.ModelSerializer):
+    """Serializer for TrustLevel model"""
+    
+    class Meta:
+        model = TrustLevel
+        fields = [
+            'id', 'name', 'level', 'description', 'numerical_value',
+            'default_anonymization_level', 'default_access_level',
+            'sharing_policies', 'is_active', 'is_system_default',
+            'created_by', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
-class TrustRelationshipSerializer(serializers.Serializer):
+class TrustRelationshipSummarySerializer(serializers.Serializer):
     """Serializer for trust relationship summary"""
     
     organization = OrganizationBasicSerializer(read_only=True)
