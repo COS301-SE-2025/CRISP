@@ -21,7 +21,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ValidationError
 
-from core.models.models import Collection, STIXObject, CollectionObject, Organization, TrustRelationship
+from core.models.models import Collection, STIXObject, CollectionObject
+from core_ut.user_management.models import Organization
+from core_ut.trust.models import TrustRelationship
 
 import sys
 import os
