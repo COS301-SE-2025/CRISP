@@ -62,10 +62,11 @@ const IndicatorTable = ({ active = true, feedId = null, searchQuery = '', userRo
     try {
       const token = localStorage.getItem('crisp_auth_token');
       
-      // Construct API URL based on whether we're loading for a specific feed or all indicators
-      let apiUrl = 'http://localhost:8000/api/v1/indicators/';
+      // Construct API URL - get real indicators from our new API
+      let apiUrl = 'http://localhost:8000/api/indicators/';
       if (feedId) {
-        apiUrl = `http://localhost:8000/api/v1/threat-feeds/${feedId}/indicators/`;
+        // For specific feed indicators, we'll add a filter parameter
+        apiUrl = `http://localhost:8000/api/indicators/?feed=${feedId}`;
       }
 
       const response = await fetch(apiUrl, {

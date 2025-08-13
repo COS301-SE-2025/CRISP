@@ -4,8 +4,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from core.models.models import Organization, TrustLevel, TrustRelationship
+from core_ut.user_management.models import UserProfile
 from django.shortcuts import get_object_or_404
 import json
+
+# Get the User model
+User = get_user_model()
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

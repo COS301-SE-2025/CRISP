@@ -209,6 +209,11 @@ TAXII_SETTINGS = {
     'MAX_PAGE_SIZE': 1000,
 }
 
+# AlienVault OTX Configuration
+# Note: You need to get your API key from https://otx.alienvault.com/api
+TAXII_DEFAULT_USERNAME = os.getenv('OTX_API_KEY', 'your_otx_api_key_here')
+TAXII_DEFAULT_PASSWORD = 'unused'  # OTX uses API key authentication
+
 # Celery Configuration (for background tasks)
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
@@ -401,10 +406,4 @@ LOGGING = {
 logs_dir = BASE_DIR / 'logs'
 logs_dir.mkdir(parents=True, exist_ok=True)
 
-import sys
-if 'runserver' in sys.argv or 'shell' in sys.argv or 'migrate' in sys.argv:
-    try:
-        import core_ut.trust.admin_ut
-        import core_ut.user_management.admin_ut
-    except ImportError:
-        pass
+# Admin modules will be auto-discovered by Django

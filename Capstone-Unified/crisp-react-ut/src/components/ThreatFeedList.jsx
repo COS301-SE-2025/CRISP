@@ -39,9 +39,9 @@ const ThreatFeedList = ({ active = true, initialSection = null, onNavigate, user
     setLoading(true);
     setError(null);
     try {
-      // API call following existing patterns
+      // API call to get real threat feeds from backend
       const token = localStorage.getItem('crisp_auth_token');
-      const response = await fetch('http://localhost:8000/api/v1/threat-feeds/', {
+      const response = await fetch('http://localhost:8000/api/threat-feeds/', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

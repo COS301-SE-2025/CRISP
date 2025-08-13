@@ -4,6 +4,7 @@ from django.urls import path, include
 from django.shortcuts import redirect
 from rest_framework import routers
 from core.api.threat_feed_views import ThreatFeedViewSet
+from core.api.indicator_views import IndicatorViewSet
 from core.viewing.home import home
 from core.simple_auth_views import login_view, system_health, alert_statistics, send_test_email, test_gmail_connection, send_alert_test_email, get_user_profile, get_user_statistics, get_organizations_simple
 from core.api_extensions import (
@@ -16,6 +17,7 @@ from core.api_extensions import (
 # Set up REST API router
 router = routers.DefaultRouter()
 router.register(r'threat-feeds', ThreatFeedViewSet, basename='threat-feed')
+router.register(r'indicators', IndicatorViewSet, basename='indicator')
 
 # Redirect to admin by default
 def redirect_to_admin(request):

@@ -12,7 +12,7 @@ class ThreatFeedSerializer(serializers.ModelSerializer):
         model = ThreatFeed
         fields = [
             'id', 'name', 'description', 'owner', 'created_at', 'updated_at',
-            'is_public', 'taxii_collection_id', 'taxii_server_url',
+            'is_public', 'is_active', 'taxii_collection_id', 'taxii_server_url',
             'taxii_api_root', 'taxii_username', 'last_sync', 'is_external'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'last_sync']

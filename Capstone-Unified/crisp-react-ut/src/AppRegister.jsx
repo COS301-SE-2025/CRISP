@@ -8,6 +8,8 @@ import logoImage from './assets/BlueV2.png';
 import { getUserProfile, updateUserProfile, getUserStatistics, changePassword, getEmailStatistics, getSystemHealth, sendTestEmail, testGmailConnection, getAuditLogs, getComprehensiveAuditLogs, getOrganizations, markAllNotificationsRead } from './api.js';
 import * as api from './api.js'; // Keep App.jsx's general API import for compatibility
 import LoadingSpinner from './components/LoadingSpinner.jsx';
+import ThreatFeedList from './components/ThreatFeedList.jsx';
+import IndicatorTable from './components/IndicatorTable.jsx';
 import UserManagement from './components/UserManagement.jsx';
 import UserManagementComponent from './components/UserManagement'; // App.jsx import
 import OrganisationManagement from './components/OrganisationManagement.jsx';
@@ -1222,195 +1224,21 @@ function Dashboard({ active }) {
   );
 }
 
-// Threat Feeds Component
+// Threat Feeds Component - Use real ThreatFeedList component
 function ThreatFeeds({ active }) {
+  console.log('ThreatFeeds component rendered, active:', active);
+  
   return (
     <section id="threat-feeds" className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
         <div>
           <h1 className="page-title">Threat Feeds</h1>
-          <p className="page-subtitle">Manage and monitor all threat intelligence feeds</p>
-        </div>
-        <div className="action-buttons">
-          <button className="btn btn-outline"><i className="fas fa-filter"></i> Filter Feeds</button>
-          <button className="btn btn-primary"><i className="fas fa-plus"></i> Add New Feed</button>
+          <p className="page-subtitle">Real threat intelligence feeds from AlienVault OTX</p>
         </div>
       </div>
-
-      <div className="filters-section">
-        <div className="filters-grid">
-          <div className="filter-group">
-            <label className="filter-label">Feed Type</label>
-            <div className="filter-control">
-              <select>
-                <option value="">All Types</option>
-                <option value="stix-taxii">STIX/TAXII</option>
-                <option value="misp">MISP</option>
-                <option value="custom">Custom</option>
-                <option value="internal">Internal</option>
-              </select>
-            </div>
-          </div>
-          <div className="filter-group">
-            <label className="filter-label">Status</label>
-            <div className="filter-control">
-              <select>
-                <option value="">All Statuses</option>
-                <option value="active">Active</option>
-                <option value="disabled">Disabled</option>
-                <option value="error">Error</option>
-              </select>
-            </div>
-          </div>
-          <div className="filter-group">
-            <label className="filter-label">Source</label>
-            <div className="filter-control">
-              <select>
-                <option value="">All Sources</option>
-                <option value="external">External</option>
-                <option value="internal">Internal</option>
-                <option value="partner">Partner</option>
-              </select>
-            </div>
-          </div>
-          <div className="filter-group">
-            <label className="filter-label">Search Feeds</label>
-            <div className="filter-control">
-              <input type="text" placeholder="Search by name or URL..." />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="tabs">
-        <div className="tab active">Active Feeds (16)</div>
-        <div className="tab">External (11)</div>
-        <div className="tab">Internal (5)</div>
-        <div className="tab">All Feeds (18)</div>
-      </div>
-
-      <div className="card">
-        <div className="card-content">
-          <ul className="feed-items">
-            <li className="feed-item">
-              <div className="feed-icon"><i className="fas fa-globe"></i></div>
-              <div className="feed-details">
-                <div className="feed-name">CIRCL MISP Feed</div>
-                <div className="feed-description">Computer Incident Response Center Luxembourg (CIRCL) MISP feed providing indicators related to various threats.</div>
-                <div className="feed-meta">
-                  <div className="feed-stats">
-                    <div className="stat-item"><i className="fas fa-search"></i> 1,245 IoCs</div>
-                    <div className="stat-item"><i className="fas fa-sync-alt"></i> Updated 25m ago</div>
-                    <div className="stat-item"><i className="fas fa-tasks"></i> 28 TTPs</div>
-                  </div>
-                  <div className="feed-badges">
-                    <span className="badge badge-active">Active</span>
-                    <span className="badge badge-connected">STIX/TAXII</span>
-                  </div>
-                </div>
-              </div>
-            </li>
-            <li className="feed-item">
-              <div className="feed-icon"><i className="fas fa-shield-alt"></i></div>
-              <div className="feed-details">
-                <div className="feed-name">SANReN CSIRT Feed</div>
-                <div className="feed-description">South African National Research Network Computer Security Incident Response Team feed focused on academic sector threats.</div>
-                <div className="feed-meta">
-                  <div className="feed-stats">
-                    <div className="stat-item"><i className="fas fa-search"></i> 862 IoCs</div>
-                    <div className="stat-item"><i className="fas fa-sync-alt"></i> Updated 1h ago</div>
-                    <div className="stat-item"><i className="fas fa-tasks"></i> 19 TTPs</div>
-                  </div>
-                  <div className="feed-badges">
-                    <span className="badge badge-active">Active</span>
-                    <span className="badge badge-connected">TAXII</span>
-                  </div>
-                </div>
-              </div>
-            </li>
-            <li className="feed-item">
-              <div className="feed-icon"><i className="fas fa-university"></i></div>
-              <div className="feed-details">
-                <div className="feed-name">SABRIC Intelligence Feed</div>
-                <div className="feed-description">South African Banking Risk Information Centre feed with financial sector threat intelligence.</div>
-                <div className="feed-meta">
-                  <div className="feed-stats">
-                    <div className="stat-item"><i className="fas fa-search"></i> 635 IoCs</div>
-                    <div className="stat-item"><i className="fas fa-sync-alt"></i> Updated 3h ago</div>
-                    <div className="stat-item"><i className="fas fa-tasks"></i> 14 TTPs</div>
-                  </div>
-                  <div className="feed-badges">
-                    <span className="badge badge-active">Active</span>
-                    <span className="badge badge-connected">STIX/TAXII</span>
-                  </div>
-                </div>
-              </div>
-            </li>
-            <li className="feed-item">
-              <div className="feed-icon"><i className="fas fa-lock"></i></div>
-              <div className="feed-details">
-                <div className="feed-name">Cyber Security Hub</div>
-                <div className="feed-description">National CSIRT of South Africa providing threat intelligence focused on critical infrastructure.</div>
-                <div className="feed-meta">
-                  <div className="feed-stats">
-                    <div className="stat-item"><i className="fas fa-search"></i> 978 IoCs</div>
-                    <div className="stat-item"><i className="fas fa-sync-alt"></i> Updated 2h ago</div>
-                    <div className="stat-item"><i className="fas fa-tasks"></i> 32 TTPs</div>
-                  </div>
-                  <div className="feed-badges">
-                    <span className="badge badge-active">Active</span>
-                    <span className="badge badge-connected">MISP</span>
-                  </div>
-                </div>
-              </div>
-            </li>
-            <li className="feed-item">
-              <div className="feed-icon"><i className="fas fa-server"></i></div>
-              <div className="feed-details">
-                <div className="feed-name">Internal Threat Feed</div>
-                <div className="feed-description">BlueVision ITM internal threat intelligence gathered from incident response activities.</div>
-                <div className="feed-meta">
-                  <div className="feed-stats">
-                    <div className="stat-item"><i className="fas fa-search"></i> 527 IoCs</div>
-                    <div className="stat-item"><i className="fas fa-sync-alt"></i> Updated 30m ago</div>
-                    <div className="stat-item"><i className="fas fa-tasks"></i> 23 TTPs</div>
-                  </div>
-                  <div className="feed-badges">
-                    <span className="badge badge-active">Active</span>
-                    <span className="badge badge-connected">Internal</span>
-                  </div>
-                </div>
-              </div>
-            </li>
-            <li className="feed-item">
-              <div className="feed-icon"><i className="fas fa-bug"></i></div>
-              <div className="feed-details">
-                <div className="feed-name">AlienVault OTX</div>
-                <div className="feed-description">Open Threat Exchange provides community-powered threat intelligence.</div>
-                <div className="feed-meta">
-                  <div className="feed-stats">
-                    <div className="stat-item"><i className="fas fa-search"></i> 1,892 IoCs</div>
-                    <div className="stat-item"><i className="fas fa-sync-alt"></i> Updated 45m ago</div>
-                    <div className="stat-item"><i className="fas fa-tasks"></i> 46 TTPs</div>
-                  </div>
-                  <div className="feed-badges">
-                    <span className="badge badge-active">Active</span>
-                    <span className="badge badge-connected">API</span>
-                  </div>
-                </div>
-              </div>
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      <div className="pagination">
-        <div className="page-item"><i className="fas fa-chevron-left"></i></div>
-        <div className="page-item active">1</div>
-        <div className="page-item">2</div>
-        <div className="page-item">3</div>
-        <div className="page-item"><i className="fas fa-chevron-right"></i></div>
-      </div>
+      
+      {/* Use the real ThreatFeedList component that fetches from API */}
+      {active && <ThreatFeedList active={active} userRole="admin" />}
     </section>
   );
 }
