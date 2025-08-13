@@ -70,7 +70,7 @@ def list_organizations(request):
             queryset = queryset.filter(is_active=is_active.lower() == 'true')
         
         # Add member count annotation
-        queryset = queryset.annotate(member_count=Count('customuser'))
+        queryset = queryset.annotate(member_count=Count('users'))
         
         # Order by name
         queryset = queryset.order_by('name')
@@ -170,6 +170,9 @@ def create_organization(request):
         
         org_service = OrganizationService()
         
+        # Extract primary user data
+        primary_user_data = request.data.get('primary_user', {})
+        
         # Create organization
         result = org_service.create_organization(
             name=request.data.get('name'),
@@ -177,7 +180,8 @@ def create_organization(request):
             organization_type=request.data.get('organization_type'),
             description=request.data.get('description', ''),
             contact_email=request.data.get('contact_email'),
-            contact_phone=request.data.get('contact_phone', ''),
+            website=request.data.get('website', ''),
+            primary_user_data=primary_user_data,
             created_by=request.user
         )
         

@@ -219,8 +219,8 @@ OTX_SETTINGS = {
     'API_KEY': os.getenv('OTX_API_KEY', ''),
     'ENABLED': os.getenv('OTX_ENABLED', 'True').lower() == 'true',
     'FETCH_INTERVAL': int(os.getenv('OTX_FETCH_INTERVAL', '3600')),
-    'BATCH_SIZE': int(os.getenv('OTX_BATCH_SIZE', '50')),
-    'MAX_AGE_DAYS': int(os.getenv('OTX_MAX_AGE_DAYS', '30')),
+    'BATCH_SIZE': int(os.getenv('OTX_BATCH_SIZE', '10')),  # Reduced from 50 to 10 for faster processing
+    'MAX_AGE_DAYS': int(os.getenv('OTX_MAX_AGE_DAYS', '1')),  # Changed from 30 to 1 day
 }
 
 # TAXII Server Configuration
@@ -231,6 +231,7 @@ TAXII_SETTINGS = {
     'MEDIA_TYPE_TAXII': 'application/taxii+json;version=2.1',
     'MEDIA_TYPE_STIX': 'application/stix+json;version=2.1',
     'MAX_CONTENT_LENGTH': 104857600,  # 100MB
+    'FILTER_LAST_DAYS': int(os.getenv('TAXII_FILTER_DAYS', 1)),  # Only fetch objects from last 1 day
 }
 
 # File Upload Settings

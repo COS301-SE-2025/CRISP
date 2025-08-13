@@ -52,26 +52,13 @@ class ChartErrorBoundary extends React.Component {
 }
 
 // API Configuration
-const API_BASE_URL = 'http://localhost:8001';
+const API_BASE_URL = 'http://localhost:8000';
 
-// API Helper Functions with Authentication
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('crisp_auth_token');
-  const headers = { 'Content-Type': 'application/json' };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  } else {
-    console.warn('No authentication token found in localStorage');
-  }
-  return headers;
-};
-
+// API Helper Functions
 const api = {
   get: async (endpoint) => {
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        headers: getAuthHeaders()
-      });
+      const response = await fetch(`${API_BASE_URL}${endpoint}`);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return await response.json();
     } catch (error) {
@@ -84,7 +71,7 @@ const api = {
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -99,7 +86,7 @@ const api = {
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -114,7 +101,7 @@ const api = {
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'DELETE',
-        headers: getAuthHeaders()
+        headers: { 'Content-Type': 'application/json' }
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       
@@ -136,60 +123,6 @@ const api = {
 function App() {
   // State to manage the active page and navigation parameters
   const [activePage, setActivePage] = useState('dashboard');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAuthenticating, setIsAuthenticating] = useState(true);
-
-  // Automatically login as admin on component mount
-  useEffect(() => {
-    const autoLogin = async () => {
-      // Check if already has valid token
-      const existingToken = localStorage.getItem('crisp_auth_token');
-      if (existingToken) {
-        setIsAuthenticated(true);
-        setIsAuthenticating(false);
-        return;
-      }
-
-      // Auto-login as admin
-      try {
-        console.log('Attempting auto-login...');
-        const response = await fetch(`${API_BASE_URL}/api/auth/login/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: 'admin', password: 'admin123' })
-        });
-
-        console.log('Login response status:', response.status);
-        
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Login response data:', data);
-          if (data.access) {
-            localStorage.setItem('crisp_auth_token', data.access);
-            localStorage.setItem('crisp_refresh_token', data.refresh);
-            localStorage.setItem('crisp_user', JSON.stringify(data.user));
-            console.log('Login successful, token stored');
-            setIsAuthenticated(true);
-            setIsAuthenticating(false);
-          } else {
-            console.error('No access token in response');
-            setIsAuthenticated(false);
-            setIsAuthenticating(false);
-          }
-        } else {
-          console.error('Auto-login failed with status:', response.status, response.statusText);
-          setIsAuthenticated(false);
-          setIsAuthenticating(false);
-        }
-      } catch (error) {
-        console.error('Auto-login error:', error);
-        setIsAuthenticated(false);
-        setIsAuthenticating(false);
-      }
-    };
-
-    autoLogin();
-  }, []);
   const [navigationState, setNavigationState] = useState({
     triggerModal: null,
     modalParams: {}
@@ -248,53 +181,10 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-
-  // Show loading screen during authentication
-  if (isAuthenticating) {
-    return (
-      <div className="App">
-        <div className="loading-screen">
-          <div className="loading-spinner"></div>
-          <h2>Loading CRISP System...</h2>
-          <p>Authenticating...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show login screen when not authenticated
-  if (!isAuthenticated) {
-    return (
-      <div className="App">
-        <div className="login-screen">
-          <div className="login-container">
-            <h2>CRISP System Login</h2>
-            <p>Please login to continue</p>
-            <button 
-              className="btn btn-primary"
-              onClick={() => {
-                setIsAuthenticating(true);
-                setIsAuthenticated(false);
-                // Clear any existing tokens
-                localStorage.removeItem('crisp_auth_token');
-                localStorage.removeItem('crisp_refresh_token');
-                localStorage.removeItem('crisp_user');
-                // Retry auto-login
-                window.location.reload();
-              }}
-            >
-              <i className="fas fa-sign-in-alt"></i> Login as Admin
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="App">
       {/* Header */}
-      <Header showPage={showPage} />
+      <Header />
       
       {/* Main Navigation */}
       <MainNav activePage={activePage} showPage={showPage} />
@@ -319,21 +209,14 @@ function App() {
 
           {/* Reports */}
           <Reports active={activePage === 'reports'} />
-          
-          {/* Notifications */}
-          <Notifications active={activePage === 'notifications'} />
-          
-          {/* User Profile */}
-          <UserProfile active={activePage === 'profile'} />
         </div>
       </main>
-
     </div>
   );
 }
 
 // Header Component
-function Header({ showPage }) {
+function Header() {
   return (
     <header>
       <div className="container header-container">
@@ -346,11 +229,11 @@ function Header({ showPage }) {
             <span className="search-icon"><i className="fas fa-search"></i></span>
             <input type="text" placeholder="Search platform..." />
           </div>
-          <div className="notifications" onClick={() => showPage('notifications')} style={{cursor: 'pointer'}}>
+          <div className="notifications">
             <i className="fas fa-bell"></i>
             <span className="notification-count">3</span>
           </div>
-          <div className="user-profile" onClick={() => showPage('profile')} style={{cursor: 'pointer'}}>
+          <div className="user-profile">
             <div className="avatar">A</div>
             <div className="user-info">
               <div className="user-name">Admin</div>
@@ -2190,7 +2073,6 @@ function ThreatFeeds({ active, navigationState, setNavigationState }) {
 
   // Feed consumption and deletion states
   const [consumingFeeds, setConsumingFeeds] = useState(new Set());
-  const [feedProgress, setFeedProgress] = useState(new Map());
   const [showDeleteFeedModal, setShowDeleteFeedModal] = useState(false);
   const [feedToDelete, setFeedToDelete] = useState(null);
   const [deletingFeed, setDeletingFeed] = useState(false);
@@ -2227,91 +2109,22 @@ function ThreatFeeds({ active, navigationState, setNavigationState }) {
     // Add feed to consuming set
     setConsumingFeeds(prev => new Set([...prev, feedId]));
     
-    // Initialize progress
-    setFeedProgress(prev => new Map(prev.set(feedId, {
-      stage: 'Initiating',
-      message: 'Starting consumption process...',
-      percentage: 0
-    })));
-    
     try {
       const result = await api.post(`/api/threat-feeds/${feedId}/consume/`);
       if (result) {
         console.log('Feed consumption started:', result);
-        
-        // Start polling for progress
-        const progressInterval = setInterval(async () => {
-          try {
-            const progressData = await api.get(`/api/threat-feeds/${feedId}/consumption_progress/`);
-            if (progressData && progressData.success) {
-              const progress = progressData.progress;
-              
-              setFeedProgress(prev => new Map(prev.set(feedId, {
-                stage: progress.stage,
-                message: progress.message || `${progress.stage}...`,
-                percentage: progress.percentage || 0,
-                current: progress.current,
-                total: progress.total
-              })));
-              
-              // If completed, stop polling
-              if (progress.stage === 'Completed' || progress.percentage >= 100) {
-                clearInterval(progressInterval);
-                
-                // Remove from consuming set after a brief delay to show completion
-                setTimeout(() => {
-                  setConsumingFeeds(prev => {
-                    const newSet = new Set(prev);
-                    newSet.delete(feedId);
-                    return newSet;
-                  });
-                  setFeedProgress(prev => {
-                    const newMap = new Map(prev);
-                    newMap.delete(feedId);
-                    return newMap;
-                  });
-                }, 2000);
-                
-                // Refresh feeds after consumption
-                await fetchThreatFeeds();
-              }
-            }
-          } catch (progressError) {
-            console.error('Error fetching progress:', progressError);
-            // Continue polling - might be temporary error
-          }
-        }, 2000); // Poll every 2 seconds
-        
-        // Set a maximum timeout to prevent infinite polling
-        setTimeout(() => {
-          clearInterval(progressInterval);
-          setConsumingFeeds(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(feedId);
-            return newSet;
-          });
-          setFeedProgress(prev => {
-            const newMap = new Map(prev);
-            newMap.delete(feedId);
-            return newMap;
-          });
-        }, 300000); // 5 minutes maximum
-        
+        // Refresh feeds after consumption
+        await fetchThreatFeeds();
       }
     } catch (error) {
       console.error('Error consuming feed:', error);
       alert('Failed to consume feed. Please try again.');
-      
-      // Remove feed from consuming set on error
+    } finally {
+      // Remove feed from consuming set
       setConsumingFeeds(prev => {
         const newSet = new Set(prev);
         newSet.delete(feedId);
         return newSet;
-      });
-      setFeedProgress(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(feedId);
-        return newMap;
       });
     }
   };
@@ -2593,24 +2406,10 @@ function ThreatFeeds({ active, navigationState, setNavigationState }) {
                           className="btn btn-sm btn-primary"
                           onClick={() => handleConsumeFeed(feed.id)}
                           disabled={consumingFeeds.has(feed.id)}
-                          style={{minWidth: '140px'}}
                         >
                           {consumingFeeds.has(feed.id) ? (
                             <>
-                              <i className="fas fa-spinner fa-spin"></i>
-                              <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-start', fontSize: '11px'}}>
-                                <span>{feedProgress.get(feed.id)?.stage || 'Processing'}</span>
-                                {feedProgress.get(feed.id)?.current && feedProgress.get(feed.id)?.total && (
-                                  <span style={{opacity: 0.8}}>
-                                    {feedProgress.get(feed.id).current}/{feedProgress.get(feed.id).total}
-                                  </span>
-                                )}
-                                {feedProgress.get(feed.id)?.percentage > 0 && (
-                                  <span style={{opacity: 0.8}}>
-                                    {feedProgress.get(feed.id).percentage}%
-                                  </span>
-                                )}
-                              </div>
+                              <i className="fas fa-spinner fa-spin"></i> Consuming...
                             </>
                           ) : (
                             <>
@@ -8338,641 +8137,726 @@ function TTPAnalysis({ active }) {
 
 // Institutions Component
 function Institutions({ active }) {
-  const [organizations, setOrganizations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedOrg, setSelectedOrg] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    domain: '',
-    contact_email: '',
-    description: '',
-    website: '',
-    organization_type: 'educational',
-    primary_user: {
-      username: '',
-      email: '',
-      password: '',
-      first_name: '',
-      last_name: ''
-    }
-  });
-
+  const mapRef = useRef(null);
+  
   useEffect(() => {
-    if (active) {
-      fetchOrganizations();
+    if (active && mapRef.current) {
+      createInstitutionMap();
     }
   }, [active]);
 
-  const fetchOrganizations = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await api.get('/api/organizations/');
-      console.log('Organizations API response:', response); // Debug log
-      if (response && response.success) {
-        const orgs = response.organizations || [];
-        console.log('Setting organizations:', orgs); // Debug log
-        setOrganizations(orgs);
-      } else {
-        console.error('API response unsuccessful:', response);
-        setError('Failed to load institutions - API response unsuccessful');
-      }
-    } catch (err) {
-      console.error('Error fetching organizations:', err);
-      setError(`Failed to load institutions: ${err.message || 'Unknown error'}`);
-    } finally {
-      setLoading(false);
-    }
+  const createInstitutionMap = () => {
+    // Clear previous chart if any
+    d3.select(mapRef.current).selectAll("*").remove();
+    
+    // Set dimensions and margins for the chart
+    const width = mapRef.current.clientWidth;
+    const height = 300;
+    
+    // Create the SVG container
+    const svg = d3.select(mapRef.current)
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height);
+    
+    // Sample data for institutions
+    const institutions = [
+      { name: "University of Pretoria", location: [28.2, -25.7], type: "Education", size: 90 },
+      { name: "Cyber Security Hub", location: [28.0, -26.2], type: "Government", size: 85 },
+      { name: "SANReN CSIRT", location: [18.4, -33.9], type: "Security", size: 75 },
+      { name: "SABRIC", location: [28.05, -26.1], type: "Financial", size: 70 },
+      { name: "University of Johannesburg", location: [28.0, -26.1], type: "Education", size: 65 },
+      { name: "Tshwane University of Technology", location: [28.16, -25.73], type: "Education", size: 60 },
+      { name: "Oxford University", location: [-1.25, 51.75], type: "Education", size: 55 },
+      { name: "CERT-EU", location: [4.35, 50.85], type: "Security", size: 50 },
+      { name: "Stanford University", location: [-122.17, 37.43], type: "Education", size: 60 },
+      { name: "MIT", location: [-71.09, 42.36], type: "Education", size: 65 }
+    ];
+    
+    // Define a projection
+    // This is a simple mercator projection - for a real app, you would use a proper world map
+    const projection = d3.geoMercator()
+      .scale(100)
+      .center([0, 0])
+      .translate([width / 2, height / 2]);
+    
+    // Define colors for institution types
+    const typeColors = {
+      "Education": "#0056b3",
+      "Government": "#38a169",
+      "Security": "#e53e3e",
+      "Financial": "#f6ad55"
+    };
+    
+    // Add institutions as circles
+    svg.selectAll("circle")
+      .data(institutions)
+      .enter()
+      .append("circle")
+      .attr("cx", d => projection(d.location)[0])
+      .attr("cy", d => projection(d.location)[1])
+      .attr("r", d => Math.sqrt(d.size) * 0.8)
+      .attr("fill", d => typeColors[d.type])
+      .attr("opacity", 0.7)
+      .attr("stroke", "#fff")
+      .attr("stroke-width", 1)
+      .append("title")
+      .text(d => `${d.name} (${d.type})`);
+    
+    // Add connections between institutions
+    // For simplicity, connecting the first institution with others
+    svg.selectAll(".connection")
+      .data(institutions.slice(1, 6))
+      .enter()
+      .append("line")
+      .attr("class", "connection")
+      .attr("x1", projection(institutions[0].location)[0])
+      .attr("y1", projection(institutions[0].location)[1])
+      .attr("x2", d => projection(d.location)[0])
+      .attr("y2", d => projection(d.location)[1])
+      .attr("stroke", "#0056b3")
+      .attr("stroke-width", 1)
+      .attr("stroke-opacity", 0.3);
+    
+    // Add a simple title
+    svg.append("text")
+      .attr("x", width / 2)
+      .attr("y", 20)
+      .attr("text-anchor", "middle")
+      .style("font-size", "16px")
+      .style("font-weight", "600")
+      .style("fill", "#2d3748")
+      .text("Global Institution Network");
+    
+    // Add a simple legend
+    const legend = svg.append("g")
+      .attr("transform", `translate(20, 40)`);
+    
+    const legendData = Object.entries(typeColors);
+    
+    legendData.forEach((item, i) => {
+      const [type, color] = item;
+      
+      legend.append("circle")
+        .attr("cx", 10)
+        .attr("cy", i * 20)
+        .attr("r", 6)
+        .attr("fill", color);
+        
+      legend.append("text")
+        .attr("x", 25)
+        .attr("y", i * 20 + 5)
+        .text(type)
+        .style("font-size", "12px");
+    });
   };
-
-  const handleCreateOrganization = async (e) => {
-    e.preventDefault();
-    setError(null); // Clear previous errors
-    try {
-      const response = await api.post('/api/organizations/create/', formData);
-      if (response && response.success) {
-        setShowCreateModal(false);
-        setFormData({
-          name: '',
-          domain: '',
-          contact_email: '',
-          description: '',
-          website: '',
-          organization_type: 'educational',
-          primary_user: {
-            username: '',
-            email: '',
-            password: '',
-            first_name: '',
-            last_name: ''
-          }
-        });
-        fetchOrganizations();
-        setError(null);
-      } else if (response && response.message) {
-        // Show backend error message
-        setError(response.message);
-      } else {
-        setError('Failed to create institution - unknown error');
-      }
-    } catch (err) {
-      console.error('Error creating organization:', err);
-      // Try to extract error message from response
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to create institution';
-      setError(errorMessage);
-    }
-  };
-
-  if (!active) return null;
 
   return (
     <section id="institutions" className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Institutions & Organizations</h1>
-          <p className="page-subtitle">Manage connected institutions and organizations</p>
+          <h1 className="page-title">Connected Institutions</h1>
+          <p className="page-subtitle">Manage sharing partners and trust relationships</p>
         </div>
         <div className="action-buttons">
-          <button 
-            className="btn btn-primary"
-            onClick={() => setShowCreateModal(true)}
-          >
-            <i className="fas fa-plus"></i> Add Institution
-          </button>
+          <button className="btn btn-outline"><i className="fas fa-filter"></i> Filter</button>
+          <button className="btn btn-primary"><i className="fas fa-plus"></i> Add Institution</button>
         </div>
       </div>
 
-      {error && (
-        <div className="error-message">
-          <i className="fas fa-exclamation-triangle"></i>
-          {error}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="loading-state">
-          <i className="fas fa-spinner fa-spin"></i>
-          <p>Loading institutions...</p>
-        </div>
-      ) : (
-        <div className="institutions-grid">
-          <div className="stats-row">
-            <div className="stat-card">
-              <div className="stat-icon">
-                <i className="fas fa-building"></i>
-              </div>
-              <div className="stat-content">
-                <h3>{organizations.length}</h3>
-                <p>Total Organizations</p>
-              </div>
-            </div>
-            
-            <div className="stat-card">
-              <div className="stat-icon">
-                <i className="fas fa-users"></i>
-              </div>
-              <div className="stat-content">
-                <h3>{organizations.reduce((sum, org) => sum + (org.member_count || 0), 0)}</h3>
-                <p>Total Members</p>
-              </div>
-            </div>
-            
-            <div className="stat-card">
-              <div className="stat-icon">
-                <i className="fas fa-handshake"></i>
-              </div>
-              <div className="stat-content">
-                <h3>{organizations.filter(org => org.trust_relationships_count > 0).length}</h3>
-                <p>Connected Orgs</p>
-              </div>
-            </div>
-            
-            <div className="stat-card">
-              <div className="stat-icon">
-                <i className="fas fa-shield-alt"></i>
-              </div>
-              <div className="stat-content">
-                <h3>{organizations.filter(org => org.is_active).length}</h3>
-                <p>Active Orgs</p>
-              </div>
+      <div className="filters-section">
+        <div className="filters-grid">
+          <div className="filter-group">
+            <label className="filter-label">Organization Type</label>
+            <div className="filter-control">
+              <select>
+                <option value="">All Types</option>
+                <option value="education">Education</option>
+                <option value="government">Government</option>
+                <option value="finance">Financial</option>
+                <option value="security">Security</option>
+              </select>
             </div>
           </div>
-
-          <div className="organizations-list">
-            {organizations.length === 0 ? (
-              <div className="empty-state">
-                <i className="fas fa-building" style={{fontSize: '48px', color: '#dee2e6'}}></i>
-                <h3>No institutions found</h3>
-                <p>Create your first institution to get started with threat intelligence sharing.</p>
-                <button 
-                  className="btn btn-primary"
-                  onClick={() => setShowCreateModal(true)}
-                >
-                  <i className="fas fa-plus"></i> Create Institution
-                </button>
-              </div>
-            ) : (
-              <div className="organizations-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Institution</th>
-                      <th>Type</th>
-                      <th>Domain</th>
-                      <th>Members</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {organizations.map(org => (
-                      <tr key={org.id}>
-                        <td>
-                          <div className="org-info">
-                            <div className="org-icon">
-                              <i className="fas fa-building"></i>
-                            </div>
-                            <div>
-                              <div className="org-name">{org.name}</div>
-                              <div className="org-description">{org.description || 'No description'}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <span className="org-type">{org.organization_type || 'Unknown'}</span>
-                        </td>
-                        <td>{org.domain || 'N/A'}</td>
-                        <td>{org.member_count || 0}</td>
-                        <td>
-                          <span className={`status-badge ${org.is_active ? 'active' : 'inactive'}`}>
-                            {org.is_active ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="actions">
-                            <button 
-                              className="btn btn-sm btn-outline"
-                              onClick={() => setSelectedOrg(org)}
-                            >
-                              <i className="fas fa-eye"></i>
-                            </button>
-                            <button className="btn btn-sm btn-outline">
-                              <i className="fas fa-edit"></i>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+          <div className="filter-group">
+            <label className="filter-label">Trust Level</label>
+            <div className="filter-control">
+              <select>
+                <option value="">All Levels</option>
+                <option value="high">High (80-100%)</option>
+                <option value="medium">Medium (50-79%)</option>
+                <option value="low">Low (0-49%)</option>
+              </select>
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Create Organization Modal */}
-      {showCreateModal && (
-        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Create New Institution</h3>
-              <button 
-                className="close-btn"
-                onClick={() => setShowCreateModal(false)}
-              >
-                <i className="fas fa-times"></i>
-              </button>
+          <div className="filter-group">
+            <label className="filter-label">Connection Status</label>
+            <div className="filter-control">
+              <select>
+                <option value="">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="pending">Pending</option>
+              </select>
             </div>
-            <form onSubmit={handleCreateOrganization}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label>Institution Name</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label>Domain</label>
-                  <input
-                    type="text"
-                    value={formData.domain}
-                    onChange={(e) => setFormData({...formData, domain: e.target.value})}
-                    placeholder="example.edu"
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label>Contact Email</label>
-                  <input
-                    type="email"
-                    value={formData.contact_email}
-                    onChange={(e) => setFormData({...formData, contact_email: e.target.value})}
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label>Organization Type</label>
-                  <select
-                    value={formData.organization_type}
-                    onChange={(e) => setFormData({...formData, organization_type: e.target.value})}
-                  >
-                    <option value="educational">Educational</option>
-                    <option value="government">Government</option>
-                    <option value="private">Private</option>
-                    <option value="nonprofit">Non-profit</option>
-                    <option value="healthcare">Healthcare</option>
-                    <option value="financial">Financial</option>
-                  </select>
-                </div>
-                
-                <div className="form-group">
-                  <label>Description</label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    rows="3"
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label>Website</label>
-                  <input
-                    type="url"
-                    value={formData.website}
-                    onChange={(e) => setFormData({...formData, website: e.target.value})}
-                    placeholder="https://example.edu"
-                  />
-                </div>
-                
-                <div className="form-section">
-                  <h4 style={{marginBottom: '1rem', paddingTop: '1rem', borderTop: '1px solid #ddd', color: '#333'}}>
-                    Primary Administrator
-                  </h4>
-                  
-                  <div className="form-group">
-                    <label>Username *</label>
-                    <input
-                      type="text"
-                      value={formData.primary_user.username}
-                      onChange={(e) => setFormData({
-                        ...formData, 
-                        primary_user: {...formData.primary_user, username: e.target.value}
-                      })}
-                      required
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label>Email *</label>
-                    <input
-                      type="email"
-                      value={formData.primary_user.email}
-                      onChange={(e) => setFormData({
-                        ...formData, 
-                        primary_user: {...formData.primary_user, email: e.target.value}
-                      })}
-                      required
-                    />
-                  </div>
-                  
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>First Name *</label>
-                      <input
-                        type="text"
-                        value={formData.primary_user.first_name}
-                        onChange={(e) => setFormData({
-                          ...formData, 
-                          primary_user: {...formData.primary_user, first_name: e.target.value}
-                        })}
-                        required
-                      />
-                    </div>
-                    
-                    <div className="form-group">
-                      <label>Last Name *</label>
-                      <input
-                        type="text"
-                        value={formData.primary_user.last_name}
-                        onChange={(e) => setFormData({
-                          ...formData, 
-                          primary_user: {...formData.primary_user, last_name: e.target.value}
-                        })}
-                        required
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="form-group">
-                    <label>Password *</label>
-                    <input
-                      type="password"
-                      value={formData.primary_user.password}
-                      onChange={(e) => setFormData({
-                        ...formData, 
-                        primary_user: {...formData.primary_user, password: e.target.value}
-                      })}
-                      required
-                      placeholder="Minimum 8 characters"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button 
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowCreateModal(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Create Institution
-                </button>
-              </div>
-            </form>
           </div>
-        </div>
-      )}
-
-      {/* Organization Details Modal */}
-      {selectedOrg && (
-        <div className="modal-overlay" onClick={() => setSelectedOrg(null)}>
-          <div className="modal large" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{selectedOrg.name}</h3>
-              <button 
-                className="close-btn"
-                onClick={() => setSelectedOrg(null)}
-              >
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="org-details">
-                <div className="detail-row">
-                  <label>Name:</label>
-                  <span>{selectedOrg.name}</span>
-                </div>
-                <div className="detail-row">
-                  <label>Type:</label>
-                  <span>{selectedOrg.organization_type || 'Not specified'}</span>
-                </div>
-                <div className="detail-row">
-                  <label>Domain:</label>
-                  <span>{selectedOrg.domain || 'Not specified'}</span>
-                </div>
-                <div className="detail-row">
-                  <label>Contact Email:</label>
-                  <span>{selectedOrg.contact_email || 'Not specified'}</span>
-                </div>
-                <div className="detail-row">
-                  <label>Website:</label>
-                  <span>
-                    {selectedOrg.website ? (
-                      <a href={selectedOrg.website} target="_blank" rel="noopener noreferrer">
-                        {selectedOrg.website}
-                      </a>
-                    ) : 'Not specified'}
-                  </span>
-                </div>
-                <div className="detail-row">
-                  <label>Description:</label>
-                  <span>{selectedOrg.description || 'No description provided'}</span>
-                </div>
-                <div className="detail-row">
-                  <label>Members:</label>
-                  <span>{selectedOrg.member_count || 0}</span>
-                </div>
-                <div className="detail-row">
-                  <label>Status:</label>
-                  <span className={`status-badge ${selectedOrg.is_active ? 'active' : 'inactive'}`}>
-                    {selectedOrg.is_active ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button 
-                className="btn btn-secondary"
-                onClick={() => setSelectedOrg(null)}
-              >
-                Close
-              </button>
+          <div className="filter-group">
+            <label className="filter-label">Search</label>
+            <div className="filter-control">
+              <input type="text" placeholder="Search by name or location..." />
             </div>
           </div>
         </div>
-      )}
+      </div>
+
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-title">
+            <div className="stat-icon"><i className="fas fa-building"></i></div>
+            <span>Total Institutions</span>
+          </div>
+          <div className="stat-value">42</div>
+          <div className="stat-change increase">
+            <span><i className="fas fa-arrow-up"></i></span>
+            <span>3 new this month</span>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-title">
+            <div className="stat-icon"><i className="fas fa-university"></i></div>
+            <span>Education Sector</span>
+          </div>
+          <div className="stat-value">18</div>
+          <div className="stat-change increase">
+            <span><i className="fas fa-arrow-up"></i></span>
+            <span>2 new this month</span>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-title">
+            <div className="stat-icon"><i className="fas fa-exchange-alt"></i></div>
+            <span>Active Sharing</span>
+          </div>
+          <div className="stat-value">35</div>
+          <div className="stat-change increase">
+            <span><i className="fas fa-arrow-up"></i></span>
+            <span>5 more than last month</span>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-title">
+            <div className="stat-icon"><i className="fas fa-handshake"></i></div>
+            <span>Avg. Trust Level</span>
+          </div>
+          <div className="stat-value">78%</div>
+          <div className="stat-change increase">
+            <span><i className="fas fa-arrow-up"></i></span>
+            <span>4% from last month</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <h2 className="card-title"><i className="fas fa-building card-icon"></i> Connected Institutions</h2>
+        </div>
+        <div className="card-content">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Institution</th>
+                <th>Type</th>
+                <th>Location</th>
+                <th>IoCs Shared</th>
+                <th>IoCs Received</th>
+                <th>Trust Level</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div className="institution-logo">UP</div>
+                    <span>University of Pretoria</span>
+                  </div>
+                </td>
+                <td>Education</td>
+                <td>Pretoria, South Africa</td>
+                <td>125</td>
+                <td>189</td>
+                <td>
+                  <div className="trust-level">
+                    <div className="trust-fill" style={{ width: '90%' }}></div>
+                  </div>
+                  <div style={{ textAlign: 'right', fontSize: '12px' }}>90%</div>
+                </td>
+                <td><span className="badge badge-active">Active</span></td>
+                <td>
+                  <button className="btn btn-outline btn-sm"><i className="fas fa-edit"></i></button>
+                  <button className="btn btn-outline btn-sm"><i className="fas fa-eye"></i></button>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div className="institution-logo">CS</div>
+                    <span>Cyber Security Hub</span>
+                  </div>
+                </td>
+                <td>Government</td>
+                <td>Johannesburg, South Africa</td>
+                <td>342</td>
+                <td>215</td>
+                <td>
+                  <div className="trust-level">
+                    <div className="trust-fill" style={{ width: '85%' }}></div>
+                  </div>
+                  <div style={{ textAlign: 'right', fontSize: '12px' }}>85%</div>
+                </td>
+                <td><span className="badge badge-active">Active</span></td>
+                <td>
+                  <button className="btn btn-outline btn-sm"><i className="fas fa-edit"></i></button>
+                  <button className="btn btn-outline btn-sm"><i className="fas fa-eye"></i></button>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div className="institution-logo">SR</div>
+                    <span>SANReN CSIRT</span>
+                  </div>
+                </td>
+                <td>Security</td>
+                <td>Cape Town, South Africa</td>
+                <td>208</td>
+                <td>176</td>
+                <td>
+                  <div className="trust-level">
+                    <div className="trust-fill" style={{ width: '75%' }}></div>
+                  </div>
+                  <div style={{ textAlign: 'right', fontSize: '12px' }}>75%</div>
+                </td>
+                <td><span className="badge badge-active">Active</span></td>
+                <td>
+                  <button className="btn btn-outline btn-sm"><i className="fas fa-edit"></i></button>
+                  <button className="btn btn-outline btn-sm"><i className="fas fa-eye"></i></button>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div className="institution-logo">SB</div>
+                    <span>SABRIC</span>
+                  </div>
+                </td>
+                <td>Financial</td>
+                <td>Johannesburg, South Africa</td>
+                <td>156</td>
+                <td>143</td>
+                <td>
+                  <div className="trust-level">
+                    <div className="trust-fill" style={{ width: '70%' }}></div>
+                  </div>
+                  <div style={{ textAlign: 'right', fontSize: '12px' }}>70%</div>
+                </td>
+                <td><span className="badge badge-active">Active</span></td>
+                <td>
+                  <button className="btn btn-outline btn-sm"><i className="fas fa-edit"></i></button>
+                  <button className="btn btn-outline btn-sm"><i className="fas fa-eye"></i></button>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div className="institution-logo">UJ</div>
+                    <span>University of Johannesburg</span>
+                  </div>
+                </td>
+                <td>Education</td>
+                <td>Johannesburg, South Africa</td>
+                <td>87</td>
+                <td>104</td>
+                <td>
+                  <div className="trust-level">
+                    <div className="trust-fill" style={{ width: '65%' }}></div>
+                  </div>
+                  <div style={{ textAlign: 'right', fontSize: '12px' }}>65%</div>
+                </td>
+                <td><span className="badge badge-active">Active</span></td>
+                <td>
+                  <button className="btn btn-outline btn-sm"><i className="fas fa-edit"></i></button>
+                  <button className="btn btn-outline btn-sm"><i className="fas fa-eye"></i></button>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div className="institution-logo">TU</div>
+                    <span>Tshwane University of Technology</span>
+                  </div>
+                </td>
+                <td>Education</td>
+                <td>Pretoria, South Africa</td>
+                <td>62</td>
+                <td>98</td>
+                <td>
+                  <div className="trust-level">
+                    <div className="trust-fill" style={{ width: '60%' }}></div>
+                  </div>
+                  <div style={{ textAlign: 'right', fontSize: '12px' }}>60%</div>
+                </td>
+                <td><span className="badge badge-active">Active</span></td>
+                <td>
+                  <button className="btn btn-outline btn-sm"><i className="fas fa-edit"></i></button>
+                  <button className="btn btn-outline btn-sm"><i className="fas fa-eye"></i></button>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div className="institution-logo">OX</div>
+                    <span>Oxford University</span>
+                  </div>
+                </td>
+                <td>Education</td>
+                <td>Oxford, United Kingdom</td>
+                <td>43</td>
+                <td>92</td>
+                <td>
+                  <div className="trust-level">
+                    <div className="trust-fill" style={{ width: '55%' }}></div>
+                  </div>
+                  <div style={{ textAlign: 'right', fontSize: '12px' }}>55%</div>
+                </td>
+                <td><span className="badge badge-active">Active</span></td>
+                <td>
+                  <button className="btn btn-outline btn-sm"><i className="fas fa-edit"></i></button>
+                  <button className="btn btn-outline btn-sm"><i className="fas fa-eye"></i></button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="pagination">
+        <div className="page-item"><i className="fas fa-chevron-left"></i></div>
+        <div className="page-item active">1</div>
+        <div className="page-item">2</div>
+        <div className="page-item">3</div>
+        <div className="page-item"><i className="fas fa-chevron-right"></i></div>
+      </div>
+
+      <div className="card mt-4">
+        <div className="card-header">
+          <h2 className="card-title"><i className="fas fa-chart-area card-icon"></i> Institution Activity Map</h2>
+        </div>
+        <div className="card-content">
+          <div className="chart-container" ref={mapRef}>
+            {/* D3.js Map will be rendered here */}
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
 
-// Reports Component  
+// Reports Component
 function Reports({ active }) {
-  const [reports, setReports] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  const sampleReports = [
-    {
-      id: 1,
-      title: "Weekly Threat Intelligence Summary",
-      type: "summary",
-      date: "2025-01-08",
-      status: "completed",
-      description: "Comprehensive overview of threat landscape for the week"
-    },
-    {
-      id: 2,
-      title: "APT Campaign Analysis",
-      type: "campaign", 
-      date: "2025-01-05",
-      status: "completed",
-      description: "Deep dive into recent APT activities and TTPs"
-    },
-    {
-      id: 3,
-      title: "Vulnerability Trend Report",
-      type: "trend",
-      date: "2025-01-01",
-      status: "draft",
-      description: "Analysis of vulnerability trends and exploitation patterns"
-    }
-  ];
-
-  useEffect(() => {
-    if (active) {
-      setLoading(true);
-      // Simulate API call
-      setTimeout(() => {
-        setReports(sampleReports);
-        setLoading(false);
-      }, 1000);
-    }
-  }, [active]);
-
-  if (!active) return null;
-
   return (
     <section id="reports" className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Reports & Analytics</h1>
-          <p className="page-subtitle">Generate and manage threat intelligence reports</p>
+          <h1 className="page-title">Threat Intelligence Reports</h1>
+          <p className="page-subtitle">Access and manage comprehensive threat reports</p>
         </div>
         <div className="action-buttons">
-          <button className="btn btn-primary">
-            <i className="fas fa-plus"></i> Generate Report
-          </button>
+          <button className="btn btn-outline"><i className="fas fa-filter"></i> Filter</button>
+          <button className="btn btn-primary"><i className="fas fa-plus"></i> Create New Report</button>
         </div>
       </div>
 
-      {loading ? (
-        <div className="loading-state">
-          <i className="fas fa-spinner fa-spin"></i>
-          <p>Loading reports...</p>
-        </div>
-      ) : (
-        <div className="reports-grid">
-          <div className="stats-row">
-            <div className="stat-card">
-              <div className="stat-icon">
-                <i className="fas fa-file-alt"></i>
-              </div>
-              <div className="stat-content">
-                <h3>{reports.length}</h3>
-                <p>Total Reports</p>
-              </div>
-            </div>
-            
-            <div className="stat-card">
-              <div className="stat-icon">
-                <i className="fas fa-check-circle"></i>
-              </div>
-              <div className="stat-content">
-                <h3>{reports.filter(r => r.status === 'completed').length}</h3>
-                <p>Completed</p>
-              </div>
-            </div>
-            
-            <div className="stat-card">
-              <div className="stat-icon">
-                <i className="fas fa-edit"></i>
-              </div>
-              <div className="stat-content">
-                <h3>{reports.filter(r => r.status === 'draft').length}</h3>
-                <p>Drafts</p>
-              </div>
+      <div className="filters-section">
+        <div className="filters-grid">
+          <div className="filter-group">
+            <label className="filter-label">Report Type</label>
+            <div className="filter-control">
+              <select>
+                <option value="">All Types</option>
+                <option value="incident">Incident</option>
+                <option value="campaign">Campaign</option>
+                <option value="trend">Trend Analysis</option>
+                <option value="summary">Weekly Summary</option>
+              </select>
             </div>
           </div>
+          <div className="filter-group">
+            <label className="filter-label">Sector Focus</label>
+            <div className="filter-control">
+              <select>
+                <option value="">All Sectors</option>
+                <option value="education">Education</option>
+                <option value="financial">Financial</option>
+                <option value="government">Government</option>
+                <option value="healthcare">Healthcare</option>
+              </select>
+            </div>
+          </div>
+          <div className="filter-group">
+            <label className="filter-label">Date Range</label>
+            <div className="filter-control">
+              <select>
+                <option value="">All Time</option>
+                <option value="week">Last Week</option>
+                <option value="month">Last Month</option>
+                <option value="quarter">Last Quarter</option>
+                <option value="year">Last Year</option>
+              </select>
+            </div>
+          </div>
+          <div className="filter-group">
+            <label className="filter-label">Search</label>
+            <div className="filter-control">
+              <input type="text" placeholder="Search reports..." />
+            </div>
+          </div>
+        </div>
+      </div>
 
-          <div className="reports-list">
-            <h3 style={{marginBottom: '1rem', color: '#333'}}>Recent Reports</h3>
-            {reports.length === 0 ? (
-              <div className="empty-state">
-                <i className="fas fa-file-alt" style={{fontSize: '48px', color: '#dee2e6'}}></i>
-                <h3>No reports available</h3>
-                <p>Generate your first threat intelligence report.</p>
-                <button className="btn btn-primary">
-                  <i className="fas fa-plus"></i> Generate Report
-                </button>
+      <div className="report-grid">
+        {/* Report Card 1 */}
+        <div className="report-card">
+          <div className="report-header">
+            <div className="report-type">Campaign Analysis</div>
+            <h3 className="report-title">Education Sector Ransomware Campaign</h3>
+            <div className="report-meta">
+              <span>May 19, 2025</span>
+              <span><i className="fas fa-eye"></i> 148</span>
+            </div>
+          </div>
+          <div className="report-content">
+            <div className="report-stats">
+              <div className="report-stat">
+                <div className="stat-number">18</div>
+                <div className="stat-label">Institutions Targeted</div>
               </div>
-            ) : (
-              <div className="reports-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Report Title</th>
-                      <th>Type</th>
-                      <th>Date</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reports.map(report => (
-                      <tr key={report.id}>
-                        <td>
-                          <div className="report-info">
-                            <div className="report-title">{report.title}</div>
-                            <div className="report-description">{report.description}</div>
-                          </div>
-                        </td>
-                        <td>
-                          <span className="report-type">{report.type}</span>
-                        </td>
-                        <td>{report.date}</td>
-                        <td>
-                          <span className={`status-badge ${report.status}`}>
-                            {report.status}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="actions">
-                            <button className="btn btn-sm btn-outline">
-                              <i className="fas fa-eye"></i>
-                            </button>
-                            <button className="btn btn-sm btn-outline">
-                              <i className="fas fa-download"></i>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="report-stat">
+                <div className="stat-number">42</div>
+                <div className="stat-label">Related IoCs</div>
               </div>
-            )}
+              <div className="report-stat">
+                <div className="stat-number">8</div>
+                <div className="stat-label">TTPs Identified</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">High</div>
+                <div className="stat-label">Severity</div>
+              </div>
+            </div>
+            <p>Analysis of ongoing ransomware campaign targeting education institutions in South Africa and neighboring countries.</p>
+            <div className="report-actions">
+              <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i> Share</button>
+              <button className="btn btn-primary btn-sm"><i className="fas fa-eye"></i> View Report</button>
+            </div>
           </div>
         </div>
-      )}
+
+        {/* Report Card 2 */}
+        <div className="report-card">
+          <div className="report-header">
+            <div className="report-type">Weekly Summary</div>
+            <h3 className="report-title">Threat Intelligence Digest: Week 20</h3>
+            <div className="report-meta">
+              <span>May 17, 2025</span>
+              <span><i className="fas fa-eye"></i> 127</span>
+            </div>
+          </div>
+          <div className="report-content">
+            <div className="report-stats">
+              <div className="report-stat">
+                <div className="stat-number">86</div>
+                <div className="stat-label">New IoCs</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">12</div>
+                <div className="stat-label">TTPs Observed</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">4</div>
+                <div className="stat-label">Critical Alerts</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">3</div>
+                <div className="stat-label">Threat Actors</div>
+              </div>
+            </div>
+            <p>Weekly summary of significant threat intelligence findings and trends for the week ending May 17, 2025.</p>
+            <div className="report-actions">
+              <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i> Share</button>
+              <button className="btn btn-primary btn-sm"><i className="fas fa-eye"></i> View Report</button>
+            </div>
+          </div>
+        </div>
+
+        {/* Report Card 3 */}
+        <div className="report-card">
+          <div className="report-header">
+            <div className="report-type">Incident Analysis</div>
+            <h3 className="report-title">University Data Breach Investigation</h3>
+            <div className="report-meta">
+              <span>May 15, 2025</span>
+              <span><i className="fas fa-eye"></i> 215</span>
+            </div>
+          </div>
+          <div className="report-content">
+            <div className="report-stats">
+              <div className="report-stat">
+                <div className="stat-number">28</div>
+                <div className="stat-label">IoCs Discovered</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">6</div>
+                <div className="stat-label">TTPs Identified</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">APT-EDU-01</div>
+                <div className="stat-label">Threat Actor</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">Medium</div>
+                <div className="stat-label">Severity</div>
+              </div>
+            </div>
+            <p>Detailed analysis of recent data breach affecting a major university, including timeline, attack vectors, and remediation steps.</p>
+            <div className="report-actions">
+              <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i> Share</button>
+              <button className="btn btn-primary btn-sm"><i className="fas fa-eye"></i> View Report</button>
+            </div>
+          </div>
+        </div>
+
+        {/* Report Card 4 */}
+        <div className="report-card">
+          <div className="report-header">
+            <div className="report-type">Trend Analysis</div>
+            <h3 className="report-title">Emerging Phishing Techniques in 2025</h3>
+            <div className="report-meta">
+              <span>May 10, 2025</span>
+              <span><i className="fas fa-eye"></i> 342</span>
+            </div>
+          </div>
+          <div className="report-content">
+            <div className="report-stats">
+              <div className="report-stat">
+                <div className="stat-number">53</div>
+                <div className="stat-label">IoCs Analyzed</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">7</div>
+                <div className="stat-label">New Techniques</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">14</div>
+                <div className="stat-label">Organizations</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">High</div>
+                <div className="stat-label">Relevance</div>
+              </div>
+            </div>
+            <p>Analysis of evolving phishing techniques observed across multiple sectors, with focus on AI-generated content and deep fakes.</p>
+            <div className="report-actions">
+              <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i> Share</button>
+              <button className="btn btn-primary btn-sm"><i className="fas fa-eye"></i> View Report</button>
+            </div>
+          </div>
+        </div>
+
+        {/* Report Card 5 */}
+        <div className="report-card">
+          <div className="report-header">
+            <div className="report-type">Sector Analysis</div>
+            <h3 className="report-title">Financial Sector Threat Landscape</h3>
+            <div className="report-meta">
+              <span>May 5, 2025</span>
+              <span><i className="fas fa-eye"></i> 198</span>
+            </div>
+          </div>
+          <div className="report-content">
+            <div className="report-stats">
+              <div className="report-stat">
+                <div className="stat-number">94</div>
+                <div className="stat-label">IoCs Analyzed</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">16</div>
+                <div className="stat-label">TTPs Identified</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">5</div>
+                <div className="stat-label">Threat Actors</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">High</div>
+                <div className="stat-label">Severity</div>
+              </div>
+            </div>
+            <p>Comprehensive overview of current threats targeting financial institutions in Southern Africa, with focus on banking trojans and ATM malware.</p>
+            <div className="report-actions">
+              <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i> Share</button>
+              <button className="btn btn-primary btn-sm"><i className="fas fa-eye"></i> View Report</button>
+            </div>
+          </div>
+        </div>
+
+        {/* Report Card 6 */}
+        <div className="report-card">
+          <div className="report-header">
+            <div className="report-type">Technical Analysis</div>
+            <h3 className="report-title">EDU-Ransom Malware Analysis</h3>
+            <div className="report-meta">
+              <span>May 2, 2025</span>
+              <span><i className="fas fa-eye"></i> 276</span>
+            </div>
+          </div>
+          <div className="report-content">
+            <div className="report-stats">
+              <div className="report-stat">
+                <div className="stat-number">37</div>
+                <div className="stat-label">IoCs Generated</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">9</div>
+                <div className="stat-label">TTPs Mapped</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">RansomGroup-X</div>
+                <div className="stat-label">Attribution</div>
+              </div>
+              <div className="report-stat">
+                <div className="stat-number">Critical</div>
+                <div className="stat-label">Severity</div>
+              </div>
+            </div>
+            <p>Technical deep-dive into the EDU-Ransom malware strain targeting educational institutions, including code analysis and IOC extraction.</p>
+            <div className="report-actions">
+              <button className="btn btn-outline btn-sm"><i className="fas fa-share-alt"></i> Share</button>
+              <button className="btn btn-primary btn-sm"><i className="fas fa-eye"></i> View Report</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="pagination">
+        <div className="page-item"><i className="fas fa-chevron-left"></i></div>
+        <div className="page-item active">1</div>
+        <div className="page-item">2</div>
+        <div className="page-item">3</div>
+        <div className="page-item">4</div>
+        <div className="page-item"><i className="fas fa-chevron-right"></i></div>
+      </div>
     </section>
   );
 }
@@ -9010,69 +8894,6 @@ function CSSStyles() {
             background-color: var(--light-gray);
             color: var(--text-dark);
             min-height: 100vh;
-        }
-        
-        /* Loading Screen */
-        .loading-screen, .login-screen {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            background: linear-gradient(135deg, #0056b3, #004494);
-            color: white;
-            text-align: center;
-        }
-        
-        .login-container {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 2rem;
-            border-radius: 12px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-        }
-        
-        .login-container h2 {
-            margin-bottom: 0.5rem;
-            font-size: 28px;
-            font-weight: 600;
-        }
-        
-        .login-container p {
-            margin-bottom: 2rem;
-            opacity: 0.9;
-        }
-        
-        .login-container .btn {
-            padding: 12px 24px;
-            font-size: 16px;
-            font-weight: 600;
-        }
-        
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid white;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
-        }
-        
-        .loading-screen h2 {
-            margin-bottom: 10px;
-            font-size: 28px;
-            font-weight: 600;
-        }
-        
-        .loading-screen p {
-            font-size: 16px;
-            opacity: 0.8;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
         }
         
         .container {
@@ -10092,15 +9913,6 @@ function CSSStyles() {
         .form-group:last-child {
             margin-bottom: 0;
         }
-        
-        .form-row {
-            display: flex;
-            gap: 1rem;
-        }
-        
-        .form-row .form-group {
-            flex: 1;
-        }
 
         .form-label {
             display: block;
@@ -10594,131 +10406,6 @@ function CSSStyles() {
             align-items: center;
             gap: 0.5rem;
             cursor: pointer;
-        }
-
-        /* Profile Styles */
-        .profile-content {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .profile-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        .profile-header {
-            background: linear-gradient(135deg, #0056b3, #004494);
-            color: white;
-            padding: 2rem;
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
-
-        .profile-avatar {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-        }
-
-        .profile-info h3 {
-            margin: 0 0 0.5rem 0;
-            font-size: 1.5rem;
-            font-weight: 600;
-        }
-
-        .profile-role {
-            margin: 0;
-            opacity: 0.9;
-            font-size: 1rem;
-            text-transform: uppercase;
-            font-weight: 500;
-            letter-spacing: 0.5px;
-        }
-
-        .profile-details {
-            padding: 2rem;
-        }
-
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .info-item {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .info-item label {
-            font-weight: 600;
-            color: #666;
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .info-item span {
-            font-size: 1rem;
-            color: #333;
-            padding: 0.5rem 0;
-            border-bottom: 1px solid #eee;
-        }
-
-        .role-badge {
-            display: inline-block;
-            padding: 0.5rem 1rem !important;
-            border-radius: 20px;
-            font-size: 0.875rem !important;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border: none !important;
-        }
-
-        .role-badge.bluevisionadmin {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .role-badge.admin {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .role-badge.publisher {
-            background: #cce5ff;
-            color: #004085;
-        }
-
-        .role-badge.viewer {
-            background: #f8f9fa;
-            color: #495057;
-        }
-
-        .edit-form {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
-        .form-actions {
-            display: flex;
-            gap: 1rem;
-            justify-content: flex-end;
-            margin-top: 2rem;
-            padding-top: 1rem;
-            border-top: 1px solid #eee;
         }
 
         .checkbox-label input[type="checkbox"] {
@@ -11531,329 +11218,8 @@ function CSSStyles() {
                 gap: 1rem;
             }
         }
-
       `}
     </style>
-  );
-}
-
-// Notifications Component
-function Notifications({ active }) {
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    if (active) {
-      // Simulated notifications data
-      setTimeout(() => {
-        setNotifications([
-          {
-            id: '1',
-            type: 'threat_alert',
-            title: 'New High-Priority Threat Detected',
-            message: 'A new malware strain has been identified in your organization\'s threat feed.',
-            severity: 'high',
-            read: false,
-            created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-          },
-          {
-            id: '2',
-            type: 'trust_request',
-            title: 'Trust Relationship Request',
-            message: 'Organization "CyberSecure Inc." has requested a bilateral trust relationship.',
-            severity: 'medium',
-            read: false,
-            created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          },
-          {
-            id: '3',
-            type: 'feed_update',
-            title: 'Threat Feed Updated',
-            message: 'Your subscribed threat feed "MITRE ATT&CK" has been updated with 15 new indicators.',
-            severity: 'low',
-            read: true,
-            created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-          }
-        ]);
-        setLoading(false);
-      }, 500);
-    }
-  }, [active]);
-
-  const markAsRead = (notificationId) => {
-    setNotifications(prev =>
-      prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
-    );
-  };
-
-  const deleteNotification = (notificationId) => {
-    setNotifications(prev => prev.filter(n => n.id !== notificationId));
-  };
-
-  if (!active) return null;
-
-  return (
-    <section id="notifications" className={`page-section ${active ? 'active' : ''}`}>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Notifications</h1>
-          <p className="page-subtitle">Stay updated with system alerts and activities</p>
-        </div>
-        <div className="action-buttons">
-          <button className="btn btn-outline">
-            <i className="fas fa-check-double"></i> Mark All Read
-          </button>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="loading-state">
-          <i className="fas fa-spinner fa-spin"></i>
-          <p>Loading notifications...</p>
-        </div>
-      ) : (
-        <div className="notifications-list">
-          {notifications.length === 0 ? (
-            <div className="empty-state">
-              <i className="fas fa-bell-slash" style={{fontSize: '48px', color: '#dee2e6'}}></i>
-              <h3>No notifications</h3>
-              <p>You're all caught up! No notifications to show.</p>
-            </div>
-          ) : (
-            notifications.map(notification => (
-              <div key={notification.id} className={`notification-item ${!notification.read ? 'unread' : ''}`}>
-                <div className="notification-content">
-                  <div className="notification-header">
-                    <div className="notification-icon">
-                      <i className={
-                        notification.type === 'threat_alert' ? 'fas fa-exclamation-triangle' :
-                        notification.type === 'trust_request' ? 'fas fa-handshake' :
-                        'fas fa-rss'
-                      } style={{
-                        color: notification.severity === 'high' ? '#dc3545' :
-                               notification.severity === 'medium' ? '#ffc107' : '#28a745'
-                      }}></i>
-                    </div>
-                    <div className="notification-meta">
-                      <h4>{notification.title}</h4>
-                      <div className="meta-info">
-                        <span>{new Date(notification.created_at).toLocaleString()}</span>
-                        {!notification.read && <span className="unread-dot"></span>}
-                      </div>
-                    </div>
-                  </div>
-                  <p className="notification-message">{notification.message}</p>
-                </div>
-                <div className="notification-actions">
-                  {!notification.read && (
-                    <button
-                      onClick={() => markAsRead(notification.id)}
-                      className="btn btn-sm btn-outline"
-                    >
-                      <i className="fas fa-check"></i>
-                    </button>
-                  )}
-                  <button
-                    onClick={() => deleteNotification(notification.id)}
-                    className="btn btn-sm btn-danger"
-                  >
-                    <i className="fas fa-trash"></i>
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-    </section>
-  );
-}
-
-// User Profile Component
-function UserProfile({ active }) {
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [editMode, setEditMode] = useState(false);
-  const [formData, setFormData] = useState({});
-
-  useEffect(() => {
-    if (active) {
-      fetchProfile();
-    }
-  }, [active]);
-
-  const fetchProfile = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/api/auth/profile/');
-      if (response && response.success) {
-        setProfile(response.user);
-        setFormData({
-          first_name: response.user.first_name || '',
-          last_name: response.user.last_name || '',
-          email: response.user.email || ''
-        });
-      }
-    } catch (err) {
-      console.error('Error fetching profile:', err);
-      setError('Failed to load profile');
-      // Fallback to localStorage data
-      const user = JSON.parse(localStorage.getItem('crisp_user') || '{}');
-      if (user.username) {
-        setProfile(user);
-        setFormData({
-          first_name: user.first_name || '',
-          last_name: user.last_name || '',
-          email: user.email || ''
-        });
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSave = async () => {
-    try {
-      const response = await api.put('/api/auth/profile/update/', formData);
-      if (response && response.success) {
-        setProfile(response.user);
-        setEditMode(false);
-      }
-    } catch (err) {
-      console.error('Error updating profile:', err);
-      setError('Failed to update profile');
-    }
-  };
-
-  if (!active) return null;
-
-  return (
-    <section id="profile" className={`page-section ${active ? 'active' : ''}`}>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">User Profile</h1>
-          <p className="page-subtitle">Manage your account information and settings</p>
-        </div>
-        <div className="action-buttons">
-          {!editMode && (
-            <button className="btn btn-primary" onClick={() => setEditMode(true)}>
-              <i className="fas fa-edit"></i> Edit Profile
-            </button>
-          )}
-        </div>
-      </div>
-
-      {error && (
-        <div className="error-message">
-          <i className="fas fa-exclamation-triangle"></i>
-          {error}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="loading-state">
-          <i className="fas fa-spinner fa-spin"></i>
-          <p>Loading profile...</p>
-        </div>
-      ) : profile ? (
-        <div className="profile-content">
-          <div className="profile-card">
-            <div className="profile-header">
-              <div className="profile-avatar">
-                <i className="fas fa-user"></i>
-              </div>
-              <div className="profile-info">
-                <h3>{profile.first_name} {profile.last_name}</h3>
-                <p className="profile-role">{profile.role}</p>
-              </div>
-            </div>
-
-            <div className="profile-details">
-              {editMode ? (
-                <form className="edit-form">
-                  <div className="form-group">
-                    <label>First Name</label>
-                    <input
-                      type="text"
-                      value={formData.first_name}
-                      onChange={(e) => setFormData({...formData, first_name: e.target.value})}
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label>Last Name</label>
-                    <input
-                      type="text"
-                      value={formData.last_name}
-                      onChange={(e) => setFormData({...formData, last_name: e.target.value})}
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label>Email</label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="form-actions">
-                    <button type="button" onClick={handleSave} className="btn btn-primary">
-                      <i className="fas fa-save"></i> Save Changes
-                    </button>
-                    <button type="button" onClick={() => setEditMode(false)} className="btn btn-secondary">
-                      <i className="fas fa-times"></i> Cancel
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <div className="info-grid">
-                  <div className="info-item">
-                    <label>Username</label>
-                    <span>{profile.username}</span>
-                  </div>
-                  
-                  <div className="info-item">
-                    <label>Email</label>
-                    <span>{profile.email}</span>
-                  </div>
-                  
-                  <div className="info-item">
-                    <label>First Name</label>
-                    <span>{profile.first_name || 'Not set'}</span>
-                  </div>
-                  
-                  <div className="info-item">
-                    <label>Last Name</label>
-                    <span>{profile.last_name || 'Not set'}</span>
-                  </div>
-                  
-                  <div className="info-item">
-                    <label>Role</label>
-                    <span className={`role-badge ${profile.role?.toLowerCase()}`}>
-                      {profile.role}
-                    </span>
-                  </div>
-                  
-                  <div className="info-item">
-                    <label>Organization</label>
-                    <span>{profile.organization?.name || 'No organization'}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="error-state">
-          <i className="fas fa-exclamation-triangle"></i>
-          <p>Unable to load profile information</p>
-        </div>
-      )}
-    </section>
   );
 }
 

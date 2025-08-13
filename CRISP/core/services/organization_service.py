@@ -83,7 +83,7 @@ class OrganizationService:
                     is_publisher=is_publisher,
                     is_verified=is_verified,
                     is_active=True,
-                    created_by=created_by.username if created_by else 'system'
+                    created_by=created_by
                 )
                 
                 # Create primary user
@@ -116,11 +116,21 @@ class OrganizationService:
                     )
                 
                 logger.info(f"Organization '{organization.name}' created with primary user {primary_user.username}")
-                return organization, primary_user
+                return {
+                    'success': True,
+                    'message': f"Organization '{organization.name}' created successfully",
+                    'organization_id': str(organization.id),
+                    'organization': organization,
+                    'primary_user_id': str(primary_user.id),
+                    'primary_user': primary_user
+                }
                 
         except Exception as e:
             logger.error(f"Error creating organization: {e}")
-            raise ValidationError(f"Failed to create organization: {e}")
+            return {
+                'success': False,
+                'message': f"Failed to create organization: {str(e)}"
+            }
     
     def update_organization(self, updating_user, organization_id, update_data):
         """Update an organization's information"""
