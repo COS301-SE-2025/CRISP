@@ -15,12 +15,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": [""]
 						}
 					},
 					"response": []
@@ -32,13 +28,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/admin/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"admin",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["admin", ""]
 						}
 					},
 					"response": []
@@ -50,13 +41,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", ""]
 						}
 					},
 					"response": []
@@ -68,14 +54,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/status/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"status",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "status", ""]
 						}
 					},
 					"response": []
@@ -92,10 +72,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{
-    "username": "your_username",
-    "password": "your_password"
-}",
+							"raw": "{\n    \"username\": \"your_username\",\n    \"password\": \"your_password\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -104,16 +81,8 @@
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/login/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"auth",
-								"login",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "login", ""]
 						}
 					},
 					"response": []
@@ -125,11 +94,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{
-    "username": "new_username",
-    "password": "new_password",
-    "email": "user@example.com"
-}",
+							"raw": "{\n    \"username\": \"new_username\",\n    \"password\": \"new_password\",\n    \"email\": \"user@example.com\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -138,16 +103,8 @@
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/register/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"auth",
-								"register",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "register", ""]
 						}
 					},
 					"response": []
@@ -159,16 +116,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/logout/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"auth",
-								"logout",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "logout", ""]
 						}
 					},
 					"response": []
@@ -180,9 +129,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{
-    "refresh": "your_refresh_token"
-}",
+							"raw": "{\n    \"refresh\": \"your_refresh_token\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -191,16 +138,8 @@
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/refresh/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"auth",
-								"refresh",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "refresh", ""]
 						},
 						"description": "Note: This endpoint was marked as FAIL in the report."
 					},
@@ -213,16 +152,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/verify/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"auth",
-								"verify",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "verify", ""]
 						}
 					},
 					"response": []
@@ -234,16 +165,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/sessions/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"auth",
-								"sessions",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "sessions", ""]
 						}
 					},
 					"response": []
@@ -255,16 +178,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/revoke-session/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"auth",
-								"revoke-session",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "revoke-session", ""]
 						},
 						"description": "Note: This endpoint was marked as FAIL in the report."
 					},
@@ -277,10 +192,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{
-    "old_password": "current_password",
-    "new_password": "new_strong_password"
-}",
+							"raw": "{\n    \"old_password\": \"current_password\",\n    \"new_password\": \"new_strong_password\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -289,16 +201,8 @@
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/change-password/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"auth",
-								"change-password",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "change-password", ""]
 						}
 					},
 					"response": []
@@ -310,9 +214,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{
-    "email": "user@example.com"
-}",
+							"raw": "{\n    \"email\": \"user@example.com\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -321,16 +223,8 @@
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/forgot-password/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"auth",
-								"forgot-password",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "forgot-password", ""]
 						}
 					},
 					"response": []
@@ -342,9 +236,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{
-    "token": "reset_token"
-}",
+							"raw": "{\n    \"token\": \"reset_token\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -353,16 +245,8 @@
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/validate-reset-token/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"auth",
-								"validate-reset-token",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "validate-reset-token", ""]
 						},
 						"description": "Note: This endpoint was marked as FAIL in the report."
 					},
@@ -375,10 +259,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{
-    "token": "reset_token",
-    "password": "new_password"
-}",
+							"raw": "{\n    \"token\": \"reset_token\",\n    \"password\": \"new_password\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -387,16 +268,8 @@
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/reset-password/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"auth",
-								"reset-password",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "reset-password", ""]
 						},
 						"description": "Note: This endpoint was marked as FAIL in the report."
 					},
@@ -409,16 +282,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/dashboard/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"auth",
-								"dashboard",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "dashboard", ""]
 						}
 					},
 					"response": []
@@ -435,16 +300,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/admin/system_health/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"admin",
-								"system_health",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "system_health", ""]
 						}
 					},
 					"response": []
@@ -456,16 +313,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/admin/trust_overview/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"admin",
-								"trust_overview",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "trust_overview", ""]
 						}
 					},
 					"response": []
@@ -477,16 +326,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/admin/dashboard/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"admin",
-								"dashboard",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "dashboard", ""]
 						}
 					},
 					"response": []
@@ -498,16 +339,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/admin/system-health/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"admin",
-								"system-health",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "system-health", ""]
 						}
 					},
 					"response": []
@@ -519,16 +352,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/admin/audit-logs/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"admin",
-								"audit-logs",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "audit-logs", ""]
 						}
 					},
 					"response": []
@@ -540,16 +365,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/admin/cleanup-sessions/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"admin",
-								"cleanup-sessions",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "cleanup-sessions", ""]
 						}
 					},
 					"response": []
@@ -561,18 +378,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/admin/users/{{pk}}/unlock/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"admin",
-								"users",
-								"{{pk}}",
-								"unlock",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "users", "{{pk}}", "unlock", ""],
 							"variable": [
 								{
 									"key": "pk",
@@ -590,16 +397,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/admin/comprehensive-audit-logs/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"admin",
-								"comprehensive-audit-logs",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "comprehensive-audit-logs", ""]
 						}
 					},
 					"response": []
@@ -611,18 +410,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/admin/users/{{pk}}/activity-summary/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"admin",
-								"users",
-								"{{pk}}",
-								"activity-summary",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "users", "{{pk}}", "activity-summary", ""],
 							"variable": [
 								{
 									"key": "pk",
@@ -640,16 +429,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/admin/security-events/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"admin",
-								"security-events",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "security-events", ""]
 						}
 					},
 					"response": []
@@ -661,16 +442,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/admin/audit-statistics/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"admin",
-								"audit-statistics",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "audit-statistics", ""]
 						}
 					},
 					"response": []
@@ -687,16 +460,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/alerts/statistics/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"alerts",
-								"statistics",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "alerts", "statistics", ""]
 						}
 					},
 					"response": []
@@ -708,16 +473,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/alerts/test-connection/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"alerts",
-								"test-connection",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "alerts", "test-connection", ""]
 						}
 					},
 					"response": []
@@ -729,16 +486,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/alerts/test-email/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"alerts",
-								"test-email",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "alerts", "test-email", ""]
 						}
 					},
 					"response": []
@@ -750,14 +499,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/alerts/list/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"alerts",
-								"list",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["alerts", "list", ""]
 						}
 					},
 					"response": []
@@ -769,14 +512,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/alerts/threat/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"alerts",
-								"threat",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["alerts", "threat", ""]
 						}
 					},
 					"response": []
@@ -788,14 +525,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/alerts/feed/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"alerts",
-								"feed",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["alerts", "feed", ""]
 						}
 					},
 					"response": []
@@ -807,14 +538,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/alerts/mark-all-read/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"alerts",
-								"mark-all-read",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["alerts", "mark-all-read", ""]
 						}
 					},
 					"response": []
@@ -826,14 +551,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/alerts/preferences/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"alerts",
-								"preferences",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["alerts", "preferences", ""]
 						}
 					},
 					"response": []
@@ -845,15 +564,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/alerts/preferences/update/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"alerts",
-								"preferences",
-								"update",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["alerts", "preferences", "update", ""]
 						}
 					},
 					"response": []
@@ -870,16 +582,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/email/send-test/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"email",
-								"send-test",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "email", "send-test", ""]
 						}
 					},
 					"response": []
@@ -896,16 +600,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/users/profile/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"users",
-								"profile",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "profile", ""]
 						}
 					},
 					"response": []
@@ -917,16 +613,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/users/statistics/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"users",
-								"statistics",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "statistics", ""]
 						}
 					},
 					"response": []
@@ -938,16 +626,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/users/list/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"users",
-								"list",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "list", ""]
 						}
 					},
 					"response": []
@@ -959,11 +639,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{
-    "username": "new_user",
-    "password": "password",
-    "email": "user@example.com"
-}",
+							"raw": "{\n    \"username\": \"new_user\",\n    \"password\": \"password\",\n    \"email\": \"user@example.com\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -972,16 +648,8 @@
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/users/create_user/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"users",
-								"create_user",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "create_user", ""]
 						}
 					},
 					"response": []
@@ -993,17 +661,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/users/{{user_id}}/get_user/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"users",
-								"{{user_id}}",
-								"get_user",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "{{user_id}}", "get_user", ""],
 							"variable": [
 								{
 									"key": "user_id",
@@ -1021,9 +680,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{
-    "email": "updated_email@example.com"
-}",
+							"raw": "{\n    \"email\": \"updated_email@example.com\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1032,17 +689,8 @@
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/users/{{user_id}}/update_user/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"users",
-								"{{user_id}}",
-								"update_user",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "{{user_id}}", "update_user", ""],
 							"variable": [
 								{
 									"key": "user_id",
@@ -1060,17 +708,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/users/{{user_id}}/delete_user/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"users",
-								"{{user_id}}",
-								"delete_user",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "{{user_id}}", "delete_user", ""],
 							"variable": [
 								{
 									"key": "user_id",
@@ -1088,9 +727,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{
-    "username": "new_username"
-}",
+							"raw": "{\n    \"username\": \"new_username\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1099,17 +736,8 @@
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/users/{{user_id}}/change_username/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"users",
-								"{{user_id}}",
-								"change_username",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "{{user_id}}", "change_username", ""],
 							"variable": [
 								{
 									"key": "user_id",
@@ -1127,11 +755,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{
-    "username": "extended_user",
-    "password": "password",
-    "email": "extended@example.com"
-}",
+							"raw": "{\n    \"username\": \"extended_user\",\n    \"password\": \"password\",\n    \"email\": \"extended@example.com\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1140,16 +764,8 @@
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/users/create/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"users",
-								"create",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "create", ""]
 						}
 					},
 					"response": []
@@ -1161,16 +777,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/users/{{pk}}/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"users",
-								"{{pk}}",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "{{pk}}", ""],
 							"variable": [
 								{
 									"key": "pk",
@@ -1188,9 +796,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{
-    "email": "updated_extended@example.com"
-}",
+							"raw": "{\n    \"email\": \"updated_extended@example.com\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1199,16 +805,8 @@
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/users/{{pk}}/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"users",
-								"{{pk}}",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "{{pk}}", ""],
 							"variable": [
 								{
 									"key": "pk",
@@ -1226,17 +824,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/users/{{pk}}/deactivate/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"users",
-								"{{pk}}",
-								"deactivate",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "{{pk}}", "deactivate", ""],
 							"variable": [
 								{
 									"key": "pk",
@@ -1254,17 +843,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/users/{{pk}}/reactivate/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"users",
-								"{{pk}}",
-								"reactivate",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "{{pk}}", "reactivate", ""],
 							"variable": [
 								{
 									"key": "pk",
@@ -1287,16 +867,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/organizations/list_organizations/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"organizations",
-								"list_organizations",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "organizations", "list_organizations", ""]
 						}
 					},
 					"response": []
@@ -1308,16 +880,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/organizations/types/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"organizations",
-								"types",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "organizations", "types", ""]
 						}
 					},
 					"response": []
@@ -1329,10 +893,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{
-    "name": "New Organization",
-    "type": "MSP"
-}",
+							"raw": "{\n    \"name\": \"New Organization\",\n    \"type\": \"MSP\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1341,16 +902,8 @@
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/organizations/create_organization/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"organizations",
-								"create_organization",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "organizations", "create_organization", ""]
 						}
 					},
 					"response": []
@@ -1362,17 +915,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}/get_organization/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"organizations",
-								"{{organization_id}}",
-								"get_organization",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "organizations", "{{organization_id}}", "get_organization", ""],
 							"variable": [
 								{
 									"key": "organization_id",
@@ -1391,17 +935,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}/update_organization/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"organizations",
-								"{{organization_id}}",
-								"update_organization",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "organizations", "{{organization_id}}", "update_organization", ""],
 							"variable": [
 								{
 									"key": "organization_id",
@@ -1420,17 +955,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}/delete_organization/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"organizations",
-								"{{organization_id}}",
-								"delete_organization",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "organizations", "{{organization_id}}", "delete_organization", ""],
 							"variable": [
 								{
 									"key": "organization_id",
@@ -1449,16 +975,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"organizations",
-								"{{organization_id}}",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "organizations", "{{organization_id}}", ""],
 							"variable": [
 								{
 									"key": "organization_id",
@@ -1477,17 +995,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}/deactivate_organization/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"organizations",
-								"{{organization_id}}",
-								"deactivate_organization",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "organizations", "{{organization_id}}", "deactivate_organization", ""],
 							"variable": [
 								{
 									"key": "organization_id",
@@ -1506,17 +1015,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}/reactivate_organization/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"organizations",
-								"{{organization_id}}",
-								"reactivate_organization",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "organizations", "{{organization_id}}", "reactivate_organization", ""],
 							"variable": [
 								{
 									"key": "organization_id",
@@ -1540,16 +1040,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/trust/groups/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"trust",
-								"groups",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "trust", "groups", ""]
 						}
 					},
 					"response": []
@@ -1561,16 +1053,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/trust/levels/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"trust",
-								"levels",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "trust", "levels", ""]
 						}
 					},
 					"response": []
@@ -1582,16 +1066,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/trust/metrics/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"trust",
-								"metrics",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "trust", "metrics", ""]
 						}
 					},
 					"response": []
@@ -1603,16 +1079,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/trust/relationships/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"trust",
-								"relationships",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "trust", "relationships", ""]
 						}
 					},
 					"response": []
@@ -1624,17 +1092,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/trust/relationships/{{relationship_id}}/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"trust",
-								"relationships",
-								"{{relationship_id}}",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "trust", "relationships", "{{relationship_id}}", ""],
 							"variable": [
 								{
 									"key": "relationship_id",
@@ -1657,14 +1116,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/threat-feeds/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"threat-feeds",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "threat-feeds", ""]
 						}
 					},
 					"response": []
@@ -1676,10 +1129,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{
-    "name": "My New Feed",
-    "url": "http://example.com/feed"
-}",
+							"raw": "{\n    \"name\": \"My New Feed\",\n    \"url\": \"http://example.com/feed\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1688,14 +1138,8 @@
 						},
 						"url": {
 							"raw": "{{base_url}}/api/threat-feeds/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"threat-feeds",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "threat-feeds", ""]
 						}
 					},
 					"response": []
@@ -1707,15 +1151,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/threat-feeds/{{pk}}/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"threat-feeds",
-								"{{pk}}",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "threat-feeds", "{{pk}}", ""],
 							"variable": [
 								{
 									"key": "pk",
@@ -1733,9 +1170,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{
-    "name": "Updated Feed Name"
-}",
+							"raw": "{\n    \"name\": \"Updated Feed Name\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1744,15 +1179,8 @@
 						},
 						"url": {
 							"raw": "{{base_url}}/api/threat-feeds/{{pk}}/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"threat-feeds",
-								"{{pk}}",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "threat-feeds", "{{pk}}", ""],
 							"variable": [
 								{
 									"key": "pk",
@@ -1770,15 +1198,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/threat-feeds/{{pk}}/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"threat-feeds",
-								"{{pk}}",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "threat-feeds", "{{pk}}", ""],
 							"variable": [
 								{
 									"key": "pk",
@@ -1796,16 +1217,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/threat-feeds/{{pk}}/consume/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"threat-feeds",
-								"{{pk}}",
-								"consume",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "threat-feeds", "{{pk}}", "consume", ""],
 							"variable": [
 								{
 									"key": "pk",
@@ -1824,16 +1237,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/threat-feeds/{{pk}}/status/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"threat-feeds",
-								"{{pk}}",
-								"status",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "threat-feeds", "{{pk}}", "status", ""],
 							"variable": [
 								{
 									"key": "pk",
@@ -1852,16 +1257,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/threat-feeds/{{pk}}/test_connection/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"threat-feeds",
-								"{{pk}}",
-								"test_connection",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "threat-feeds", "{{pk}}", "test_connection", ""],
 							"variable": [
 								{
 									"key": "pk",
@@ -1880,15 +1277,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/threat-feeds/external/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"threat-feeds",
-								"external",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "threat-feeds", "external", ""]
 						}
 					},
 					"response": []
@@ -1900,15 +1290,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/threat-feeds/available_collections/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"threat-feeds",
-								"available_collections",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "threat-feeds", "available_collections", ""]
 						}
 					},
 					"response": []
@@ -1925,14 +1308,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/indicators/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"indicators",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "indicators", ""]
 						}
 					},
 					"response": []
@@ -1944,15 +1321,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/indicators/{{pk}}/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"indicators",
-								"{{pk}}",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["api", "indicators", "{{pk}}", ""],
 							"variable": [
 								{
 									"key": "pk",
@@ -1971,15 +1341,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/indicators/recent/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"indicators",
-								"recent",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "indicators", "recent", ""]
 						}
 					},
 					"response": []
@@ -1991,15 +1354,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/indicators/stats/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"indicators",
-								"stats",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "indicators", "stats", ""]
 						}
 					},
 					"response": []
@@ -2011,15 +1367,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/indicators/types/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"indicators",
-								"types",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "indicators", "types", ""]
 						}
 					},
 					"response": []
@@ -2036,14 +1385,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", ""]
 						}
 					},
 					"response": []
@@ -2055,16 +1398,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/dashboard/overview/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"dashboard",
-								"overview",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "dashboard", "overview", ""]
 						}
 					},
 					"response": []
@@ -2076,16 +1411,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/threat-feeds/external/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"threat-feeds",
-								"external",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "threat-feeds", "external", ""]
 						}
 					},
 					"response": []
@@ -2097,16 +1424,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/threat-feeds/collections/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"threat-feeds",
-								"collections",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "threat-feeds", "collections", ""]
 						}
 					},
 					"response": []
@@ -2123,13 +1442,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/taxii2/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"taxii2",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["taxii2", ""]
 						}
 					},
 					"response": []
@@ -2141,14 +1455,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/taxii2/collections/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"taxii2",
-								"collections",
-								""
-							]
+							"host": ["{{base_url}}"],
+							"path": ["taxii2", "collections", ""]
 						},
 						"description": "Note: This endpoint was marked as FAIL in the report."
 					},
@@ -2161,15 +1469,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/taxii2/collections/{{collection_id}}/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"taxii2",
-								"collections",
-								"{{collection_id}}",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["taxii2", "collections", "{{collection_id}}", ""],
 							"variable": [
 								{
 									"key": "collection_id",
@@ -2188,16 +1489,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/taxii2/collections/{{collection_id}}/objects/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"taxii2",
-								"collections",
-								"{{collection_id}}",
-								"objects",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["taxii2", "collections", "{{collection_id}}", "objects", ""],
 							"variable": [
 								{
 									"key": "collection_id",
@@ -2216,17 +1509,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/taxii2/collections/{{collection_id}}/objects/{{object_id}}/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"taxii2",
-								"collections",
-								"{{collection_id}}",
-								"objects",
-								"{{object_id}}",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["taxii2", "collections", "{{collection_id}}", "objects", "{{object_id}}", ""],
 							"variable": [
 								{
 									"key": "collection_id",
@@ -2249,16 +1533,8 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/taxii2/collections/{{collection_id}}/manifest/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"taxii2",
-								"collections",
-								"{{collection_id}}",
-								"manifest",
-								""
-							],
+							"host": ["{{base_url}}"],
+							"path": ["taxii2", "collections", "{{collection_id}}", "manifest", ""],
 							"variable": [
 								{
 									"key": "collection_id",
