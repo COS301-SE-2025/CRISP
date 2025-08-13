@@ -1,12 +1,12 @@
 {
 	"info": {
-		"_postman_id": "a9a7252b-3e39-4c1b-8f6b-6c7e3c5e3d6a",
-		"name": "CRISP Unified API - Complete Collection",
-		"description": "Comprehensive API collection for CRISP Threat Intelligence and Trust Management Platform",
+		"_postman_id": "crisp-unified-api-v2",
+		"name": "CRISP Unified API - Complete Collection v2",
+		"description": "Comprehensive API collection for CRISP Threat Intelligence and Trust Management Platform with automatic authentication",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"version": {
 			"major": 2,
-			"minor": 0,
+			"minor": 1,
 			"patch": 0
 		}
 	},
@@ -26,7 +26,41 @@
 			"script": {
 				"type": "text/javascript",
 				"exec": [
-					""
+					"// Auto-login if no access token exists",
+					"if (!pm.globals.get('access_token') || pm.globals.get('access_token') === '') {",
+					"    console.log('No access token found, attempting auto-login...');",
+					"    ",
+					"    const loginRequest = {",
+					"        url: pm.globals.get('base_url') + '/api/v1/auth/login/',",
+					"        method: 'POST',",
+					"        header: {",
+					"            'Content-Type': 'application/json'",
+					"        },",
+					"        body: {",
+					"            mode: 'raw',",
+					"            raw: JSON.stringify({",
+					"                username: pm.globals.get('admin_username') || 'admin',",
+					"                password: pm.globals.get('admin_password') || 'password123'",
+					"            })",
+					"        }",
+					"    };",
+					"    ",
+					"    pm.sendRequest(loginRequest, function (err, response) {",
+					"        if (err) {",
+					"            console.log('Login failed:', err);",
+					"        } else if (response.code === 200) {",
+					"            const responseBody = response.json();",
+					"            if (responseBody.success && responseBody.tokens) {",
+					"                pm.globals.set('access_token', responseBody.tokens.access);",
+					"                pm.globals.set('refresh_token', responseBody.tokens.refresh);",
+					"                pm.globals.set('user_id', responseBody.user.id);",
+					"                console.log('Auto-login successful!');",
+					"            }",
+					"        } else {",
+					"            console.log('Login failed with status:', response.code);",
+					"        }",
+					"    });",
+					"}"
 				]
 			}
 		}
@@ -49,24 +83,23 @@
 		},
 		{
 			"key": "user_id",
-			"value": "1",
+			"value": "",
 			"type": "string"
 		},
 		{
-			"key": "organization_id",
-			"value": "org_uuid",
+			"key": "admin_username",
+			"value": "admin",
 			"type": "string"
 		},
 		{
-			"key": "collection_id",
-			"value": "collection_uuid",
+			"key": "admin_password",
+			"value": "password123",
 			"type": "string"
 		}
 	],
 	"item": [
 		{
-			"name": "Authentication",
-			"description": "User authentication and session management endpoints",
+			"name": "🔐 Authentication",
 			"item": [
 				{
 					"name": "Login",
@@ -75,21 +108,29 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"if (pm.response.code === 200) {",
-									"    const response = pm.response.json();",
-									"    if (response.access) {",
-									"        pm.collectionVariables.set('access_token', response.access);",
-									"    }",
-									"    if (response.refresh) {",
-									"        pm.collectionVariables.set('refresh_token', response.refresh);",
-									"    }",
-									"}"
+									"pm.test('Login successful', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"    pm.expect(responseBody.tokens).to.have.property('access');",
+									"    pm.expect(responseBody.tokens).to.have.property('refresh');",
+									"    ",
+									"    // Store tokens globally",
+									"    pm.globals.set('access_token', responseBody.tokens.access);",
+									"    pm.globals.set('refresh_token', responseBody.tokens.refresh);",
+									"    pm.globals.set('user_id', responseBody.user.id);",
+									"    ",
+									"    console.log('Tokens saved to global variables');",
+									"});"
 								],
 								"type": "text/javascript"
 							}
 						}
 					],
 					"request": {
+						"auth": {
+							"type": "noauth"
+						},
 						"method": "POST",
 						"header": [
 							{
@@ -99,18 +140,54 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"username\": \"admin\",\n    \"password\": \"password123\"\n}"
+							"raw": "{\n    \"username\": \"{{admin_username}}\",\n    \"password\": \"{{admin_password}}\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/login/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "auth", "login", ""]
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login",
+								""
+							]
 						}
 					}
 				},
 				{
 					"name": "Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Registration response received', function () {",
+									"    pm.response.to.be.ok;",
+									"    const responseBody = pm.response.json();",
+									"    ",
+									"    if (pm.response.code === 200 || pm.response.code === 201) {",
+									"        pm.test('Registration successful', function () {",
+									"            pm.expect(responseBody.success).to.be.true;",
+									"        });",
+									"    } else if (pm.response.code === 400) {",
+									"        pm.test('Registration failed with validation error', function () {",
+									"            pm.expect(responseBody.success).to.be.false;",
+									"            pm.expect(responseBody.message).to.exist;",
+									"        });",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
+						"auth": {
+							"type": "noauth"
+						},
 						"method": "POST",
 						"header": [
 							{
@@ -120,33 +197,20 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"username\": \"newuser\",\n    \"email\": \"newuser@example.com\",\n    \"password\": \"securePassword123\",\n    \"first_name\": \"New\",\n    \"last_name\": \"User\"\n}"
+							"raw": "{\n    \"username\": \"testuser_{{$randomInt}}\",\n    \"email\": \"testuser{{$randomInt}}@example.com\",\n    \"password\": \"SecurePassword123!\",\n    \"password_confirm\": \"SecurePassword123!\",\n    \"first_name\": \"Test\",\n    \"last_name\": \"User\",\n    \"organization\": \"Test Organization\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/register/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "auth", "register", ""]
-						}
-					}
-				},
-				{
-					"name": "Logout",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"refresh_token\": \"{{refresh_token}}\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/api/v1/auth/logout/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "auth", "logout", ""]
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"register",
+								""
+							]
 						}
 					}
 				},
@@ -157,21 +221,28 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"if (pm.response.code === 200) {",
-									"    const response = pm.response.json();",
-									"    if (response.access) {",
-									"        pm.collectionVariables.set('access_token', response.access);",
-									"    }",
-									"    if (response.refresh) {",
-									"        pm.collectionVariables.set('refresh_token', response.refresh);",
-									"    }",
-									"}"
+									"pm.test('Token refresh successful', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"    pm.expect(responseBody.data.tokens).to.have.property('access');",
+									"    pm.expect(responseBody.data.tokens).to.have.property('refresh');",
+									"    ",
+									"    // Update stored tokens",
+									"    pm.globals.set('access_token', responseBody.data.tokens.access);",
+									"    pm.globals.set('refresh_token', responseBody.data.tokens.refresh);",
+									"    ",
+									"    console.log('Tokens refreshed and updated');",
+									"});"
 								],
 								"type": "text/javascript"
 							}
 						}
 					],
 					"request": {
+						"auth": {
+							"type": "noauth"
+						},
 						"method": "POST",
 						"header": [
 							{
@@ -185,75 +256,119 @@
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/refresh/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "auth", "refresh", ""]
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"refresh",
+								""
+							]
 						}
 					}
 				},
 				{
 					"name": "Verify Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Token verification successful', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"    pm.expect(responseBody.data.token_valid).to.be.true;",
+									"    pm.expect(responseBody.data.user).to.exist;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/verify/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "auth", "verify", ""]
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"verify",
+								""
+							]
 						}
 					}
 				},
 				{
 					"name": "User Sessions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Sessions retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"    pm.expect(responseBody.data.sessions).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/sessions/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "auth", "sessions", ""]
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"sessions",
+								""
+							]
 						}
 					}
 				},
 				{
-					"name": "Revoke Session",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
+					"name": "Logout",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Logout successful', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"    ",
+									"    // Clear stored tokens after logout",
+									"    pm.globals.unset('access_token');",
+									"    pm.globals.unset('refresh_token');",
+									"    pm.globals.unset('user_id');",
+									"    ",
+									"    console.log('Logged out and tokens cleared');",
+									"});"
+								],
+								"type": "text/javascript"
 							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"session_id\": \"session_uuid\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/api/v1/auth/revoke-session/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "auth", "revoke-session", ""]
 						}
-					}
-				},
-				{
-					"name": "Change Password",
+					],
 					"request": {
 						"method": "POST",
 						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							},
 							{
 								"key": "Content-Type",
 								"value": "application/json"
@@ -261,18 +376,44 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"old_password\": \"currentPassword123\",\n    \"new_password\": \"newSecurePassword123\"\n}"
+							"raw": "{}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/v1/auth/change-password/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "auth", "change-password", ""]
+							"raw": "{{base_url}}/api/v1/auth/logout/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"logout",
+								""
+							]
 						}
 					}
 				},
 				{
 					"name": "Forgot Password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Password reset request processed', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
+						"auth": {
+							"type": "noauth"
+						},
 						"method": "POST",
 						"header": [
 							{
@@ -282,18 +423,44 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"email\": \"user@example.com\"\n}"
+							"raw": "{\n    \"email\": \"admin@example.com\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/forgot-password/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "auth", "forgot-password", ""]
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"forgot-password",
+								""
+							]
 						}
 					}
 				},
 				{
 					"name": "Validate Reset Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Reset token validation response received', function () {",
+									"    pm.response.to.be.ok;",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.exist;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
+						"auth": {
+							"type": "noauth"
+						},
 						"method": "POST",
 						"header": [
 							{
@@ -303,18 +470,44 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"token\": \"reset_token_here\"\n}"
+							"raw": "{\n    \"token\": \"sample-reset-token\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/validate-reset-token/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "auth", "validate-reset-token", ""]
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"validate-reset-token",
+								""
+							]
 						}
 					}
 				},
 				{
 					"name": "Reset Password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Password reset response received', function () {",
+									"    pm.response.to.be.ok;",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.exist;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
+						"auth": {
+							"type": "noauth"
+						},
 						"method": "POST",
 						"header": [
 							{
@@ -324,123 +517,161 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"token\": \"reset_token_here\",\n    \"password\": \"newSecurePassword123\"\n}"
+							"raw": "{\n    \"token\": \"sample-reset-token\",\n    \"new_password\": \"NewSecurePassword123!\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/reset-password/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "auth", "reset-password", ""]
-						}
-					}
-				},
-				{
-					"name": "Auth Dashboard",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/auth/dashboard/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "auth", "dashboard", ""]
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"reset-password",
+								""
+							]
 						}
 					}
 				}
 			]
 		},
 		{
-			"name": "User Management",
-			"description": "User creation, management, and profile endpoints",
+			"name": "👥 User Management",
 			"item": [
 				{
-					"name": "List Users",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/users/list/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "users", "list", ""]
-						}
-					}
-				},
-				{
-					"name": "Create User",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"username\": \"testuser\",\n    \"email\": \"testuser@example.com\",\n    \"password\": \"securePassword123\",\n    \"first_name\": \"Test\",\n    \"last_name\": \"User\",\n    \"role\": \"user\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/api/v1/users/create/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "users", "create", ""]
-						}
-					}
-				},
-				{
 					"name": "Get User Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('User profile retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"    pm.expect(responseBody.data.profile).to.exist;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/users/profile/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "users", "profile", ""]
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"profile",
+								""
+							]
 						}
 					}
 				},
 				{
 					"name": "Get User by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('User details retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"    pm.expect(responseBody.data.user).to.exist;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/users/{{user_id}}/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "users", "{{user_id}}", ""]
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"{{user_id}}",
+								""
+							]
 						}
 					}
 				},
 				{
-					"name": "Update User",
+					"name": "List Users",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Users list retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"    pm.expect(responseBody.data.users).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
-						"method": "PUT",
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/list/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"list",
+								""
+							]
+						}
+					}
+				},
+				{
+					"name": "Create User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('User creation response received', function () {",
+									"    pm.response.to.be.ok;",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.exist;",
+									"    ",
+									"    if (responseBody.success) {",
+									"        pm.expect(responseBody.data.user).to.exist;",
+									"        console.log('User created successfully');",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
 						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							},
 							{
 								"key": "Content-Type",
 								"value": "application/json"
@@ -448,115 +679,158 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"email\": \"updated@example.com\",\n    \"first_name\": \"Updated\",\n    \"last_name\": \"Name\"\n}"
+							"raw": "{\n    \"username\": \"newuser_{{$randomInt}}\",\n    \"email\": \"newuser{{$randomInt}}@example.com\",\n    \"password\": \"SecurePassword123!\",\n    \"first_name\": \"New\",\n    \"last_name\": \"User\",\n    \"role\": \"viewer\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/v1/users/{{user_id}}/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "users", "{{user_id}}", ""]
-						}
-					}
-				},
-				{
-					"name": "Deactivate User",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/users/{{user_id}}/deactivate/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "users", "{{user_id}}", "deactivate", ""]
-						}
-					}
-				},
-				{
-					"name": "Reactivate User",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/users/{{user_id}}/reactivate/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "users", "{{user_id}}", "reactivate", ""]
+							"raw": "{{base_url}}/api/v1/users/create/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"create",
+								""
+							]
 						}
 					}
 				},
 				{
 					"name": "User Statistics",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('User statistics retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/users/statistics/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "users", "statistics", ""]
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"statistics",
+								""
+							]
 						}
 					}
 				}
 			]
 		},
 		{
-			"name": "Organization Management",
-			"description": "Organization CRUD operations and management",
+			"name": "🏢 Organizations",
 			"item": [
 				{
 					"name": "List Organizations",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Organizations list retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/organizations/list_organizations/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "organizations", "list_organizations", ""]
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations",
+								"list_organizations",
+								""
+							]
 						}
 					}
 				},
 				{
 					"name": "Organization Types",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Organization types retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/organizations/types/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "organizations", "types", ""]
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations",
+								"types",
+								""
+							]
 						}
 					}
 				},
 				{
 					"name": "Create Organization",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Organization creation response received', function () {",
+									"    pm.response.to.be.ok;",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.exist;",
+									"    ",
+									"    if (responseBody.success && responseBody.data && responseBody.data.organization) {",
+									"        pm.globals.set('test_org_id', responseBody.data.organization.id);",
+									"        console.log('Organization created with ID:', responseBody.data.organization.id);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
 						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							},
 							{
 								"key": "Content-Type",
 								"value": "application/json"
@@ -564,478 +838,236 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Test Organization\",\n    \"description\": \"A test organization for API testing\",\n    \"organization_type\": \"university\",\n    \"contact_email\": \"contact@testorg.edu\",\n    \"website\": \"https://testorg.edu\",\n    \"domain\": \"testorg.edu\"\n}"
+							"raw": "{\n    \"name\": \"Test Organization {{$randomInt}}\",\n    \"domain\": \"testorg{{$randomInt}}.com\",\n    \"organization_type\": \"security_vendor\",\n    \"description\": \"Test organization for API testing\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/organizations/create_organization/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "organizations", "create_organization", ""]
-						}
-					}
-				},
-				{
-					"name": "Get Organization",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}/get_organization/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "organizations", "{{organization_id}}", "get_organization", ""]
-						}
-					}
-				},
-				{
-					"name": "Update Organization",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"name\": \"Updated Organization Name\",\n    \"description\": \"Updated description\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}/update_organization/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "organizations", "{{organization_id}}", "update_organization", ""]
-						}
-					}
-				},
-				{
-					"name": "Delete Organization",
-					"request": {
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}/delete_organization/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "organizations", "{{organization_id}}", "delete_organization", ""]
-						}
-					}
-				},
-				{
-					"name": "Deactivate Organization",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}/deactivate_organization/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "organizations", "{{organization_id}}", "deactivate_organization", ""]
-						}
-					}
-				},
-				{
-					"name": "Reactivate Organization",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}/reactivate_organization/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "organizations", "{{organization_id}}", "reactivate_organization", ""]
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations",
+								"create_organization",
+								""
+							]
 						}
 					}
 				}
 			]
 		},
 		{
-			"name": "Trust Management",
-			"description": "Trust relationships, groups, levels and metrics",
+			"name": "🔗 Trust Management",
 			"item": [
 				{
 					"name": "Trust Groups",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Trust groups retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/trust/groups/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "trust", "groups", ""]
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"trust",
+								"groups",
+								""
+							]
 						}
 					}
 				},
 				{
 					"name": "Trust Levels",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Trust levels retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/trust/levels/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "trust", "levels", ""]
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"trust",
+								"levels",
+								""
+							]
 						}
 					}
 				},
 				{
 					"name": "Trust Metrics",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Trust metrics retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/trust/metrics/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "trust", "metrics", ""]
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"trust",
+								"metrics",
+								""
+							]
 						}
 					}
 				},
 				{
 					"name": "List Trust Relationships",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Trust relationships retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/trust/relationships/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "trust", "relationships", ""]
-						}
-					}
-				},
-				{
-					"name": "Create Trust Relationship",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"source_organization\": \"{{organization_id}}\",\n    \"target_organization\": \"target_org_id\",\n    \"relationship_type\": \"partnership\",\n    \"trust_level\": 1,\n    \"notes\": \"Test trust relationship\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/api/v1/trust/relationships/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "trust", "relationships", ""]
-						}
-					}
-				},
-				{
-					"name": "Get Trust Relationship",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/trust/relationships/1/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "trust", "relationships", "1", ""]
-						}
-					}
-				},
-				{
-					"name": "Update Trust Relationship",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"relationship_type\": \"educational\",\n    \"notes\": \"Updated relationship notes\",\n    \"is_active\": true\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/api/v1/trust/relationships/1/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "trust", "relationships", "1", ""]
-						}
-					}
-				},
-				{
-					"name": "Delete Trust Relationship",
-					"request": {
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/trust/relationships/1/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "trust", "relationships", "1", ""]
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"trust",
+								"relationships",
+								""
+							]
 						}
 					}
 				}
 			]
 		},
 		{
-			"name": "Threat Intelligence",
-			"description": "Threat feeds, indicators, and intelligence data",
+			"name": "🚨 Threat Intelligence",
 			"item": [
 				{
 					"name": "List Threat Feeds",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Threat feeds retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/threat-feeds/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "threat-feeds", ""]
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"threat-feeds",
+								""
+							]
 						}
 					}
 				},
-				{
-					"name": "Create Threat Feed",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"name\": \"Test Threat Feed\",\n    \"description\": \"A test threat feed for API testing\",\n    \"taxii_server_url\": \"https://example.com/taxii2/\",\n    \"taxii_api_root\": \"api-root\",\n    \"taxii_collection_id\": \"collection-id\",\n    \"is_external\": true,\n    \"is_public\": false\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/api/threat-feeds/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "threat-feeds", ""]
-						}
-					}
-				},
-				{
-					"name": "Get Threat Feed",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/threat-feeds/1/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "threat-feeds", "1", ""]
-						}
-					}
-				},
-				{
-					"name": "Update Threat Feed",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"name\": \"Updated Threat Feed\",\n    \"description\": \"Updated description\",\n    \"is_active\": true\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/api/threat-feeds/1/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "threat-feeds", "1", ""]
-						}
-					}
-				},
-				{
-					"name": "Delete Threat Feed",
-					"request": {
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/threat-feeds/1/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "threat-feeds", "1", ""]
-						}
-					}
-				},
-				{
-					"name": "Consume Threat Feed",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/threat-feeds/1/consume/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "threat-feeds", "1", "consume", ""]
-						}
-					}
-				},
-				{
-					"name": "Threat Feed Status",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/threat-feeds/1/status/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "threat-feeds", "1", "status", ""]
-						}
-					}
-				},
-				{
-					"name": "Test Feed Connection",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/threat-feeds/1/test_connection/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "threat-feeds", "1", "test_connection", ""]
-						}
-					}
-				},
-				{
-					"name": "External Feeds",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/threat-feeds/external/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "threat-feeds", "external", ""]
-						}
-					}
-				},
-				{
-					"name": "Available Collections",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/threat-feeds/available_collections/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "threat-feeds", "available_collections", ""]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "Indicators",
-			"description": "Threat indicators and IOC management",
-			"item": [
 				{
 					"name": "List Indicators",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Indicators retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/indicators/?page=1&page_size=20",
-							"host": ["{{base_url}}"],
-							"path": ["api", "indicators", ""],
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"indicators",
+								""
+							],
 							"query": [
 								{
 									"key": "page",
@@ -1044,52 +1076,42 @@
 								{
 									"key": "page_size",
 									"value": "20"
-								},
-								{
-									"key": "type",
-									"value": "ip",
-									"disabled": true
-								},
-								{
-									"key": "confidence",
-									"value": "high",
-									"disabled": true
 								}
 							]
 						}
 					}
 				},
 				{
-					"name": "Get Indicator",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/indicators/1/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "indicators", "1", ""]
-						}
-					}
-				},
-				{
 					"name": "Recent Indicators",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Recent indicators retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/indicators/recent/?hours=24",
-							"host": ["{{base_url}}"],
-							"path": ["api", "indicators", "recent", ""],
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"indicators",
+								"recent",
+								""
+							],
 							"query": [
 								{
 									"key": "hours",
@@ -1101,218 +1123,34 @@
 				},
 				{
 					"name": "Indicator Statistics",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Indicator statistics retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/indicators/stats/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "indicators", "stats", ""]
-						}
-					}
-				},
-				{
-					"name": "Indicator Types",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/indicators/types/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "indicators", "types", ""]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "TAXII 2.1 Protocol",
-			"description": "TAXII 2.1 standard compliant endpoints",
-			"item": [
-				{
-					"name": "TAXII Discovery",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/taxii+json;version=2.1"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/taxii2/",
-							"host": ["{{base_url}}"],
-							"path": ["taxii2", ""]
-						}
-					}
-				},
-				{
-					"name": "TAXII Collections List",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/taxii+json;version=2.1"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/taxii2/collections/",
-							"host": ["{{base_url}}"],
-							"path": ["taxii2", "collections", ""]
-						}
-					}
-				},
-				{
-					"name": "TAXII Collection Detail",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/taxii+json;version=2.1"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/taxii2/collections/{{collection_id}}/",
-							"host": ["{{base_url}}"],
-							"path": ["taxii2", "collections", "{{collection_id}}", ""]
-						}
-					}
-				},
-				{
-					"name": "Collection Objects",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/stix+json;version=2.1"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/taxii2/collections/{{collection_id}}/objects/?limit=20",
-							"host": ["{{base_url}}"],
-							"path": ["taxii2", "collections", "{{collection_id}}", "objects", ""],
-							"query": [
-								{
-									"key": "limit",
-									"value": "20"
-								},
-								{
-									"key": "added_after",
-									"value": "2024-01-01T00:00:00Z",
-									"disabled": true
-								},
-								{
-									"key": "type",
-									"value": "indicator",
-									"disabled": true
-								}
-							]
-						}
-					}
-				},
-				{
-					"name": "Add Objects to Collection",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/stix+json;version=2.1"
-							},
-							{
-								"key": "Accept",
-								"value": "application/taxii+json;version=2.1"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"objects\": [\n        {\n            \"type\": \"indicator\",\n            \"spec_version\": \"2.1\",\n            \"id\": \"indicator--12345678-1234-5678-9abc-123456789abc\",\n            \"created\": \"2024-01-01T00:00:00.000Z\",\n            \"modified\": \"2024-01-01T00:00:00.000Z\",\n            \"pattern\": \"[file:hashes.MD5 = 'd41d8cd98f00b204e9800998ecf8427e']\",\n            \"labels\": [\"malicious-activity\"]\n        }\n    ]\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/taxii2/collections/{{collection_id}}/objects/",
-							"host": ["{{base_url}}"],
-							"path": ["taxii2", "collections", "{{collection_id}}", "objects", ""]
-						}
-					}
-				},
-				{
-					"name": "Get Specific Object",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/stix+json;version=2.1"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/taxii2/collections/{{collection_id}}/objects/object_id/",
-							"host": ["{{base_url}}"],
-							"path": ["taxii2", "collections", "{{collection_id}}", "objects", "object_id", ""]
-						}
-					}
-				},
-				{
-					"name": "Collection Manifest",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/taxii+json;version=2.1"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/taxii2/collections/{{collection_id}}/manifest/?limit=50",
-							"host": ["{{base_url}}"],
-							"path": ["taxii2", "collections", "{{collection_id}}", "manifest", ""],
-							"query": [
-								{
-									"key": "limit",
-									"value": "50"
-								},
-								{
-									"key": "added_after",
-									"value": "2024-01-01T00:00:00Z",
-									"disabled": true
-								}
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"indicators",
+								"stats",
+								""
 							]
 						}
 					}
@@ -1320,546 +1158,180 @@
 			]
 		},
 		{
-			"name": "Administrative",
-			"description": "System administration and monitoring endpoints",
+			"name": "⚙️ Admin Functions",
 			"item": [
 				{
 					"name": "System Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('System health check successful', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/admin/system_health/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "admin", "system_health", ""]
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"system_health",
+								""
+							]
 						}
 					}
 				},
 				{
 					"name": "Admin Dashboard",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Admin dashboard retrieved successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/admin/dashboard/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "admin", "dashboard", ""]
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"dashboard",
+								""
+							]
 						}
 					}
-				},
+				}
+			]
+		},
+		{
+			"name": "📊 System Status",
+			"item": [
 				{
-					"name": "Extended System Health",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
+					"name": "API Root",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('API root accessible', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
 							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/admin/system-health/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "admin", "system-health", ""]
 						}
-					}
-				},
-				{
-					"name": "Trust System Overview",
+					],
 					"request": {
+						"auth": {
+							"type": "noauth"
+						},
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
+						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/v1/admin/trust_overview/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "admin", "trust_overview", ""]
-						}
-					}
-				},
-				{
-					"name": "Audit Logs",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/admin/audit-logs/?page=1&page_size=50",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "admin", "audit-logs", ""],
-							"query": [
-								{
-									"key": "page",
-									"value": "1"
-								},
-								{
-									"key": "page_size",
-									"value": "50"
-								},
-								{
-									"key": "action",
-									"value": "login",
-									"disabled": true
-								},
-								{
-									"key": "user",
-									"value": "{{user_id}}",
-									"disabled": true
-								}
+							"raw": "{{base_url}}/api/v1/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								""
 							]
 						}
 					}
 				},
 				{
-					"name": "Comprehensive Audit Logs",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/admin/comprehensive-audit-logs/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "admin", "comprehensive-audit-logs", ""]
-						}
-					}
-				},
-				{
-					"name": "Security Events",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/admin/security-events/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "admin", "security-events", ""]
-						}
-					}
-				},
-				{
-					"name": "Audit Statistics",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/admin/audit-statistics/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "admin", "audit-statistics", ""]
-						}
-					}
-				},
-				{
-					"name": "User Activity Summary",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/admin/users/{{user_id}}/activity-summary/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "admin", "users", "{{user_id}}", "activity-summary", ""]
-						}
-					}
-				},
-				{
-					"name": "Clean Expired Sessions",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/admin/cleanup-sessions/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "admin", "cleanup-sessions", ""]
-						}
-					}
-				},
-				{
-					"name": "Unlock User Account",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/admin/users/{{user_id}}/unlock/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "admin", "users", "{{user_id}}", "unlock", ""]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "Alert System",
-			"description": "Notification and alert management",
-			"item": [
-				{
-					"name": "Alert List",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/alerts/list/",
-							"host": ["{{base_url}}"],
-							"path": ["alerts", "list", ""]
-						}
-					}
-				},
-				{
-					"name": "Alert Statistics",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/alerts/statistics/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "alerts", "statistics", ""]
-						}
-					}
-				},
-				{
-					"name": "Test Gmail Connection",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/alerts/test-connection/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "alerts", "test-connection", ""]
-						}
-					}
-				},
-				{
-					"name": "Send Test Alert Email",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"recipient\": \"test@example.com\",\n    \"subject\": \"Test Alert\",\n    \"message\": \"This is a test alert email.\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/api/v1/alerts/test-email/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "alerts", "test-email", ""]
-						}
-					}
-				},
-				{
-					"name": "Send Threat Alert",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"threat_type\": \"malware\",\n    \"severity\": \"high\",\n    \"description\": \"New malware detected\",\n    \"indicators\": [\"192.168.1.100\", \"malware.exe\"]\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/alerts/threat/",
-							"host": ["{{base_url}}"],
-							"path": ["alerts", "threat", ""]
-						}
-					}
-				},
-				{
-					"name": "Send Feed Notification",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"feed_id\": 1,\n    \"notification_type\": \"update\",\n    \"message\": \"Feed updated with new indicators\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/alerts/feed/",
-							"host": ["{{base_url}}"],
-							"path": ["alerts", "feed", ""]
-						}
-					}
-				},
-				{
-					"name": "Mark All Notifications Read",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/alerts/mark-all-read/",
-							"host": ["{{base_url}}"],
-							"path": ["alerts", "mark-all-read", ""]
-						}
-					}
-				},
-				{
-					"name": "Get Notification Preferences",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/alerts/preferences/",
-							"host": ["{{base_url}}"],
-							"path": ["alerts", "preferences", ""]
-						}
-					}
-				},
-				{
-					"name": "Update Notification Preferences",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"email_notifications\": true,\n    \"threat_alerts\": true,\n    \"feed_updates\": false,\n    \"daily_summary\": true\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/alerts/preferences/update/",
-							"host": ["{{base_url}}"],
-							"path": ["alerts", "preferences", "update", ""]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "Dashboard & Unified API",
-			"description": "Dashboard data and unified API endpoints",
-			"item": [
-				{
-					"name": "API Root",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/api/v1/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", ""]
-						}
-					}
-				},
-				{
-					"name": "Dashboard Overview",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/dashboard/overview/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "dashboard", "overview", ""]
-						}
-					}
-				},
-				{
-					"name": "Unified External Feeds",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/threat-feeds/external/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "threat-feeds", "external", ""]
-						}
-					}
-				},
-				{
-					"name": "Unified Collections",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/threat-feeds/collections/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "threat-feeds", "collections", ""]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "Email System",
-			"description": "Email testing and configuration",
-			"item": [
-				{
-					"name": "Send Test Email",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{access_token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"to\": \"test@example.com\",\n    \"subject\": \"Test Email from CRISP\",\n    \"message\": \"This is a test email from the CRISP system.\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/api/v1/email/send-test/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "email", "send-test", ""]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "System Status",
-			"description": "Core system status and health endpoints",
-			"item": [
-				{
-					"name": "Home Page",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/",
-							"host": ["{{base_url}}"],
-							"path": [""]
-						}
-					}
-				},
-				{
 					"name": "Core System Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('System status check successful', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
+						"auth": {
+							"type": "noauth"
+						},
 						"method": "GET",
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/status/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "status", ""]
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"status",
+								""
+							]
 						}
 					}
 				},
 				{
-					"name": "Django Admin",
+					"name": "Home Page",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Home page accessible', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
+						"auth": {
+							"type": "noauth"
+						},
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/admin/",
-							"host": ["{{base_url}}"],
-							"path": ["admin", ""]
+							"raw": "{{base_url}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								""
+							]
 						}
 					}
 				}
