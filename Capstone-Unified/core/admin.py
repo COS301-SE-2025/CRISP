@@ -3,7 +3,7 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 import json
 
-from core.models.models import Organization, STIXObject, Collection, CollectionObject, Feed, Identity
+from core.models.models import STIXObject, Collection, CollectionObject, Feed, Identity
 
 try:
     from core.models.models import Institution, Indicator, ThreatFeed, TTPData
@@ -19,12 +19,6 @@ except ImportError:
         EXTENDED_MODELS_AVAILABLE = False
 
 
-@admin.register(Organization)
-class OrganizationAdmin(admin.ModelAdmin):
-    list_display = ['name', 'organization_type', 'contact_email', 'created_at']
-    list_filter = ['organization_type', 'created_at']
-    search_fields = ['name', 'description', 'contact_email']
-    readonly_fields = ['stix_id', 'created_at', 'updated_at']
 
 
 @admin.register(STIXObject)
