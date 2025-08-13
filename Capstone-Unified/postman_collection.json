@@ -1,4 +1,3 @@
-
 {
 	"info": {
 		"_postman_id": "a9a7252b-3e39-4c1b-8f6b-6c7e3c5e3d6a",
@@ -562,23 +561,23 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/admin/users/{{pk}}/unlock/",
-						"host": [
-							"{{base_url}}"
-						],
-						"path": [
-							"api",
-							"v1",
-							"admin",
-							"users",
-							"{{pk}}",
-							"unlock",
-							""
-						],
-						"variable": [
-							{
-								"key": "pk",
-								"value": "user_uuid"
-							}
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"users",
+								"{{pk}}",
+								"unlock",
+								""
+							],
+							"variable": [
+								{
+									"key": "pk",
+									"value": "user_uuid"
+								}
 							]
 						}
 					},
@@ -612,23 +611,24 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/admin/users/{{pk}}/activity-summary/",
-						"host": [
-							"{{base_url}}"
-						],
-						"path": [
-							"api",
-							"v1",
-							"admin",
-							"users",
-							"{{pk}}",
-							"activity-summary",
-							""
-						],
-						"variable": [
-							{
-								"key": "pk",
-								"value": "user_uuid"
-							}
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"users",
+								"{{pk}}",
+								"activity-summary",
+								""
+							],
+							"variable": [
+								{
+									"key": "pk",
+									"value": "user_uuid"
+								}
+							]
 						}
 					},
 					"response": []
@@ -993,22 +993,23 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/users/{{user_id}}/get_user/",
-						"host": [
-							"{{base_url}}"
-						],
-						"path": [
-							"api",
-							"v1",
-							"users",
-							"{{user_id}}",
-							"get_user",
-							""
-						],
-						"variable": [
-							{
-								"key": "user_id",
-								"value": "1"
-							}
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"{{user_id}}",
+								"get_user",
+								""
+							],
+							"variable": [
+								{
+									"key": "user_id",
+									"value": "1"
+								}
+							]
 						}
 					},
 					"response": []
@@ -1031,22 +1032,23 @@
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/users/{{user_id}}/update_user/",
-						"host": [
-							"{{base_url}}"
-						],
-						"path": [
-							"api",
-							"v1",
-							"users",
-							"{{user_id}}",
-							"update_user",
-							""
-						],
-						"variable": [
-							{
-								"key": "user_id",
-								"value": "1"
-							}
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"{{user_id}}",
+								"update_user",
+								""
+							],
+							"variable": [
+								{
+									"key": "user_id",
+									"value": "1"
+								}
+							]
 						}
 					},
 					"response": []
@@ -1058,22 +1060,23 @@
 						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/v1/users/{{user_id}}/delete_user/",
-						"host": [
-							"{{base_url}}"
-						],
-						"path": [
-							"api",
-							"v1",
-							"users",
-							"{{user_id}}",
-							"delete_user",
-							""
-						],
-						"variable": [
-							{
-								"key": "user_id",
-								"value": "1"
-							}
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"{{user_id}}",
+								"delete_user",
+								""
+							],
+							"variable": [
+								{
+									"key": "user_id",
+									"value": "1"
+								}
+							]
 						}
 					},
 					"response": []
@@ -1096,22 +1099,23 @@
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/users/{{user_id}}/change_username/",
-						"host": [
-							"{{base_url}}"
-						],
-						"path": [
-							"api",
-							"v1",
-							"users",
-							"{{user_id}}",
-							"change_username",
-							""
-						],
-						"variable": [
-							{
-								"key": "user_id",
-								"value": "1"
-							}
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"{{user_id}}",
+								"change_username",
+								""
+							],
+							"variable": [
+								{
+									"key": "user_id",
+									"value": "1"
+								}
+							]
 						}
 					},
 					"response": []
@@ -1156,7 +1160,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/v1/users/:pk/",
+							"raw": "{{base_url}}/api/v1/users/{{pk}}/",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1164,7 +1168,7 @@
 								"api",
 								"v1",
 								"users",
-								":pk",
+								"{{pk}}",
 								""
 							],
 							"variable": [
@@ -1194,7 +1198,7 @@
 							}
 						},
 						"url": {
-							"raw": "{{base_url}}/api/v1/users/:pk/",
+							"raw": "{{base_url}}/api/v1/users/{{pk}}/",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1202,7 +1206,7 @@
 								"api",
 								"v1",
 								"users",
-								":pk",
+								"{{pk}}",
 								""
 							],
 							"variable": [
@@ -1221,7 +1225,7 @@
 						"method": "POST",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/v1/users/:pk/deactivate/",
+							"raw": "{{base_url}}/api/v1/users/{{pk}}/deactivate/",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1229,7 +1233,7 @@
 								"api",
 								"v1",
 								"users",
-								":pk",
+								"{{pk}}",
 								"deactivate",
 								""
 							],
@@ -1249,7 +1253,7 @@
 						"method": "POST",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/v1/users/:pk/reactivate/",
+							"raw": "{{base_url}}/api/v1/users/{{pk}}/reactivate/",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1257,7 +1261,7 @@
 								"api",
 								"v1",
 								"users",
-								":pk",
+								"{{pk}}",
 								"reactivate",
 								""
 							],
@@ -1357,7 +1361,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/v1/organizations/:organization_id/get_organization/",
+							"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}/get_organization/",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1365,7 +1369,7 @@
 								"api",
 								"v1",
 								"organizations",
-								":organization_id",
+								"{{organization_id}}",
 								"get_organization",
 								""
 							],
@@ -1386,7 +1390,7 @@
 						"method": "PUT",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/v1/organizations/:organization_id/update_organization/",
+							"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}/update_organization/",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1394,7 +1398,7 @@
 								"api",
 								"v1",
 								"organizations",
-								":organization_id",
+								"{{organization_id}}",
 								"update_organization",
 								""
 							],
@@ -1415,7 +1419,7 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/v1/organizations/:organization_id/delete_organization/",
+							"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}/delete_organization/",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1423,7 +1427,7 @@
 								"api",
 								"v1",
 								"organizations",
-								":organization_id",
+								"{{organization_id}}",
 								"delete_organization",
 								""
 							],
@@ -1444,7 +1448,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/v1/organizations/:organization_id/",
+							"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}/",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1452,7 +1456,7 @@
 								"api",
 								"v1",
 								"organizations",
-								":organization_id",
+								"{{organization_id}}",
 								""
 							],
 							"variable": [
@@ -1472,7 +1476,7 @@
 						"method": "POST",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/v1/organizations/:organization_id/deactivate_organization/",
+							"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}/deactivate_organization/",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1480,7 +1484,7 @@
 								"api",
 								"v1",
 								"organizations",
-								":organization_id",
+								"{{organization_id}}",
 								"deactivate_organization",
 								""
 							],
@@ -1501,7 +1505,7 @@
 						"method": "POST",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/v1/organizations/:organization_id/reactivate_organization/",
+							"raw": "{{base_url}}/api/v1/organizations/{{organization_id}}/reactivate_organization/",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1509,7 +1513,7 @@
 								"api",
 								"v1",
 								"organizations",
-								":organization_id",
+								"{{organization_id}}",
 								"reactivate_organization",
 								""
 							],
@@ -1619,7 +1623,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/v1/trust/relationships/:relationship_id/",
+							"raw": "{{base_url}}/api/v1/trust/relationships/{{relationship_id}}/",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1628,7 +1632,7 @@
 								"v1",
 								"trust",
 								"relationships",
-								":relationship_id",
+								"{{relationship_id}}",
 								""
 							],
 							"variable": [
@@ -1702,14 +1706,14 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/threat-feeds/:pk/",
+							"raw": "{{base_url}}/api/threat-feeds/{{pk}}/",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
 								"threat-feeds",
-								":pk",
+								"{{pk}}",
 								""
 							],
 							"variable": [
@@ -1739,14 +1743,14 @@
 							}
 						},
 						"url": {
-							"raw": "{{base_url}}/api/threat-feeds/:pk/",
+							"raw": "{{base_url}}/api/threat-feeds/{{pk}}/",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
 								"threat-feeds",
-								":pk",
+								"{{pk}}",
 								""
 							],
 							"variable": [
@@ -1765,14 +1769,14 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/threat-feeds/:pk/",
+							"raw": "{{base_url}}/api/threat-feeds/{{pk}}/",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
 								"threat-feeds",
-								":pk",
+								"{{pk}}",
 								""
 							],
 							"variable": [
@@ -1791,14 +1795,14 @@
 						"method": "POST",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/threat-feeds/:pk/consume/",
+							"raw": "{{base_url}}/api/threat-feeds/{{pk}}/consume/",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
 								"threat-feeds",
-								":pk",
+								"{{pk}}",
 								"consume",
 								""
 							],
@@ -1819,14 +1823,14 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/threat-feeds/:pk/status/",
+							"raw": "{{base_url}}/api/threat-feeds/{{pk}}/status/",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
 								"threat-feeds",
-								":pk",
+								"{{pk}}",
 								"status",
 								""
 							],
@@ -1847,14 +1851,14 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/threat-feeds/:pk/test_connection/",
+							"raw": "{{base_url}}/api/threat-feeds/{{pk}}/test_connection/",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
 								"threat-feeds",
-								":pk",
+								"{{pk}}",
 								"test_connection",
 								""
 							],
@@ -1939,14 +1943,14 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/indicators/:pk/",
+							"raw": "{{base_url}}/api/indicators/{{pk}}/",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
 								"indicators",
-								":pk",
+								"{{pk}}",
 								""
 							],
 							"variable": [
@@ -2156,14 +2160,14 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/taxii2/collections/:collection_id/",
+							"raw": "{{base_url}}/taxii2/collections/{{collection_id}}/",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"taxii2",
 								"collections",
-								":collection_id",
+								"{{collection_id}}",
 								""
 							],
 							"variable": [
@@ -2183,14 +2187,14 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/taxii2/collections/:collection_id/objects/",
+							"raw": "{{base_url}}/taxii2/collections/{{collection_id}}/objects/",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"taxii2",
 								"collections",
-								":collection_id",
+								"{{collection_id}}",
 								"objects",
 								""
 							],
@@ -2211,16 +2215,16 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/taxii2/collections/:collection_id/objects/:object_id/",
+							"raw": "{{base_url}}/taxii2/collections/{{collection_id}}/objects/{{object_id}}/",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"taxii2",
 								"collections",
-								":collection_id",
+								"{{collection_id}}",
 								"objects",
-								":object_id",
+								"{{object_id}}",
 								""
 							],
 							"variable": [
@@ -2244,14 +2248,14 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/taxii2/collections/:collection_id/manifest/",
+							"raw": "{{base_url}}/taxii2/collections/{{collection_id}}/manifest/",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"taxii2",
 								"collections",
-								":collection_id",
+								"{{collection_id}}",
 								"manifest",
 								""
 							],
