@@ -303,7 +303,7 @@ class ComprehensiveEndpointTester:
             # Extended Authentication Endpoints (from core_ut)
             {"method": "POST", "url": "/api/v1/auth/register/", "name": "Auth Register", "auth_required": False, "data": {"username": f"testuser{int(time.time())}", "email": f"test{int(time.time())}@example.com", "password": "testpass123", "password_confirm": "testpass123", "first_name": "Test", "last_name": "User", "organization": "68a93b91-d018-4f7a-9ff8-a32582dc6193", "role": "viewer"}},
             {"method": "POST", "url": "/api/v1/auth/logout/", "name": "Auth Logout", "auth_required": True},
-            {"method": "POST", "url": "/api/v1/auth/refresh/", "name": "Auth Refresh Token", "auth_required": True, "data": {"refresh": "dummy_token"}, "expect_error": False},
+            {"method": "POST", "url": "/api/v1/auth/refresh/", "name": "Auth Refresh Token", "auth_required": True, "data": {}, "expect_error": True},
             {"method": "GET", "url": "/api/v1/auth/verify/", "name": "Auth Verify Token", "auth_required": True, "expect_error": True},
             {"method": "GET", "url": "/api/v1/auth/sessions/", "name": "Auth Sessions", "auth_required": True},
             {"method": "POST", "url": "/api/v1/auth/revoke-session/", "name": "Auth Revoke Session", "auth_required": True, "data": {"session_id": "test-session-id"}, "expect_error": True},

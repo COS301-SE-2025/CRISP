@@ -153,7 +153,7 @@ class AuthenticationViewSet(viewsets.ViewSet):
         }
         """
         try:
-            refresh_token = request.data.get('refresh')
+            refresh_token = request.data.get('refresh_token')
             
             if not refresh_token:
                 return Response({

@@ -139,8 +139,9 @@ urlpatterns = [
     path('api/v1/users/<int:user_id>/change_username/', change_username, name='change-username'),
     
     
-    # Temporarily disabled until imports are fixed  
-    # path('api/v1/', include('core_ut.user_management.urls_ut')),
+    # Enable core_ut extended endpoints
+    path('', include('core_ut.user_management.urls_ut')),
+    path('alerts/', include('core_ut.alerts.alerts_urls')),
     path('taxii2/', include('core.taxii.urls')),
     
     # Add missing unified API endpoints
