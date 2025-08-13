@@ -415,6 +415,34 @@ class AccessControlService:
         
         return managing_level > target_level
     
+    def can_create_organizations(self, user) -> bool:
+        """Check if user can create organizations"""
+        return self.has_permission(user, 'can_create_organizations')
+    
+    def can_view_organization(self, user, organization) -> bool:
+        """Check if user can view organization details"""
+        if not user or not organization:
+            return False
+            
+        # BlueVision admins can view all organizations
+        if user.role == 'BlueVisionAdmin':
+            return True
+            
+        # Users can view their own organization
+        if user.organization and user.organization.id == organization.id:
+            return True
+            
+        # Check trust relationships
+        return self.can_access_organization(user, organization)
+    
+    def can_delete_organization(self, user, organization) -> bool:
+        """Check if user can delete/deactivate organizations"""
+        if not user or not organization:
+            return False
+            
+        # Only BlueVision admins can delete organizations
+        return user.role == 'BlueVisionAdmin'
+    
     def get_accessible_data_sources(self, user) -> List[str]:
         """Get list of data source organization IDs accessible to user"""
         accessible_org_ids = []

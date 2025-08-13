@@ -604,7 +604,17 @@ class TTPAggregationService:
             # Calculate seasonal statistics
             periods = list(time_data)
             if not periods:
-                return {'error': 'No data available for seasonal analysis'}
+                return {
+                    'seasonal_patterns': [],
+                    'peak_period': None,
+                    'low_period': None,
+                    'seasonality_strength': 0,
+                    'total_occurrences': 0,
+                    'analysis_period': f"{days} days",
+                    'granularity': granularity,
+                    'period_label': period_label,
+                    'message': 'No data available for the specified period'
+                }
             
             counts = [p['count'] for p in periods]
             mean_count = statistics.mean(counts)
