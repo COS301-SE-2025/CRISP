@@ -61,6 +61,10 @@ class AuthenticationViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def login(self, request):
         """Handle user login"""
+        username = None
+        password = None
+        totp_code = None
+        remember_device = False
         try:
             # Debug: Log the raw request body
             logger.info(f"Raw request body: {request.body}")
