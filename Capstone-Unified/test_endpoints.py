@@ -109,7 +109,7 @@ def main():
         # Alert endpoints
         {"method": "GET", "url": "/api/v1/alerts/statistics/", "name": "Alert Statistics", "auth_required": False},
         {"method": "GET", "url": "/api/v1/alerts/test-connection/", "name": "Test Gmail Connection", "auth_required": True},
-        {"method": "POST", "url": "/api/v1/alerts/test-email/", "name": "Send Alert Test Email", "auth_required": True},
+        {"method": "POST", "url": "/api/v1/alerts/test-email/", "name": "Send Alert Test Email", "auth_required": True, "data": {"email": "test@example.com"}},
         
         # User endpoints
         {"method": "GET", "url": "/api/v1/users/profile/", "name": "User Profile", "auth_required": True},

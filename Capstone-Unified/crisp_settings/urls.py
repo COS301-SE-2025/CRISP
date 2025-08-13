@@ -139,13 +139,13 @@ urlpatterns = [
     path('api/v1/users/<int:user_id>/change_username/', change_username, name='change-username'),
     
     
-    # Temporarily disabled until imports are fixed
+    # Temporarily disabled until imports are fixed  
     # path('api/v1/', include('core_ut.user_management.urls_ut')),
     path('taxii2/', include('core.taxii.urls')),
-]
-
-# Add unified API patterns
-urlpatterns += [
-    # Include unified API endpoints
-    path('api/', include(api_urlpatterns)),
+    
+    # Add missing unified API endpoints
+    path('api/v1/', api_root_v1, name='api-v1-root'),
+    path('api/v1/dashboard/overview/', dashboard_overview, name='dashboard-overview'),
+    path('api/v1/threat-feeds/external/', unified_threat_feeds_external, name='unified-threat-feeds-external'),
+    path('api/v1/threat-feeds/collections/', unified_threat_feeds_collections, name='unified-threat-feeds-collections'),
 ]
