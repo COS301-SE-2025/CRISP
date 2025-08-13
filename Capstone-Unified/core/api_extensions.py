@@ -709,14 +709,44 @@ def list_users(request):
     """List users endpoint"""
     users = []
     for user in User.objects.all():
-        # Get or create user profile to access organization
-        try:
-            profile = user.profile
-        except UserProfile.DoesNotExist:
-            profile = UserProfile.objects.create(user=user)
+        # Handle CustomUser model which may have organization directly
+        organization_name = None
+        organization_id = None
+        
+        # Check if user has organization attribute directly (CustomUser model)
+        if hasattr(user, 'organization') and user.organization:
+            organization_name = user.organization.name
+            organization_id = str(user.organization.id)
+        else:
+            # Fallback to profile relationship if it exists
+            try:
+                if hasattr(user, 'profile'):
+                    profile = user.profile
+                    if profile and profile.organization:
+                        organization_name = profile.organization.name
+                        organization_id = str(profile.organization.id)
+                elif hasattr(user, 'userprofile'):
+                    profile = user.userprofile
+                    if profile and profile.organization:
+                        organization_name = profile.organization.name
+                        organization_id = str(profile.organization.id)
+            except (AttributeError, UserProfile.DoesNotExist):
+                # No profile or organization found
+                pass
+            
+        # Get user role
+        user_role = "user"
+        if hasattr(user, 'role'):
+            user_role = user.role
+        elif user.is_superuser:
+            user_role = "BlueVisionAdmin"
+        elif user.is_staff:
+            user_role = "publisher"
+        else:
+            user_role = "viewer"
             
         users.append({
-            "id": user.id,
+            "id": str(user.id),
             "username": user.username,
             "email": user.email,
             "first_name": user.first_name,
@@ -724,9 +754,9 @@ def list_users(request):
             "is_active": user.is_active,
             "is_staff": user.is_staff,
             "is_superuser": user.is_superuser,
-            "role": "BlueVisionAdmin" if user.is_superuser else "user",
-            "organization": profile.organization.name if profile.organization else None,
-            "organization_id": str(profile.organization.id) if profile.organization else None,
+            "role": user_role,
+            "organization": organization_name,
+            "organization_id": organization_id,
             "date_joined": user.date_joined.isoformat() if user.date_joined else None,
             "last_login": user.last_login.isoformat() if user.last_login else None
         })

@@ -222,16 +222,10 @@ if EXTENDED_MODELS_AVAILABLE:
 
     @admin.register(Indicator)
     class IndicatorAdmin(admin.ModelAdmin):
-        list_display = ['get_value_preview', 'type', 'confidence', 'is_anonymized', 'first_seen']
+        list_display = ['value', 'type', 'confidence', 'is_anonymized', 'first_seen']
         list_filter = ['type', 'is_anonymized', 'confidence']
         search_fields = ['value', 'description', 'stix_id']
         readonly_fields = ['stix_id', 'created_at', 'updated_at']
-        
-        def get_value_preview(self, obj):
-            if len(obj.value) > 50:
-                return obj.value[:50] + '...'
-            return obj.value
-        get_value_preview.short_description = 'Value'
 
     @admin.register(ThreatFeed)
     class ThreatFeedAdmin(admin.ModelAdmin):
