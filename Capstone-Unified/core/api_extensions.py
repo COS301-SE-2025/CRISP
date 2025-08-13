@@ -2,8 +2,10 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from django.contrib.auth.models import User
-from core.models.models import Organization, TrustLevel, TrustRelationship, UserProfile
+from django.contrib.auth import get_user_model
+User = get_user_model()
+from core_ut.user_management.models import Organization
+from core_ut.trust.models import TrustRelationship, TrustLevel
 from django.shortcuts import get_object_or_404
 import json
 
@@ -11,7 +13,6 @@ import json
 @permission_classes([IsAuthenticated])
 def list_organizations(request):
     """Organizations endpoint returning real organizations from database"""
-    from core.models.models import Organization
     
     organizations = []
     for org in Organization.objects.all():
@@ -696,11 +697,8 @@ def list_users(request):
     """List users endpoint"""
     users = []
     for user in User.objects.all():
-        # Get or create user profile to access organization
-        try:
-            profile = user.profile
-        except UserProfile.DoesNotExist:
-            profile = UserProfile.objects.create(user=user)
+        # Get user profile (if exists)
+        profile = getattr(user, 'profile', None)
             
         users.append({
             "id": user.id,
@@ -766,8 +764,7 @@ def create_user(request):
             is_active=True
         )
         
-        # Create user profile and handle organization assignment
-        profile = UserProfile.objects.create(user=user)
+        # Note: Profile will be created by the user_management app if needed
         
         # Handle organization assignment (check both 'organization' and 'organization_id')
         organization_value = data.get('organization') or data.get('organization_id')
@@ -787,8 +784,8 @@ def create_user(request):
                     organization = None
             
             if organization:
-                profile.organization = organization
-                profile.save()
+                # Organization assignment will be handled by the user_management app
+                pass
         
         return Response({
             "success": True,
@@ -802,8 +799,8 @@ def create_user(request):
                 "is_staff": user.is_staff,
                 "is_superuser": user.is_superuser,
                 "role": "BlueVisionAdmin" if user.is_superuser else "user",
-                "organization": profile.organization.name if profile.organization else None,
-                "organization_id": str(profile.organization.id) if profile.organization else None,
+                "organization": profile.organization.name if profile and profile.organization else None,
+                "organization_id": str(profile.organization.id) if profile and profile.organization else None,
                 "date_joined": user.date_joined.isoformat() if user.date_joined else None
             },
             "message": "User created successfully"
@@ -828,11 +825,8 @@ def user_detail(request, user_id):
         }, status=status.HTTP_404_NOT_FOUND)
     
     if request.method == 'GET':
-        # Get or create user profile to access organization
-        try:
-            profile = user.profile
-        except UserProfile.DoesNotExist:
-            profile = UserProfile.objects.create(user=user)
+        # Get user profile (if exists)
+        profile = getattr(user, 'profile', None)
         
         return Response({
             "success": True,
@@ -846,8 +840,8 @@ def user_detail(request, user_id):
                 "is_staff": user.is_staff,
                 "is_superuser": user.is_superuser,
                 "role": "BlueVisionAdmin" if user.is_superuser else "user",
-                "organization": profile.organization.name if profile.organization else None,
-                "organization_id": str(profile.organization.id) if profile.organization else None,
+                "organization": profile.organization.name if profile and profile.organization else None,
+                "organization_id": str(profile.organization.id) if profile and profile.organization else None,
                 "date_joined": user.date_joined.isoformat() if user.date_joined else None,
                 "last_login": user.last_login.isoformat() if user.last_login else None
             }
@@ -858,11 +852,8 @@ def user_detail(request, user_id):
             data = json.loads(request.body) if request.body else {}
             print(f"DEBUG: Received user update data: {data}")  # Debug log
             
-            # Get or create user profile
-            try:
-                profile = user.profile
-            except UserProfile.DoesNotExist:
-                profile = UserProfile.objects.create(user=user)
+            # Get user profile (if exists)
+            profile = getattr(user, 'profile', None)
             
             # Update user fields
             if 'first_name' in data:
@@ -898,12 +889,15 @@ def user_detail(request, user_id):
                                 "error": f"Organization '{organization_value}' not found"
                             }, status=status.HTTP_400_BAD_REQUEST)
                     
-                    profile.organization = organization
+                    if profile:
+                        profile.organization = organization
                 else:
-                    profile.organization = None
+                    if profile:
+                        profile.organization = None
             
             user.save()
-            profile.save()
+            if profile:
+                profile.save()
             
             return Response({
                 "success": True,
