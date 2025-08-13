@@ -68,11 +68,8 @@ class AuthenticationViewSet(viewsets.ViewSet):
             
             # Handle JSON parsing manually if request.data fails
             try:
-                logger.info(f"Request data: {request.data}")
                 username = request.data.get('username')
                 password = request.data.get('password')
-                totp_code = request.data.get('totp_code')
-                remember_device = request.data.get('remember_device', False)
             except Exception as json_error:
                 logger.error(f"JSON parsing error: {json_error}")
                 # Try to parse raw body manually with better error handling

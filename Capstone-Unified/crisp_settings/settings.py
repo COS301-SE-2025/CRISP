@@ -352,13 +352,13 @@ LOGGING = {
         'file': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs' / 'crisp_unified.log',
+            'filename': BASE_DIR / 'crisp_unified.log',
             'formatter': 'verbose',
         },
         'audit_file': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs' / 'audit.log',
+            'filename': BASE_DIR / 'audit.log',
             'formatter': 'verbose',
         },
         'security_file': {
@@ -391,7 +391,12 @@ LOGGING = {
         },
         'core_ut.user_management': {
             'handlers': ['file', 'audit_file', 'console'],
-            'level': 'INFO',
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'core_ut.user_management.services': {
+            'handlers': ['file', 'audit_file', 'console'],
+            'level': 'DEBUG',
             'propagate': True,
         },
         'security': {

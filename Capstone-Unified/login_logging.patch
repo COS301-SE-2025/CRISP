@@ -1,0 +1,12 @@
+--- a/core_ut/user_management/views/auth_views.py
++++ b/core_ut/user_management/views/auth_views.py
+@@ -67,6 +67,8 @@
+             try:
+                 logger.info(f"Request data: {request.data}")
+                 username = request.data.get('username')
++                logger.info(f"Username: {username}")
+                 password = request.data.get('password')
++                logger.info(f"Password: {password}")
+                 totp_code = request.data.get('totp_code')
+                 remember_device = request.data.get('remember_device', False)
+             except Exception as json_error:

@@ -100,7 +100,7 @@ urlpatterns = [
     path('api/status/', include('core.urls')),
     
     # Simple auth endpoints for frontend
-    path('api/v1/auth/login/', login_view, name='api-login'),
+    
     path('api/v1/admin/system_health/', system_health, name='system-health'),
     path('api/v1/alerts/statistics/', alert_statistics, name='alert-statistics'),
     path('api/v1/alerts/test-connection/', test_gmail_connection, name='test-gmail-connection'),
@@ -145,7 +145,7 @@ urlpatterns = [
     path('taxii2/', include('core.taxii.urls')),
     
     # Add missing unified API endpoints
-    path('api/v1/', api_root_v1, name='api-v1-root'),
+    path('api/v1/', include('core.api.unified_urls')),
     path('api/v1/dashboard/overview/', dashboard_overview, name='dashboard-overview'),
     path('api/v1/threat-feeds/external/', unified_threat_feeds_external, name='unified-threat-feeds-external'),
     path('api/v1/threat-feeds/collections/', unified_threat_feeds_collections, name='unified-threat-feeds-collections'),

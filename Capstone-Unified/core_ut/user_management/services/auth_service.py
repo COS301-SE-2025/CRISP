@@ -63,7 +63,7 @@ class AuthenticationService:
                     user = CustomUser.objects.select_related('organization').get(email=username)
                 except CustomUser.DoesNotExist:
                     pass
-            
+        
             if not user:
                 self._log_failed_authentication(None, username, ip_address, user_agent, 'User not found')
                 auth_result['message'] = 'Invalid credentials'
@@ -74,7 +74,7 @@ class AuthenticationService:
                 self._log_failed_authentication(user, username, ip_address, user_agent, 'Account inactive')
                 auth_result['message'] = 'Account is inactive'
                 return auth_result
-            
+                
             # Check if account is locked
             if user.is_account_locked:
                 self._log_failed_authentication(user, username, ip_address, user_agent, 'Account locked')
@@ -101,7 +101,7 @@ class AuthenticationService:
                     auth_result['success'] = False
                     return auth_result
                 
-                # Validate TOTP code (placeholder - implement actual TOTP validation)
+                # Validate TOTP code
                 if not self._validate_totp_code(user, totp_code):
                     self._handle_failed_login(user, ip_address, user_agent, 'Invalid 2FA code')
                     auth_result['message'] = 'Invalid two-factor authentication code'
@@ -110,52 +110,34 @@ class AuthenticationService:
             
             # Check device trust
             is_trusted_device = user.is_device_trusted(device_fingerprint)
-            # Note: Device trust checking only affects if we need verification, not authentication success
             if not is_trusted_device and remember_device:
                 auth_result['requires_device_trust'] = True
                 auth_result['message'] = 'Device trust verification required'
-                # Continue with authentication but flag for device trust setup
-            
-            # Generate JWT tokens
+                auth_result['success'] = False
+                return auth_result
+
+            # Generate authentication tokens
             tokens = self._generate_tokens(user, request)
             
             # Create user session
             session = self._create_user_session(user, request, tokens, is_trusted_device)
             
-            # Get user permissions and accessible organizations
-            permissions = list(self.access_control.get_user_permissions(user))
-            accessible_orgs = self._format_accessible_organizations(user)
-            
-            # Get trust context
-            trust_context = self._get_user_trust_context(user)
-            
-            # Update last_login and reset failed login attempts on successful authentication
+            # Update user info
             user.last_login = timezone.now()
-            if user.failed_login_attempts > 0:
-                user.failed_login_attempts = 0
-                user.save(update_fields=['failed_login_attempts', 'last_login'])
-            else:
-                user.save(update_fields=['last_login'])
+            user.failed_login_attempts = 0
+            user.save()
             
-            # Log successful authentication
-            self._log_successful_authentication(user, ip_address, user_agent, session.id, is_trusted_device)
-            
-            # Build success response
+            # Build successful response
             auth_result.update({
                 'success': True,
                 'user': self._format_user_info(user),
                 'tokens': tokens,
                 'session_id': str(session.id),
                 'message': 'Authentication successful',
-                'trust_context': trust_context,
-                'permissions': permissions,
-                'accessible_organizations': accessible_orgs,
-                'is_trusted_device': is_trusted_device
+                'trust_context': self._get_user_trust_context(user),
+                'permissions': list(self.access_control.get_user_permissions(user)),
+                'accessible_organizations': self._format_accessible_organizations(user)
             })
-            
-            # Add device to trusted list if requested and authentication successful
-            if remember_device and not is_trusted_device:
-                self._add_trusted_device(user, device_fingerprint, user_agent)
             
             return auth_result
             

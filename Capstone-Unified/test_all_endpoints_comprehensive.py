@@ -71,7 +71,7 @@ class ComprehensiveEndpointTester:
 
     def get_auth_token(self):
         """Get authentication token"""
-        login_data = {"username": "admin1", "password": "admin123"}
+        login_data = {"username": "admin_test", "password": "admin123"}
         result = self.test_endpoint("POST", f"{BASE_URL}/api/v1/auth/login/", data=login_data)
         
         if result.get("success") and isinstance(result.get("content"), dict):

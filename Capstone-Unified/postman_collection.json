@@ -1,0 +1,2278 @@
+
+{
+	"info": {
+		"_postman_id": "a9a7252b-3e39-4c1b-8f6b-6c7e3c5e3d6a",
+		"name": "Capstone-Unified API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Core System",
+			"item": [
+				{
+					"name": "Home Page",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Django Admin",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "API Root",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Core System Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/status/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"status",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{
+    "username": "your_username",
+    "password": "your_password"
+}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{
+    "username": "new_username",
+    "password": "new_password",
+    "email": "user@example.com"
+}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"register",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/logout/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"logout",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Token Refresh",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{
+    "refresh": "your_refresh_token"
+}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/refresh/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"refresh",
+								""
+							]
+						},
+						"description": "Note: This endpoint was marked as FAIL in the report."
+					},
+					"response": []
+				},
+				{
+					"name": "Token Verification",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/verify/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"verify",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "User Sessions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/sessions/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"sessions",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Revoke Session",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/revoke-session/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"revoke-session",
+								""
+							]
+						},
+						"description": "Note: This endpoint was marked as FAIL in the report."
+					},
+					"response": []
+				},
+				{
+					"name": "Change Password",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{
+    "old_password": "current_password",
+    "new_password": "new_strong_password"
+}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/change-password/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"change-password",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{
+    "email": "user@example.com"
+}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/forgot-password/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"forgot-password",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Validate Reset Token",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{
+    "token": "reset_token"
+}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/validate-reset-token/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"validate-reset-token",
+								""
+							]
+						},
+						"description": "Note: This endpoint was marked as FAIL in the report."
+					},
+					"response": []
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{
+    "token": "reset_token",
+    "password": "new_password"
+}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/reset-password/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"reset-password",
+								""
+							]
+						},
+						"description": "Note: This endpoint was marked as FAIL in the report."
+					},
+					"response": []
+				},
+				{
+					"name": "Auth Dashboard",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/dashboard/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"dashboard",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Administrative",
+			"item": [
+				{
+					"name": "System Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/system_health/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"system_health",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Trust System Overview",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/trust_overview/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"trust_overview",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Admin Dashboard",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/dashboard/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"dashboard",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Extended System Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/system-health/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"system-health",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Audit Logs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/audit-logs/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"audit-logs",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Clean Expired Sessions",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/cleanup-sessions/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"cleanup-sessions",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Unlock User Account",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/users/{{pk}}/unlock/",
+						"host": [
+							"{{base_url}}"
+						],
+						"path": [
+							"api",
+							"v1",
+							"admin",
+							"users",
+							"{{pk}}",
+							"unlock",
+							""
+						],
+						"variable": [
+							{
+								"key": "pk",
+								"value": "user_uuid"
+							}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Comprehensive Audit Logs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/comprehensive-audit-logs/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"comprehensive-audit-logs",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "User Activity Summary",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/users/{{pk}}/activity-summary/",
+						"host": [
+							"{{base_url}}"
+						],
+						"path": [
+							"api",
+							"v1",
+							"admin",
+							"users",
+							"{{pk}}",
+							"activity-summary",
+							""
+						],
+						"variable": [
+							{
+								"key": "pk",
+								"value": "user_uuid"
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Security Events",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/security-events/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"security-events",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Audit Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/audit-statistics/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"audit-statistics",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Alert System",
+			"item": [
+				{
+					"name": "Alert Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/alerts/statistics/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"alerts",
+								"statistics",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Test Gmail Connection",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/alerts/test-connection/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"alerts",
+								"test-connection",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send Test Alert Email",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/alerts/test-email/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"alerts",
+								"test-email",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Alert List",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/alerts/list/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"alerts",
+								"list",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send Threat Alert",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/alerts/threat/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"alerts",
+								"threat",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send Feed Notification",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/alerts/feed/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"alerts",
+								"feed",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Mark All Notifications Read",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/alerts/mark-all-read/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"alerts",
+								"mark-all-read",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Notification Preferences",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/alerts/preferences/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"alerts",
+								"preferences",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Notification Preferences",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/alerts/preferences/update/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"alerts",
+								"preferences",
+								"update",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Email System",
+			"item": [
+				{
+					"name": "Send Test Email",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/email/send-test/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"email",
+								"send-test",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "User Management",
+			"item": [
+				{
+					"name": "User Profile Info",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/profile/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"profile",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "User Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/statistics/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"statistics",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List All Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/list/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"list",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create New User",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{
+    "username": "new_user",
+    "password": "password",
+    "email": "user@example.com"
+}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/create_user/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"create_user",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Specific User",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}/get_user/",
+						"host": [
+							"{{base_url}}"
+						],
+						"path": [
+							"api",
+							"v1",
+							"users",
+							"{{user_id}}",
+							"get_user",
+							""
+						],
+						"variable": [
+							{
+								"key": "user_id",
+								"value": "1"
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update User Info",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{
+    "email": "updated_email@example.com"
+}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}/update_user/",
+						"host": [
+							"{{base_url}}"
+						],
+						"path": [
+							"api",
+							"v1",
+							"users",
+							"{{user_id}}",
+							"update_user",
+							""
+						],
+						"variable": [
+							{
+								"key": "user_id",
+								"value": "1"
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}/delete_user/",
+						"host": [
+							"{{base_url}}"
+						],
+						"path": [
+							"api",
+							"v1",
+							"users",
+							"{{user_id}}",
+							"delete_user",
+							""
+						],
+						"variable": [
+							{
+								"key": "user_id",
+								"value": "1"
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Change Username",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{
+    "username": "new_username"
+}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}/change_username/",
+						"host": [
+							"{{base_url}}"
+						],
+						"path": [
+							"api",
+							"v1",
+							"users",
+							"{{user_id}}",
+							"change_username",
+							""
+						],
+						"variable": [
+							{
+								"key": "user_id",
+								"value": "1"
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Extended Create User",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{
+    "username": "extended_user",
+    "password": "password",
+    "email": "extended@example.com"
+}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/create/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"create",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Extended Get User",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/:pk/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								":pk",
+								""
+							],
+							"variable": [
+								{
+									"key": "pk",
+									"value": "user_uuid"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Extended Update User",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{
+    "email": "updated_extended@example.com"
+}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/:pk/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								":pk",
+								""
+							],
+							"variable": [
+								{
+									"key": "pk",
+									"value": "user_uuid"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Deactivate User",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/:pk/deactivate/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								":pk",
+								"deactivate",
+								""
+							],
+							"variable": [
+								{
+									"key": "pk",
+									"value": "user_uuid"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reactivate User",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/:pk/reactivate/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								":pk",
+								"reactivate",
+								""
+							],
+							"variable": [
+								{
+									"key": "pk",
+									"value": "user_uuid"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Organization Management",
+			"item": [
+				{
+					"name": "List Organizations",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/list_organizations/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations",
+								"list_organizations",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Organization Types",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/types/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations",
+								"types",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Organization",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{
+    "name": "New Organization",
+    "type": "MSP"
+}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/create_organization/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations",
+								"create_organization",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Organization",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/:organization_id/get_organization/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations",
+								":organization_id",
+								"get_organization",
+								""
+							],
+							"variable": [
+								{
+									"key": "organization_id",
+									"value": "org_id"
+								}
+							]
+						},
+						"description": "Note: This endpoint was marked as SKIP in the report."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Organization",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/:organization_id/update_organization/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations",
+								":organization_id",
+								"update_organization",
+								""
+							],
+							"variable": [
+								{
+									"key": "organization_id",
+									"value": "org_id"
+								}
+							]
+						},
+						"description": "Note: This endpoint was marked as SKIP in the report."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Organization",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/:organization_id/delete_organization/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations",
+								":organization_id",
+								"delete_organization",
+								""
+							],
+							"variable": [
+								{
+									"key": "organization_id",
+									"value": "org_id"
+								}
+							]
+						},
+						"description": "Note: This endpoint was marked as SKIP in the report."
+					},
+					"response": []
+				},
+				{
+					"name": "Organization Detail",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/:organization_id/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations",
+								":organization_id",
+								""
+							],
+							"variable": [
+								{
+									"key": "organization_id",
+									"value": "org_id"
+								}
+							]
+						},
+						"description": "Note: This endpoint was marked as SKIP in the report."
+					},
+					"response": []
+				},
+				{
+					"name": "Deactivate Organization",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/:organization_id/deactivate_organization/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations",
+								":organization_id",
+								"deactivate_organization",
+								""
+							],
+							"variable": [
+								{
+									"key": "organization_id",
+									"value": "org_id"
+								}
+							]
+						},
+						"description": "Note: This endpoint was marked as SKIP in the report."
+					},
+					"response": []
+				},
+				{
+					"name": "Reactivate Organization",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/:organization_id/reactivate_organization/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"organizations",
+								":organization_id",
+								"reactivate_organization",
+								""
+							],
+							"variable": [
+								{
+									"key": "organization_id",
+									"value": "org_id"
+								}
+							]
+						},
+						"description": "Note: This endpoint was marked as SKIP in the report."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Trust Management",
+			"item": [
+				{
+					"name": "Trust Groups",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/trust/groups/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"trust",
+								"groups",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Trust Levels",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/trust/levels/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"trust",
+								"levels",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Trust Metrics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/trust/metrics/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"trust",
+								"metrics",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Trust Relationships",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/trust/relationships/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"trust",
+								"relationships",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Trust Relationship Detail",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/trust/relationships/:relationship_id/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"trust",
+								"relationships",
+								":relationship_id",
+								""
+							],
+							"variable": [
+								{
+									"key": "relationship_id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Core Threat Intelligence",
+			"item": [
+				{
+					"name": "List Threat Feeds",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/threat-feeds/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"threat-feeds",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Threat Feed",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{
+    "name": "My New Feed",
+    "url": "http://example.com/feed"
+}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/threat-feeds/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"threat-feeds",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Specific Feed Detail",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/threat-feeds/:pk/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"threat-feeds",
+								":pk",
+								""
+							],
+							"variable": [
+								{
+									"key": "pk",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Threat Feed",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{
+    "name": "Updated Feed Name"
+}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/threat-feeds/:pk/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"threat-feeds",
+								":pk",
+								""
+							],
+							"variable": [
+								{
+									"key": "pk",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Threat Feed",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/threat-feeds/:pk/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"threat-feeds",
+								":pk",
+								""
+							],
+							"variable": [
+								{
+									"key": "pk",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Consume Feed",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/threat-feeds/:pk/consume/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"threat-feeds",
+								":pk",
+								"consume",
+								""
+							],
+							"variable": [
+								{
+									"key": "pk",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Note: This endpoint was marked as FAIL in the report."
+					},
+					"response": []
+				},
+				{
+					"name": "Feed Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/threat-feeds/:pk/status/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"threat-feeds",
+								":pk",
+								"status",
+								""
+							],
+							"variable": [
+								{
+									"key": "pk",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Note: This endpoint was marked as FAIL in the report."
+					},
+					"response": []
+				},
+				{
+					"name": "Test Feed Connection",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/threat-feeds/:pk/test_connection/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"threat-feeds",
+								":pk",
+								"test_connection",
+								""
+							],
+							"variable": [
+								{
+									"key": "pk",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Note: This endpoint was marked as FAIL in the report."
+					},
+					"response": []
+				},
+				{
+					"name": "External Feeds",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/threat-feeds/external/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"threat-feeds",
+								"external",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Available Collections",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/threat-feeds/available_collections/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"threat-feeds",
+								"available_collections",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Indicators API",
+			"item": [
+				{
+					"name": "List Indicators",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/indicators/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"indicators",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Specific Indicator",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/indicators/:pk/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"indicators",
+								":pk",
+								""
+							],
+							"variable": [
+								{
+									"key": "pk",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Note: This endpoint was marked as FAIL in the report."
+					},
+					"response": []
+				},
+				{
+					"name": "Recent Indicators",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/indicators/recent/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"indicators",
+								"recent",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Indicator Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/indicators/stats/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"indicators",
+								"stats",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Indicator Types",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/indicators/types/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"indicators",
+								"types",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Unified API",
+			"item": [
+				{
+					"name": "API Root",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Dashboard Overview",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/dashboard/overview/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"dashboard",
+								"overview",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Unified External Feeds",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/threat-feeds/external/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"threat-feeds",
+								"external",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Unified Collections",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/threat-feeds/collections/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"threat-feeds",
+								"collections",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "TAXII 2.1 Protocol",
+			"item": [
+				{
+					"name": "TAXII Discovery",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/taxii2/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"taxii2",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TAXII Collections List",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/taxii2/collections/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"taxii2",
+								"collections",
+								""
+							]
+						},
+						"description": "Note: This endpoint was marked as FAIL in the report."
+					},
+					"response": []
+				},
+				{
+					"name": "TAXII Collection Detail",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/taxii2/collections/:collection_id/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"taxii2",
+								"collections",
+								":collection_id",
+								""
+							],
+							"variable": [
+								{
+									"key": "collection_id",
+									"value": "collection_uuid"
+								}
+							]
+						},
+						"description": "Note: This endpoint was marked as FAIL in the report."
+					},
+					"response": []
+				},
+				{
+					"name": "Collection Objects",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/taxii2/collections/:collection_id/objects/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"taxii2",
+								"collections",
+								":collection_id",
+								"objects",
+								""
+							],
+							"variable": [
+								{
+									"key": "collection_id",
+									"value": "collection_uuid"
+								}
+							]
+						},
+						"description": "Note: This endpoint was marked as FAIL in the report."
+					},
+					"response": []
+				},
+				{
+					"name": "Specific Object",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/taxii2/collections/:collection_id/objects/:object_id/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"taxii2",
+								"collections",
+								":collection_id",
+								"objects",
+								":object_id",
+								""
+							],
+							"variable": [
+								{
+									"key": "collection_id",
+									"value": "collection_uuid"
+								},
+								{
+									"key": "object_id",
+									"value": "object_id"
+								}
+							]
+						},
+						"description": "Note: This endpoint was marked as SKIP in the report."
+					},
+					"response": []
+				},
+				{
+					"name": "Collection Manifest",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/taxii2/collections/:collection_id/manifest/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"taxii2",
+								"collections",
+								":collection_id",
+								"manifest",
+								""
+							],
+							"variable": [
+								{
+									"key": "collection_id",
+									"value": "collection_uuid"
+								}
+							]
+						},
+						"description": "Note: This endpoint was marked as FAIL in the report."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000"
+		}
+	]
+}
