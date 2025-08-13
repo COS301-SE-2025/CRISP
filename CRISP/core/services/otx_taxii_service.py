@@ -220,12 +220,18 @@ class OTXTaxiiService:
         logger.error(f"All {max_retries} polling attempts failed")
         raise last_error
 
-    def consume_feed(self, threat_feed, limit=None, force_days=None, batch_size=100):
+    def consume_feed(self, threat_feed, limit=None, force_days=None, batch_size=None):
         """
         Consume STIX data from a TAXII collection and convert to CRISP entities
         """
         try:
-            logger.info(f"Starting consumption of feed: {threat_feed.name}")
+            # Use OTX settings if parameters not provided
+            if force_days is None:
+                force_days = settings.OTX_SETTINGS.get('MAX_AGE_DAYS', 1)
+            if batch_size is None:
+                batch_size = settings.OTX_SETTINGS.get('BATCH_SIZE', 10)
+            
+            logger.info(f"Starting consumption of feed: {threat_feed.name} (max_age_days: {force_days}, batch_size: {batch_size})")
             
             # Initialize the STIX1Parser if it doesn't exist
             if not hasattr(self, 'stix1_parser'):

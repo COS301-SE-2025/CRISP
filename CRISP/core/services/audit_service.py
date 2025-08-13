@@ -762,3 +762,72 @@ class AuditService:
             return {k: self._sanitize_value(v) for k, v in value.items()}
         else:
             return value
+
+    def log_data_access_event(self, user=None, resource_type: str = None, 
+                             resource_id: str = None, action: str = None, 
+                             success: bool = True, additional_data: Dict = None, **kwargs):
+        """
+        Log data access events for compliance and monitoring
+        """
+        try:
+            # Skip logging in test environment
+            if self._is_test_environment():
+                return True
+                
+            # Log as a user action with data access context
+            return self.log_user_action(
+                user=user,
+                action=action or 'data_access',
+                success=success,
+                additional_data=additional_data,
+                resource_type=resource_type,
+                resource_id=resource_id,
+                **kwargs
+            )
+        except Exception as e:
+            logger.error(f"Error logging data access event: {e}")
+            return False
+
+    def log_request_audit(self, user=None, action: str = None, success: bool = True,
+                         additional_data: Dict = None, **kwargs):
+        """
+        Log general request audit events
+        """
+        try:
+            # Skip logging in test environment
+            if self._is_test_environment():
+                return True
+                
+            # Log as a user action
+            return self.log_user_action(
+                user=user,
+                action=action or 'request',
+                success=success,
+                additional_data=additional_data,
+                **kwargs
+            )
+        except Exception as e:
+            logger.error(f"Error logging request audit: {e}")
+            return False
+    
+    def log_performance_event(self, action: str = None, user=None, 
+                            additional_data: Dict = None, **kwargs):
+        """
+        Log performance-related events
+        """
+        try:
+            # Skip logging in test environment
+            if self._is_test_environment():
+                return True
+                
+            # Log as a system event
+            return self.log_system_event(
+                action=action or 'performance_issue',
+                component='system',
+                success=True,
+                additional_data=additional_data,
+                **kwargs
+            )
+        except Exception as e:
+            logger.error(f"Error logging performance event: {e}")
+            return False

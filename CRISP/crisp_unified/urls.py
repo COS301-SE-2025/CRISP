@@ -23,7 +23,7 @@ urlpatterns = [
     path('api/', include('core.urls')),
     
     # Legacy threat feed API endpoints
-    path('api/threat-feeds/', include(router.urls)),
+    path('api/', include(router.urls)),
     path('api/indicators/', indicators_list, name='indicators-list'),
     path('api/indicators/bulk-import/', indicators_bulk_import, name='indicators-bulk-import'),
     path('api/indicators/<int:indicator_id>/update/', indicator_update, name='indicator-update'),

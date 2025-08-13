@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from taxii2client.v21 import Server, ApiRoot, Collection
 from stix2 import parse as stix2_parse
@@ -133,26 +133,36 @@ class StixTaxiiService:
         try:
             import requests
             
-            # Build the URL
+            # Build the URL with date filtering
             url = f"{server_url}/{api_root}/collections/{collection_id}/objects/"
+            
+            # Add date filter to only get objects from last N days
+            filter_days = settings.TAXII_SETTINGS.get('FILTER_LAST_DAYS', 1)
+            from datetime import timezone as dt_timezone
+            cutoff_date = (datetime.now(dt_timezone.utc) - timedelta(days=filter_days)).isoformat()
+            
+            params = {
+                'added_after': cutoff_date
+            }
             
             # Set up authentication
             auth = None
             if username and password:
                 auth = (username, password)
             
-            # Make the request
-            response = requests.get(url, auth=auth)
+            # Make the request with date filter (no timeout to see actual performance)
+            response = requests.get(url, auth=auth, params=params)
             response.raise_for_status()
             
             # Parse the response
             data = response.json()
             
-            # Return objects from bundle or direct objects
-            if 'objects' in data:
-                return data['objects']
-            else:
-                return data.get('objects', [])
+            # Return objects from bundle or direct objects (date-filtered)
+            objects = data.get('objects', [])
+            
+            logger.info(f"Retrieved {len(objects)} objects from last {filter_days} day(s) (cutoff: {cutoff_date})")
+            
+            return objects
                 
         except Exception as e:
             self.logger.error(f"Error getting STIX objects: {e}")
@@ -176,7 +186,7 @@ class StixTaxiiService:
             # Build the URL
             url = f"{server_url}/{api_root}/collections/"
             
-            # Make the request
+            # Make the request (no timeout to see actual performance)
             response = requests.get(url)
             response.raise_for_status()
             
@@ -443,20 +453,63 @@ class StixTaxiiService:
                 'ttp_created': 0,
                 'ttp_updated': 0,
                 'errors': 0,
-                'access_denied': 0
+                'access_denied': 0,
+                'objects_processed': 0
             }
             
-            for obj in objects:
+            # Log consumption start with timing information
+            start_time = datetime.now()
+            filter_days = settings.TAXII_SETTINGS.get('FILTER_LAST_DAYS', 1)
+            logger.info(f"Starting consumption of {len(objects)} objects from last {filter_days} day(s) at {start_time}")
+            
+            # Initialize progress tracking
+            progress_key = f"consumption_progress_{feed_obj.id}"
+            from django.core.cache import cache
+            
+            def update_progress(stage, current=0, total=0, message=""):
+                progress_data = {
+                    'stage': stage,
+                    'current': current,
+                    'total': total,
+                    'message': message,
+                    'percentage': int((current / total * 100)) if total > 0 else 0,
+                    'start_time': start_time.isoformat(),
+                    'updated_at': datetime.now().isoformat(),
+                    'feed_name': feed_obj.name
+                }
+                cache.set(progress_key, progress_data, timeout=300)  # 5 minutes
+                return progress_data
+            
+            # Update progress: Starting
+            update_progress('starting', 0, len(objects), f"Preparing to process {len(objects)} objects")
+            
+            for i, obj in enumerate(objects):
                 try:
+                    # Update progress every 5 objects or for small datasets
+                    if i % 5 == 0 or len(objects) <= 20:
+                        obj_type = obj.get('type', 'unknown')
+                        update_progress('processing', i, len(objects), 
+                                      f"Processing {obj_type} {i+1}/{len(objects)}")
+                    
                     if obj.get('type') == 'indicator':
                         stix_obj = stix2_parse(obj)
                         self._process_indicator(stix_obj, feed_obj, stats, user)
                     elif obj.get('type') == 'attack-pattern':
                         stix_obj = stix2_parse(obj)
                         self._process_attack_pattern(stix_obj, feed_obj, stats, user)
+                    stats['objects_processed'] += 1
                 except Exception as e:
                     logger.error(f"Error parsing STIX object: {str(e)}")
                     stats['errors'] += 1
+            
+            # Log consumption completion with timing
+            end_time = datetime.now()
+            duration = (end_time - start_time).total_seconds()
+            logger.info(f"Consumption completed in {duration:.2f} seconds. Processed {stats['objects_processed']}/{len(objects)} objects")
+            
+            # Update progress: Completed
+            update_progress('completed', len(objects), len(objects), 
+                          f"Completed: {stats['indicators_created']} indicators, {stats['ttp_created']} TTPs created")
             
             # Log the consumption
             self.audit_service.log_user_action(

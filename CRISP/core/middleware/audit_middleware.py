@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional
 from django.utils.deprecation import MiddlewareMixin
 from django.utils import timezone
 from django.contrib.auth.models import AnonymousUser
-from core.models.models import AuditLog, CustomUser
+from core.models.models import CustomUser
 from core.services.audit_service import AuditService
 
 logger = logging.getLogger(__name__)

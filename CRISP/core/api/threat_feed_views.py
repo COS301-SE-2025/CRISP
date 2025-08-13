@@ -8,6 +8,7 @@ from django.utils import timezone
 from rest_framework.permissions import AllowAny
 from django.http import Http404
 from rest_framework.views import exception_handler
+from django.core.cache import cache
 
 from core.models.models import ThreatFeed, SystemActivity
 from core.services.otx_taxii_service import OTXTaxiiService
@@ -94,6 +95,35 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
                 {"error": "Failed to retrieve collections", "details": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+    
+    @action(detail=True, methods=['get'])
+    def consumption_progress(self, request, pk=None):
+        """
+        Get real-time consumption progress for a threat feed
+        """
+        try:
+            feed = self.get_object()
+            progress_key = f"consumption_progress_{feed.id}"
+            progress_data = cache.get(progress_key)
+            
+            if progress_data:
+                return Response({
+                    'success': True,
+                    'progress': progress_data
+                })
+            else:
+                return Response({
+                    'success': True,
+                    'progress': None,
+                    'message': 'No active consumption in progress'
+                })
+                
+        except Exception as e:
+            logger.error(f"Error getting consumption progress: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     @action(detail=True, methods=['post'])
     def consume(self, request, pk=None):
