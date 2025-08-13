@@ -776,5 +776,5 @@ Our frontend implements the MVC pattern using React to separate presentation con
 |---------|------|---------|--------|
 | 1.0 | May 24, 2025 | Initial version | Dreas Vermaak |
 | 1.1 | May 26, 2025 | Restructured to match specification requirements | Armand van der Colf|
-
+| 1.2 | August 13, 2025 | Service Contracts Updated | Dreas Vermaak |
 ---
