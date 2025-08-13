@@ -22,6 +22,7 @@ DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
+# For development in Docker/WSL, allow all hosts when DEBUG is True
 if DEBUG:
     ALLOWED_HOSTS.append('*')
 
@@ -211,6 +212,8 @@ CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
+
+# Enhanced Security Settings
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
@@ -230,12 +233,14 @@ CSRF_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = 'Strict'
 
+# Cache Configuration
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
     }
 }
 
+# CRISP Trust Management System Configuration
 CRISP_SETTINGS = {
     # Trust system configuration
     'TRUST_SYSTEM': {
@@ -397,10 +402,3 @@ LOGGING = {
 logs_dir = BASE_DIR / 'logs'
 logs_dir.mkdir(parents=True, exist_ok=True)
 
-import sys
-if 'runserver' in sys.argv or 'shell' in sys.argv or 'migrate' in sys.argv:
-    try:
-        import core_ut.trust.admin_ut
-        import core_ut.user_management.admin_ut
-    except ImportError:
-        pass

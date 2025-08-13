@@ -13,6 +13,9 @@ from core.api_extensions import (
     trust_overview, list_users, create_user, user_detail, change_username
 )
 
+# Import admin modules to ensure all models are registered
+from . import admin as crisp_admin
+
 # Set up REST API router
 router = routers.DefaultRouter()
 router.register(r'threat-feeds', ThreatFeedViewSet, basename='threat-feed')
@@ -67,7 +70,7 @@ urlpatterns = [
     path('api/v1/users/<int:user_id>/change_username/', change_username, name='change-username'),
     
     
-    # Temporarily disabled until imports are fixed
-    # path('api/v1/', include('core_ut.user_management.urls_ut')),
+    # Trust and User Management URLs
+    path('api/v1/ut/', include('core_ut.urls_ut')),
     path('taxii2/', include('core.taxii.urls')),
 ]
