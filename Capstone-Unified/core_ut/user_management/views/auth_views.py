@@ -36,7 +36,7 @@ class AuthenticationViewSet(viewsets.ViewSet):
         """
         Instantiates and returns the list of permissions that this view requires.
         """
-        if self.action in ['login', 'register', 'forgot_password', 'validate_reset_token', 'reset_password']:
+        if self.action in ['login', 'register', 'refresh', 'forgot_password', 'validate_reset_token', 'reset_password']:
             permission_classes = [AllowAny]
         else:
             permission_classes = self.permission_classes
@@ -70,6 +70,8 @@ class AuthenticationViewSet(viewsets.ViewSet):
             try:
                 username = request.data.get('username')
                 password = request.data.get('password')
+                totp_code = request.data.get('totp_code')
+                remember_device = request.data.get('remember_device', False)
             except Exception as json_error:
                 logger.error(f"JSON parsing error: {json_error}")
                 # Try to parse raw body manually with better error handling
@@ -242,7 +244,7 @@ class AuthenticationViewSet(viewsets.ViewSet):
             
             # Get fresh user data with trust context
             user = request.user
-            trust_context = self.trust_service._get_user_trust_context(user)
+            trust_context = self.trust_service.get_trust_context(user)
             permissions = list(self.auth_service.access_control.get_user_permissions(user))
             accessible_orgs = self.auth_service._format_accessible_organizations(user)
             
@@ -447,11 +449,25 @@ class AuthenticationViewSet(viewsets.ViewSet):
                 role = 'viewer'
             
             # Validate required fields
-            if not all([username, password, password_confirm, email, first_name, last_name, organization]):
+            required_fields = {
+                'username': username,
+                'password': password,
+                'password_confirm': password_confirm,
+                'email': email,
+                'first_name': first_name,
+                'last_name': last_name
+            }
+            
+            missing_fields = [field for field, value in required_fields.items() if not value]
+            if missing_fields:
                 return Response({
                     'success': False,
-                    'message': 'All fields are required'
+                    'message': f'Missing required fields: {", ".join(missing_fields)}'
                 }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # If no organization provided, create a default one
+            if not organization:
+                organization = f"{first_name} {last_name}'s Organization"
             
             # Validate password confirmation
             if password != password_confirm:

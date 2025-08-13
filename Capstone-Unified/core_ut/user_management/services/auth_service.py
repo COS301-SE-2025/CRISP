@@ -342,7 +342,7 @@ class AuthenticationService:
             if not user.is_active:
                 return {'success': False, 'message': 'User account is inactive'}
             
-            if not user.organization.is_active:
+            if user.organization and not user.organization.is_active:
                 return {'success': False, 'message': 'Organization is inactive'}
             
             # Check if session exists and is active
