@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ("user_management", "0003_alter_organization_organization_type"),
+        ("user_management", "0001_initial"),
     ]
 
     operations = [
