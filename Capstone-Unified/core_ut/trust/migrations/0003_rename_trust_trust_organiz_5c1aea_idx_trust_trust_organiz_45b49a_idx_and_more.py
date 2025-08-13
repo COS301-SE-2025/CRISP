@@ -9,10 +9,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        (
-            "user_management",
-            "0002_alter_customuser_managers_alter_customuser_metadata_and_more",
-        ),
+        ("user_management", "0001_initial"),
         ("trust", "0002_update_for_user_management"),
     ]
 

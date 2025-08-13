@@ -7,7 +7,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('trust', '0001_initial'),
+        ('trust', '0001_initial_ut'),
         ('user_management', '0001_initial'),
     ]
 
