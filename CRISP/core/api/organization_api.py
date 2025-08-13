@@ -10,7 +10,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
-from core.models.models import Organization, CustomUser, BilateralTrust
+from core.models.models import Organization, CustomUser, TrustRelationship
 from core.services.organization_service import OrganizationService
 from core.services.access_control_service import AccessControlService
 from core.serializers.organization_serializer import (
@@ -470,19 +470,19 @@ def get_organization_trust_relationships(request, organization_id):
                 'message': 'Insufficient permissions to view trust relationships'
             }, status=status.HTTP_403_FORBIDDEN)
         
-        # Get bilateral trust relationships
-        bilateral_trusts = BilateralTrust.objects.filter(
-            Q(requesting_organization=organization) | Q(responding_organization=organization)
-        ).select_related('requesting_organization', 'responding_organization')
+        # Get trust relationships
+        trust_relationships_qs = TrustRelationship.objects.filter(
+            Q(source_organization=organization) | Q(target_organization=organization)
+        ).select_related('source_organization', 'target_organization', 'trust_level')
         
         trust_relationships = []
-        for trust in bilateral_trusts:
+        for trust in trust_relationships_qs:
             # Determine the other organization
-            if trust.requesting_organization.id == organization.id:
-                other_org = trust.responding_organization
+            if trust.source_organization.id == organization.id:
+                other_org = trust.target_organization
                 relationship_type = 'outgoing'
             else:
-                other_org = trust.requesting_organization
+                other_org = trust.source_organization
                 relationship_type = 'incoming'
             
             trust_relationships.append({
@@ -493,7 +493,7 @@ def get_organization_trust_relationships(request, organization_id):
                     'domain': other_org.domain,
                     'organization_type': other_org.organization_type
                 },
-                'trust_level': trust.trust_level,
+                'trust_level': trust.trust_level.name if trust.trust_level else None,
                 'status': trust.status,
                 'relationship_type': relationship_type,
                 'created_at': trust.created_at.isoformat(),
