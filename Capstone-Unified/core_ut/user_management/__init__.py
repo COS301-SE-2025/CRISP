@@ -1,0 +1,1 @@
+default_app_config = 'core_ut.user_management.apps_ut.UserManagementConfig'
