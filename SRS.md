@@ -83,7 +83,7 @@ The platform will facilitate both consumption of external threat feeds and publi
 
 #### Institution Publisher (Client) Stories
 - As an Institution Publisher, I want to publish threat intelligence about attacks on my institution so that I can help protect other educational Institutions
-- As an Institution Publisher, I want to add users from my Institution via email invitation so that my team can access relevant threat intelligence
+- As an Institution Publisher, I want to add users from my Institution so that my team can access relevant threat intelligence
 - As an Institution Publisher, I want to configure what types of threats my Institution shares so that I can control our data sharing policies
 - As an Institution Publisher, I want to set anonymization levels for different types of data so that I can protect sensitive institutional information
 - As an Institution Publisher, I want to consume threat feeds from other Institutions so that I can stay informed about relevant threats
@@ -311,218 +311,158 @@ The following five essential use case diagrams illustrate the core functionality
 
 ---
 
-## 6. Service Contracts
 
-### 6.1 REST API Contracts
+## 6 Service Contracts
 
-#### 6.1.1 Authentication Service
-```
+The CRISP platform implements REST APIs over HTTPS with JWT authentication, TAXII 2.1 compliance, and trust-based data anonymization. Services enforce loose coupling through standardized contracts with versioned APIs, comprehensive error handling, and retry policies.
+
+## 6.1 Core API Contracts
+
+### 6.1.1 Authentication Service (v1.0)
+| Endpoint | Method | Auth | Rate Limit |
+|----------|---------|------|-----------|
+| `/api/auth/login` | POST | None | 5/min |
+| `/api/auth/refresh` | POST | JWT | 20/min |
+
+```bash
 POST /api/auth/login
-Request: { 
-  "username": string, 
-  "password": string 
+Content-Type: application/json
+{
+  "username": "user@example.com", 
+  "password": "SecurePassword123"
 }
-Response: { 
-  "token": string, 
+
+Response 200:
+{
+  "success": true,
+  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
   "user": {
-    "id": string,
-    "username": string,
-    "role": string,
-    "Institution_id": string
+    "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+    "username": "user@example.com",
+    "role": "publisher",
+    "institution_id": "550e8400-e29b-41d4-a716-446655440000"
   },
-  "expires_in": number
-}
-Error Response: {
-  "error": string,
-  "message": string
-}
-```
-
-#### 6.1.2 Institution Management Service
-```
-POST /api/Institutions/
-Request: {
-  "name": string,
-  "contact_email": string,
-  "institution_type": string,
-  "publisher_user": {
-    "username": string,
-    "email": string,
-    "password": string
-  }
-}
-Response: {
-  "id": string,
-  "name": string,
-  "status": "created"
+  "expires_in": 900
 }
 
-GET /api/Institutions/{id}/users/
-Response: {
-  "users": [
-    {
-      "id": string,
-      "username": string,
-      "email": string,
-      "role": string,
-      "created_at": datetime
-    }
-  ]
-}
-
-POST /api/Institutions/{id}/users/invite/
-Request: {
-  "email": string,
-  "role": "viewer"
-}
-Response: {
-  "status": "invitation_sent",
-  "email": string
-}
+Error 401: {"success": false, "error": "INVALID_CREDENTIALS", "message": "Invalid username or password"}
 ```
 
-#### 6.1.3 Threat Intelligence Service
+### 6.1.2 Institution Management
+| Endpoint | Method | Auth | Description |
+|----------|---------|------|-------------|
+| `/api/institutions/` | POST | None | Create institution |
+| `/api/institutions/{id}/users/` | GET | JWT | Get users |
+
+
+```bash
+POST /api/institutions/
+{"name": "TechCorp", "contact_email": "admin@techcorp.com", "institution_type": "private_sector", 
+ "publisher_user": {"username": "admin", "email": "admin@techcorp.com", "password": "SecurePassword123"}}
+Response 201: {"id": "550e8400-e29b-41d4-a716-446655440000", "status": "created"}
+
+GET /api/institutions/{id}/users/
+Response: {"users": [{"id": "uuid", "username": "admin", "role": "publisher"}]}
+}}
 ```
-GET /api/threats/
-Query Parameters: {
-  "type": string (optional),
-  "severity": string (optional),
-  "date_from": date (optional),
-  "date_to": date (optional),
-  "limit": number (optional),
-  "offset": number (optional)
-}
-Response: {
-  "threats": [ThreatIntelligenceObject],
-  "pagination": {
-    "total": number,
-    "limit": number,
-    "offset": number
-  }
-}
+
+### 6.1.3 Threat Intelligence
+| Endpoint | Method | Parameters | Description |
+|----------|---------|------------|-------------|
+| `/api/threats/` | GET | type, severity, date_from, limit, offset | List threats |
+| `/api/threats/` | POST | - | Create threat |
+
+
+```bash
+GET /api/threats/?type=malware&severity=high&limit=10
+Response: {"threats": [{"id": "threat_123", "indicators": ["hash:md5:d41d8cd98f00b204e9800998ecf8427e"], 
+"severity": "high", "ttps": ["T1055", "T1083"], "trust_score": 0.95}], "pagination": {"total": 150}}
 
 POST /api/threats/
-Request: {
-  "type": string,
-  "indicators": [string],
-  "description": string,
-  "severity": string,
-  "ttps": [string],
-  "anonymization_level": string
-}
-Response: {
-  "id": string,
-  "status": "created",
-  "anonymized_preview": ThreatIntelligenceObject
-}
+{"type": "malware", "indicators": ["hash:md5:d41d8cd98f00b204e9800998ecf8427e"], 
+ "severity": "critical", "ttps": ["T1055", "T1083"], "anonymization_level": "medium"}
+Response 201: {"id": "threat_789012", "status": "created"}
 
-POST /api/threats/bulk-upload/
-Request: multipart/form-data with file (CSV/JSON)
-Response: {
-  "processed": number,
-  "created": number,
-  "errors": [string]
-}
 ```
 
-#### 6.1.4 Alert Service
-```
-GET /api/alerts/
-Response: {
-  "alerts": [
-    {
-      "id": string,
-      "threat_id": string,
-      "severity": string,
-      "message": string,
-      "created_at": datetime,
-      "read": boolean
-    }
-  ]
-}
+### 6.1.4 TAXII 2.1 Services
+| Endpoint | Method | Content-Type | Description |
+|----------|---------|--------------|-------------|
+| `/taxii2/` | GET | application/taxii+json;version=2.1 | Discovery |
+| `/taxii2/collections/` | GET | application/taxii+json;version=2.1 | List collections |
+| `/taxii2/collections/{id}/objects/` | GET/POST | application/stix+json;version=2.1 | STIX objects |
 
-POST /api/alerts/subscribe/
-Request: {
-  "threat_types": [string],
-  "severity_levels": [string],
-  "notification_methods": [string]
-}
-Response: {
-  "subscription_id": string,
-  "status": "created"
-}
-
-PUT /api/alerts/{id}/read/
-Response: {
-  "status": "marked_as_read"
-}
-```
-
-### 6.2 TAXII 2.1 API Contracts
-
-#### 6.2.1 Discovery Service
-```
+```bash
 GET /taxii2/
+Accept: application/taxii+json;version=2.1
 Response: {
   "title": "CRISP TAXII 2.1 Server",
   "description": "Cyber Risk Information Sharing Platform",
-  "contact": string,
-  "default": "/taxii2/collections/",
+  "contact": "admin@crisp.example.com",
   "api_roots": ["/taxii2/"]
 }
-```
 
-#### 6.2.2 Collections Service
-```
 GET /taxii2/collections/
+Authorization: Bearer {access_token}
 Response: {
-  "collections": [
-    {
-      "id": string,
-      "title": string,
-      "description": string,
-      "can_read": boolean,
-      "can_write": boolean,
-      "media_types": ["application/stix+json;version=2.1"]
-    }
-  ]
+  "collections": [{
+    "id": "col_malware_indicators",
+    "title": "Malware Indicators",
+    "can_read": true,
+    "can_write": true,
+    "media_types": ["application/stix+json;version=2.1"]
+  }]
 }
 
-GET /taxii2/collections/{id}/objects/
-Query Parameters: {
-  "added_after": datetime (optional),
-  "limit": number (optional),
-  "match[type]": string (optional)
-}
+GET /taxii2/collections/col_malware_indicators/objects/?added_after=2025-01-15T00:00:00Z&limit=20
 Response: {
-  "more": boolean,
-  "next": string (optional),
-  "objects": [STIX2.1Objects]
+  "objects": [{
+    "type": "indicator",
+    "spec_version": "2.1",
+    "id": "indicator--f47ac10b-58cc-4372-a567-0e02b2c3d479",
+    "labels": ["malicious-activity"],
+    "pattern": "[file:hashes.MD5 = 'd41d8cd98f00b204e9800998ecf8427e']",
+    "valid_from": "2025-01-15T10:00:00.000Z"
+  }]
 }
 ```
 
-### 6.3 Internal Service Interfaces
+### 6.1.5 Alert Services
+| Endpoint | Method | Description |
+|----------|---------|-------------|
+| `/api/alerts/` | GET | Get user alerts |
+| `/api/alerts/subscribe/` | POST | Create subscription |
+| `/api/alerts/{id}/read/` | PUT | Mark as read |
 
-#### 6.3.1 AnonymizationService
-```
-interface AnonymizationService {
-  anonymize(data: ThreatData, level: AnonymizationLevel): AnonymizedThreatData
-  preview(data: ThreatData, level: AnonymizationLevel): AnonymizedThreatData
-  validateEffectiveness(original: ThreatData, anonymized: AnonymizedThreatData): number
+```bash
+POST /api/alerts/subscribe/
+{
+  "threat_types": ["malware", "phishing"],
+  "severity_levels": ["high", "critical"],
+  "notification_methods": ["email", "in_app"],
+  "frequency": "immediate"
 }
-```
+Response 201: {"subscription_id": "sub_456789", "status": "created", "active": true}
 
-#### 6.3.2 TrustService
-```
-interface TrustService {
-  evaluateAccess(requesting_org: string, target_org: string, data_type: string): AccessLevel
-  getAnonymizationLevel(trust_relationship: TrustLevel): AnonymizationLevel
-  updateTrustRelationship(org1: string, org2: string, level: TrustLevel): boolean
+GET /api/alerts/?unread_only=true&limit=20
+Response: {
+  "alerts": [{
+    "id": "alert_123456",
+    "threat_id": "threat_789012",
+    "severity": "critical",
+    "message": "New high-severity threat detected",
+    "read": false
+  }],
+  "unread_count": 5
 }
+
+PUT /api/alerts/alert_123456/read/
+Response: {"status": "marked_as_read", "read_at": "2025-01-15T10:35:00Z"}
 ```
 
-#### 6.3.3 AlertService
-```
+## 6.2 Internal Service Interfaces
+
+```python
 interface AlertService {
   generateAlert(threat: ThreatIntelligence, criteria: AlertCriteria): Alert
   notifySubscribers(alert: Alert): void
@@ -530,16 +470,71 @@ interface AlertService {
 }
 ```
 
-#### 6.3.4 FeedService
-```
-interface FeedService {
-  consumeFeed(feed_url: string, format: string): ThreatIntelligence[]
-  normalizeFeedData(external_data: any, source_format: string): ThreatIntelligence
-  validateFeedData(data: ThreatIntelligence): ValidationResult
+## 6.3 Error Handling & Timeouts
+
+**Standard Error Response:**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human readable description",
+    "timestamp": "2025-01-15T10:30:00Z",
+    "request_id": "req_123456789"
+  }
 }
 ```
 
----
+**Error Classifications:**
+- Client Errors (400-499): No retry - `VALIDATION_ERROR`, `UNAUTHORIZED`
+
+
+**Timeout Matrix:**
+- API requests: 30s
+- Database queries: 10s  
+- File uploads: 300s
+- Bulk operations: 600s
+
+**Circuit Breaker:** 5 failure threshold, 60s recovery timeout
+
+## 6.4 Communication Protocols
+
+**External Communication:**
+- HTTPS/TLS 1.3 for all API communication (30s timeout)
+- TAXII 2.1 for STIX object exchange (60s timeout)
+- WebSockets (WSS) for real-time notifications (300s timeout)
+
+**Internal Communication:**
+- Direct function calls (synchronous service-to-service)
+- Django signals (asynchronous event notifications)
+- Celery tasks (background processing with retry)
+
+**Data Formats:** JSON, STIX 2.1 objects, CSV for bulk uploads, multipart/form-data
+
+## 6.5 Versioning & Security
+
+**API Versioning:**
+- URL path versioning (`/api/v1/`, `/api/v2/`)
+- 12-month deprecation policy
+- Backward compatibility for additive changes
+- Content negotiation: `Accept: application/json;version=1.0`
+
+**Authentication & Authorization:**
+- JWT Bearer tokens (15-minute lifetime)
+- API keys for service-to-service  
+- OAuth 2.0 for third-party integration
+
+**Data Protection:**
+- AES-256-GCM encryption at rest
+- Trust-based data anonymization
+- Audit logging with correlation IDs
+
+## 6.6 Testing & Monitoring
+
+**Contract Testing:**
+- JSON schema validation for all payloads
+- Integration tests with pytest
+
 
 ## 7. Architectural Requirements
 

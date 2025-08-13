@@ -8,7 +8,7 @@ CRISP (Cyber Risk Information Sharing Platform) is a secure threat intelligence 
 - **[PDF user manual](https://github.com/COS301-SE-2025/CRISP/blob/documents/CRISP%20User%20Manual.pdf)** - **Done by Liam, double check before demo (2025-08-09)**
 - **[Technical installation manual]()** - **NEEDS TO BE IMPLEMENTED (2025-08-09)**
 - **[Coding standards/quality](https://github.com/COS301-SE-2025/CRISP/wiki/Coding-Standards-Document)** 
-- **[Functional Requirements (SRS) Document](https://github.com/COS301-SE-2025/CRISP/blob/documents/SRS.md)** - Detailed system requirements and specifications **NBNB please update(2025-08-09) need updated diagrams , Architectural structural design & requirements,  Quality requirements, Deployment Model, Service Contracts**
+- **[Functional Requirements (SRS) Document](https://github.com/COS301-SE-2025/CRISP/blob/documents/SRS.md)** - Detailed system requirements and specifications **NBNB please update(2025-08-13) need updated diagrams , Architectural structural design & requirements , Deployment Model(in progress)**
 - **[GitHub Project Board](https://github.com/orgs/COS301-SE-2025/projects/205)** - Track our development progress and sprint planning
 - **[Coding standards document](https://github.com/COS301-SE-2025/CRISP/wiki/Coding-Standards-Document)** - **Update the file structure of repo and code before demo(2025-08-09)**
 
@@ -28,23 +28,6 @@ Inspired by the Malware Information Sharing Platform (MISP) and the CIRCL inform
 - **Data Anonymization** - Configurable anonymization to protect sensitive information
 - **External Integration** - Compatible with MISP and other threat intelligence platforms
 
-## 🚀 Quick Start - Running the Demo UI
-
-### Terminal 1: Frontend
-```bash
-cd demo-ui
-npm run dev
-```
-
-### Terminal 2: Backend (Simple Demo Server)
-```bash
-python3 run_demo_server.py
-```
-
-Once both are running:
-- **Frontend:** http://localhost:5173 (or 3000)
-- **Backend:** http://localhost:8000
-- **Demo UI:** Navigate to demo UI and test real email alerts to datadefenders.sa@gmail.com
 
 ## 🏗️ Architecture & Design Patterns
 
@@ -165,13 +148,8 @@ We follow an **Agile Scrum Framework**:
 - PostgreSQL 13+
 
 ### Installation
-```bash
-# Start with Docker Compose
-docker-compose up -d
-
-# Access the application
-# Web Interface: http://localhost:8000
-# API Documentation: http://localhost:8000/api/docs
+```
+ **FIX AFTER DONE WITH IMPLEMENTATION (add description on how to use system)**
 ```
 
 ## 🔒 Security
