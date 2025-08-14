@@ -1,0 +1,2885 @@
+{
+	"info": {
+		"_postman_id": "crisp-unified-api-fixed",
+		"name": "CRISP Unified API - Fixed Collection (ALL 92 Endpoints)",
+		"description": "Complete working collection for CRISP Threat Intelligence Platform with proper authentication and all endpoints",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"version": {
+			"major": 4,
+			"minor": 0,
+			"patch": 0
+		}
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{access_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Skip auth setup for public endpoints",
+					"const currentRequest = pm.request.url.toString();",
+					"const publicEndpoints = ['/auth/login/', '/auth/register/', '/auth/forgot-password/', '/auth/validate-reset-token/', '/auth/reset-password/', '/api/v1/', '/api/status/', '/admin/', '//'];",
+					"const isPublicEndpoint = publicEndpoints.some(endpoint => currentRequest.includes(endpoint));",
+					"",
+					"if (!isPublicEndpoint) {",
+					"    // Ensure we have an access token for authenticated requests",
+					"    let token = pm.collectionVariables.get('access_token') || pm.globals.get('access_token');",
+					"    if (!token) {",
+					"        console.log('No access token found. Please run the Login request first.');",
+					"        // Set a dummy token to avoid immediate failure",
+					"        pm.collectionVariables.set('access_token', 'MISSING_TOKEN_RUN_LOGIN_FIRST');",
+					"    }",
+					"}",
+					"",
+					"// Set proper headers for TAXII endpoints",
+					"if (currentRequest.includes('/taxii2/')) {",
+					"    pm.request.headers.add({",
+					"        key: 'Accept',",
+					"        value: 'application/taxii+json;version=2.1'",
+					"    });",
+					"}",
+					"",
+					"// Set up dynamic variables",
+					"if (!pm.globals.get('test_user_id')) {",
+					"    pm.globals.set('test_user_id', pm.globals.get('user_id') || pm.collectionVariables.get('user_id') || '1');",
+					"}",
+					"if (!pm.globals.get('test_org_id')) {",
+					"    pm.globals.set('test_org_id', pm.collectionVariables.get('test_org_id') || '1');",
+					"}",
+					"if (!pm.globals.get('test_collection_id')) {",
+					"    pm.globals.set('test_collection_id', pm.collectionVariables.get('test_collection_id') || '1');",
+					"}",
+					"if (!pm.globals.get('test_feed_id')) {",
+					"    pm.globals.set('test_feed_id', '1');",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global test script",
+					"pm.test('Response received within acceptable time', function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(30000);",
+					"});",
+					"",
+					"// Handle token refresh for 401 responses",
+					"if (pm.response.code === 401 && pm.globals.get('refresh_token') && !pm.request.url.toString().includes('/auth/login/')) {",
+					"    console.log('Access token expired, attempting refresh...');",
+					"    ",
+					"    const refreshRequest = {",
+					"        url: pm.globals.get('base_url') + '/api/v1/auth/refresh/',",
+					"        method: 'POST',",
+					"        header: {",
+					"            'Content-Type': 'application/json'",
+					"        },",
+					"        body: {",
+					"            mode: 'raw',",
+					"            raw: JSON.stringify({",
+					"                refresh: pm.globals.get('refresh_token')",
+					"            })",
+					"        }",
+					"    };",
+					"    ",
+					"    pm.sendRequest(refreshRequest, function (err, response) {",
+					"        if (err) {",
+					"            console.log('Token refresh failed:', err);",
+					"        } else if (response.code === 200) {",
+					"            const responseBody = response.json();",
+					"            if (responseBody.success && responseBody.data && responseBody.data.tokens) {",
+					"                pm.collectionVariables.set('access_token', responseBody.data.tokens.access);",
+					"                pm.collectionVariables.set('refresh_token', responseBody.data.tokens.refresh);",
+					"                pm.globals.set('access_token', responseBody.data.tokens.access);",
+					"                pm.globals.set('refresh_token', responseBody.data.tokens.refresh);",
+					"                console.log('Token refreshed successfully.');",
+					"            }",
+					"        }",
+					"    });",
+					"}",
+					"",
+					"// Store useful data from responses",
+					"if (pm.response.code === 200 || pm.response.code === 201) {",
+					"    try {",
+					"        const responseBody = pm.response.json();",
+					"        ",
+					"        // Store IDs for subsequent requests",
+					"        if (responseBody.user && responseBody.user.id) {",
+					"            pm.globals.set('test_user_id', responseBody.user.id);",
+					"        }",
+					"        if (responseBody.data && responseBody.data.user && responseBody.data.user.id) {",
+					"            pm.globals.set('test_user_id', responseBody.data.user.id);",
+					"        }",
+					"        if (responseBody.data && responseBody.data.organization && responseBody.data.organization.id) {",
+					"            pm.globals.set('test_org_id', responseBody.data.organization.id);",
+					"        }",
+					"        if (responseBody.data && responseBody.data.feed && responseBody.data.feed.id) {",
+					"            pm.globals.set('test_feed_id', responseBody.data.feed.id);",
+					"        }",
+					"    } catch (e) {",
+					"        // Ignore JSON parsing errors",
+					"    }",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://127.0.0.1:8000",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refresh_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "admin_username",
+			"value": "demo",
+			"type": "string"
+		},
+		{
+			"key": "admin_password",
+			"value": "AdminPass123!",
+			"type": "string"
+		},
+		{
+			"key": "test_user_id",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "test_org_id",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "test_collection_id",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "test_feed_id",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "trust_relationship_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "object_id",
+			"value": "1",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Authentication (12 endpoints)",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Login successful', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"    ",
+									"    if (responseBody.tokens) {",
+									"        pm.expect(responseBody.tokens).to.have.property('access');",
+									"        pm.expect(responseBody.tokens).to.have.property('refresh');",
+									"        ",
+									"        // Set both collection and global variables",
+									"        pm.collectionVariables.set('access_token', responseBody.tokens.access);",
+									"        pm.collectionVariables.set('refresh_token', responseBody.tokens.refresh);",
+									"        pm.collectionVariables.set('user_id', responseBody.user.id);",
+									"        pm.globals.set('access_token', responseBody.tokens.access);",
+									"        pm.globals.set('refresh_token', responseBody.tokens.refresh);",
+									"        pm.globals.set('user_id', responseBody.user.id);",
+									"        ",
+									"        // Capture organization ID if available",
+									"        if (responseBody.user && responseBody.user.organization_id) {",
+									"            pm.collectionVariables.set('test_org_id', responseBody.user.organization_id);",
+									"            pm.globals.set('test_org_id', responseBody.user.organization_id);",
+									"            console.log('Organization ID captured:', responseBody.user.organization_id);",
+									"        } else if (responseBody.user && responseBody.user.organization) {",
+									"            pm.collectionVariables.set('test_org_id', responseBody.user.organization);",
+									"            pm.globals.set('test_org_id', responseBody.user.organization);",
+									"            console.log('Organization ID captured:', responseBody.user.organization);",
+									"        }",
+									"        ",
+									"        console.log('Tokens saved to variables. User ID:', responseBody.user.id);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"{{admin_username}}\",\n    \"password\": \"{{admin_password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "login", ""]
+						}
+					}
+				},
+				{
+					"name": "Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Registration response received', function () {",
+									"    pm.response.to.be.ok;",
+									"    ",
+									"    if (pm.response.code === 200 || pm.response.code === 201) {",
+									"        const responseBody = pm.response.json();",
+									"        pm.expect(responseBody.success).to.be.true;",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"testuser_{{$randomInt}}\",\n    \"email\": \"testuser{{$randomInt}}@example.com\",\n    \"password\": \"SecurePassword123!\",\n    \"password_confirm\": \"SecurePassword123!\",\n    \"first_name\": \"Test\",\n    \"last_name\": \"User\",\n    \"organization\": \"Test Organization\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "register", ""]
+						}
+					}
+				},
+				{
+					"name": "Logout",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Logout response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/logout/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "logout", ""]
+						}
+					}
+				},
+				{
+					"name": "Token Refresh",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Token refresh response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refresh\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/refresh/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "refresh", ""]
+						}
+					}
+				},
+				{
+					"name": "Verify Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Token verification response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/verify/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "verify", ""]
+						}
+					}
+				},
+				{
+					"name": "User Sessions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Sessions response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/sessions/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "sessions", ""]
+						}
+					}
+				},
+				{
+					"name": "Revoke Session",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Revoke session response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"session_id\": \"sample_session_id\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/revoke-session/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "revoke-session", ""]
+						}
+					}
+				},
+				{
+					"name": "Change Password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Change password response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"current_password\": \"{{admin_password}}\",\n    \"new_password\": \"NewSecurePassword123!\",\n    \"new_password_confirm\": \"NewSecurePassword123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/change-password/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "change-password", ""]
+						}
+					}
+				},
+				{
+					"name": "Forgot Password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Forgot password request processed', function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"test@crisp.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/forgot-password/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "forgot-password", ""]
+						}
+					}
+				},
+				{
+					"name": "Validate Reset Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Reset token validation response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"sample-reset-token\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/validate-reset-token/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "validate-reset-token", ""]
+						}
+					}
+				},
+				{
+					"name": "Reset Password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Password reset response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"sample-reset-token\",\n    \"new_password\": \"NewSecurePassword123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/reset-password/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "reset-password", ""]
+						}
+					}
+				},
+				{
+					"name": "Auth Dashboard",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Auth dashboard response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/dashboard/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "dashboard", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "User Management (19 endpoints)",
+			"item": [
+				{
+					"name": "List Users",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Users list response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/list/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "list", ""]
+						}
+					}
+				},
+				{
+					"name": "Create User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('User creation response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"newuser_{{$randomInt}}\",\n    \"email\": \"newuser{{$randomInt}}@example.com\",\n    \"password\": \"SecurePassword123!\",\n    \"password_confirm\": \"SecurePassword123!\",\n    \"first_name\": \"New\",\n    \"last_name\": \"User\",\n    \"role\": \"viewer\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "register", ""]
+						}
+					}
+				},
+				{
+					"name": "Get User Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('User profile response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/profile/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "profile", ""]
+						}
+					}
+				},
+				{
+					"name": "Get User by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('User details response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "{{user_id}}", ""]
+						}
+					}
+				},
+				{
+					"name": "Update User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('User update response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"first_name\": \"Updated\",\n    \"last_name\": \"User\",\n    \"email\": \"updated@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "{{user_id}}", ""]
+						}
+					}
+				},
+				{
+					"name": "Deactivate User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('User deactivation response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}/deactivate/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "{{user_id}}", "deactivate", ""]
+						}
+					}
+				},
+				{
+					"name": "Reactivate User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('User reactivation response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}/reactivate/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "{{user_id}}", "reactivate", ""]
+						}
+					}
+				},
+				{
+					"name": "User Statistics",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('User statistics response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/statistics/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "statistics", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Organizations (9 endpoints)",
+			"item": [
+				{
+					"name": "List Organizations",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Organizations list response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/list_organizations/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "organizations", "list_organizations", ""]
+						}
+					}
+				},
+				{
+					"name": "Organization Types",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Organization types response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/types/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "organizations", "types", ""]
+						}
+					}
+				},
+				{
+					"name": "Create Organization",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Organization creation successful', function () {",
+									"    pm.response.to.have.status(201);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"    ",
+									"    // Capture organization ID for use in other requests",
+									"    if (responseBody.data && responseBody.data.id) {",
+									"        pm.collectionVariables.set('test_org_id', responseBody.data.id);",
+									"        pm.globals.set('test_org_id', responseBody.data.id);",
+									"        console.log('Organization ID captured:', responseBody.data.id);",
+									"    } else if (responseBody.organization && responseBody.organization.id) {",
+									"        pm.collectionVariables.set('test_org_id', responseBody.organization.id);",
+									"        pm.globals.set('test_org_id', responseBody.organization.id);",
+									"        console.log('Organization ID captured:', responseBody.organization.id);",
+									"    } else if (responseBody.id) {",
+									"        pm.collectionVariables.set('test_org_id', responseBody.id);",
+									"        pm.globals.set('test_org_id', responseBody.id);",
+									"        console.log('Organization ID captured:', responseBody.id);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Test Organization {{$randomInt}}\",\n    \"domain\": \"testorg{{$randomInt}}.com\",\n    \"contact_email\": \"admin@testorg{{$randomInt}}.com\",\n    \"organization_type\": \"private\",\n    \"description\": \"Test organization for API testing\",\n    \"primary_user\": {\n        \"username\": \"orgadmin{{$randomInt}}\",\n        \"email\": \"admin@testorg{{$randomInt}}.com\",\n        \"password\": \"SecurePassword123!\",\n        \"first_name\": \"Organization\",\n        \"last_name\": \"Admin\"\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/create_organization/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "organizations", "create_organization", ""]
+						}
+					}
+				},
+				{
+					"name": "Get Organization",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Organization details response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/{{test_org_id}}/get_organization/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "organizations", "{{test_org_id}}", "get_organization", ""]
+						}
+					}
+				},
+				{
+					"name": "Update Organization",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Organization update response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Organization\",\n    \"description\": \"Updated description\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/{{test_org_id}}/update_organization/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "organizations", "{{test_org_id}}", "update_organization", ""]
+						}
+					}
+				},
+				{
+					"name": "Delete Organization",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Organization deletion response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/{{test_org_id}}/delete_organization/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "organizations", "{{test_org_id}}", "delete_organization", ""]
+						}
+					}
+				},
+				{
+					"name": "Deactivate Organization",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Organization deactivation response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/{{test_org_id}}/deactivate_organization/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "organizations", "{{test_org_id}}", "deactivate_organization", ""]
+						}
+					}
+				},
+				{
+					"name": "Reactivate Organization",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Organization reactivation response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/organizations/{{test_org_id}}/reactivate_organization/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "organizations", "{{test_org_id}}", "reactivate_organization", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Trust Management (8 endpoints)",
+			"item": [
+				{
+					"name": "Trust Groups",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Trust groups response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/trust/groups/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "trust", "groups", ""]
+						}
+					}
+				},
+				{
+					"name": "Trust Levels",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Trust levels response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/trust/levels/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "trust", "levels", ""]
+						}
+					}
+				},
+				{
+					"name": "Trust Metrics",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Trust metrics response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/trust/metrics/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "trust", "metrics", ""]
+						}
+					}
+				},
+				{
+					"name": "List Trust Relationships",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Trust relationships response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/trust/relationships/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "trust", "relationships", ""]
+						}
+					}
+				},
+				{
+					"name": "Create Trust Relationship",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Trust relationship creation successful', function () {",
+									"    pm.response.to.have.status(201);",
+									"    const responseBody = pm.response.json();",
+									"    pm.expect(responseBody.success).to.be.true;",
+									"    ",
+									"    // Capture trust relationship ID for use in other requests",
+									"    if (responseBody.data && responseBody.data.id) {",
+									"        pm.collectionVariables.set('trust_relationship_id', responseBody.data.id);",
+									"        pm.globals.set('trust_relationship_id', responseBody.data.id);",
+									"        console.log('Trust Relationship ID captured:', responseBody.data.id);",
+									"    } else if (responseBody.relationship && responseBody.relationship.id) {",
+									"        pm.collectionVariables.set('trust_relationship_id', responseBody.relationship.id);",
+									"        pm.globals.set('trust_relationship_id', responseBody.relationship.id);",
+									"        console.log('Trust Relationship ID captured:', responseBody.relationship.id);",
+									"    } else if (responseBody.id) {",
+									"        pm.collectionVariables.set('trust_relationship_id', responseBody.id);",
+									"        pm.globals.set('trust_relationship_id', responseBody.id);",
+									"        console.log('Trust Relationship ID captured:', responseBody.id);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"source_organization\": \"{{test_org_id}}\",\n    \"target_organization\": \"1\",\n    \"trust_level\": \"high\",\n    \"relationship_type\": \"bilateral\",\n    \"notes\": \"Test trust relationship\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/trust/relationships/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "trust", "relationships", ""]
+						}
+					}
+				},
+				{
+					"name": "Get Trust Relationship",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Trust relationship details response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/trust/relationships/1/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "trust", "relationships", "1", ""]
+						}
+					}
+				},
+				{
+					"name": "Update Trust Relationship",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Trust relationship update response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"trust_level\": \"medium\",\n    \"context\": \"updated_testing\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/trust/relationships/1/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "trust", "relationships", "1", ""]
+						}
+					}
+				},
+				{
+					"name": "Delete Trust Relationship",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Trust relationship deletion response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/trust/relationships/1/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "trust", "relationships", "1", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Threat Intelligence (10 endpoints)",
+			"item": [
+				{
+					"name": "List Threat Feeds",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Threat feeds response received', function () {",
+									"    pm.response.to.be.ok;",
+									"    ",
+									"    if (pm.response.code === 200) {",
+									"        const responseBody = pm.response.json();",
+									"        if (responseBody.data && responseBody.data.feeds && responseBody.data.feeds.length > 0) {",
+									"            pm.globals.set('test_feed_id', responseBody.data.feeds[0].id);",
+									"        }",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/threat-feeds/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "threat-feeds", ""]
+						}
+					}
+				},
+				{
+					"name": "Create Threat Feed",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Threat feed creation successful', function () {",
+									"    pm.response.to.have.status(201);",
+									"    const responseBody = pm.response.json();",
+									"    ",
+									"    // Capture threat feed ID for use in other requests",
+									"    if (responseBody.id) {",
+									"        pm.collectionVariables.set('test_feed_id', responseBody.id);",
+									"        pm.globals.set('test_feed_id', responseBody.id);",
+									"        console.log('Threat Feed ID captured:', responseBody.id);",
+									"    } else if (responseBody.data && responseBody.data.id) {",
+									"        pm.collectionVariables.set('test_feed_id', responseBody.data.id);",
+									"        pm.globals.set('test_feed_id', responseBody.data.id);",
+									"        console.log('Threat Feed ID captured:', responseBody.data.id);",
+									"    } else if (responseBody.feed && responseBody.feed.id) {",
+									"        pm.collectionVariables.set('test_feed_id', responseBody.feed.id);",
+									"        pm.globals.set('test_feed_id', responseBody.feed.id);",
+									"        console.log('Threat Feed ID captured:', responseBody.feed.id);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Test Threat Feed {{$randomInt}}\",\n    \"taxii_server_url\": \"https://api.test-feed.com\",\n    \"taxii_api_root\": \"/taxii2/\",\n    \"taxii_collection_id\": \"test-collection\",\n    \"is_public\": false,\n    \"is_external\": true,\n    \"description\": \"Test feed for API testing\",\n    \"is_active\": true,\n    \"owner\": \"{{user_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/threat-feeds/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "threat-feeds", ""]
+						}
+					}
+				},
+				{
+					"name": "Get Threat Feed",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Threat feed details response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/threat-feeds/{{test_feed_id}}/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "threat-feeds", "{{test_feed_id}}", ""]
+						}
+					}
+				},
+				{
+					"name": "Update Threat Feed",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Threat feed update response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Test Threat Feed\",\n    \"description\": \"Updated description\",\n    \"is_active\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/threat-feeds/{{test_feed_id}}/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "threat-feeds", "{{test_feed_id}}", ""]
+						}
+					}
+				},
+				{
+					"name": "Delete Threat Feed",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Threat feed deletion response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/threat-feeds/{{test_feed_id}}/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "threat-feeds", "{{test_feed_id}}", ""]
+						}
+					}
+				},
+				{
+					"name": "Consume Threat Feed",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Feed consumption response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/threat-feeds/{{test_feed_id}}/consume/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "threat-feeds", "{{test_feed_id}}", "consume", ""]
+						}
+					}
+				},
+				{
+					"name": "Threat Feed Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Feed status response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/threat-feeds/{{test_feed_id}}/status/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "threat-feeds", "{{test_feed_id}}", "status", ""]
+						}
+					}
+				},
+				{
+					"name": "Test Feed Connection",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Feed connection test response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/threat-feeds/{{test_feed_id}}/test_connection/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "threat-feeds", "{{test_feed_id}}", "test_connection", ""]
+						}
+					}
+				},
+				{
+					"name": "External Feeds",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('External feeds response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/threat-feeds/external/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "threat-feeds", "external", ""]
+						}
+					}
+				},
+				{
+					"name": "Available Collections",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Available collections response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/threat-feeds/available_collections/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "threat-feeds", "available_collections", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Indicators (5 endpoints)",
+			"item": [
+				{
+					"name": "List Indicators",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Indicators list response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/indicators/?page=1&page_size=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "indicators", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Indicator",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Indicator details response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/indicators/1/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "indicators", "1", ""]
+						}
+					}
+				},
+				{
+					"name": "Recent Indicators",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Recent indicators response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/indicators/recent/?hours=24",
+							"host": ["{{base_url}}"],
+							"path": ["api", "indicators", "recent", ""],
+							"query": [
+								{
+									"key": "hours",
+									"value": "24"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Indicator Statistics",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Indicator statistics response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/indicators/stats/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "indicators", "stats", ""]
+						}
+					}
+				},
+				{
+					"name": "Indicator Types",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Indicator types response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/indicators/types/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "indicators", "types", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "TAXII 2.1 Protocol (7 endpoints)",
+			"item": [
+				{
+					"name": "TAXII Discovery",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('TAXII discovery response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/taxii+json;version=2.1"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/taxii2/",
+							"host": ["{{base_url}}"],
+							"path": ["taxii2", ""]
+						}
+					}
+				},
+				{
+					"name": "TAXII Collections List",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('TAXII collections list response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/taxii+json;version=2.1"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/taxii2/collections/",
+							"host": ["{{base_url}}"],
+							"path": ["taxii2", "collections", ""]
+						}
+					}
+				},
+				{
+					"name": "TAXII Collection Detail",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('TAXII collection detail response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/taxii+json;version=2.1"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/taxii2/collections/{{test_collection_id}}/",
+							"host": ["{{base_url}}"],
+							"path": ["taxii2", "collections", "{{test_collection_id}}", ""]
+						}
+					}
+				},
+				{
+					"name": "Collection Objects",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Collection objects response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/taxii+json;version=2.1"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/taxii2/collections/{{test_collection_id}}/objects/?limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["taxii2", "collections", "{{test_collection_id}}", "objects", ""],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Add Objects to Collection",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Add objects to collection response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/taxii+json;version=2.1"
+							},
+							{
+								"key": "Accept",
+								"value": "application/taxii+json;version=2.1"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"objects\": [\n        {\n            \"type\": \"indicator\",\n            \"id\": \"indicator--{{$guid}}\",\n            \"created\": \"{{$isoTimestamp}}\",\n            \"modified\": \"{{$isoTimestamp}}\",\n            \"pattern\": \"[file:hashes.MD5 = 'd41d8cd98f00b204e9800998ecf8427e']\",\n            \"labels\": [\"malicious-activity\"]\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/taxii2/collections/{{test_collection_id}}/objects/",
+							"host": ["{{base_url}}"],
+							"path": ["taxii2", "collections", "{{test_collection_id}}", "objects", ""]
+						}
+					}
+				},
+				{
+					"name": "Get Specific Object",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Specific object response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/taxii+json;version=2.1"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/taxii2/collections/{{test_collection_id}}/objects/{{object_id}}/",
+							"host": ["{{base_url}}"],
+							"path": ["taxii2", "collections", "{{test_collection_id}}", "objects", "{{object_id}}", ""]
+						}
+					}
+				},
+				{
+					"name": "Collection Manifest",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Collection manifest response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/taxii+json;version=2.1"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/taxii2/collections/{{test_collection_id}}/manifest/?limit=50",
+							"host": ["{{base_url}}"],
+							"path": ["taxii2", "collections", "{{test_collection_id}}", "manifest", ""],
+							"query": [
+								{
+									"key": "limit",
+									"value": "50"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Admin Functions (11 endpoints)",
+			"item": [
+				{
+					"name": "System Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('System health check response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/system_health/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "system_health", ""]
+						}
+					}
+				},
+				{
+					"name": "Admin Dashboard",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Admin dashboard response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/dashboard/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "dashboard", ""]
+						}
+					}
+				},
+				{
+					"name": "Extended System Health",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Extended system health response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/system-health/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "system-health", ""]
+						}
+					}
+				},
+				{
+					"name": "Trust System Overview",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Trust system overview response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/trust_overview/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "trust_overview", ""]
+						}
+					}
+				},
+				{
+					"name": "Audit Logs",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Audit logs response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/audit-logs/?page=1&page_size=50",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "audit-logs", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "50"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Comprehensive Audit Logs",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Comprehensive audit logs response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/comprehensive-audit-logs/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "comprehensive-audit-logs", ""]
+						}
+					}
+				},
+				{
+					"name": "Security Events",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Security events response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/security-events/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "security-events", ""]
+						}
+					}
+				},
+				{
+					"name": "Audit Statistics",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Audit statistics response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/audit-statistics/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "audit-statistics", ""]
+						}
+					}
+				},
+				{
+					"name": "User Activity Summary",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('User activity summary response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/users/{{user_id}}/activity-summary/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "users", "{{user_id}}", "activity-summary", ""]
+						}
+					}
+				},
+				{
+					"name": "Clean Expired Sessions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Session cleanup response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/cleanup-sessions/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "cleanup-sessions", ""]
+						}
+					}
+				},
+				{
+					"name": "Unlock User Account",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('User unlock response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/users/{{user_id}}/unlock/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "users", "{{user_id}}", "unlock", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Alert System (9 endpoints)",
+			"item": [
+				{
+					"name": "Alert List",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Alert list response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/alerts/list/",
+							"host": ["{{base_url}}"],
+							"path": ["alerts", "list", ""]
+						}
+					}
+				},
+				{
+					"name": "Alert Statistics",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Alert statistics response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/alerts/statistics/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "alerts", "statistics", ""]
+						}
+					}
+				},
+				{
+					"name": "Test Gmail Connection",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Gmail connection test response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/alerts/test-connection/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "alerts", "test-connection", ""]
+						}
+					}
+				},
+				{
+					"name": "Send Test Alert Email",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Test alert email response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"recipient\": \"test@example.com\",\n    \"subject\": \"Test Alert Email\",\n    \"message\": \"This is a test alert email from the CRISP system.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/alerts/test-email/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "alerts", "test-email", ""]
+						}
+					}
+				},
+				{
+					"name": "Send Threat Alert",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Threat alert response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"threat_type\": \"malware\",\n    \"severity\": \"high\",\n    \"description\": \"Test threat alert\",\n    \"indicators\": [\"192.168.1.100\", \"malicious.exe\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/alerts/threat/",
+							"host": ["{{base_url}}"],
+							"path": ["alerts", "threat", ""]
+						}
+					}
+				},
+				{
+					"name": "Send Feed Notification",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Feed notification response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"feed_name\": \"Test Feed\",\n    \"status\": \"updated\",\n    \"message\": \"Feed has been updated with new indicators\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/alerts/feed/",
+							"host": ["{{base_url}}"],
+							"path": ["alerts", "feed", ""]
+						}
+					}
+				},
+				{
+					"name": "Mark All Notifications Read",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Mark all read response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/alerts/mark-all-read/",
+							"host": ["{{base_url}}"],
+							"path": ["alerts", "mark-all-read", ""]
+						}
+					}
+				},
+				{
+					"name": "Get Notification Preferences",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Notification preferences response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/alerts/preferences/",
+							"host": ["{{base_url}}"],
+							"path": ["alerts", "preferences", ""]
+						}
+					}
+				},
+				{
+					"name": "Update Notification Preferences",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Notification preferences update response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email_alerts\": true,\n    \"threat_notifications\": true,\n    \"feed_updates\": false,\n    \"system_notifications\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/alerts/preferences/update/",
+							"host": ["{{base_url}}"],
+							"path": ["alerts", "preferences", "update", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Email System (1 endpoint)",
+			"item": [
+				{
+					"name": "Send Test Email",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Test email response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"recipient\": \"test@example.com\",\n    \"subject\": \"Test Email from CRISP System\",\n    \"message\": \"This is a test email to verify the email system is working correctly.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/email/send-test/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "email", "send-test", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Unified API (4 endpoints)",
+			"item": [
+				{
+					"name": "API Root",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('API root accessible', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", ""]
+						}
+					}
+				},
+				{
+					"name": "Dashboard Overview",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Dashboard overview response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/dashboard/overview/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "dashboard", "overview", ""]
+						}
+					}
+				},
+				{
+					"name": "Unified External Feeds",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Unified external feeds response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/threat-feeds/external/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "threat-feeds", "external", ""]
+						}
+					}
+				},
+				{
+					"name": "Unified Collections",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Unified collections response received', function () {",
+									"    pm.response.to.be.ok;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/threat-feeds/collections/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "threat-feeds", "collections", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "System Status (3 endpoints)",
+			"item": [
+				{
+					"name": "Home Page",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Home page accessible', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/",
+							"host": ["{{base_url}}"],
+							"path": [""]
+						}
+					}
+				},
+				{
+					"name": "Core System Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('System status check successful', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/status/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "status", ""]
+						}
+					}
+				},
+				{
+					"name": "Django Admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Django admin accessible', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/",
+							"host": ["{{base_url}}"],
+							"path": ["admin", ""]
+						}
+					}
+				}
+			]
+		}
+	]
+}

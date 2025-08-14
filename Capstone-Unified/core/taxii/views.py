@@ -72,15 +72,11 @@ class TAXIIBaseView(APIView):
         Get the organization associated with the authenticated user.
         """
         try:
-            # Try to get organization from user profile or groups
-            if hasattr(request.user, 'organization'):
-                return request.user.organization
-            
-            # Fallback: get first organization created by user
+            # Prioritize core app organizations (created_by relationship)
             org = Organization.objects.filter(created_by=request.user).first()
             if org:
                 return org
-                
+            
             # If no organization found, create a default one for development
             if settings.DEBUG:
                 org, created = Organization.objects.get_or_create(

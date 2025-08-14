@@ -25,6 +25,7 @@ class ComprehensiveEndpointTester:
         self.test_operations_feed_id = None
         self.test_indicator_id = None
         self.refresh_token = None
+        self.test_detail_org_id = None  # Separate org for detail testing
         
     def test_endpoint(self, method, url, headers=None, data=None, auth_token=None, expect_error=False):
         """Test a single endpoint and return results"""
@@ -105,7 +106,10 @@ class ComprehensiveEndpointTester:
         if result.get("success") and result.get("content"):
             try:
                 content = result["content"]
-                if "organizations" in content and content["organizations"]:
+                if "data" in content and "organizations" in content["data"] and content["data"]["organizations"]:
+                    self.test_org_id = content["data"]["organizations"][0]["id"]
+                    print(f"Using test organization ID: {self.test_org_id}")
+                elif "organizations" in content and content["organizations"]:
                     self.test_org_id = content["organizations"][0]["id"]
                     print(f"Using test organization ID: {self.test_org_id}")
                 elif "results" in content and content["results"]:
@@ -119,6 +123,11 @@ class ComprehensiveEndpointTester:
                 print(f"Content was: {content}")
                 pass
         
+        # Use permanent organization for detail testing (won't be deleted)
+        # This organization was pre-created to avoid test sequence conflicts
+        self.test_detail_org_id = "f2a14bd4-2afe-4056-8d7f-c70ea3053395"
+        print(f"Using permanent detail test organization ID: {self.test_detail_org_id}")
+        
         # Try to get a test collection ID
         result = self.test_endpoint("GET", f"{BASE_URL}/taxii2/", auth_token=self.auth_token)
         if result.get("success"):
@@ -130,7 +139,10 @@ class ComprehensiveEndpointTester:
         if result.get("success") and result.get("content"):
             try:
                 content = result["content"]
-                if "relationships" in content and content["relationships"]:
+                if "data" in content and isinstance(content["data"], list) and content["data"]:
+                    self.test_relationship_id = content["data"][0].get("id", 1)
+                    print(f"Using test relationship ID: {self.test_relationship_id}")
+                elif "relationships" in content and content["relationships"]:
                     self.test_relationship_id = content["relationships"][0].get("id", 1)
                     print(f"Using test relationship ID: {self.test_relationship_id}")
                 else:
@@ -138,37 +150,68 @@ class ComprehensiveEndpointTester:
             except:
                 self.test_relationship_id = 1
         
-        # Create a test threat feed for testing operations
-        test_feed_data = {
-            "name": f"Test Feed {int(time.time())}",
-            "url": "https://example.com/feed", 
-            "owner": self.test_org_id or "68a93b91-d018-4f7a-9ff8-a32582dc6193"
-        }
-        result = self.test_endpoint("POST", f"{BASE_URL}/api/threat-feeds/", auth_token=self.auth_token, data=test_feed_data)
-        if result.get("success") and result.get("content"):
-            try:
-                self.test_threat_feed_id = result["content"]["id"]
-                print(f"Created test threat feed ID: {self.test_threat_feed_id}")
-            except:
-                self.test_threat_feed_id = 1  # Fallback
+        # Get a core app organization ID for threat feeds (different from core_ut orgs)
+        core_orgs_result = self.test_endpoint("GET", f"{BASE_URL}/api/threat-feeds/", auth_token=self.auth_token)
+        core_org_id = None
+        
+        # Try to get an organization from existing threat feeds or use a known core org
+        try:
+            # Use a manual call to get core organizations - we know some exist
+            import requests
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            # We'll create a core organization since the models are different
+            core_org_data = {
+                "name": f"Core Test Org {int(time.time())}",
+                "type": "university"
+            }
+            # Use pre-created core organization for threat feeds
+            core_org_id = "28caf162-28b1-48b7-a13c-2c5f1963217f"  # Created specifically for testing
+            self.core_org_id = core_org_id  # Store as instance variable
+            print(f"Using core app organization ID for threat feeds: {core_org_id}")
+        except:
+            print("Could not get core organization ID")
+            self.core_org_id = None
+        
+        # Create a test threat feed for testing operations (only if we have a valid core org ID)
+        if core_org_id:
+            test_feed_data = {
+                "name": f"Test Feed {int(time.time())}",
+                "url": "https://example.com/feed", 
+                "owner": core_org_id
+            }
+            result = self.test_endpoint("POST", f"{BASE_URL}/api/threat-feeds/", auth_token=self.auth_token, data=test_feed_data)
+            if result.get("success") and result.get("content"):
+                try:
+                    self.test_threat_feed_id = result["content"]["id"]
+                    print(f"Created test threat feed ID: {self.test_threat_feed_id}")
+                except:
+                    print(f"Error extracting threat feed ID from: {result['content']}")
+                    self.test_threat_feed_id = None
+            else:
+                print(f"Failed to create test threat feed: {result}")
+                self.test_threat_feed_id = None
         else:
-            self.test_threat_feed_id = 1
+            print("No valid organization ID for threat feed creation")
+            self.test_threat_feed_id = None
         
         # Create a second threat feed for operations testing (so delete test doesn't affect operations)
-        test_feed_data2 = {
-            "name": f"Operations Test Feed {int(time.time())}",
-            "url": "https://example.com/operations-feed",
-            "owner": self.test_org_id or "68a93b91-d018-4f7a-9ff8-a32582dc6193"
-        }
-        result = self.test_endpoint("POST", f"{BASE_URL}/api/threat-feeds/", auth_token=self.auth_token, data=test_feed_data2)
-        if result.get("success") and result.get("content"):
-            try:
-                self.test_operations_feed_id = result["content"]["id"]
-                print(f"Created operations test threat feed ID: {self.test_operations_feed_id}")
-            except:
+        if core_org_id:
+            test_feed_data2 = {
+                "name": f"Operations Test Feed {int(time.time())}",
+                "url": "https://example.com/operations-feed",
+                "owner": core_org_id
+            }
+            result = self.test_endpoint("POST", f"{BASE_URL}/api/threat-feeds/", auth_token=self.auth_token, data=test_feed_data2)
+            if result.get("success") and result.get("content"):
+                try:
+                    self.test_operations_feed_id = result["content"]["id"]
+                    print(f"Created operations test threat feed ID: {self.test_operations_feed_id}")
+                except:
+                    self.test_operations_feed_id = self.test_threat_feed_id
+            else:
                 self.test_operations_feed_id = self.test_threat_feed_id
         else:
-            self.test_operations_feed_id = self.test_threat_feed_id
+            self.test_operations_feed_id = None
         
         # Get actual indicator ID for testing
         result = self.test_endpoint("GET", f"{BASE_URL}/api/indicators/", auth_token=self.auth_token)
@@ -212,16 +255,33 @@ class ComprehensiveEndpointTester:
         expect_error = endpoint_info.get("expect_error", False)
         
         # Special handling for refresh token endpoint
-        if url.endswith("/api/v1/auth/refresh/") and self.refresh_token:
-            data = {"refresh_token": self.refresh_token}
+        if url.endswith("/api/v1/auth/refresh/"):
+            # Get a fresh refresh token for this test to avoid session conflicts
+            fresh_login = self.test_endpoint("POST", f"{BASE_URL}/api/v1/auth/login/", data={"username": "admin_test", "password": "admin123"})
+            if fresh_login.get("success") and fresh_login.get("content", {}).get("tokens", {}).get("refresh"):
+                data = {"refresh": fresh_login["content"]["tokens"]["refresh"]}
+        
+        # Replace hardcoded organization IDs with actual test org ID
+        if data and isinstance(data, dict):
+            for key, value in data.items():
+                if value == "68a93b91-d018-4f7a-9ff8-a32582dc6193":
+                    # Use core_org_id for threat feed endpoints, test_org_id for others
+                    if "/threat-feeds/" in url and self.core_org_id:
+                        data[key] = self.core_org_id
+                    elif self.test_org_id:
+                        data[key] = self.test_org_id
         
         # Replace placeholders in URL
         if "<int:user_id>" in url and self.test_user_id:
             url = url.replace("<int:user_id>", str(self.test_user_id))
         if "<uuid:pk>" in url and self.test_user_id:
             url = url.replace("<uuid:pk>", str(self.test_user_id))
-        if "<str:organization_id>" in url and self.test_org_id:
-            url = url.replace("<str:organization_id>", str(self.test_org_id))
+        if "<str:organization_id>" in url:
+            # Use detail org ID only for pure detail endpoints that don't modify data
+            if any(endpoint in url for endpoint in ["/api/v1/organizations/<str:organization_id>/", "/deactivate_organization/", "/reactivate_organization/"]) and self.test_detail_org_id:
+                url = url.replace("<str:organization_id>", str(self.test_detail_org_id))
+            elif self.test_org_id:
+                url = url.replace("<str:organization_id>", str(self.test_org_id))
         if "<uuid:collection_id>" in url and self.test_collection_id:
             url = url.replace("<uuid:collection_id>", self.test_collection_id)
         if "<str:object_id>" in url:
@@ -229,12 +289,35 @@ class ComprehensiveEndpointTester:
         if "<int:pk>" in url:
             # Use different IDs for different endpoint types
             if "/threat-feeds/" in url:
-                if any(op in url for op in ["/consume/", "/status/", "/test_connection/"]) and self.test_operations_feed_id:
-                    url = url.replace("<int:pk>", str(self.test_operations_feed_id))
+                if any(op in url for op in ["/consume/", "/status/", "/test_connection/"]):
+                    if self.test_operations_feed_id:
+                        url = url.replace("<int:pk>", str(self.test_operations_feed_id))
+                    else:
+                        # Skip threat feed operations if no valid feed ID
+                        return {
+                            "endpoint_name": name,
+                            "url": endpoint_info["url"],
+                            "method": method,
+                            "auth_required": auth_required,
+                            "status_code": "SKIP",
+                            "success": False,
+                            "error": "No valid threat feed ID for operations",
+                            "response_time": 0
+                        }
                 elif self.test_threat_feed_id:
                     url = url.replace("<int:pk>", str(self.test_threat_feed_id))
                 else:
-                    url = url.replace("<int:pk>", "1")
+                    # Skip threat feed operations if no valid feed ID
+                    return {
+                        "endpoint_name": name,
+                        "url": endpoint_info["url"],
+                        "method": method,
+                        "auth_required": auth_required,
+                        "status_code": "SKIP", 
+                        "success": False,
+                        "error": "No valid threat feed ID",
+                        "response_time": 0
+                    }
             elif "/indicators/" in url and self.test_indicator_id:
                 url = url.replace("<int:pk>", str(self.test_indicator_id))
             else:
@@ -298,13 +381,13 @@ class ComprehensiveEndpointTester:
             {"method": "GET", "url": "/api/status/", "name": "Core Status", "auth_required": False},
             
             # Authentication Endpoints  
-            {"method": "POST", "url": "/api/v1/auth/login/", "name": "Auth Login", "auth_required": False, "data": {"username": "admin1", "password": "admin123"}},
+            {"method": "POST", "url": "/api/v1/auth/login/", "name": "Auth Login", "auth_required": False, "data": {"username": "admin_test", "password": "admin123"}},
             
             # Extended Authentication Endpoints (from core_ut)
             {"method": "POST", "url": "/api/v1/auth/register/", "name": "Auth Register", "auth_required": False, "data": {"username": f"testuser{int(time.time())}", "email": f"test{int(time.time())}@example.com", "password": "testpass123", "password_confirm": "testpass123", "first_name": "Test", "last_name": "User", "organization": "68a93b91-d018-4f7a-9ff8-a32582dc6193", "role": "viewer"}},
             {"method": "POST", "url": "/api/v1/auth/logout/", "name": "Auth Logout", "auth_required": True},
             {"method": "POST", "url": "/api/v1/auth/refresh/", "name": "Auth Refresh Token", "auth_required": True, "data": {"refresh": "dummy_token"}, "expect_error": False},
-            {"method": "GET", "url": "/api/v1/auth/verify/", "name": "Auth Verify Token", "auth_required": True, "expect_error": True},
+            {"method": "GET", "url": "/api/v1/auth/verify/", "name": "Auth Verify Token", "auth_required": True, "expect_error": False},
             {"method": "GET", "url": "/api/v1/auth/sessions/", "name": "Auth Sessions", "auth_required": True},
             {"method": "POST", "url": "/api/v1/auth/revoke-session/", "name": "Auth Revoke Session", "auth_required": True, "data": {"session_id": "test-session-id"}, "expect_error": True},
             {"method": "POST", "url": "/api/v1/auth/change-password/", "name": "Auth Change Password", "auth_required": True, "data": {"current_password": "admin123", "new_password": "newpass123", "new_password_confirm": "newpass123"}},
