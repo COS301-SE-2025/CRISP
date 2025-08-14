@@ -56,7 +56,7 @@ urlpatterns = [
     path('api/v1/trust/levels/', trust_levels, name='trust-levels'),
     path('api/v1/trust/metrics/', trust_metrics, name='trust-metrics'),
     path('api/v1/trust/relationships/', trust_relationships, name='trust-relationships'),
-    path('api/v1/trust/relationships/<int:relationship_id>/', trust_relationships_detail, name='trust-relationship-detail'),
+    path('api/v1/trust/relationships/<uuid:relationship_id>/', trust_relationships_detail, name='trust-relationship-detail'),
     
     # Admin endpoints
     path('api/v1/admin/trust_overview/', trust_overview, name='trust-overview'),
@@ -64,10 +64,10 @@ urlpatterns = [
     
     # User management endpoints
     path('api/v1/users/create_user/', create_user, name='create-user'),
-    path('api/v1/users/<int:user_id>/get_user/', user_detail, name='get-user'),
-    path('api/v1/users/<int:user_id>/update_user/', user_detail, name='update-user'),
-    path('api/v1/users/<int:user_id>/delete_user/', user_detail, name='delete-user'),
-    path('api/v1/users/<int:user_id>/change_username/', change_username, name='change-username'),
+    path('api/v1/users/<uuid:user_id>/get_user/', user_detail, name='get-user'),
+    path('api/v1/users/<uuid:user_id>/update_user/', user_detail, name='update-user'),
+    path('api/v1/users/<uuid:user_id>/delete_user/', user_detail, name='delete-user'),
+    path('api/v1/users/<uuid:user_id>/change_username/', change_username, name='change-username'),
     
     
     # Trust and User Management URLs
