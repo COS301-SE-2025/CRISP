@@ -14,12 +14,10 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.core.paginator import Paginator
 
-from rest_framework import viewsets, status
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import action
-from rest_framework.exceptions import NotFound, ValidationError
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.contrib.auth.decorators import login_required
 
 from core.models.models import Collection, STIXObject, CollectionObject, Organization, TrustRelationship
 
@@ -60,12 +58,47 @@ except ImportError:
         pass
 
 
-class TAXIIBaseView(APIView):
+@method_decorator(csrf_exempt, name='dispatch')
+class TAXIIBaseView(View):
     """
     Base view for all TAXII 2.1 endpoints with common functionality.
     """
-    permission_classes = [IsAuthenticated]
     content_type = settings.TAXII_SETTINGS.get('MEDIA_TYPE_TAXII', 'application/taxii+json;version=2.1')
+    
+    def dispatch(self, request, *args, **kwargs):
+        """Override dispatch to handle authentication"""
+        # Check authentication for all TAXII endpoints except discovery
+        if not self.__class__.__name__ == 'DiscoveryView':
+            if not request.user.is_authenticated:
+                # Check for Authorization header
+                auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+                if not auth_header.startswith('Bearer '):
+                    return JsonResponse({'error': 'Authentication required'}, status=401)
+                
+                # Extract token and validate
+                token = auth_header.split(' ')[1]
+                try:
+                    from rest_framework_simplejwt.tokens import UntypedToken
+                    from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+                    from django.contrib.auth import get_user_model
+                    import jwt
+                    from django.conf import settings as django_settings
+                    
+                    # Decode token
+                    decoded_token = jwt.decode(token, django_settings.SECRET_KEY, algorithms=['HS256'])
+                    user_id = decoded_token.get('user_id')
+                    
+                    if user_id:
+                        User = get_user_model()
+                        user = User.objects.get(id=user_id)
+                        request.user = user
+                    else:
+                        return JsonResponse({'error': 'Invalid token'}, status=401)
+                        
+                except (jwt.InvalidTokenError, User.DoesNotExist, Exception) as e:
+                    return JsonResponse({'error': 'Invalid authentication token'}, status=401)
+        
+        return super().dispatch(request, *args, **kwargs)
     
     def get_organization(self, request):
         """
@@ -89,9 +122,9 @@ class TAXIIBaseView(APIView):
                 )
                 return org
             
-            raise NotFound("No organization found for authenticated user")
+            return JsonResponse({"error": "No organization found for authenticated user"}, status=404)
         except Exception as e:
-            raise NotFound(f"Error finding organization: {str(e)}")
+            return JsonResponse({"error": f"Error finding organization: {str(e)}"}, status=500)
     
     def get_trust_level(self, source_org, target_org):
         """
@@ -208,6 +241,22 @@ class TAXIIBaseView(APIView):
             return trust_rel.trust_level.get_anonymization_level()
         except TrustRelationship.DoesNotExist:
             return AnonymizationLevel.HIGH
+    
+    def get_collection(self, collection_id):
+        """
+        Get collection by either UUID or title.
+        """
+        try:
+            # First try UUID lookup
+            import uuid
+            uuid.UUID(collection_id)
+            return Collection.objects.get(id=collection_id)
+        except (ValueError, Collection.DoesNotExist):
+            # If not a valid UUID or not found, try title lookup
+            try:
+                return Collection.objects.get(title=collection_id)
+            except Collection.DoesNotExist:
+                raise Collection.DoesNotExist(f"Collection '{collection_id}' not found")
         
         
 
@@ -261,31 +310,39 @@ class CollectionsView(TAXIIBaseView):
         """
         Get all collections accessible to the authenticated user.
         """
-        org = self.get_organization(request)
-        
-        # Get collections owned by the organization
-        owned_collections = Collection.objects.filter(owner=org)
-        
-        # For now, only show owned collections
-        all_collections = owned_collections
-        
-        # Build response
-        collections_data = {
-            'collections': []
-        }
-        
-        for collection in all_collections:
-            collection_data = {
-                'id': str(collection.id),
-                'title': collection.title,
-                'description': collection.description,
-                'can_read': collection.can_read,
-                'can_write': collection.can_write and (collection.owner == org),
-                'media_types': collection.media_types or [settings.TAXII_SETTINGS.get('MEDIA_TYPE_STIX', 'application/stix+json;version=2.1')],
+        try:
+            org = self.get_organization(request)
+            
+            # Get collections owned by the organization
+            owned_collections = Collection.objects.filter(owner=org)
+            
+            # For now, only show owned collections
+            all_collections = owned_collections
+            
+            # Build response
+            collections_data = {
+                'collections': []
             }
-            collections_data['collections'].append(collection_data)
-        
-        return JsonResponse(collections_data, content_type=self.content_type)
+            
+            for collection in all_collections:
+                collection_data = {
+                    'id': str(collection.id),
+                    'title': collection.title,
+                    'description': collection.description,
+                    'can_read': collection.can_read,
+                    'can_write': collection.can_write and (collection.owner == org),
+                    'media_types': collection.media_types or [settings.TAXII_SETTINGS.get('MEDIA_TYPE_STIX', 'application/stix+json;version=2.1')],
+                }
+                collections_data['collections'].append(collection_data)
+            
+            response = JsonResponse(collections_data)
+            response['Content-Type'] = self.content_type
+            return response
+            
+        except Exception as e:
+            error_response = JsonResponse({"error": str(e)}, status=500)
+            error_response['Content-Type'] = self.content_type
+            return error_response
 
 
 class CollectionView(TAXIIBaseView):
@@ -299,10 +356,10 @@ class CollectionView(TAXIIBaseView):
         org = self.get_organization(request)
         
         try:
-            collection = Collection.objects.get(id=collection_id)
+            collection = self.get_collection(collection_id)
             
             if collection.owner != org:
-                raise NotFound("Collection not found")
+                return JsonResponse({"error": "Collection not found"}, status=404)
             
             collection_data = {
                 'id': str(collection.id),
@@ -316,7 +373,7 @@ class CollectionView(TAXIIBaseView):
             return JsonResponse(collection_data, content_type=self.content_type)
             
         except Collection.DoesNotExist:
-            raise NotFound("Collection not found")
+            return JsonResponse({"error": "Collection not found"}, status=404)
 
 
 class CollectionObjectsView(TAXIIBaseView):
@@ -331,7 +388,7 @@ class CollectionObjectsView(TAXIIBaseView):
         org = self.get_organization(request)
         
         try:
-            collection = Collection.objects.get(id=collection_id)
+            collection = self.get_collection(collection_id)
             
             # Check if user has read access to this collection
             if not collection.can_read and collection.owner != org:
@@ -418,7 +475,7 @@ class CollectionObjectsView(TAXIIBaseView):
             return JsonResponse(objects_data, content_type=settings.TAXII_SETTINGS.get('MEDIA_TYPE_STIX', 'application/stix+json;version=2.1'))
             
         except Collection.DoesNotExist:
-            raise NotFound("Collection not found")
+            return JsonResponse({"error": "Collection not found"}, status=404)
     
     def post(self, request, collection_id):
         """
@@ -427,7 +484,7 @@ class CollectionObjectsView(TAXIIBaseView):
         org = self.get_organization(request)
         
         try:
-            collection = Collection.objects.get(id=collection_id)
+            collection = self.get_collection(collection_id)
             
             # Check if user has write access to this collection
             if not collection.can_write or collection.owner != org:
@@ -524,7 +581,7 @@ class CollectionObjectsView(TAXIIBaseView):
             return Response(response_data, status=status_code, content_type=self.content_type)
             
         except Collection.DoesNotExist:
-            raise NotFound("Collection not found")
+            return JsonResponse({"error": "Collection not found"}, status=404)
 
 
 class ObjectView(TAXIIBaseView):
@@ -538,7 +595,7 @@ class ObjectView(TAXIIBaseView):
         org = self.get_organization(request)
         
         try:
-            collection = Collection.objects.get(id=collection_id)
+            collection = self.get_collection(collection_id)
             
             # Check if user has read access to this collection
             if not collection.can_read and collection.owner != org:
@@ -560,7 +617,7 @@ class ObjectView(TAXIIBaseView):
             ).exists()
             
             if not in_collection:
-                raise NotFound("Object not found in collection")
+                return JsonResponse({"error": "Object not found in collection"}, status=404)
             
             # Apply anonymization based on trust relationship
             stix_data = stix_object.to_stix()
@@ -575,7 +632,7 @@ class ObjectView(TAXIIBaseView):
                 
                 # If anonymization failed, deny access to object
                 if stix_data is None:
-                    raise NotFound("Object not accessible due to anonymization restrictions")
+                    return JsonResponse({"error": "Object not accessible due to anonymization restrictions"}, status=403)
             
             # Build response
             objects_data = {
@@ -585,9 +642,9 @@ class ObjectView(TAXIIBaseView):
             return JsonResponse(objects_data, content_type=settings.TAXII_SETTINGS.get('MEDIA_TYPE_STIX', 'application/stix+json;version=2.1'))
             
         except Collection.DoesNotExist:
-            raise NotFound("Collection not found")
+            return JsonResponse({"error": "Collection not found"}, status=404)
         except STIXObject.DoesNotExist:
-            raise NotFound("Object not found")
+            return JsonResponse({"error": "Object not found"}, status=404)
 
 
 class ManifestView(TAXIIBaseView):
@@ -601,7 +658,7 @@ class ManifestView(TAXIIBaseView):
         org = self.get_organization(request)
         
         try:
-            collection = Collection.objects.get(id=collection_id)
+            collection = self.get_collection(collection_id)
             
             # Check if user has read access to this collection
             # Allow access if collection is readable OR if same organization
@@ -681,4 +738,4 @@ class ManifestView(TAXIIBaseView):
             return JsonResponse(manifest_data, content_type=self.content_type)
             
         except Collection.DoesNotExist:
-            raise NotFound("Collection not found")
+            return JsonResponse({"error": "Collection not found"}, status=404)

@@ -146,6 +146,19 @@ urlpatterns = [
     
     # Add missing unified API endpoints
     path('api/v1/', include('core.api.unified_urls')),
+    
+    # Missing threat feed endpoints that are causing 404s
+    path('api/threat-feeds/<int:pk>/consume/', ThreatFeedViewSet.as_view({'post': 'consume'}), name='threat-feeds-consume'),
+    path('api/threat-feeds/<int:pk>/status/', ThreatFeedViewSet.as_view({'get': 'status'}), name='threat-feeds-status'),
+    path('api/threat-feeds/<int:pk>/test_connection/', ThreatFeedViewSet.as_view({'get': 'test_connection'}), name='threat-feeds-test'),
+    
+    # Missing indicator endpoints that are causing 404s
+    path('api/indicators/<int:pk>/', IndicatorViewSet.as_view({'get': 'retrieve'}), name='indicators-detail'),
+    path('api/indicators/recent/', IndicatorViewSet.as_view({'get': 'recent'}), name='indicators-recent'),
+    path('api/indicators/stats/', IndicatorViewSet.as_view({'get': 'stats'}), name='indicators-stats'),
+    path('api/indicators/types/', IndicatorViewSet.as_view({'get': 'types'}), name='indicators-types'),
+    
+    # Additional API v1 endpoints not covered by unified_urls
     path('api/v1/dashboard/overview/', dashboard_overview, name='dashboard-overview'),
     path('api/v1/threat-feeds/external/', unified_threat_feeds_external, name='unified-threat-feeds-external'),
     path('api/v1/threat-feeds/collections/', unified_threat_feeds_collections, name='unified-threat-feeds-collections'),

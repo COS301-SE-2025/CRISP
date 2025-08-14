@@ -13,12 +13,12 @@ urlpatterns = [
     
     # Collections
     path('collections/', views.CollectionsView.as_view(), name='taxii-collections'),
-    path('collections/<uuid:collection_id>/', views.CollectionView.as_view(), name='taxii-collection'),
+    path('collections/<str:collection_id>/', views.CollectionView.as_view(), name='taxii-collection'),
     
-    # Collection Objects
-    path('collections/<uuid:collection_id>/objects/', views.CollectionObjectsView.as_view(), name='taxii-collection-objects'),
-    path('collections/<uuid:collection_id>/objects/<str:object_id>/', views.ObjectView.as_view(), name='taxii-object'),
+    # Collection Objects  
+    path('collections/<str:collection_id>/objects/', views.CollectionObjectsView.as_view(), name='taxii-collection-objects'),
+    path('collections/<str:collection_id>/objects/<str:object_id>/', views.ObjectView.as_view(), name='taxii-object'),
     
     # Manifest
-    path('collections/<uuid:collection_id>/manifest/', views.ManifestView.as_view(), name='taxii-manifest'),
+    path('collections/<str:collection_id>/manifest/', views.ManifestView.as_view(), name='taxii-manifest'),
 ]
