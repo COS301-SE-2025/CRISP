@@ -16,10 +16,10 @@ router.register(r'users', UserViewSet, basename='user')
 urlpatterns = [
     # All viewsets are registered in this single router
     path('', include(router.urls)),
-    # Trust management system URLs (temporarily disabled)
-    # path('trust/', include('core_ut.trust.urls_ut')),
+    # Trust management system URLs
+    path('trust/', include('core_ut.trust.urls_ut')),
     # Alerts system URLs (temporarily disabled)  
     # path('alerts/', include('core_ut.alerts.alerts_urls')),
-    # User management URLs (temporarily disabled)
-    # path('user-management/', include('core_ut.user_management.urls_ut')),
+    # User management URLs
+    path('user-management/', include('core_ut.user_management.urls_ut')),
 ]
