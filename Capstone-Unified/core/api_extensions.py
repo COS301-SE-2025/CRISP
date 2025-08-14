@@ -12,52 +12,38 @@ import json
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def list_organizations(request):
-    """Organizations endpoint returning real organizations from database"""
+    """Organizations endpoint returning real organizations from User Management database"""
+    
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.debug(f"Organizations request from user: {request.user.username if request.user.is_authenticated else 'Anonymous'} ({request.user.get_full_name() if request.user.is_authenticated else 'Anonymous'})")
+    logger.debug(f"Authorization header: {request.META.get('HTTP_AUTHORIZATION', 'None')}")
+    
+    # Get all organizations from User Management database
+    org_queryset = Organization.objects.all().order_by('name')
+    logger.debug(f"Found {org_queryset.count()} organizations in database")
     
     organizations = []
-    for org in Organization.objects.all():
-        # Count users belonging to this organization (if we have that relationship)
-        user_count = User.objects.filter(email__icontains=org.name.lower().replace(' ', '')).count()
+    for org in org_queryset:
+        # Count users belonging to this organization using the proper relationship
+        user_count = User.objects.filter(organization=org).count()
         
         organizations.append({
             "id": str(org.id),  # Convert UUID to string for frontend
             "name": org.name,
             "organization_type": org.organization_type or 'other',
             "description": org.description or '',
-            "country": "US",  # Default for now
-            "is_active": True,  # Organizations don't have is_active field currently
-            "created_date": "2025-01-01T00:00:00Z",  # Default for now
-            "user_count": user_count
+            "country": getattr(org, 'country', 'US'),  # Use org country if available
+            "is_active": getattr(org, 'is_active', True),  # Use org is_active if available
+            "created_date": org.created_at.isoformat() if hasattr(org, 'created_at') else "2025-01-01T00:00:00Z",
+            "user_count": user_count,
+            "domain": getattr(org, 'domain', ''),
+            "website": getattr(org, 'website', ''),
+            "contact_email": getattr(org, 'contact_email', '')
         })
     
-    # If no organizations exist, create some defaults
-    if not organizations:
-        default_orgs = [
-            {"name": "Bluevision", "type": "security_vendor"},
-            {"name": "Test", "type": "other"}, 
-            {"name": "Financial Corp", "type": "financial"},
-            {"name": "TechCorp Industries", "type": "technology"},
-            {"name": "Healthcare Alliance", "type": "healthcare"}
-        ]
-        
-        for org_data in default_orgs:
-            org, created = Organization.objects.get_or_create(
-                name=org_data["name"],
-                defaults={
-                    'organization_type': org_data["type"],
-                    'description': f'Default organization: {org_data["name"]}'
-                }
-            )
-            organizations.append({
-                "id": str(org.id),
-                "name": org.name,
-                "organization_type": org.organization_type,
-                "description": org.description or '',
-                "country": "US",
-                "is_active": True,
-                "created_date": "2025-01-01T00:00:00Z",
-                "user_count": 0
-            })
+    logger.debug(f"Returning {len(organizations)} organizations to frontend")
     
     return Response({
         "success": True,
