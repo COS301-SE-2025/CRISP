@@ -5,7 +5,7 @@ from rest_framework import status
 from django.contrib.auth import get_user_model
 User = get_user_model()
 from core_ut.user_management.models import Organization
-from core_ut.trust.models import TrustRelationship, TrustLevel
+from core_ut.trust.models import TrustRelationship, TrustLevel, TrustGroup, TrustGroupMembership
 from django.shortcuts import get_object_or_404
 import json
 
@@ -281,52 +281,84 @@ def reactivate_organization(request, organization_id):
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def trust_groups(request):
-    """Trust groups endpoint"""
+    """Trust groups endpoint with real database operations"""
     if request.method == 'GET':
-        groups = [
-            {
-                "id": 1,
-                "name": "High Security Partners",
-                "description": "Trusted security vendors and government agencies",
-                "trust_level": "high",
-                "member_count": 5
-            },
-            {
-                "id": 2,
-                "name": "Industry Collaborators", 
-                "description": "Financial and healthcare sector partners",
-                "trust_level": "medium",
-                "member_count": 12
-            },
-            {
-                "id": 3,
-                "name": "Research Network",
-                "description": "Educational and research institutions", 
-                "trust_level": "medium",
-                "member_count": 8
-            }
-        ]
+        # Get actual trust groups from database
+        groups = []
+        for group in TrustGroup.objects.filter(is_active=True):
+            # Count the number of members in this group
+            member_count = TrustGroupMembership.objects.filter(
+                trust_group=group,
+                is_active=True
+            ).count()
+            
+            groups.append({
+                "id": str(group.id),  # Convert UUID to string
+                "name": group.name,
+                "description": group.description,
+                "group_type": group.group_type,
+                "is_public": group.is_public,
+                "requires_approval": group.requires_approval,
+                "trust_level": group.default_trust_level.name.lower() if group.default_trust_level else "medium",
+                "member_count": member_count,
+                "created_at": group.created_at.isoformat(),
+                "created_by": group.created_by
+            })
+        
         return Response({
             "success": True,
             "data": groups
         })
     
     elif request.method == 'POST':
-        # Handle trust group creation
+        # Handle trust group creation with real database operations
         try:
             data = json.loads(request.body) if request.body else {}
-            new_group = {
-                "id": 4,
-                "name": data.get('name', 'New Group'),
-                "description": data.get('description', ''),
-                "trust_level": data.get('trust_level', 'medium'),
-                "member_count": 1
-            }
+            
+            name = data.get('name')
+            description = data.get('description', '')
+            group_type = data.get('group_type', 'community')
+            is_public = data.get('is_public', False)
+            trust_level_name = data.get('trust_level', 'trusted')
+            
+            if not name:
+                return Response({
+                    "success": False,
+                    "error": "Group name is required"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Get or create trust level
+            try:
+                trust_level = TrustLevel.objects.get(name=trust_level_name)
+            except TrustLevel.DoesNotExist:
+                trust_level = None
+            
+            # Create new trust group
+            new_group = TrustGroup.objects.create(
+                name=name,
+                description=description,
+                group_type=group_type,
+                is_public=is_public,
+                default_trust_level=trust_level,
+                created_by=request.user.username if request.user.is_authenticated else "system"
+            )
+            
             return Response({
                 "success": True,
-                "data": new_group,
+                "data": {
+                    "id": str(new_group.id),
+                    "name": new_group.name,
+                    "description": new_group.description,
+                    "group_type": new_group.group_type,
+                    "is_public": new_group.is_public,
+                    "trust_level": new_group.default_trust_level.name.lower() if new_group.default_trust_level else "medium",
+                    "member_count": 0,
+                    "created_at": new_group.created_at.isoformat(),
+                    "created_by": new_group.created_by
+                },
                 "message": "Trust group created successfully"
             }, status=status.HTTP_201_CREATED)
+            
         except Exception as e:
             return Response({
                 "success": False,
@@ -432,7 +464,7 @@ def trust_relationships(request):
                 "established_date": rel.created_at.isoformat(),
                 "last_updated": rel.updated_at.isoformat(),
                 "notes": rel.notes or "",
-                "created_by": rel.created_by
+                "created_by": rel.created_by.username if rel.created_by else None
             })
         
         return Response({
