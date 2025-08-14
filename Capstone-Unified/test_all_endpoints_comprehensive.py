@@ -72,7 +72,7 @@ class ComprehensiveEndpointTester:
 
     def get_auth_token(self):
         """Get authentication token"""
-        login_data = {"username": "admin_test", "password": "admin123"}
+        login_data = {"username": "admin_test", "password": "password123"}
         result = self.test_endpoint("POST", f"{BASE_URL}/api/v1/auth/login/", data=login_data)
         
         if result.get("success") and isinstance(result.get("content"), dict):
@@ -88,18 +88,45 @@ class ComprehensiveEndpointTester:
         """Create test data needed for endpoint testing"""
         print("Creating test data...")
         
-        # Try to get a test user ID
-        result = self.test_endpoint("GET", f"{BASE_URL}/api/v1/users/list/", auth_token=self.auth_token)
-        if result.get("success") and result.get("content"):
+        # Create a separate test user for user operations (to avoid modifying the auth user)
+        test_user_data = {
+            "username": f"test_user_{int(time.time())}",
+            "email": f"testuser{int(time.time())}@example.com",
+            "password": "testpass123",
+            "role": "BlueVisionAdmin"
+        }
+        create_result = self.test_endpoint("POST", f"{BASE_URL}/api/v1/users/create_user/", auth_token=self.auth_token, data=test_user_data)
+        if create_result.get("success") and create_result.get("content"):
             try:
+                self.test_user_id = create_result["content"]["id"]
+                print(f"Created separate test user ID: {self.test_user_id}")
+            except:
+                # Fallback to existing user list
+                result = self.test_endpoint("GET", f"{BASE_URL}/api/v1/users/list/", auth_token=self.auth_token)
+                if result.get("success") and result.get("content"):
+                    content = result["content"]
+                    if "data" in content and "users" in content["data"]:
+                        users = content["data"]["users"]
+                        if users:
+                            # Use a user that's not the current auth user
+                            for user in users:
+                                if user.get("username") != "admin_test":
+                                    self.test_user_id = user["id"]
+                                    print(f"Using fallback test user ID: {self.test_user_id}")
+                                    break
+        else:
+            # Final fallback
+            result = self.test_endpoint("GET", f"{BASE_URL}/api/v1/users/list/", auth_token=self.auth_token)
+            if result.get("success") and result.get("content"):
                 content = result["content"]
                 if "data" in content and "users" in content["data"]:
                     users = content["data"]["users"]
                     if users:
-                        self.test_user_id = users[0]["id"]
-                        print(f"Using test user ID: {self.test_user_id}")
-            except:
-                pass
+                        for user in users:
+                            if user.get("username") != "admin_test":
+                                self.test_user_id = user["id"]
+                                print(f"Using existing test user ID: {self.test_user_id}")
+                                break
         
         # Try to get a test organization ID
         result = self.test_endpoint("GET", f"{BASE_URL}/api/v1/organizations/list_organizations/", auth_token=self.auth_token)
@@ -257,9 +284,35 @@ class ComprehensiveEndpointTester:
         # Special handling for refresh token endpoint
         if url.endswith("/api/v1/auth/refresh/"):
             # Get a fresh refresh token for this test to avoid session conflicts
-            fresh_login = self.test_endpoint("POST", f"{BASE_URL}/api/v1/auth/login/", data={"username": "admin_test", "password": "admin123"})
+            fresh_login = self.test_endpoint("POST", f"{BASE_URL}/api/v1/auth/login/", data={"username": "admin_test", "password": "password123"})
             if fresh_login.get("success") and fresh_login.get("content", {}).get("tokens", {}).get("refresh"):
                 data = {"refresh": fresh_login["content"]["tokens"]["refresh"]}
+        
+        # Special handling for change password endpoint - use password that might have changed
+        if url.endswith("/api/v1/auth/change-password/"):
+            # Try with the new password first (in case password was already changed)
+            test_passwords = ["newpass123", "password123"]
+            for test_password in test_passwords:
+                test_data = {"current_password": test_password, "new_password": "temppass456", "new_password_confirm": "temppass456"}
+                test_result = self.test_endpoint(method, url, auth_token=self.auth_token, data=test_data)
+                if test_result.get("success"):
+                    # Reset password back to original
+                    self.test_endpoint("POST", url, auth_token=self.auth_token, 
+                                     data={"current_password": "temppass456", "new_password": "password123", "new_password_confirm": "password123"})
+                    return test_result
+            # If neither worked, continue with original test data
+            
+        # Special handling for login endpoint - try different passwords in case password was changed
+        if url.endswith("/api/v1/auth/login/") and name == "Auth Login":
+            test_passwords = ["password123", "newpass123", "temppass456"]
+            base_data = data.copy() if data else {"username": "admin_test"}
+            for test_password in test_passwords:
+                test_data = base_data.copy()
+                test_data["password"] = test_password
+                test_result = self.test_endpoint(method, url, data=test_data)
+                if test_result.get("success"):
+                    return test_result
+            # If none worked, continue with original test data
         
         # Replace hardcoded organization IDs with actual test org ID
         if data and isinstance(data, dict):
@@ -277,9 +330,45 @@ class ComprehensiveEndpointTester:
         if "<uuid:pk>" in url and self.test_user_id:
             url = url.replace("<uuid:pk>", str(self.test_user_id))
         if "<str:organization_id>" in url:
-            # Use detail org ID only for pure detail endpoints that don't modify data
-            if any(endpoint in url for endpoint in ["/api/v1/organizations/<str:organization_id>/", "/deactivate_organization/", "/reactivate_organization/"]) and self.test_detail_org_id:
-                url = url.replace("<str:organization_id>", str(self.test_detail_org_id))
+            # For detail endpoints, create organization on-demand to avoid conflicts
+            if any(endpoint in url for endpoint in ["/api/v1/organizations/<str:organization_id>/", "/deactivate_organization/", "/reactivate_organization/"]):
+                # Create a fresh organization for detail testing
+                detail_org_data = {
+                    "name": f"DetailOrg{int(time.time())}{name.replace(' ', '')}",
+                    "organization_type": "private"
+                }
+                create_result = self.test_endpoint("POST", f"{BASE_URL}/api/v1/organizations/create_organization/", auth_token=self.auth_token, data=detail_org_data)
+                if create_result.get("success") and create_result.get("content"):
+                    try:
+                        # Handle different response formats
+                        content = create_result["content"]
+                        if "data" in content and "id" in content["data"]:
+                            detail_org_id = content["data"]["id"]
+                        elif "id" in content:
+                            detail_org_id = content["id"]
+                        else:
+                            detail_org_id = None
+                        
+                        if detail_org_id:
+                            url = url.replace("<str:organization_id>", str(detail_org_id))
+                            print(f"    → Created fresh detail org {detail_org_id} for {name}")
+                        else:
+                            print(f"    → Could not find org ID in response: {content}")
+                            raise Exception("No ID found")
+                    except Exception as e:
+                        print(f"    → Failed to extract org ID: {e}, content: {create_result.get('content')}")
+                        # Fallback to main org ID
+                        if self.test_org_id:
+                            url = url.replace("<str:organization_id>", str(self.test_org_id))
+                        else:
+                            url = url.replace("<str:organization_id>", "test-org-id")
+                else:
+                    print(f"    → Failed to create fresh org: {create_result}")
+                    # Fallback to main org ID
+                    if self.test_org_id:
+                        url = url.replace("<str:organization_id>", str(self.test_org_id))
+                    else:
+                        url = url.replace("<str:organization_id>", "test-org-id")
             elif self.test_org_id:
                 url = url.replace("<str:organization_id>", str(self.test_org_id))
         if "<uuid:collection_id>" in url and self.test_collection_id:
@@ -381,7 +470,7 @@ class ComprehensiveEndpointTester:
             {"method": "GET", "url": "/api/status/", "name": "Core Status", "auth_required": False},
             
             # Authentication Endpoints  
-            {"method": "POST", "url": "/api/v1/auth/login/", "name": "Auth Login", "auth_required": False, "data": {"username": "admin_test", "password": "admin123"}},
+            {"method": "POST", "url": "/api/v1/auth/login/", "name": "Auth Login", "auth_required": False, "data": {"username": "admin_test", "password": "password123"}},
             
             # Extended Authentication Endpoints (from core_ut)
             {"method": "POST", "url": "/api/v1/auth/register/", "name": "Auth Register", "auth_required": False, "data": {"username": f"testuser{int(time.time())}", "email": f"test{int(time.time())}@example.com", "password": "testpass123", "password_confirm": "testpass123", "first_name": "Test", "last_name": "User", "organization": "68a93b91-d018-4f7a-9ff8-a32582dc6193", "role": "viewer"}},
@@ -390,7 +479,7 @@ class ComprehensiveEndpointTester:
             {"method": "GET", "url": "/api/v1/auth/verify/", "name": "Auth Verify Token", "auth_required": True, "expect_error": False},
             {"method": "GET", "url": "/api/v1/auth/sessions/", "name": "Auth Sessions", "auth_required": True},
             {"method": "POST", "url": "/api/v1/auth/revoke-session/", "name": "Auth Revoke Session", "auth_required": True, "data": {"session_id": "test-session-id"}, "expect_error": True},
-            {"method": "POST", "url": "/api/v1/auth/change-password/", "name": "Auth Change Password", "auth_required": True, "data": {"current_password": "admin123", "new_password": "newpass123", "new_password_confirm": "newpass123"}},
+            {"method": "POST", "url": "/api/v1/auth/change-password/", "name": "Auth Change Password", "auth_required": True, "data": {"current_password": "password123", "new_password": "newpass123", "new_password_confirm": "newpass123"}},
             {"method": "POST", "url": "/api/v1/auth/forgot-password/", "name": "Auth Forgot Password", "auth_required": False, "data": {"email": "admin@crisp.com"}, "expect_error": True},
             {"method": "POST", "url": "/api/v1/auth/validate-reset-token/", "name": "Auth Validate Reset Token", "auth_required": False, "data": {"token": "valid-test-token-123"}, "expect_error": True},
             {"method": "POST", "url": "/api/v1/auth/reset-password/", "name": "Auth Reset Password", "auth_required": False, "data": {"token": "valid-test-token-123", "new_password": "newpass123"}, "expect_error": True},
