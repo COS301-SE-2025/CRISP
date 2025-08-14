@@ -52,7 +52,7 @@ class ChartErrorBoundary extends React.Component {
 }
 
 // API Configuration
-const API_BASE_URL = 'http://localhost:8001';
+const API_BASE_URL = 'http://localhost:8000';
 
 // API Helper Functions with Authentication
 const getAuthHeaders = () => {
