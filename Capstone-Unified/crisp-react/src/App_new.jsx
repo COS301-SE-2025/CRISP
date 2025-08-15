@@ -1,42 +1,18 @@
 import React, { useState } from 'react';
 
-// Import all the new components
+// Import all components
 import UserManagement from './components/user/UserManagement';
 import TrustManagement from './components/trust/TrustManagement';
 import UserProfile from './components/user/UserProfile';
 import Notifications from './components/notifications/Notifications';
 import Institutions from './components/institutions/Institutions';
 import Reports from './components/reports/Reports';
+import ThreatFeedList from './components/threat/ThreatFeedList';
+import IndicatorTable from './components/threat/IndicatorTable';
+import UnifiedDashboard from './components/dashboard/UnifiedDashboard';
 
-// Simple Dashboard placeholder
-const Dashboard = () => (
-  <div style={{ padding: '20px', textAlign: 'center' }}>
-    <h2>CRISP Dashboard</h2>
-    <p>Welcome to the Consolidated Risk Information Sharing Platform</p>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginTop: '30px' }}>
-      <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-        <i className="fas fa-shield-alt" style={{ fontSize: '32px', color: '#0056b3', marginBottom: '10px' }}></i>
-        <h3>Threat Intelligence</h3>
-        <p>Monitor and analyze threat indicators</p>
-      </div>
-      <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-        <i className="fas fa-handshake" style={{ fontSize: '32px', color: '#0056b3', marginBottom: '10px' }}></i>
-        <h3>Trust Network</h3>
-        <p>Manage organizational relationships</p>
-      </div>
-      <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-        <i className="fas fa-rss" style={{ fontSize: '32px', color: '#0056b3', marginBottom: '10px' }}></i>
-        <h3>Data Feeds</h3>
-        <p>STIX/TAXII feed management</p>
-      </div>
-      <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-        <i className="fas fa-chart-bar" style={{ fontSize: '32px', color: '#0056b3', marginBottom: '10px' }}></i>
-        <h3>Analytics</h3>
-        <p>Generate reports and insights</p>
-      </div>
-    </div>
-  </div>
-);
+// Dashboard component - now uses UnifiedDashboard
+const Dashboard = () => <UnifiedDashboard />;
 
 function App() {
   const [activePage, setActivePage] = useState('dashboard');
@@ -57,6 +33,10 @@ function App() {
         return <Institutions />;
       case 'reports':
         return <Reports />;
+      case 'threat-feeds':
+        return <ThreatFeedList />;
+      case 'indicators':
+        return <IndicatorTable />;
       default:
         return <Dashboard />;
     }
@@ -96,6 +76,22 @@ function App() {
           >
             <i className="fas fa-handshake"></i>
             <span>Trust Management</span>
+          </button>
+          
+          <button 
+            className={`nav-item ${activePage === 'threat-feeds' ? 'active' : ''}`}
+            onClick={() => setActivePage('threat-feeds')}
+          >
+            <i className="fas fa-rss"></i>
+            <span>Threat Feeds</span>
+          </button>
+          
+          <button 
+            className={`nav-item ${activePage === 'indicators' ? 'active' : ''}`}
+            onClick={() => setActivePage('indicators')}
+          >
+            <i className="fas fa-shield-alt"></i>
+            <span>Threat Indicators</span>
           </button>
           
           <button 

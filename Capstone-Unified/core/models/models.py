@@ -1119,13 +1119,13 @@ class TrustRelationship(models.Model):
     source_organization = models.ForeignKey(
         'Organization',
         on_delete=models.CASCADE,
-        related_name='trust_relationships_as_source',
+        related_name='core_trust_relationships_as_source',
         help_text="Source organization in the trust relationship"
     )
     target_organization = models.ForeignKey(
         'Organization',
         on_delete=models.CASCADE,
-        related_name='trust_relationships_as_target',
+        related_name='core_trust_relationships_as_target',
         help_text="Target organization in the trust relationship"
     )
     
@@ -1201,7 +1201,7 @@ class TrustRelationship(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='trust_approvals_as_source',
+        related_name='core_trust_approvals_as_source',
         help_text="User who approved on behalf of source organization"
     )
     approved_by_target_user = models.ForeignKey(
@@ -1209,7 +1209,7 @@ class TrustRelationship(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='trust_approvals_as_target',
+        related_name='core_trust_approvals_as_target',
         help_text="User who approved on behalf of target organization"
     )
     
@@ -1255,7 +1255,7 @@ class TrustRelationship(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='created_trust_relationships',
+        related_name='core_created_trust_relationships',
         help_text="User who created this relationship"
     )
     last_modified_by = models.ForeignKey(
@@ -1263,7 +1263,7 @@ class TrustRelationship(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='modified_trust_relationships',
+        related_name='core_modified_trust_relationships',
         help_text="User who last modified this relationship"
     )
     revoked_by = models.ForeignKey(
@@ -1271,7 +1271,7 @@ class TrustRelationship(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='revoked_trust_relationships',
+        related_name='core_revoked_trust_relationships',
         help_text="User who revoked this relationship"
     )
 
@@ -1511,8 +1511,8 @@ class TrustGroup(models.Model):
             def all(self):
                 """Get all member organizations"""
                 return Organization.objects.filter(
-                    trust_group_memberships__trust_group=self.trust_group,
-                    trust_group_memberships__is_active=True
+                    core_trust_group_memberships__trust_group=self.trust_group,
+                    core_trust_group_memberships__is_active=True
                 )
         
         return MemberOrganizationsManager(self)
@@ -1531,7 +1531,7 @@ class TrustGroupMembership(models.Model):
     organization = models.ForeignKey(
         'Organization',
         on_delete=models.CASCADE,
-        related_name='trust_group_memberships',
+        related_name='core_trust_group_memberships',
         help_text="Organization that is a member of this trust group"
     )
     membership_type = models.CharField(
@@ -1614,7 +1614,7 @@ class TrustLog(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='trust_logs_as_source',
+        related_name='core_trust_logs_as_source',
         help_text="Organization that initiated the action"
     )
     target_organization = models.ForeignKey(
@@ -1622,7 +1622,7 @@ class TrustLog(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='trust_logs_as_target',
+        related_name='core_trust_logs_as_target',
         help_text="Target organization (if applicable)"
     )
     trust_relationship = models.ForeignKey(
@@ -1644,7 +1644,7 @@ class TrustLog(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='performed_trust_logs',
+        related_name='core_performed_trust_logs',
         help_text="User who performed the action"
     )
     ip_address = models.GenericIPAddressField(
@@ -1917,7 +1917,7 @@ class AuthenticationLog(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='authentication_logs'
+        related_name='core_authentication_logs'
     )
     action = models.CharField(
         max_length=50,
@@ -2229,7 +2229,7 @@ class UserInvitation(models.Model):
     inviter = models.ForeignKey(
         'CustomUser', 
         on_delete=models.CASCADE,
-        related_name='sent_invitations',
+        related_name='core_sent_invitations',
         help_text="User who sent the invitation"
     )
     invited_role = models.CharField(
@@ -2263,7 +2263,7 @@ class UserInvitation(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='accepted_invitations',
+        related_name='core_accepted_invitations',
         help_text="User who accepted the invitation"
     )
     message = models.TextField(
@@ -2328,7 +2328,7 @@ class PasswordResetToken(models.Model):
     user = models.ForeignKey(
         'CustomUser',
         on_delete=models.CASCADE,
-        related_name='password_reset_tokens',
+        related_name='core_password_reset_tokens',
         help_text="User requesting password reset"
     )
     token = models.CharField(

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
+import UserProfile from './components/user/UserProfile.jsx';
 
 // Error Boundary for Chart Component
 class ChartErrorBoundary extends React.Component {
@@ -149,7 +150,7 @@ const api = {
   }
 };
 
-function App() {
+function App({ user, onLogout, isAdmin }) {
   // State to manage the active page and navigation parameters
   const [activePage, setActivePage] = useState('dashboard');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -342,7 +343,7 @@ function App() {
       <Header showPage={showPage} />
       
       {/* Main Navigation */}
-      <MainNav activePage={activePage} showPage={showPage} />
+      <MainNav activePage={activePage} showPage={showPage} user={user} onLogout={onLogout} isAdmin={isAdmin} />
 
       {/* Main Content */}
       <main className="main-content">
@@ -409,8 +410,10 @@ function Header({ showPage }) {
 }
 
 // Main Navigation Component
-function MainNav({ activePage, showPage }) {
+function MainNav({ activePage, showPage, user, onLogout, isAdmin }) {
   const [systemStatus, setSystemStatus] = useState('loading');
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showManagementSubmenu, setShowManagementSubmenu] = useState(false);
   
   // Check system status periodically
   useEffect(() => {
@@ -492,6 +495,110 @@ function MainNav({ activePage, showPage }) {
                systemStatus === 'loading' ? 'Checking...' : 'System Offline'}
             </span>
           </div>
+          
+          {/* User Profile Dropdown */}
+          {user && (
+            <div className="user-profile-container">
+              <button 
+                className="user-profile" 
+                onClick={() => setShowUserMenu(!showUserMenu)}
+              >
+                <div className="avatar">
+                  {(user.first_name || user.username || 'U').charAt(0).toUpperCase()}
+                </div>
+                <div className="user-info">
+                  <div className="user-name">
+                    {user.first_name && user.last_name 
+                      ? `${user.first_name} ${user.last_name}`
+                      : user.username
+                    }
+                  </div>
+                  <div className="user-role">{user.role}</div>
+                </div>
+                <i className="fas fa-chevron-down"></i>
+              </button>
+              
+              {showUserMenu && (
+                <div className="user-menu-dropdown">
+                  <div className="dropdown-header">
+                    <div className="user-avatar-large">
+                      {(user.first_name || user.username || 'U').charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="user-name-large">
+                        {user.first_name && user.last_name 
+                          ? `${user.first_name} ${user.last_name}`
+                          : user.username
+                        }
+                      </div>
+                      <div className="user-email">{user.email || user.username}</div>
+                    </div>
+                  </div>
+                  <div className="menu-divider"></div>
+                  <div className="menu-items">
+                    {/* Profile & Settings */}
+                    <button className="menu-item" onClick={() => { showPage('profile'); setShowUserMenu(false); }}>
+                      <i className="fas fa-user"></i>
+                      <span>My Profile</span>
+                    </button>
+                    
+                    {/* Management Submenu */}
+                    <div className="menu-item-submenu">
+                      <button 
+                        className="menu-item" 
+                        onClick={() => setShowManagementSubmenu(!showManagementSubmenu)}
+                      >
+                        <i className="fas fa-users"></i>
+                        <span>Management</span>
+                        <i className={`fas fa-chevron-${showManagementSubmenu ? 'up' : 'down'} submenu-arrow`}></i>
+                      </button>
+                      {showManagementSubmenu && (
+                        <div className="submenu">
+                          <button 
+                            className="submenu-item" 
+                            onClick={() => { showPage('user-management'); setShowUserMenu(false); setShowManagementSubmenu(false); }}
+                          >
+                            <i className="fas fa-users"></i>
+                            <span>User Management</span>
+                          </button>
+                          <button 
+                            className="submenu-item" 
+                            onClick={() => { showPage('institutions'); setShowUserMenu(false); setShowManagementSubmenu(false); }}
+                          >
+                            <i className="fas fa-university"></i>
+                            <span>Institution Management</span>
+                          </button>
+                          <button 
+                            className="submenu-item" 
+                            onClick={() => { showPage('trust-management'); setShowUserMenu(false); setShowManagementSubmenu(false); }}
+                          >
+                            <i className="fas fa-handshake"></i>
+                            <span>Trust Management</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Admin-only options */}
+                    {isAdmin && (
+                      <button 
+                        className="menu-item" 
+                        onClick={() => { showPage('notifications'); setShowUserMenu(false); }}
+                      >
+                        <i className="fas fa-shield-alt"></i>
+                        <span>Admin Settings</span>
+                      </button>
+                    )}
+                  </div>
+                  <div className="menu-divider"></div>
+                  <button className="menu-item logout-item" onClick={() => { onLogout(); setShowUserMenu(false); }}>
+                    <i className="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </nav>
@@ -500,6 +607,8 @@ function MainNav({ activePage, showPage }) {
 
 // Dashboard Component
 function Dashboard({ active, showPage, isAuthenticated, isAuthenticating }) {
+  if (!active) return null;
+  
   // State for dashboard data
   const [dashboardStats, setDashboardStats] = useState({
     threat_feeds: 0,
@@ -2209,6 +2318,8 @@ function Dashboard({ active, showPage, isAuthenticated, isAuthenticating }) {
 
 // Threat Feeds Component
 function ThreatFeeds({ active, navigationState, setNavigationState }) {
+  if (!active) return null;
+  
   const [threatFeeds, setThreatFeeds] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -2901,6 +3012,8 @@ function ThreatFeeds({ active, navigationState, setNavigationState }) {
 
 // IoC Management Component
 function IoCManagement({ active }) {
+  if (!active) return null;
+  
   const [indicators, setIndicators] = useState([]);
   const [filteredIndicators, setFilteredIndicators] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -5222,6 +5335,8 @@ Only patterns and techniques, no indicators</option>
 
 // TTP Analysis Component
 function TTPAnalysis({ active }) {
+  if (!active) return null;
+  
   const [ttpData, setTtpData] = useState([]);
   const [trendsData, setTrendsData] = useState([]);
   const [matrixData, setMatrixData] = useState(null);
@@ -9330,6 +9445,209 @@ function CSSStyles() {
             background-color: var(--success);
         }
         
+        /* User Profile Dropdown */
+        .user-profile-container {
+            position: relative;
+            margin-left: 20px;
+        }
+        
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 25px;
+            padding: 8px 15px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        
+        .user-profile:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+        
+        .avatar {
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
+        }
+        
+        .user-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .user-role {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .user-profile i {
+            font-size: 12px;
+            transition: transform 0.3s ease;
+        }
+        
+        .user-profile.open i {
+            transform: rotate(180deg);
+        }
+        
+        .user-menu-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            min-width: 280px;
+            z-index: 1000;
+            margin-top: 5px;
+            overflow: hidden;
+            animation: dropdownFadeIn 0.2s ease-out;
+        }
+        
+        @keyframes dropdownFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .dropdown-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 20px;
+            background: linear-gradient(135deg, #0056b3, #004494);
+            color: white;
+        }
+        
+        .user-avatar-large {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .user-name-large {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+        
+        .user-email {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .menu-divider {
+            height: 1px;
+            background: #e9ecef;
+        }
+        
+        .menu-items {
+            padding: 10px 0;
+        }
+        
+        .menu-item {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+            text-align: left;
+        }
+        
+        .menu-item:hover {
+            background: #f8f9fa;
+            color: #0056b3;
+        }
+        
+        .menu-item i {
+            width: 16px;
+            text-align: center;
+        }
+        
+        .menu-item-submenu {
+            position: relative;
+        }
+        
+        .submenu-arrow {
+            margin-left: auto !important;
+            font-size: 12px;
+            transition: transform 0.3s ease;
+        }
+        
+        .submenu {
+            background: #f8f9fa;
+            border-left: 3px solid #0056b3;
+        }
+        
+        .submenu-item {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 20px 10px 40px;
+            background: none;
+            border: none;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 13px;
+            text-align: left;
+        }
+        
+        .submenu-item:hover {
+            background: #e9ecef;
+            color: #0056b3;
+        }
+        
+        .submenu-item i {
+            width: 14px;
+            text-align: center;
+        }
+        
+        .logout-item {
+            color: #dc3545 !important;
+        }
+        
+        .logout-item:hover {
+            background: #f8d7da !important;
+            color: #721c24 !important;
+        }
+        
         /* Main Content */
         .main-content {
             padding: 30px 0;
@@ -11715,192 +12033,6 @@ function Notifications({ active }) {
   );
 }
 
-// User Profile Component
-function UserProfile({ active }) {
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [editMode, setEditMode] = useState(false);
-  const [formData, setFormData] = useState({});
-
-  useEffect(() => {
-    if (active) {
-      fetchProfile();
-    }
-  }, [active]);
-
-  const fetchProfile = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/api/auth/profile/');
-      if (response && response.success) {
-        setProfile(response.user);
-        setFormData({
-          first_name: response.user.first_name || '',
-          last_name: response.user.last_name || '',
-          email: response.user.email || ''
-        });
-      }
-    } catch (err) {
-      console.error('Error fetching profile:', err);
-      setError('Failed to load profile');
-      // Fallback to localStorage data
-      const user = JSON.parse(localStorage.getItem('crisp_user') || '{}');
-      if (user.username) {
-        setProfile(user);
-        setFormData({
-          first_name: user.first_name || '',
-          last_name: user.last_name || '',
-          email: user.email || ''
-        });
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSave = async () => {
-    try {
-      const response = await api.put('/api/auth/profile/update/', formData);
-      if (response && response.success) {
-        setProfile(response.user);
-        setEditMode(false);
-      }
-    } catch (err) {
-      console.error('Error updating profile:', err);
-      setError('Failed to update profile');
-    }
-  };
-
-  if (!active) return null;
-
-  return (
-    <section id="profile" className={`page-section ${active ? 'active' : ''}`}>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">User Profile</h1>
-          <p className="page-subtitle">Manage your account information and settings</p>
-        </div>
-        <div className="action-buttons">
-          {!editMode && (
-            <button className="btn btn-primary" onClick={() => setEditMode(true)}>
-              <i className="fas fa-edit"></i> Edit Profile
-            </button>
-          )}
-        </div>
-      </div>
-
-      {error && (
-        <div className="error-message">
-          <i className="fas fa-exclamation-triangle"></i>
-          {error}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="loading-state">
-          <i className="fas fa-spinner fa-spin"></i>
-          <p>Loading profile...</p>
-        </div>
-      ) : profile ? (
-        <div className="profile-content">
-          <div className="profile-card">
-            <div className="profile-header">
-              <div className="profile-avatar">
-                <i className="fas fa-user"></i>
-              </div>
-              <div className="profile-info">
-                <h3>{profile.first_name} {profile.last_name}</h3>
-                <p className="profile-role">{profile.role}</p>
-              </div>
-            </div>
-
-            <div className="profile-details">
-              {editMode ? (
-                <form className="edit-form">
-                  <div className="form-group">
-                    <label>First Name</label>
-                    <input
-                      type="text"
-                      value={formData.first_name}
-                      onChange={(e) => setFormData({...formData, first_name: e.target.value})}
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label>Last Name</label>
-                    <input
-                      type="text"
-                      value={formData.last_name}
-                      onChange={(e) => setFormData({...formData, last_name: e.target.value})}
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label>Email</label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="form-actions">
-                    <button type="button" onClick={handleSave} className="btn btn-primary">
-                      <i className="fas fa-save"></i> Save Changes
-                    </button>
-                    <button type="button" onClick={() => setEditMode(false)} className="btn btn-secondary">
-                      <i className="fas fa-times"></i> Cancel
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <div className="info-grid">
-                  <div className="info-item">
-                    <label>Username</label>
-                    <span>{profile.username}</span>
-                  </div>
-                  
-                  <div className="info-item">
-                    <label>Email</label>
-                    <span>{profile.email}</span>
-                  </div>
-                  
-                  <div className="info-item">
-                    <label>First Name</label>
-                    <span>{profile.first_name || 'Not set'}</span>
-                  </div>
-                  
-                  <div className="info-item">
-                    <label>Last Name</label>
-                    <span>{profile.last_name || 'Not set'}</span>
-                  </div>
-                  
-                  <div className="info-item">
-                    <label>Role</label>
-                    <span className={`role-badge ${profile.role?.toLowerCase()}`}>
-                      {profile.role}
-                    </span>
-                  </div>
-                  
-                  <div className="info-item">
-                    <label>Organization</label>
-                    <span>{profile.organization?.name || 'No organization'}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="error-state">
-          <i className="fas fa-exclamation-triangle"></i>
-          <p>Unable to load profile information</p>
-        </div>
-      )}
-    </section>
-  );
-}
 
 // Entry point
 function CRISPApp() {

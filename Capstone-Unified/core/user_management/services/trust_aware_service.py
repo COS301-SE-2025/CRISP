@@ -2,7 +2,7 @@ from typing import Dict, List, Optional, Any, Tuple
 from django.db.models import QuerySet
 from django.core.exceptions import PermissionDenied
 from ..models import CustomUser, Organization
-from core.trust.models import TrustRelationship, TrustLevel, TrustGroup
+from core.trust_management.models import TrustRelationship, TrustLevel, TrustGroup
 from .access_control_service import AccessControlService
 import logging
 
@@ -169,7 +169,7 @@ class TrustAwareService:
             return groups
         
         try:
-            from core.trust.models import TrustGroupMembership
+            from core.trust_management.models import TrustGroupMembership
             
             memberships = TrustGroupMembership.objects.filter(
                 organization=user.organization,
@@ -546,7 +546,7 @@ class TrustAwareService:
                     metrics['trust_relationships']['by_access_level'].get(access, 0) + 1
             
             # Get trust group metrics
-            from core.trust.models import TrustGroupMembership
+            from core.trust_management.models import TrustGroupMembership
             memberships = TrustGroupMembership.objects.filter(
                 organization=org, is_active=True
             )
@@ -611,7 +611,7 @@ class TrustAwareService:
                         metrics['trust_relationships']['by_trust_level'].get(level, 0) + 1
             
             # Get trust group metrics
-            from core.trust.models import TrustGroup, TrustGroupMembership
+            from core.trust_management.models import TrustGroup, TrustGroupMembership
             metrics['trust_groups']['total_groups'] = TrustGroup.objects.count()
             metrics['trust_groups']['total_memberships'] = TrustGroupMembership.objects.filter(
                 is_active=True
@@ -656,7 +656,7 @@ class TrustAwareService:
                         accessible.append(rel.target_organization)
             
             # Get organizations through trust groups
-            from core.trust.models import TrustGroupMembership
+            from core.trust_management.models import TrustGroupMembership
             if user.organization:
                 memberships = TrustGroupMembership.objects.filter(
                     organization=user.organization,
@@ -702,7 +702,7 @@ class TrustAwareService:
                 return float(relationship.trust_level.numerical_value)
             
             # Check for mutual trust groups
-            from core.trust.models import TrustGroupMembership
+            from core.trust_management.models import TrustGroupMembership
             common_groups = TrustGroupMembership.objects.filter(
                 organization=source_org,
                 is_active=True,
@@ -768,7 +768,7 @@ class TrustAwareService:
                     })
             
             # Get trust groups
-            from core.trust.models import TrustGroupMembership
+            from core.trust_management.models import TrustGroupMembership
             if user.organization:
                 memberships = TrustGroupMembership.objects.filter(
                     organization=user.organization,

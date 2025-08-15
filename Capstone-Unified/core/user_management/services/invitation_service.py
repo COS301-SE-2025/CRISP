@@ -15,8 +15,8 @@ from django.core.exceptions import ValidationError
 
 from core.user_management.models.invitation_models import UserInvitation, PasswordResetToken
 from core.user_management.models.user_models import Organization
-from core.notifications.services.gmail_smtp_service import GmailSMTPService
-from core.audit.services.audit_service import AuditService
+from core.services.email_service import UnifiedEmailService as GmailSMTPService
+from core.services.audit_service import AuditService
 
 CustomUser = get_user_model()
 logger = logging.getLogger(__name__)

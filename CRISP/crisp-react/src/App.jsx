@@ -149,92 +149,11 @@ const api = {
   }
 };
 
-function App() {
+function App({ user, onLogout }) {
   // State to manage the active page and navigation parameters
   const [activePage, setActivePage] = useState('dashboard');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAuthenticating, setIsAuthenticating] = useState(true);
 
-  // Automatically login as admin on component mount
-  useEffect(() => {
-    const validateToken = async (token) => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/profile/`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        return response.ok;
-      } catch (error) {
-        console.error('Token validation error:', error);
-        return false;
-      }
-    };
-
-    const autoLogin = async () => {
-      setIsAuthenticating(true);
-      
-      // Check if already has valid token
-      const existingToken = localStorage.getItem('crisp_auth_token');
-      if (existingToken) {
-        console.log('Validating existing token...');
-        const isTokenValid = await validateToken(existingToken);
-        if (isTokenValid) {
-          console.log('Existing token is valid');
-          setIsAuthenticated(true);
-          setIsAuthenticating(false);
-          return;
-        } else {
-          console.log('Existing token is invalid, clearing and re-authenticating...');
-          localStorage.removeItem('crisp_auth_token');
-          localStorage.removeItem('crisp_refresh_token');
-          localStorage.removeItem('crisp_user');
-        }
-      }
-
-      // Auto-login as admin
-      try {
-        console.log('Attempting auto-login as admin...');
-        const response = await fetch(`${API_BASE_URL}/api/auth/login/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: 'admin', password: 'admin123' })
-        });
-
-        console.log('Login response status:', response.status);
-        
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Login response data:', data);
-          if (data.access) {
-            localStorage.setItem('crisp_auth_token', data.access);
-            if (data.refresh) {
-              localStorage.setItem('crisp_refresh_token', data.refresh);
-            }
-            if (data.user) {
-              localStorage.setItem('crisp_user', JSON.stringify(data.user));
-            }
-            console.log('Auto-login successful, token stored');
-            setIsAuthenticated(true);
-          } else {
-            console.error('No access token in response');
-            setIsAuthenticated(false);
-          }
-        } else {
-          const errorText = await response.text();
-          console.error('Auto-login failed with status:', response.status, response.statusText);
-          console.error('Error response:', errorText);
-          setIsAuthenticated(false);
-        }
-      } catch (error) {
-        console.error('Auto-login error:', error);
-        console.error('This might indicate the backend server is not running');
-        setIsAuthenticated(false);
-      }
-      
-      setIsAuthenticating(false);
-    };
-
-    autoLogin();
-  }, []);
+  // Navigation state and functions
   const [navigationState, setNavigationState] = useState({
     triggerModal: null,
     modalParams: {}
@@ -294,52 +213,11 @@ function App() {
   }, []);
 
 
-  // Show loading screen during authentication
-  if (isAuthenticating) {
-    return (
-      <div className="App">
-        <div className="loading-screen">
-          <div className="loading-spinner"></div>
-          <h2>Loading CRISP System...</h2>
-          <p>Authenticating...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show login screen when not authenticated
-  if (!isAuthenticated) {
-    return (
-      <div className="App">
-        <div className="login-screen">
-          <div className="login-container">
-            <h2>CRISP System Login</h2>
-            <p>Please login to continue</p>
-            <button 
-              className="btn btn-primary"
-              onClick={() => {
-                setIsAuthenticating(true);
-                setIsAuthenticated(false);
-                // Clear any existing tokens
-                localStorage.removeItem('crisp_auth_token');
-                localStorage.removeItem('crisp_refresh_token');
-                localStorage.removeItem('crisp_user');
-                // Retry auto-login
-                window.location.reload();
-              }}
-            >
-              <i className="fas fa-sign-in-alt"></i> Login as Admin
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="App">
       {/* Header */}
-      <Header showPage={showPage} />
+      <Header showPage={showPage} user={user} onLogout={onLogout} />
       
       {/* Main Navigation */}
       <MainNav activePage={activePage} showPage={showPage} />
@@ -348,7 +226,7 @@ function App() {
       <main className="main-content">
         <div className="container">
           {/* Dashboard */}
-          <Dashboard active={activePage === 'dashboard'} showPage={showPage} isAuthenticated={isAuthenticated} isAuthenticating={isAuthenticating} />
+          <Dashboard active={activePage === 'dashboard'} showPage={showPage} user={user} />
 
           {/* Threat Feeds */}
           <ThreatFeeds active={activePage === 'threat-feeds'} navigationState={navigationState} setNavigationState={setNavigationState} />
@@ -378,7 +256,7 @@ function App() {
 }
 
 // Header Component
-function Header({ showPage }) {
+function Header({ showPage, user, onLogout }) {
   return (
     <header>
       <div className="container header-container">
@@ -396,12 +274,32 @@ function Header({ showPage }) {
             <span className="notification-count">3</span>
           </div>
           <div className="user-profile" onClick={() => showPage('profile')} style={{cursor: 'pointer'}}>
-            <div className="avatar">A</div>
+            <div className="avatar">{user?.username?.charAt(0)?.toUpperCase() || 'U'}</div>
             <div className="user-info">
-              <div className="user-name">Admin</div>
-              <div className="user-role">Security Analyst</div>
+              <div className="user-name">{user?.username || 'User'}</div>
+              <div className="user-role">{user?.role || 'User'}</div>
             </div>
           </div>
+          <button 
+            className="logout-btn" 
+            onClick={onLogout}
+            title="Logout"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#fff',
+              cursor: 'pointer',
+              fontSize: '18px',
+              marginLeft: '15px',
+              padding: '8px',
+              borderRadius: '4px',
+              transition: 'background 0.3s'
+            }}
+            onMouseOver={(e) => e.target.style.background = 'rgba(255,255,255,0.1)'}
+            onMouseOut={(e) => e.target.style.background = 'none'}
+          >
+            <i className="fas fa-sign-out-alt"></i>
+          </button>
         </div>
       </div>
     </header>
@@ -499,7 +397,7 @@ function MainNav({ activePage, showPage }) {
 }
 
 // Dashboard Component
-function Dashboard({ active, showPage, isAuthenticated, isAuthenticating }) {
+function Dashboard({ active, showPage, user }) {
   // State for dashboard data
   const [dashboardStats, setDashboardStats] = useState({
     threat_feeds: 0,
@@ -556,32 +454,32 @@ function Dashboard({ active, showPage, isAuthenticated, isAuthenticating }) {
   
   // Fetch dashboard data from backend
   useEffect(() => {
-    if (active && !isAuthenticating && isAuthenticated) {
+    if (active && user) {
       fetchDashboardData();
       fetchRecentIoCs();
       fetchChartData();
       fetchSystemHealth();
       fetchRecentActivities();
     }
-  }, [active, isAuthenticated, isAuthenticating]);
+  }, [active, user]);
 
   // Refetch chart data when filters change
   useEffect(() => {
-    if (active && !isAuthenticating && isAuthenticated) {
+    if (active && user) {
       fetchChartData();
     }
-  }, [chartFilters, active, isAuthenticated, isAuthenticating]);
+  }, [chartFilters, active, user]);
 
   // Auto-refresh system health every 30 seconds
   useEffect(() => {
-    if (!active || isAuthenticating || !isAuthenticated) return;
+    if (!active || !user) return;
     
     const interval = setInterval(() => {
       fetchSystemHealth();
     }, 30000);
     
     return () => clearInterval(interval);
-  }, [active, isAuthenticated, isAuthenticating]);
+  }, [active, user]);
   
   const fetchDashboardData = async () => {
     const feedsData = await api.get('/api/threat-feeds/');

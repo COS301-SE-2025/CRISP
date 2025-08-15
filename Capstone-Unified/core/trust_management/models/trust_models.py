@@ -3,6 +3,7 @@ from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from datetime import timedelta
+from core.models.models import CustomUser, Organization
 
 
 TRUST_LEVEL_CHOICES = [
@@ -238,10 +239,9 @@ class TrustGroup(models.Model):
             
             def all(self):
                 """Get all member organizations"""
-                from core.user_management.models import Organization
                 return Organization.objects.filter(
-                    trust_group_memberships__trust_group=self.trust_group,
-                    trust_group_memberships__is_active=True
+                    trust_mgmt_group_memberships__trust_group=self.trust_group,
+                    trust_mgmt_group_memberships__is_active=True
                 )
         
         return MemberOrganizationsManager(self)
@@ -262,15 +262,15 @@ class TrustRelationship(models.Model):
     
     # Organizations involved in the trust relationship
     source_organization = models.ForeignKey(
-        'user_management.Organization',
+        Organization,
         on_delete=models.CASCADE,
-        related_name='trust_relationships_as_source',
+        related_name='trust_mgmt_relationships_as_source',
         help_text="Source organization in the trust relationship"
     )
     target_organization = models.ForeignKey(
-        'user_management.Organization',
+        Organization,
         on_delete=models.CASCADE,
-        related_name='trust_relationships_as_target',
+        related_name='trust_mgmt_relationships_as_target',
         help_text="Target organization in the trust relationship"
     )
     
@@ -350,19 +350,19 @@ class TrustRelationship(models.Model):
         help_text="Whether target organization has approved"
     )
     approved_by_source_user = models.ForeignKey(
-        'user_management.CustomUser',
+        CustomUser,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='trust_approvals_as_source',
+        related_name='trust_mgmt_approvals_as_source',
         help_text="User who approved on behalf of source organization"
     )
     approved_by_target_user = models.ForeignKey(
-        'user_management.CustomUser',
+        CustomUser,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='trust_approvals_as_target',
+        related_name='trust_mgmt_approvals_as_target',
         help_text="User who approved on behalf of target organization"
     )
     
@@ -404,27 +404,27 @@ class TrustRelationship(models.Model):
     
     # Audit fields
     created_by = models.ForeignKey(
-        'user_management.CustomUser',
+        CustomUser,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='created_trust_relationships',
+        related_name='trust_mgmt_created_relationships',
         help_text="User who created this relationship"
     )
     last_modified_by = models.ForeignKey(
-        'user_management.CustomUser',
+        CustomUser,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='modified_trust_relationships',
+        related_name='trust_mgmt_modified_relationships',
         help_text="User who last modified this relationship"
     )
     revoked_by = models.ForeignKey(
-        'user_management.CustomUser',
+        CustomUser,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='revoked_trust_relationships',
+        related_name='trust_mgmt_revoked_relationships',
         help_text="User who revoked this relationship"
     )
 
@@ -569,9 +569,9 @@ class TrustGroupMembership(models.Model):
         related_name='group_memberships'
     )
     organization = models.ForeignKey(
-        'user_management.Organization',
+        Organization,
         on_delete=models.CASCADE,
-        related_name='trust_group_memberships',
+        related_name='trust_mgmt_group_memberships',
         help_text="Organization that is a member of this trust group"
     )
     membership_type = models.CharField(
@@ -650,19 +650,19 @@ class TrustLog(models.Model):
         help_text="Type of trust action performed"
     )
     source_organization = models.ForeignKey(
-        'user_management.Organization',
+        Organization,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='trust_logs_as_source',
+        related_name='trust_mgmt_logs_as_source',
         help_text="Organization that initiated the action"
     )
     target_organization = models.ForeignKey(
-        'user_management.Organization',
+        Organization,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='trust_logs_as_target',
+        related_name='trust_mgmt_logs_as_target',
         help_text="Target organization (if applicable)"
     )
     trust_relationship = models.ForeignKey(
@@ -680,11 +680,11 @@ class TrustLog(models.Model):
         related_name='trust_logs_as_user'
     )
     user = models.ForeignKey(
-        'user_management.CustomUser',
+        CustomUser,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='performed_trust_logs',
+        related_name='trust_mgmt_performed_logs',
         help_text="User who performed the action"
     )
     ip_address = models.GenericIPAddressField(

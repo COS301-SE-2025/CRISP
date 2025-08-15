@@ -11,7 +11,7 @@ from django.utils import timezone
 from django.conf import settings
 import logging
 
-from core.notifications.services.gmail_smtp_service import GmailSMTPService
+from core.services.email_service import UnifiedEmailService
 
 logger = logging.getLogger(__name__)
 

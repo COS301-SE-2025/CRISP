@@ -3,7 +3,7 @@ from django.db import transaction
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.utils import timezone
 from ..models import CustomUser, Organization, AuthenticationLog
-from core.trust.models import TrustRelationship, TrustLevel, TrustGroup, TrustGroupMembership
+from core.trust_management.models import TrustRelationship, TrustLevel, TrustGroup, TrustGroupMembership
 from .access_control_service import AccessControlService
 import logging
 

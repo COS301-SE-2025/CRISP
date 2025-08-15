@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
-const UserProfile = () => {
+const UserProfile = ({ active }) => {
+  if (!active) return null;
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -14,7 +15,13 @@ const UserProfile = () => {
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8000/api/auth/profile/');
+      const token = localStorage.getItem('crisp_auth_token');
+      const response = await fetch('http://localhost:8000/api/auth/profile/', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         setProfile(data.user);
@@ -35,9 +42,11 @@ const UserProfile = () => {
 
   const handleSave = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/auth/profile/update/', {
+      const token = localStorage.getItem('crisp_auth_token');
+      const response = await fetch('http://localhost:8000/api/auth/profile/', {
         method: 'PUT',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(editData)

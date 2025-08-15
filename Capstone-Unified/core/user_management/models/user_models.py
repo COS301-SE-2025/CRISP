@@ -43,7 +43,7 @@ class AuthenticationLog(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='authentication_logs'
+        related_name='user_mgmt_authentication_logs'
     )
     action = models.CharField(
         max_length=50,

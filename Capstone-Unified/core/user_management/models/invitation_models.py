@@ -9,9 +9,7 @@ import uuid
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
-from django.contrib.auth import get_user_model
-
-CustomUser = get_user_model()
+from core.models.models import CustomUser, Organization
 
 class UserInvitation(models.Model):
     """
@@ -33,15 +31,15 @@ class UserInvitation(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(max_length=255, help_text="Email address of the invitee")
     organization = models.ForeignKey(
-        'user_management.Organization', 
+        Organization, 
         on_delete=models.CASCADE,
-        related_name='invitations',
+        related_name='user_mgmt_invitations',
         help_text="Organization extending the invitation"
     )
     inviter = models.ForeignKey(
         CustomUser, 
         on_delete=models.CASCADE,
-        related_name='sent_invitations',
+        related_name='user_mgmt_sent_invitations',
         help_text="User who sent the invitation"
     )
     invited_role = models.CharField(
@@ -75,7 +73,7 @@ class UserInvitation(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='accepted_invitations',
+        related_name='user_mgmt_accepted_invitations',
         help_text="User who accepted the invitation"
     )
     message = models.TextField(
@@ -141,7 +139,7 @@ class PasswordResetToken(models.Model):
     user = models.ForeignKey(
         CustomUser,
         on_delete=models.CASCADE,
-        related_name='password_reset_tokens',
+        related_name='user_mgmt_password_reset_tokens',
         help_text="User requesting password reset"
     )
     token = models.CharField(
