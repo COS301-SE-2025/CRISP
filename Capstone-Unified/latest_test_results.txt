@@ -1,0 +1,223 @@
+================================================================================
+COMPREHENSIVE ENDPOINT TESTING - ALL ENDPOINTS
+Generated: 2025-08-14 13:22:55
+================================================================================
+
+1. AUTHENTICATION SETUP
+----------------------------------------
+Authentication Token: OBTAINED (eyJhbGciOiJIUzI1NiIs...)
+
+Creating test data...
+Using existing test user ID: 051780c3-dc2d-4d8c-bdf3-087d32dc80d1
+Using test organization ID: 9cb8bd53-adf2-451c-bc1d-f1e5e953da6f
+Using permanent detail test organization ID: f2a14bd4-2afe-4056-8d7f-c70ea3053395
+Using test collection ID: 2abd8fe1-1594-496d-b31a-adbd56c7f007
+Using test relationship ID: 2
+Using core app organization ID for threat feeds: 28caf162-28b1-48b7-a13c-2c5f1963217f
+Created test threat feed ID: 63
+Created operations test threat feed ID: 64
+
+2. COMPREHENSIVE ENDPOINT TESTING (92 endpoints)
+----------------------------------------
+  1. Testing Home Page (GET /)
+     PASS (HTTP 200) - 0.004s
+  2. Testing Django Admin (GET /admin/)
+     PASS (HTTP 200) - 0.061s
+  3. Testing API Root (GET /api/)
+     PASS (HTTP 200) - 0.005s
+  4. Testing Core Status (GET /api/status/)
+     PASS (HTTP 200) - 0.037s
+  5. Testing Auth Login (POST /api/v1/auth/login/)
+     PASS (HTTP 200) - 0.658s
+  6. Testing Auth Register (POST /api/v1/auth/register/)
+     PASS (HTTP 201) - 1.386s
+  7. Testing Auth Logout (POST /api/v1/auth/logout/)
+     PASS (HTTP 200) - 1.185s
+  8. Testing Auth Refresh Token (POST /api/v1/auth/refresh/)
+     PASS (HTTP 200) - 0.693s
+  9. Testing Auth Verify Token (GET /api/v1/auth/verify/)
+     PASS (HTTP 200) - 0.032s
+ 10. Testing Auth Sessions (GET /api/v1/auth/sessions/)
+     PASS (HTTP 200) - 0.038s
+ 11. Testing Auth Revoke Session (POST /api/v1/auth/revoke-session/)
+     PASS (HTTP 500) - 0.031s
+ 12. Testing Auth Change Password (POST /api/v1/auth/change-password/)
+     PASS (HTTP 200) - 1.348s
+ 13. Testing Auth Forgot Password (POST /api/v1/auth/forgot-password/)
+     PASS (HTTP 500) - 2.718s
+ 14. Testing Auth Validate Reset Token (POST /api/v1/auth/validate-reset-token/)
+     PASS (HTTP 400) - 0.026s
+ 15. Testing Auth Reset Password (POST /api/v1/auth/reset-password/)
+     PASS (HTTP 400) - 0.030s
+ 16. Testing Auth Dashboard (GET /api/v1/auth/dashboard/)
+     PASS (HTTP 200) - 0.036s
+ 17. Testing System Health (GET /api/v1/admin/system_health/)
+     PASS (HTTP 200) - 0.005s
+ 18. Testing Trust Overview (GET /api/v1/admin/trust_overview/)
+     PASS (HTTP 200) - 0.027s
+ 19. Testing Admin Dashboard (GET /api/v1/admin/dashboard/)
+     PASS (HTTP 200) - 0.206s
+ 20. Testing Admin System Health (GET /api/v1/admin/system-health/)
+     PASS (HTTP 200) - 0.048s
+ 21. Testing Admin Audit Logs (GET /api/v1/admin/audit-logs/)
+     PASS (HTTP 200) - 0.248s
+ 22. Testing Admin Cleanup Sessions (POST /api/v1/admin/cleanup-sessions/)
+     PASS (HTTP 403) - 0.027s
+ 23. Testing Admin Unlock User (POST /api/v1/admin/users/<uuid:pk>/unlock/)
+     PASS (HTTP 200) - 1.572s
+ 24. Testing Admin Comprehensive Audit Logs (GET /api/v1/admin/comprehensive-audit-logs/)
+     PASS (HTTP 200) - 0.220s
+ 25. Testing Admin User Activity Summary (GET /api/v1/admin/users/<uuid:pk>/activity-summary/)
+     PASS (HTTP 200) - 0.037s
+ 26. Testing Admin Security Events (GET /api/v1/admin/security-events/)
+     PASS (HTTP 200) - 0.246s
+ 27. Testing Admin Audit Statistics (GET /api/v1/admin/audit-statistics/)
+     PASS (HTTP 200) - 0.244s
+ 28. Testing Alert Statistics (GET /api/v1/alerts/statistics/)
+     PASS (HTTP 200) - 0.004s
+ 29. Testing Test Gmail Connection (GET /api/v1/alerts/test-connection/)
+     PASS (HTTP 200) - 0.025s
+ 30. Testing Send Alert Test Email (POST /api/v1/alerts/test-email/)
+     PASS (HTTP 200) - 0.033s
+ 31. Testing Alerts List (GET /alerts/list/)
+     PASS (HTTP 200) - 0.027s
+ 32. Testing Send Threat Alert (POST /alerts/threat/)
+     PASS (HTTP 500) - 2.346s
+ 33. Testing Send Feed Notification (POST /alerts/feed/)
+     PASS (HTTP 500) - 2.049s
+ 34. Testing Mark All Alerts Read (POST /alerts/mark-all-read/)
+     PASS (HTTP 200) - 0.025s
+ 35. Testing Get Alert Preferences (GET /alerts/preferences/)
+     PASS (HTTP 200) - 0.028s
+ 36. Testing Update Alert Preferences (POST /alerts/preferences/update/)
+     PASS (HTTP 200) - 0.027s
+ 37. Testing Extended Test Connection (GET /alerts/test-connection/)
+     PASS (HTTP 500) - 2.101s
+ 38. Testing Extended Alert Statistics (GET /alerts/statistics/)
+     PASS (HTTP 200) - 2.376s
+ 39. Testing Extended Test Email (POST /alerts/test-email/)
+     PASS (HTTP 500) - 2.077s
+ 40. Testing Send Test Email (POST /api/v1/email/send-test/)
+     PASS (HTTP 200) - 0.026s
+ 41. Testing User Profile (GET /api/v1/users/profile/)
+     PASS (HTTP 200) - 0.024s
+ 42. Testing User Statistics (GET /api/v1/users/statistics/)
+     PASS (HTTP 200) - 0.032s
+ 43. Testing List Users (GET /api/v1/users/list/)
+     PASS (HTTP 200) - 1.594s
+ 44. Testing Create User (POST /api/v1/users/create_user/)
+     PASS (HTTP 201) - 1.164s
+ 45. Testing Get User (GET /api/v1/users/<int:user_id>/get_user/)
+     PASS (HTTP 200) - 0.050s
+ 46. Testing Update User (PUT /api/v1/users/<int:user_id>/update_user/)
+     PASS (HTTP 200) - 0.403s
+ 47. Testing Delete User (DELETE /api/v1/users/<int:user_id>/delete_user/)
+     PASS (HTTP 400) - 0.028s
+ 48. Testing Change Username (PATCH /api/v1/users/<int:user_id>/change_username/)
+     PASS (HTTP 200) - 0.190s
+ 49. Testing Extended Create User (POST /api/v1/users/create/)
+     PASS (HTTP 400) - 0.037s
+ 50. Testing Extended Get User (GET /api/v1/users/<uuid:pk>/)
+     PASS (HTTP 200) - 0.057s
+ 51. Testing Extended Update User (PUT /api/v1/users/<uuid:pk>/)
+     PASS (HTTP 200) - 0.391s
+ 52. Testing Deactivate User (POST /api/v1/users/<uuid:pk>/deactivate/)
+     FAIL (HTTP 200)
+     Error: {'success': True, 'data': {'message': 'User updated1755170581 deactivated successfully', 'user_id': ...
+ 53. Testing Reactivate User (POST /api/v1/users/<uuid:pk>/reactivate/)
+     PASS (HTTP 200) - 0.122s
+ 54. Testing List Organizations (GET /api/v1/organizations/list_organizations/)
+     PASS (HTTP 200) - 0.357s
+ 55. Testing Organization Types (GET /api/v1/organizations/types/)
+     PASS (HTTP 200) - 0.045s
+ 56. Testing Create Organization (POST /api/v1/organizations/create_organization/)
+     PASS (HTTP 201) - 0.046s
+ 57. Testing Get Organization (GET /api/v1/organizations/<str:organization_id>/get_organization/)
+    → Created fresh detail org 5c92ebdf-64bf-4841-b8f0-ac25516eb69d for Get Organization
+     PASS (HTTP 200) - 0.040s
+ 58. Testing Update Organization (PUT /api/v1/organizations/<str:organization_id>/update_organization/)
+    → Created fresh detail org ccb05ff9-dfe2-4a60-aed3-0e339429b147 for Update Organization
+     FAIL (HTTP 400)
+     Error: {'success': False, 'error': 'duplicate key value violates unique constraint "core_organization_name_...
+ 59. Testing Delete Organization (DELETE /api/v1/organizations/<str:organization_id>/delete_organization/)
+    → Created fresh detail org 5d401de7-94d1-4740-bd12-3ec91e4def99 for Delete Organization
+     PASS (HTTP 200) - 0.078s
+ 60. Testing Organization Detail (GET /api/v1/organizations/<str:organization_id>/)
+    → Created fresh detail org 168080b7-9f9e-4aa9-a3cb-36395a9ba098 for Organization Detail
+     PASS (HTTP 200) - 0.035s
+ 61. Testing Deactivate Organization (POST /api/v1/organizations/<str:organization_id>/deactivate_organization/)
+    → Created fresh detail org 6259e44e-8c9c-4a41-9e0e-6887367a56bf for Deactivate Organization
+     PASS (HTTP 200) - 0.043s
+ 62. Testing Reactivate Organization (POST /api/v1/organizations/<str:organization_id>/reactivate_organization/)
+    → Created fresh detail org 2ade25ca-bd31-4de0-852e-fcb29d7974a4 for Reactivate Organization
+     PASS (HTTP 200) - 0.037s
+ 63. Testing Trust Groups (GET /api/v1/trust/groups/)
+     PASS (HTTP 200) - 0.036s
+ 64. Testing Trust Levels (GET /api/v1/trust/levels/)
+     PASS (HTTP 200) - 0.032s
+ 65. Testing Trust Metrics (GET /api/v1/trust/metrics/)
+     PASS (HTTP 200) - 0.041s
+ 66. Testing Trust Relationships (GET /api/v1/trust/relationships/)
+     PASS (HTTP 200) - 0.055s
+ 67. Testing Trust Relationship Detail (GET /api/v1/trust/relationships/<int:relationship_id>/)
+     PASS (HTTP 200) - 0.048s
+ 68. Testing Threat Feeds List (GET /api/threat-feeds/)
+     PASS (HTTP 200) - 0.065s
+ 69. Testing Create Threat Feed (POST /api/threat-feeds/)
+     PASS (HTTP 201) - 0.073s
+ 70. Testing Threat Feed Detail (GET /api/threat-feeds/<int:pk>/)
+     PASS (HTTP 200) - 0.057s
+ 71. Testing Update Threat Feed (PUT /api/threat-feeds/<int:pk>/)
+     PASS (HTTP 200) - 0.107s
+ 72. Testing Delete Threat Feed (DELETE /api/threat-feeds/<int:pk>/)
+     PASS (HTTP 204) - 0.072s
+ 73. Testing Consume Threat Feed (POST /api/threat-feeds/<int:pk>/consume/)
+     PASS (HTTP 200) - 5.345s
+ 74. Testing Threat Feed Status (GET /api/threat-feeds/<int:pk>/status/)
+     PASS (HTTP 200) - 0.042s
+ 75. Testing Test Threat Feed Connection (GET /api/threat-feeds/<int:pk>/test_connection/)
+     PASS (HTTP 200) - 0.478s
+ 76. Testing External Threat Feeds (GET /api/threat-feeds/external/)
+     PASS (HTTP 200) - 0.036s
+ 77. Testing Available Collections (GET /api/threat-feeds/available_collections/)
+     PASS (HTTP 200) - 0.454s
+ 78. Testing Indicators List (GET /api/indicators/)
+     PASS (HTTP 200) - 0.038s
+ 79. Testing Indicator Detail (GET /api/indicators/<int:pk>/)
+     PASS (HTTP 404) - 0.040s
+ 80. Testing Recent Indicators (GET /api/indicators/recent/)
+     PASS (HTTP 200) - 0.047s
+ 81. Testing Indicator Statistics (GET /api/indicators/stats/)
+     PASS (HTTP 200) - 0.044s
+ 82. Testing Indicator Types (GET /api/indicators/types/)
+     PASS (HTTP 200) - 0.043s
+ 83. Testing Unified API Root (GET /api/v1/)
+     PASS (HTTP 200) - 0.009s
+ 84. Testing Dashboard Overview (GET /api/v1/dashboard/overview/)
+     PASS (HTTP 200) - 0.037s
+ 85. Testing Unified External Feeds (GET /api/v1/threat-feeds/external/)
+     PASS (HTTP 200) - 0.042s
+ 86. Testing Unified Collections (GET /api/v1/threat-feeds/collections/)
+     PASS (HTTP 200) - 0.007s
+ 87. Testing TAXII Discovery (GET /taxii2/)
+     PASS (HTTP 200) - 0.007s
+ 88. Testing TAXII Collections List (GET /taxii2/collections/)
+     PASS (HTTP 200) - 0.045s
+ 89. Testing TAXII Collection Detail (GET /taxii2/collections/<uuid:collection_id>/)
+     PASS (HTTP 404) - 0.039s
+ 90. Testing TAXII Collection Objects (GET /taxii2/collections/<uuid:collection_id>/objects/)
+     PASS (HTTP 404) - 0.058s
+ 91. Testing TAXII Object Detail (GET /taxii2/collections/<uuid:collection_id>/objects/<str:object_id>/)
+     PASS (HTTP 404) - 0.044s
+ 92. Testing TAXII Collection Manifest (GET /taxii2/collections/<uuid:collection_id>/manifest/)
+     PASS (HTTP 404) - 0.038s
+
+3. FINAL SUMMARY
+----------------------------------------
+Total Endpoints: 92
+Passed: 90
+Failed: 2
+Skipped: 0
+Success Rate: 97.8%
+
+Detailed results saved to: comprehensive_test_results.json
