@@ -69,10 +69,26 @@ const getAuthHeaders = () => {
 const api = {
   get: async (endpoint) => {
     try {
+      const headers = getAuthHeaders();
+      const token = localStorage.getItem('crisp_auth_token');
+      
+      // Don't make API calls if we don't have a token (except for auth endpoints)
+      if (!token && !endpoint.includes('/auth/')) {
+        console.warn(`Skipping API call to ${endpoint} - no authentication token`);
+        return null;
+      }
+      
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        headers: getAuthHeaders()
+        headers: headers
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          console.warn(`Authentication failed for ${endpoint} - token may be expired`);
+          // Could trigger re-authentication here if needed
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
       return await response.json();
     } catch (error) {
       console.error(`API Error: ${endpoint}`, error);
@@ -141,18 +157,42 @@ function App() {
 
   // Automatically login as admin on component mount
   useEffect(() => {
+    const validateToken = async (token) => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/auth/profile/`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        return response.ok;
+      } catch (error) {
+        console.error('Token validation error:', error);
+        return false;
+      }
+    };
+
     const autoLogin = async () => {
+      setIsAuthenticating(true);
+      
       // Check if already has valid token
       const existingToken = localStorage.getItem('crisp_auth_token');
       if (existingToken) {
-        setIsAuthenticated(true);
-        setIsAuthenticating(false);
-        return;
+        console.log('Validating existing token...');
+        const isTokenValid = await validateToken(existingToken);
+        if (isTokenValid) {
+          console.log('Existing token is valid');
+          setIsAuthenticated(true);
+          setIsAuthenticating(false);
+          return;
+        } else {
+          console.log('Existing token is invalid, clearing and re-authenticating...');
+          localStorage.removeItem('crisp_auth_token');
+          localStorage.removeItem('crisp_refresh_token');
+          localStorage.removeItem('crisp_user');
+        }
       }
 
       // Auto-login as admin
       try {
-        console.log('Attempting auto-login...');
+        console.log('Attempting auto-login as admin...');
         const response = await fetch(`${API_BASE_URL}/api/auth/login/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -166,26 +206,31 @@ function App() {
           console.log('Login response data:', data);
           if (data.access) {
             localStorage.setItem('crisp_auth_token', data.access);
-            localStorage.setItem('crisp_refresh_token', data.refresh);
-            localStorage.setItem('crisp_user', JSON.stringify(data.user));
-            console.log('Login successful, token stored');
+            if (data.refresh) {
+              localStorage.setItem('crisp_refresh_token', data.refresh);
+            }
+            if (data.user) {
+              localStorage.setItem('crisp_user', JSON.stringify(data.user));
+            }
+            console.log('Auto-login successful, token stored');
             setIsAuthenticated(true);
-            setIsAuthenticating(false);
           } else {
             console.error('No access token in response');
             setIsAuthenticated(false);
-            setIsAuthenticating(false);
           }
         } else {
+          const errorText = await response.text();
           console.error('Auto-login failed with status:', response.status, response.statusText);
+          console.error('Error response:', errorText);
           setIsAuthenticated(false);
-          setIsAuthenticating(false);
         }
       } catch (error) {
         console.error('Auto-login error:', error);
+        console.error('This might indicate the backend server is not running');
         setIsAuthenticated(false);
-        setIsAuthenticating(false);
       }
+      
+      setIsAuthenticating(false);
     };
 
     autoLogin();
@@ -303,7 +348,7 @@ function App() {
       <main className="main-content">
         <div className="container">
           {/* Dashboard */}
-          <Dashboard active={activePage === 'dashboard'} showPage={showPage} />
+          <Dashboard active={activePage === 'dashboard'} showPage={showPage} isAuthenticated={isAuthenticated} isAuthenticating={isAuthenticating} />
 
           {/* Threat Feeds */}
           <ThreatFeeds active={activePage === 'threat-feeds'} navigationState={navigationState} setNavigationState={setNavigationState} />
@@ -454,7 +499,7 @@ function MainNav({ activePage, showPage }) {
 }
 
 // Dashboard Component
-function Dashboard({ active, showPage }) {
+function Dashboard({ active, showPage, isAuthenticated, isAuthenticating }) {
   // State for dashboard data
   const [dashboardStats, setDashboardStats] = useState({
     threat_feeds: 0,
@@ -511,32 +556,32 @@ function Dashboard({ active, showPage }) {
   
   // Fetch dashboard data from backend
   useEffect(() => {
-    if (active) {
+    if (active && !isAuthenticating && isAuthenticated) {
       fetchDashboardData();
       fetchRecentIoCs();
       fetchChartData();
       fetchSystemHealth();
       fetchRecentActivities();
     }
-  }, [active]);
+  }, [active, isAuthenticated, isAuthenticating]);
 
   // Refetch chart data when filters change
   useEffect(() => {
-    if (active) {
+    if (active && !isAuthenticating && isAuthenticated) {
       fetchChartData();
     }
-  }, [chartFilters, active]);
+  }, [chartFilters, active, isAuthenticated, isAuthenticating]);
 
   // Auto-refresh system health every 30 seconds
   useEffect(() => {
-    if (!active) return;
+    if (!active || isAuthenticating || !isAuthenticated) return;
     
     const interval = setInterval(() => {
       fetchSystemHealth();
     }, 30000);
     
     return () => clearInterval(interval);
-  }, [active]);
+  }, [active, isAuthenticated, isAuthenticating]);
   
   const fetchDashboardData = async () => {
     const feedsData = await api.get('/api/threat-feeds/');
