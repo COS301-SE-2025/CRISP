@@ -492,6 +492,11 @@
 			"key": "session_id",
 			"value": "",
 			"type": "string"
+		},
+		{
+			"key": "reset_token",
+			"value": "sample-reset-token-12345",
+			"type": "string"
 		}
 	],
 	"item": [
@@ -527,6 +532,16 @@
 									"            pm.collectionVariables.set('session_id', responseBody.session_id);",
 									"            pm.globals.set('session_id', responseBody.session_id);",
 									"            console.log('Session ID captured:', responseBody.session_id);",
+									"        } else if (responseBody.data && responseBody.data.session_id) {",
+									"            pm.collectionVariables.set('session_id', responseBody.data.session_id);",
+									"            pm.globals.set('session_id', responseBody.data.session_id);",
+									"            console.log('Session ID captured from data:', responseBody.data.session_id);",
+									"        } else {",
+									"            // Generate a mock session ID for testing",
+									"            const mockSessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);",
+									"            pm.collectionVariables.set('session_id', mockSessionId);",
+									"            pm.globals.set('session_id', mockSessionId);",
+									"            console.log('Mock session ID generated:', mockSessionId);",
 									"        }",
 									"        ",
 									"        // Capture organization ID if available",
@@ -868,7 +883,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"token\": \"sample-reset-token\"\n}"
+							"raw": "{\n    \"token\": \"{{reset_token}}\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/validate-reset-token/",
@@ -905,7 +920,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"token\": \"sample-reset-token\",\n    \"new_password\": \"NewSecurePassword123!\"\n}"
+							"raw": "{\n    \"token\": \"{{reset_token}}\",\n    \"new_password\": \"NewSecurePassword123!\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/reset-password/",
@@ -2814,9 +2829,9 @@
 							"raw": "{\n    \"threat_type\": \"malware\",\n    \"severity\": \"high\",\n    \"description\": \"Test threat alert\",\n    \"indicators\": [\"192.168.1.100\", \"malicious.exe\"]\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/alerts/threat/",
+							"raw": "{{base_url}}/api/v1/alerts/threat/",
 							"host": ["{{base_url}}"],
-							"path": ["alerts", "threat", ""]
+							"path": ["api", "v1", "alerts", "threat", ""]
 						}
 					}
 				},
@@ -2848,9 +2863,9 @@
 							"raw": "{\n    \"feed_name\": \"Test Feed\",\n    \"status\": \"updated\",\n    \"message\": \"Feed has been updated with new indicators\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/alerts/feed/",
+							"raw": "{{base_url}}/api/v1/alerts/feed/",
 							"host": ["{{base_url}}"],
-							"path": ["alerts", "feed", ""]
+							"path": ["api", "v1", "alerts", "feed", ""]
 						}
 					}
 				},

@@ -3,8 +3,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from core.models.models import Organization, TrustLevel, TrustRelationship
-from core_ut.user_management.models import UserProfile
+from core.models.models import TrustLevel, TrustRelationship
+from core_ut.user_management.models import UserProfile, Organization
 from django.shortcuts import get_object_or_404
 import json
 
@@ -32,9 +32,13 @@ def list_organizations(request):
             "name": org.name,
             "organization_type": org.organization_type or 'other',
             "description": org.description or '',
-            "country": "US",  # Default for now
-            "is_active": True,  # Organizations don't have is_active field currently
-            "created_date": "2025-01-01T00:00:00Z",  # Default for now
+            "contact_email": getattr(org, 'contact_email', '') or '',
+            "website": getattr(org, 'website', '') or '',
+            "domain": getattr(org, 'domain', '') or '',
+            "is_active": getattr(org, 'is_active', True),
+            "is_publisher": getattr(org, 'is_publisher', False),
+            "is_verified": getattr(org, 'is_verified', False),
+            "created_date": org.created_at.isoformat() if org.created_at else None,
             "user_count": user_count
         }
         organizations.append(org_data)
@@ -63,9 +67,13 @@ def list_organizations(request):
                 "name": org.name,
                 "organization_type": org.organization_type,
                 "description": org.description or '',
-                "country": "US",
-                "is_active": True,
-                "created_date": "2025-01-01T00:00:00Z",
+                "contact_email": getattr(org, 'contact_email', '') or '',
+                "website": getattr(org, 'website', '') or '',
+                "domain": getattr(org, 'domain', '') or '',
+                "is_active": getattr(org, 'is_active', True),
+                "is_publisher": getattr(org, 'is_publisher', False),
+                "is_verified": getattr(org, 'is_verified', False),
+                "created_date": org.created_at.isoformat() if org.created_at else None,
                 "user_count": 0
             })
     
@@ -102,19 +110,65 @@ def organization_types(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_organization(request):
-    """Create organization endpoint"""
+    """Create organization endpoint with proper validation"""
     try:
         data = json.loads(request.body) if request.body else {}
         
         name = data.get('name')
-        organization_type = data.get('organization_type', 'other')
+        organization_type = data.get('organization_type')
         description = data.get('description', '')
+        primary_user_data = data.get('primary_user')
+        contact_email = data.get('contact_email')
+        domain = data.get('domain')
         
+        # Validate required fields
         if not name:
             return Response({
                 "success": False,
                 "error": "Organization name is required"
             }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not organization_type:
+            return Response({
+                "success": False,
+                "error": "Organization type is required"
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        if not primary_user_data:
+            return Response({
+                "success": False,
+                "error": "Primary user data is required"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate primary user fields
+        required_user_fields = ['username', 'email', 'password', 'first_name', 'last_name']
+        for field in required_user_fields:
+            if field not in primary_user_data or not primary_user_data[field]:
+                return Response({
+                    "success": False,
+                    "error": f"Primary user '{field}' is required"
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate email formats
+        from django.core.validators import validate_email
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        
+        try:
+            validate_email(primary_user_data['email'])
+        except DjangoValidationError:
+            return Response({
+                "success": False,
+                "error": "Invalid primary user email format"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if contact_email:
+            try:
+                validate_email(contact_email)
+            except DjangoValidationError:
+                return Response({
+                    "success": False,
+                    "error": "Invalid contact email format"
+                }, status=status.HTTP_400_BAD_REQUEST)
         
         # Check if organization already exists
         if Organization.objects.filter(name=name).exists():
@@ -123,21 +177,63 @@ def create_organization(request):
                 "error": "Organization with this name already exists"
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Create organization
-        org = Organization.objects.create(
-            name=name,
-            organization_type=organization_type,
-            description=description
+        # Check domain uniqueness if provided
+        if domain and Organization.objects.filter(domain=domain).exists():
+            return Response({
+                "success": False,
+                "error": "Organization domain already exists"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check username uniqueness
+        from core_ut.user_management.models import CustomUser
+        if CustomUser.objects.filter(username=primary_user_data['username']).exists():
+            return Response({
+                "success": False,
+                "error": "Primary user username already exists"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check email uniqueness
+        if CustomUser.objects.filter(email=primary_user_data['email']).exists():
+            return Response({
+                "success": False,
+                "error": "Primary user email already exists"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Use the proper organization service
+        from core_ut.user_management.services.organization_service import OrganizationService
+        org_service = OrganizationService()
+        
+        org_data = {
+            'name': name,
+            'organization_type': organization_type,
+            'description': description,
+            'contact_email': contact_email or primary_user_data['email'],
+            'domain': domain
+        }
+        
+        organization, primary_user = org_service.create_organization(
+            creating_user=request.user,
+            org_data=org_data,
+            primary_user_data=primary_user_data
         )
         
         return Response({
             "success": True,
             "data": {
-                "id": str(org.id),
-                "name": org.name,
-                "organization_type": org.organization_type,
-                "description": org.description,
-                "is_active": True
+                "id": str(organization.id),
+                "name": organization.name,
+                "organization_type": organization.organization_type,
+                "description": organization.description,
+                "is_active": organization.is_active,
+                "contact_email": organization.contact_email,
+                "domain": organization.domain
+            },
+            "primary_user": {
+                "id": str(primary_user.id),
+                "username": primary_user.username,
+                "email": primary_user.email,
+                "first_name": primary_user.first_name,
+                "last_name": primary_user.last_name
             },
             "message": "Organization created successfully"
         }, status=status.HTTP_201_CREATED)
@@ -153,25 +249,47 @@ def create_organization(request):
 def organization_detail(request, organization_id):
     """Organization detail endpoint for get/update/delete operations"""
     try:
-        # Handle both UUID and integer IDs
+        # Import both organization models for consistency with list_organizations
+        from core.models.models import Organization as CoreOrganization
+        from core_ut.user_management.models import Organization as UTOrganization
+        
+        org = None
+        # Try both models to find the organization
         try:
             import uuid
             uuid.UUID(str(organization_id))
-            org = Organization.objects.get(id=organization_id)
-        except (ValueError, Organization.DoesNotExist):
+            
+            # First try UT model
+            try:
+                org = UTOrganization.objects.get(id=organization_id)
+            except UTOrganization.DoesNotExist:
+                # Then try core model
+                try:
+                    org = CoreOrganization.objects.get(id=organization_id)
+                except CoreOrganization.DoesNotExist:
+                    pass
+                    
+        except ValueError:
             # Try to find by name if not UUID
             try:
-                org = Organization.objects.get(name=organization_id)
-            except Organization.DoesNotExist:
-                return Response({
-                    "success": False,
-                    "error": "Organization not found"
-                }, status=status.HTTP_404_NOT_FOUND)
-    except Organization.DoesNotExist:
+                org = UTOrganization.objects.get(name=organization_id)
+            except UTOrganization.DoesNotExist:
+                try:
+                    org = CoreOrganization.objects.get(name=organization_id)
+                except CoreOrganization.DoesNotExist:
+                    pass
+        
+        if org is None:
+            return Response({
+                "success": False,
+                "error": "Organization not found"
+            }, status=status.HTTP_404_NOT_FOUND)
+            
+    except Exception as e:
         return Response({
             "success": False,
-            "error": "Organization not found"
-        }, status=status.HTTP_404_NOT_FOUND)
+            "error": f"Error retrieving organization: {str(e)}"
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     if request.method == 'GET':
         return Response({
@@ -180,12 +298,27 @@ def organization_detail(request, organization_id):
                 "id": str(org.id),
                 "name": org.name,
                 "organization_type": org.organization_type,
-                "description": org.description,
-                "is_active": True  # Organizations don't have is_active field currently
+                "description": org.description or "",
+                "contact_email": getattr(org, 'contact_email', '') or "",
+                "website": getattr(org, 'website', '') or "",
+                "domain": getattr(org, 'domain', '') or "",
+                "created_at": org.created_at.isoformat() if org.created_at else None,
+                "updated_at": org.updated_at.isoformat() if org.updated_at else None,
+                "created_by": getattr(org, 'created_by', None),
+                "is_active": getattr(org, 'is_active', True),
+                "is_publisher": getattr(org, 'is_publisher', False),
+                "is_verified": getattr(org, 'is_verified', False)
             }
         })
     
     elif request.method == 'PUT':
+        # Only allow modification of UT model organizations (not legacy core model)
+        if not hasattr(org, 'is_active'):
+            return Response({
+                "success": False,
+                "error": "Cannot modify legacy organization. Please contact administrator."
+            }, status=status.HTTP_403_FORBIDDEN)
+            
         try:
             data = json.loads(request.body) if request.body else {}
             
@@ -196,6 +329,19 @@ def organization_detail(request, organization_id):
                 org.organization_type = data['organization_type']
             if 'description' in data:
                 org.description = data['description']
+            if 'contact_email' in data:
+                org.contact_email = data['contact_email']
+            if 'website' in data:
+                org.website = data['website']
+            if 'domain' in data:
+                org.domain = data['domain']
+            # sectors field doesn't exist in core_ut Organization model
+            if 'is_active' in data:
+                org.is_active = bool(data['is_active'])
+            if 'is_publisher' in data:
+                org.is_publisher = bool(data['is_publisher'])
+            if 'is_verified' in data:
+                org.is_verified = bool(data['is_verified'])
             
             org.save()
             
@@ -205,8 +351,16 @@ def organization_detail(request, organization_id):
                     "id": str(org.id),
                     "name": org.name,
                     "organization_type": org.organization_type,
-                    "description": org.description,
-                    "is_active": True
+                    "description": org.description or "",
+                    "contact_email": getattr(org, 'contact_email', '') or "",
+                    "website": getattr(org, 'website', '') or "",
+                    "domain": getattr(org, 'domain', '') or "",
+                    "created_at": org.created_at.isoformat() if org.created_at else None,
+                    "updated_at": org.updated_at.isoformat() if org.updated_at else None,
+                    "created_by": getattr(org, 'created_by', None),
+                    "is_active": getattr(org, 'is_active', True),
+                    "is_publisher": getattr(org, 'is_publisher', False),
+                    "is_verified": getattr(org, 'is_verified', False)
                 },
                 "message": "Organization updated successfully"
             })
@@ -218,6 +372,13 @@ def organization_detail(request, organization_id):
             }, status=status.HTTP_400_BAD_REQUEST)
     
     elif request.method == 'DELETE':
+        # Only allow deletion of UT model organizations (not legacy core model)
+        if not hasattr(org, 'is_active'):
+            return Response({
+                "success": False,
+                "error": "Cannot delete legacy organization. Please contact administrator."
+            }, status=status.HTTP_403_FORBIDDEN)
+            
         org_name = org.name
         org.delete()
         
@@ -231,24 +392,60 @@ def organization_detail(request, organization_id):
 def deactivate_organization(request, organization_id):
     """Deactivate organization endpoint"""
     try:
-        # Handle both UUID and string IDs
+        # Import both organization models for consistency
+        from core.models.models import Organization as CoreOrganization
+        from core_ut.user_management.models import Organization as UTOrganization
+        
+        org = None
+        # Try both models to find the organization
         try:
             import uuid
             uuid.UUID(str(organization_id))
-            org = Organization.objects.get(id=organization_id)
-        except (ValueError, Organization.DoesNotExist):
+            
+            # First try UT model
             try:
-                org = Organization.objects.get(name=organization_id)
-            except Organization.DoesNotExist:
-                return Response({
-                    "success": False,
-                    "error": "Organization not found"
-                }, status=status.HTTP_404_NOT_FOUND)
+                org = UTOrganization.objects.get(id=organization_id)
+            except UTOrganization.DoesNotExist:
+                # Then try core model
+                try:
+                    org = CoreOrganization.objects.get(id=organization_id)
+                except CoreOrganization.DoesNotExist:
+                    pass
+                    
+        except ValueError:
+            # Try to find by name if not UUID
+            try:
+                org = UTOrganization.objects.get(name=organization_id)
+            except UTOrganization.DoesNotExist:
+                try:
+                    org = CoreOrganization.objects.get(name=organization_id)
+                except CoreOrganization.DoesNotExist:
+                    pass
         
-        # Since Organization model doesn't have is_active field, we'll simulate deactivation
-        # This could be enhanced to add an is_active field to the model
+        if org is None:
+            return Response({
+                "success": False,
+                "error": "Organization not found"
+            }, status=status.HTTP_404_NOT_FOUND)
+            
+        # Only allow deactivation of UT model organizations (not legacy core model)
+        if not hasattr(org, 'is_active'):
+            return Response({
+                "success": False,
+                "error": "Cannot deactivate legacy organization. Please contact administrator."
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Deactivate the organization
+        org.is_active = False
+        org.save()
+        
         return Response({
             "success": True,
+            "data": {
+                "id": str(org.id),
+                "name": org.name,
+                "is_active": org.is_active
+            },
             "message": f"Organization '{org.name}' deactivated successfully"
         })
         
@@ -277,10 +474,17 @@ def reactivate_organization(request, organization_id):
                     "error": "Organization not found"
                 }, status=status.HTTP_404_NOT_FOUND)
         
-        # Since Organization model doesn't have is_active field, we'll simulate reactivation
-        # This could be enhanced to add an is_active field to the model
+        # Reactivate the organization
+        org.is_active = True
+        org.save()
+        
         return Response({
             "success": True,
+            "data": {
+                "id": str(org.id),
+                "name": org.name,
+                "is_active": org.is_active
+            },
             "message": f"Organization '{org.name}' reactivated successfully"
         })
         

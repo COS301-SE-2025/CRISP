@@ -37,6 +37,8 @@ const handleResponse = async (response) => {
     
     if (data && data.detail) {
       error = data.detail;
+    } else if (data && data.error) {
+      error = data.error;
     } else if (data && data.message) {
       error = data.message;
     } else if (data && data.non_field_errors) {

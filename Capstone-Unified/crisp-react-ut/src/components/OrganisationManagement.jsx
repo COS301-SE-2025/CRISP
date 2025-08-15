@@ -334,7 +334,11 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
           await api.deactivateOrganization(organizationId, 'Deactivated by admin');
           loadOrganizations();
         } catch (err) {
-          setError('Failed to deactivate organization: ' + err.message);
+          if (err.message && err.message.includes('legacy organization')) {
+            setError('Cannot deactivate this organization: This is a legacy organization from an older system version. Legacy organizations are read-only and cannot be modified to protect data integrity. Only newer organizations can be deactivated.');
+          } else {
+            setError('Failed to deactivate organization: ' + err.message);
+          }
         } finally {
           setOperationLoading(false);
         }
@@ -357,7 +361,11 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
           await api.reactivateOrganization(organizationId, 'Reactivated by admin');
           loadOrganizations();
         } catch (err) {
-          setError('Failed to reactivate organization: ' + err.message);
+          if (err.message && err.message.includes('legacy organization')) {
+            setError('Cannot reactivate this organization: This is a legacy organization from an older system version. Legacy organizations are read-only and cannot be modified to protect data integrity. Only newer organizations can be reactivated.');
+          } else {
+            setError('Failed to reactivate organization: ' + err.message);
+          }
         } finally {
           setOperationLoading(false);
         }
@@ -383,7 +391,11 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
           setShowActionsPopup(false);
           setSelectedOrganizationForActions(null);
         } catch (err) {
-          setError('Failed to delete organization: ' + err.message);
+          if (err.message && err.message.includes('legacy organization')) {
+            setError('Cannot delete this organization: This is a legacy organization from an older system version. Legacy organizations are read-only and cannot be deleted to protect data integrity. Only newer organizations can be deleted.');
+          } else {
+            setError('Failed to delete organization: ' + err.message);
+          }
         } finally {
           setOperationLoading(false);
         }
@@ -430,7 +442,11 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
           } else if (typeof err === 'string') {
             setError(err);
           } else {
-            setError('Failed to save organization: ' + (err.message || 'Unknown error'));
+            if (err.message && err.message.includes('legacy organization')) {
+              setError('Cannot update this organization: This is a legacy organization from an older system version. Legacy organizations are read-only and cannot be modified to protect data integrity. Only newer organizations can be updated.');
+            } else {
+              setError('Failed to save organization: ' + (err.message || 'Unknown error'));
+            }
           }
         } finally {
           setSubmitting(false);
