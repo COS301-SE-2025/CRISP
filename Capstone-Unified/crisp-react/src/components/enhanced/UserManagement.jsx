@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { getUsersList, createUser, updateUser, deactivateUser, reactivateUser, deleteUser, changeUsername, getUserDetails, getOrganizations, getCurrentUser } from '../api.js';
+import { getUsersList, createUser, updateUser, deactivateUser, reactivateUser, deleteUser, changeUsername, getUserDetails, getOrganizations, getCurrentUser } from '../../api.js';
 import LoadingSpinner from './LoadingSpinner.jsx';
 import ConfirmationModal from './ConfirmationModal.jsx';
 import Pagination from './Pagination.jsx';
 
 // Import alias for the API to avoid conflicts
-import * as api from '../api.js';
+import * as api from '../../api.js';
 
 const UserManagement = ({ active = true, initialSection = null }) => {
   console.log('UserManagement rendered with props:', { active, initialSection });

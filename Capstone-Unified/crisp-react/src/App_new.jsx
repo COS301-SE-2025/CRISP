@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 // Import all components
-import UserManagement from './components/user/UserManagement';
+import UserManagement from './components/enhanced/UserManagement';
 import TrustManagement from './components/trust/TrustManagement';
 import UserProfile from './components/user/UserProfile';
 import Notifications from './components/notifications/Notifications';

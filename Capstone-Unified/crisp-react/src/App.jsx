@@ -266,6 +266,11 @@ function App({ user, onLogout, isAdmin }) {
     }
   };
 
+  // Function to navigate to register user page/modal
+  const navigateToRegisterUser = () => {
+    showPage('user-management', 'addUser');
+  };
+
   // Handle browser back/forward navigation
   useEffect(() => {
     const handlePopState = () => {
@@ -340,7 +345,7 @@ function App({ user, onLogout, isAdmin }) {
   return (
     <div className="App">
       {/* Header */}
-      <Header showPage={showPage} />
+      <Header showPage={showPage} user={user} onLogout={onLogout} isAdmin={isAdmin} navigateToRegisterUser={navigateToRegisterUser} />
       
       {/* Main Navigation */}
       <MainNav activePage={activePage} showPage={showPage} user={user} onLogout={onLogout} isAdmin={isAdmin} />
@@ -378,8 +383,43 @@ function App({ user, onLogout, isAdmin }) {
   );
 }
 
-// Header Component
-function Header({ showPage }) {
+// Header Component with Enhanced Profile Dropdown
+function Header({ showPage, user, onLogout, isAdmin, navigateToRegisterUser }) {
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showManagementSubmenu, setShowManagementSubmenu] = useState(false);
+  
+  // User profile data processing
+  const userInitial = user && user.username ? user.username.charAt(0).toUpperCase() : 'A';
+  const userName = user && user.username ? user.username.split('@')[0] : 'Admin';
+  const userRole = user?.role || 'Security Analyst';
+  
+  // Event handlers
+  const handleUserMenuClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowUserMenu(!showUserMenu);
+  };
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.user-profile-container')) {
+        setShowUserMenu(false);
+        setShowManagementSubmenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Close submenu when main menu closes
+  useEffect(() => {
+    if (!showUserMenu) {
+      setShowManagementSubmenu(false);
+    }
+  }, [showUserMenu]);
+
   return (
     <header>
       <div className="container header-container">
@@ -396,12 +436,83 @@ function Header({ showPage }) {
             <i className="fas fa-bell"></i>
             <span className="notification-count">3</span>
           </div>
-          <div className="user-profile" onClick={() => showPage('profile')} style={{cursor: 'pointer'}}>
-            <div className="avatar">A</div>
-            <div className="user-info">
-              <div className="user-name">Admin</div>
-              <div className="user-role">Security Analyst</div>
-            </div>
+          
+          {/* Enhanced User Profile Menu */}
+          <div className="user-profile-container">
+            <button className="user-profile" onClick={handleUserMenuClick} type="button">
+              <div className="avatar">{userInitial}</div>
+              <div className="user-info">
+                <div className="user-name">{userName}</div>
+                <div className="user-role">{userRole}</div>
+              </div>
+              <i className="fas fa-chevron-down"></i>
+            </button>
+            
+            {showUserMenu && (
+              <div className="user-menu-dropdown">
+                <div className="dropdown-header">
+                  <div className="user-avatar-large">{userInitial}</div>
+                  <div>
+                    <div className="user-name-large">{userName}</div>
+                    <div className="user-email">{user?.username || 'admin@example.com'}</div>
+                  </div>
+                </div>
+                <div className="menu-divider"></div>
+                <div className="menu-items">
+                  <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('profile');}} type="button">
+                    <i className="fas fa-user"></i>
+                    <span>My Profile</span>
+                  </button>
+                  <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('account-settings');}} type="button">
+                    <i className="fas fa-cog"></i>
+                    <span>Account Settings</span>
+                  </button>
+                  <div className="menu-divider"></div>
+                  <div className="menu-item-submenu">
+                    <button className="menu-item" onClick={() => setShowManagementSubmenu(!showManagementSubmenu)} type="button">
+                      <i className="fas fa-users"></i>
+                      <span>Management</span>
+                      <i className={`fas fa-chevron-${showManagementSubmenu ? 'up' : 'down'} submenu-arrow`}></i>
+                    </button>
+                    {showManagementSubmenu && (
+                      <div className="submenu">
+                        <button className="submenu-item" onClick={() => {setShowUserMenu(false); setShowManagementSubmenu(false); showPage('user-management');}} type="button">
+                          <i className="fas fa-users"></i>
+                          <span>User Management</span>
+                        </button>
+                        <button className="submenu-item" onClick={() => {setShowUserMenu(false); setShowManagementSubmenu(false); showPage('organisation-management');}} type="button">
+                          <i className="fas fa-university"></i>
+                          <span>Organisation Management</span>
+                        </button>
+                        <button className="submenu-item" onClick={() => {setShowUserMenu(false); setShowManagementSubmenu(false); showPage('trust-management');}} type="button">
+                          <i className="fas fa-handshake"></i>
+                          <span>Trust Management</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {/* Admin Settings - BlueVision Admins only */}
+                  {userRole === 'BlueVisionAdmin' && (
+                    <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('admin-settings');}} type="button">
+                      <i className="fas fa-shield-alt"></i>
+                      <span>Admin Settings</span>
+                    </button>
+                  )}
+                  {/* Register User - BlueVision Admins only */}
+                  {userRole === 'BlueVisionAdmin' && navigateToRegisterUser && (
+                    <button className="menu-item" onClick={() => {setShowUserMenu(false); navigateToRegisterUser();}} type="button">
+                      <i className="fas fa-user-plus"></i>
+                      <span>Register New User</span>
+                    </button>
+                  )}
+                </div>
+                <div className="menu-divider"></div>
+                <button className="menu-item logout-item" onClick={() => {setShowUserMenu(false); onLogout();}} type="button">
+                  <i className="fas fa-sign-out-alt"></i>
+                  <span>Logout</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
