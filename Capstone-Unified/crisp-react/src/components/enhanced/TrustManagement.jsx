@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import * as api from '../api.js';
+import * as api from '../../api.js';
 import LoadingSpinner from './LoadingSpinner.jsx';
 import ConfirmationModal from './ConfirmationModal.jsx';
 import Pagination from './Pagination.jsx';

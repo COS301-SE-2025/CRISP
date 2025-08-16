@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { getOrganizations, createOrganization, updateOrganization, deactivateOrganization, reactivateOrganization, deleteOrganization, getOrganizationDetails, getOrganizationTypes } from '../api.js';
+import { getOrganizations, createOrganization, updateOrganization, deactivateOrganization, reactivateOrganization, deleteOrganization, getOrganizationDetails, getOrganizationTypes } from '../../api.js';
 import LoadingSpinner from './LoadingSpinner.jsx';
 import ConfirmationModal from './ConfirmationModal.jsx';
 import Pagination from './Pagination.jsx';
 
-import * as api from '../api.js';
+import * as api from '../../api.js';
 
 const OrganisationManagement = ({ active = true, initialSection = null }) => {
   console.log('OrganisationManagement rendered with props:', { active, initialSection });
@@ -377,7 +377,7 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
         try {
           setOperationLoading(true);
           await new Promise(resolve => setTimeout(resolve, 800));
-          await deleteOrganization(organizationId, 'Deleted by admin');
+          await api.deleteOrganization(organizationId, 'Deleted by admin');
           loadOrganizations();
           // Ensure actions popup is closed after successful deletion
           setShowActionsPopup(false);

@@ -132,6 +132,79 @@ class AccessControlService:
             username = getattr(user, 'username', 'Anonymous') if user else 'Anonymous'
             raise PermissionDenied(f"User {username} does not have permission: {permission}")
     
+    def can_manage_users(self, user) -> bool:
+        """Check if user can manage users in general (for listing/accessing user management)"""
+        if not user:
+            return False
+            
+        # Use the existing permission system
+        return self.has_permission(user, 'can_manage_users')
+    
+    def can_create_users(self, user) -> bool:
+        """Check if user can create new users"""
+        if not user:
+            return False
+            
+        # Use the existing permission system
+        return self.has_permission(user, 'can_create_organization_users')
+    
+    def can_view_user(self, viewing_user, target_user) -> bool:
+        """Check if user can view another user's details"""
+        if not viewing_user or not target_user:
+            return False
+            
+        # Users can view themselves
+        if viewing_user.id == target_user.id:
+            return True
+            
+        # BlueVision admins can view all users
+        if viewing_user.role == 'BlueVisionAdmin':
+            return True
+            
+        # Admins can view all users
+        if viewing_user.role == 'admin':
+            return True
+            
+        # Publishers can view users in their organization
+        if (viewing_user.role == 'publisher' and 
+            viewing_user.organization and 
+            target_user.organization and
+            viewing_user.organization.id == target_user.organization.id):
+            return True
+        
+        return False
+    
+    def can_modify_user(self, modifying_user, target_user) -> bool:
+        """Check if user can modify another user's details"""
+        # This is essentially the same as can_manage_user but with different semantics
+        return self.can_manage_user(modifying_user, target_user)
+    
+    def can_delete_user(self, deleting_user, target_user) -> bool:
+        """Check if user can delete another user"""
+        if not deleting_user or not target_user:
+            return False
+            
+        # Users cannot delete themselves (handled separately in the API)
+        if deleting_user.id == target_user.id:
+            return False
+            
+        # BlueVision admins can delete all users
+        if deleting_user.role == 'BlueVisionAdmin':
+            return True
+            
+        # Admins can delete users except other admins and BlueVision admins
+        if deleting_user.role == 'admin':
+            return target_user.role not in ['admin', 'BlueVisionAdmin']
+            
+        # Publishers can delete viewers in their organization
+        if (deleting_user.role == 'publisher' and 
+            deleting_user.organization and 
+            target_user.organization and
+            deleting_user.organization.id == target_user.organization.id):
+            return target_user.role == 'viewer'
+        
+        return False
+    
     def can_manage_user(self, managing_user, target_user) -> bool:
         """Check if user can manage another user"""
         if not managing_user or not target_user:
@@ -261,6 +334,31 @@ class AccessControlService:
             logger.error(f"Error getting accessible organizations: {e}")
         
         return accessible
+    
+    def get_manageable_organizations(self, user) -> List[Organization]:
+        """Get organizations that the user can manage (for user invitations and management)"""
+        manageable = []
+        
+        if not user:
+            return manageable
+        
+        try:
+            # BlueVision admins can manage ALL organizations
+            if user.role == 'BlueVisionAdmin':
+                return list(Organization.objects.filter(is_active=True))
+            
+            # Admins can manage all organizations
+            if user.role == 'admin':
+                return list(Organization.objects.filter(is_active=True))
+            
+            # Publishers can only manage their own organization
+            if user.role == 'publisher' and user.organization:
+                manageable.append(user.organization)
+            
+        except Exception as e:
+            logger.error(f"Error getting manageable organizations: {e}")
+        
+        return manageable
     
     def can_access_organization(self, user, organization) -> bool:
         """Check if user can access an organization"""

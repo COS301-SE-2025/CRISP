@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import UserProfile from './components/user/UserProfile.jsx';
+import UserManagement from './components/enhanced/UserManagement.jsx';
+import OrganisationManagement from './components/enhanced/OrganisationManagement.jsx';
+import TrustManagement from './components/enhanced/TrustManagement.jsx';
 
 // Error Boundary for Chart Component
 class ChartErrorBoundary extends React.Component {
@@ -376,6 +379,11 @@ function App({ user, onLogout, isAdmin }) {
           
           {/* User Profile */}
           <UserProfile active={activePage === 'profile'} />
+          
+          {/* Management Components */}
+          <UserManagement active={activePage === 'user-management'} />
+          <OrganisationManagement active={activePage === 'organisation-management'} />
+          <TrustManagement active={activePage === 'trust-management'} />
         </div>
       </main>
 

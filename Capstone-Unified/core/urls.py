@@ -65,6 +65,7 @@ trust_urlpatterns = [
 # Organization Management URLs
 organization_urlpatterns = [
     path('', organization_api.list_organizations, name='organization_list'),
+    path('types/', organization_api.get_organization_types, name='organization_types'),
     path('create/', organization_api.create_organization, name='organization_create'),
     path('<uuid:organization_id>/', organization_api.get_organization, name='organization_detail'),
     path('<uuid:organization_id>/update/', organization_api.update_organization, name='organization_update'),

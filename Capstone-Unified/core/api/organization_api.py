@@ -520,3 +520,35 @@ def get_organization_trust_relationships(request, organization_id):
             'success': False,
             'message': 'Failed to get trust relationships'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_organization_types(request):
+    """
+    Get available organization types
+    
+    GET /api/organizations/types/
+    """
+    try:
+        # Get organization type choices from the model
+        from core.models.models import ORGANIZATION_TYPE_CHOICES
+        
+        organization_types = [
+            {
+                'value': choice[0],
+                'label': choice[1]
+            }
+            for choice in ORGANIZATION_TYPE_CHOICES
+        ]
+        
+        return Response({
+            'success': True,
+            'organization_types': organization_types
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error getting organization types: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to get organization types'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
