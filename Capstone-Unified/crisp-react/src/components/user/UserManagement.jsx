@@ -7,20 +7,65 @@ const UserManagement = () => {
   const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => {
+    console.log('UserManagement useEffect triggered, calling fetchUsers');
     fetchUsers();
   }, []);
 
   const fetchUsers = async () => {
+    console.log('=== fetchUsers called ===');
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8000/api/users/');
+      const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+      console.log('Using token:', token ? 'Token found' : 'No token');
+      console.log('Available localStorage keys:', Object.keys(localStorage));
+      
+      const response = await fetch('http://localhost:8000/api/users/', {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+      });
+      console.log('Fetch completed, processing response...');
+      
+      console.log('Response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
-        setUsers(data.users || []);
+        console.log('Full API response:', JSON.stringify(data, null, 2));
+        
+        // Handle Django Rest Framework pagination response
+        let users = [];
+        if (data.results && data.results.users) {
+          // Paginated response with custom wrapper
+          users = data.results.users;
+          console.log('Extracted from paginated data.results.users:', users);
+        } else if (data.users) {
+          // Direct users array
+          users = data.users;
+          console.log('Extracted from data.users:', users);
+        } else if (data.results && Array.isArray(data.results)) {
+          // Paginated response with direct array
+          users = data.results;
+          console.log('Extracted from paginated data.results (array):', users);
+        } else if (Array.isArray(data)) {
+          // Direct array response
+          users = data;
+          console.log('Data is direct array:', users);
+        } else {
+          console.log('Could not find users in response. Available keys:', Object.keys(data));
+          console.log('Data structure:', data);
+        }
+        
+        console.log('Final users array:', users);
+        console.log('Users array length:', users.length);
+        setUsers(users);
       } else {
-        throw new Error('Failed to fetch users');
+        const errorText = await response.text();
+        console.log('Error response:', errorText);
+        throw new Error(`Failed to fetch users: ${response.status} ${errorText}`);
       }
     } catch (err) {
+      console.error('Fetch error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -56,13 +101,25 @@ const UserManagement = () => {
     <div className="user-management">
       <div className="header">
         <h2>User Management</h2>
-        <button 
-          className="btn btn-primary"
-          onClick={() => setShowAddModal(true)}
-        >
-          <i className="fas fa-plus"></i>
-          Add User
-        </button>
+        <div className="header-buttons">
+          <button 
+            className="btn btn-secondary"
+            onClick={() => {
+              console.log('Debug button clicked - calling fetchUsers');
+              fetchUsers();
+            }}
+          >
+            <i className="fas fa-refresh"></i>
+            Debug Reload Users
+          </button>
+          <button 
+            className="btn btn-primary"
+            onClick={() => setShowAddModal(true)}
+          >
+            <i className="fas fa-plus"></i>
+            Add User
+          </button>
+        </div>
       </div>
 
       <div className="users-table">
@@ -160,6 +217,11 @@ const UserManagement = () => {
           justify-content: space-between;
           align-items: center;
           margin-bottom: 20px;
+        }
+
+        .header-buttons {
+          display: flex;
+          gap: 10px;
         }
 
         .header h2 {

@@ -195,7 +195,7 @@ export const getOrganizations = async (queryParams = {}) => {
 };
 
 export const createOrganization = async (orgData) => {
-  const response = await fetch(`${API_BASE_URL}/api/organizations/`, {
+  const response = await fetch(`${API_BASE_URL}/api/organizations/create/`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(orgData),
@@ -210,7 +210,7 @@ export const createOrganization = async (orgData) => {
 };
 
 export const updateOrganization = async (orgId, orgData) => {
-  const response = await fetch(`${API_BASE_URL}/api/organizations/${orgId}/`, {
+  const response = await fetch(`${API_BASE_URL}/api/organizations/${orgId}/update/`, {
     method: 'PUT',
     headers: getAuthHeaders(),
     body: JSON.stringify(orgData),
@@ -255,7 +255,7 @@ export const reactivateOrganization = async (orgId, reason = '') => {
 };
 
 export const deleteOrganization = async (orgId, reason = '') => {
-  const response = await fetch(`${API_BASE_URL}/api/organizations/${orgId}/`, {
+  const response = await fetch(`${API_BASE_URL}/api/organizations/${orgId}/delete/`, {
     method: 'DELETE',
     headers: getAuthHeaders(),
     body: JSON.stringify({ reason }),

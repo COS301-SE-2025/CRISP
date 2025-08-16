@@ -116,7 +116,10 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
       console.log('Full response object:', JSON.stringify(response, null, 2));
       
       let organizationsData = [];
-      if (response.data && response.data.organizations) {
+      if (response.results && response.results.organizations) {
+        // Django REST Framework pagination with custom wrapper
+        organizationsData = response.results.organizations;
+      } else if (response.data && response.data.organizations) {
         organizationsData = response.data.organizations;
       } else if (response.organizations) {
         organizationsData = response.organizations;

@@ -35,6 +35,8 @@ class OrganizationService:
         if not name or not organization_type or not contact_email:
             raise ValidationError("Name, organization type, and contact email are required")
         
+        logger.info(f"OrganizationService.create_organization called with primary_user_data: {primary_user_data}")
+        
         if not primary_user_data:
             raise ValidationError("Primary user data is required")
         

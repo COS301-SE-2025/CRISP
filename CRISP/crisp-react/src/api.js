@@ -4,7 +4,9 @@ const API_BASE_URL = 'http://localhost:8000';
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('access_token');
+  const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+  console.log('Getting auth headers - token found:', token ? 'Yes' : 'No');
+  console.log('Available localStorage keys:', Object.keys(localStorage));
   return {
     'Content-Type': 'application/json',
     'Authorization': token ? `Bearer ${token}` : '',

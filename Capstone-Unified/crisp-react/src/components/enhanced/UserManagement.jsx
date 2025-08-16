@@ -135,7 +135,10 @@ const UserManagement = ({ active = true, initialSection = null }) => {
       
       // More robust data extraction
       let usersData = [];
-      if (response.data && response.data.users) {
+      if (response.results && response.results.users) {
+        // Django REST Framework pagination with custom wrapper
+        usersData = response.results.users;
+      } else if (response.data && response.data.users) {
         usersData = response.data.users;
       } else if (response.users) {
         usersData = response.users;

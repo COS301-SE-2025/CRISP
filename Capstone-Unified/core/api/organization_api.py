@@ -26,11 +26,11 @@ class OrganizationPagination(PageNumberPagination):
     page_size_query_param = 'page_size'
     max_page_size = 100
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def list_organizations(request):
     """
-    List organizations with filtering and pagination
+    List organizations with filtering and pagination (GET) or create organization (POST)
     
     GET /api/organizations/
     Query params:
@@ -39,7 +39,19 @@ def list_organizations(request):
         - search: search in name, domain, description
         - organization_type: filter by organization type
         - is_active: filter by active status
+        
+    POST /api/organizations/
+    Body: {
+        "name": "string",
+        "domain": "string",
+        "organization_type": "string",
+        "description": "string",
+        "contact_email": "string"
+    }
     """
+    if request.method == 'POST':
+        return create_organization(request)
+    
     try:
         access_control = AccessControlService()
         
@@ -172,6 +184,10 @@ def create_organization(request):
         
         # Extract primary user data
         primary_user_data = request.data.get('primary_user', {})
+        
+        # Debug logging
+        logger.info(f"Organization creation request data: {request.data}")
+        logger.info(f"Primary user data extracted: {primary_user_data}")
         
         # Create organization
         result = org_service.create_organization(
