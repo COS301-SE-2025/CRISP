@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { getUsersList, createUser, updateUser, deactivateUser, reactivateUser, deleteUser, changeUsername, getUserDetails, getOrganizations, getCurrentUser } from '../../api.js';
+import { getUsersList, createUser, updateUser, deactivateUser, reactivateUser, deleteUserPermanently, changeUsername, getUserDetails, getOrganizations, getCurrentUser } from '../../api.js';
 import LoadingSpinner from './LoadingSpinner.jsx';
 import ConfirmationModal from './ConfirmationModal.jsx';
 import Pagination from './Pagination.jsx';
@@ -457,7 +457,7 @@ const UserManagement = ({ active = true, initialSection = null }) => {
         try {
           setOperationLoading(true);
           await new Promise(resolve => setTimeout(resolve, 800));
-          await api.deleteUser(userId, 'Deleted by admin');
+          await api.deleteUserPermanently(userId, 'Deleted by admin');
           loadUsers();
           // Ensure actions popup is closed after successful deletion
           setShowActionsPopup(false);

@@ -146,16 +146,19 @@ export const reactivateUser = async (userId, reason = '') => {
   return await response.json();
 };
 
-export const deleteUser = async (userId, reason = '') => {
-  const response = await fetch(`${API_BASE_URL}/api/users/${userId}/delete/`, {
+export const deleteUserPermanently = async (userId, reason = '') => {
+  const response = await fetch(`${API_BASE_URL}/api/users/${userId}/delete-permanently/`, {
     method: 'DELETE',
     headers: getAuthHeaders(),
-    body: JSON.stringify({ reason }),
+    body: JSON.stringify({ 
+      confirm: true,
+      reason 
+    }),
   });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || 'Failed to delete user');
+    throw new Error(errorData.message || 'Failed to permanently delete user');
   }
 
   return await response.json();

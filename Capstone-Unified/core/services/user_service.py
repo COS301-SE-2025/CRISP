@@ -493,7 +493,7 @@ class UserService:
                 
                 return {
                     'success': True,
-                    'message': f"User '{user.username}' has been deleted successfully",
+                    'message': f"User '{user.username}' has been deactivated successfully",
                     'user_id': str(user.id)
                 }
                 
@@ -502,6 +502,83 @@ class UserService:
             return {
                 'success': False,
                 'message': f"Failed to delete user: {str(e)}"
+            }
+    
+    def delete_user_permanently(self, user_id, deleted_by, reason=''):
+        """Permanently delete a user and all related data from the database"""
+        try:
+            user = CustomUser.objects.get(id=user_id)
+        except CustomUser.DoesNotExist:
+            return {
+                'success': False,
+                'message': 'User not found'
+            }
+        
+        # Check permissions - only BlueVisionAdmin can permanently delete users
+        if deleted_by.role != 'BlueVisionAdmin':
+            return {
+                'success': False,
+                'message': 'Only BlueVision administrators can permanently delete users'
+            }
+        
+        # Prevent self-deletion
+        if user.id == deleted_by.id:
+            return {
+                'success': False,
+                'message': 'Cannot permanently delete your own account'
+            }
+        
+        username = user.username
+        
+        try:
+            with transaction.atomic():
+                # Delete user sessions
+                UserSession.objects.filter(user=user).delete()
+                
+                # Delete trusted devices
+                TrustedDevice.objects.filter(user=user).delete()
+                
+                # Delete user profile
+                try:
+                    UserProfile.objects.filter(user=user).delete()
+                except:
+                    pass  # UserProfile might not exist
+                
+                # Delete authentication logs related to this user
+                AuthenticationLog.objects.filter(user=user).delete()
+                
+                # Delete invitations sent by this user
+                UserInvitation.objects.filter(inviter=user).delete()
+                
+                # Log the permanent deletion before deleting the user
+                AuthenticationLog.log_authentication_event(
+                    user=deleted_by,
+                    action='user_delete_permanent',
+                    success=True,
+                    additional_data={
+                        'deleted_user_id': str(user.id),
+                        'deleted_user_username': username,
+                        'reason': reason,
+                        'action_type': 'user_permanently_deleted'
+                    }
+                )
+                
+                # Permanently delete the user
+                user.delete()
+                
+                logger.info(f"User '{username}' permanently deleted by {deleted_by.username}")
+                
+                return {
+                    'success': True,
+                    'message': f"User '{username}' has been permanently deleted",
+                    'user_id': str(user_id)
+                }
+                
+        except Exception as e:
+            logger.error(f"Error permanently deleting user {user_id}: {e}")
+            return {
+                'success': False,
+                'message': f"Failed to permanently delete user: {str(e)}"
             }
     
     def update_user(self, user_id, update_data, updated_by):

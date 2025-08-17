@@ -312,11 +312,15 @@ def update_user(request, user_id):
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
-def delete_user(request, user_id):
+def delete_user_permanently(request, user_id):
     """
-    Delete/deactivate user
+    Permanently delete a user and all related data (BlueVision admins only)
     
-    DELETE /api/users/{user_id}/
+    DELETE /api/users/{user_id}/delete-permanently/
+    Body: {
+        "reason": "string",
+        "confirm": true
+    }
     """
     try:
         access_control = AccessControlService()
@@ -330,24 +334,34 @@ def delete_user(request, user_id):
                 'message': 'User not found'
             }, status=status.HTTP_404_NOT_FOUND)
         
-        # Check permissions
+        # Check permissions (only BlueVision admins)
         if not access_control.can_delete_user(request.user, user):
             return Response({
                 'success': False,
-                'message': 'Insufficient permissions to delete this user'
+                'message': 'Insufficient permissions to permanently delete this user'
             }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Require confirmation
+        if not request.data.get('confirm', False):
+            return Response({
+                'success': False,
+                'message': 'Permanent deletion requires confirmation. Set "confirm": true in request body.'
+            }, status=status.HTTP_400_BAD_REQUEST)
         
         # Prevent self-deletion
         if user.id == request.user.id:
             return Response({
                 'success': False,
-                'message': 'Cannot delete your own account'
+                'message': 'Cannot permanently delete your own account'
             }, status=status.HTTP_400_BAD_REQUEST)
         
         user_service = UserService()
-        result = user_service.delete_user(
+        reason = request.data.get('reason', '')
+        
+        result = user_service.delete_user_permanently(
             user_id=user_id,
-            deleted_by=request.user
+            deleted_by=request.user,
+            reason=reason
         )
         
         if result['success']:
@@ -362,10 +376,10 @@ def delete_user(request, user_id):
             }, status=status.HTTP_400_BAD_REQUEST)
             
     except Exception as e:
-        logger.error(f"Error deleting user {user_id}: {str(e)}")
+        logger.error(f"Error permanently deleting user {user_id}: {str(e)}")
         return Response({
             'success': False,
-            'message': 'Failed to delete user'
+            'message': 'Failed to permanently delete user'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
