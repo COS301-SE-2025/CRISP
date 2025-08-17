@@ -45,3 +45,7 @@ media/
 # Temporary files
 *.tmp
 *.temp
+
+# User and public folders
+userstr*/
+publica*/

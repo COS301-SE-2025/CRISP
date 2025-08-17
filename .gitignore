@@ -13,6 +13,9 @@ __pycache__/
 *$py.class
 *.so
 
+PublicationConsumptionAnonymization/
+TrustUsersManagement/
+
 # Distribution / packaging
 .Python
 build/

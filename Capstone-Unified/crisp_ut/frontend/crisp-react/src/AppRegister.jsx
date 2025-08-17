@@ -69,10 +69,26 @@ const getAuthHeaders = () => {
 const api = {
   get: async (endpoint) => {
     try {
+      const headers = getAuthHeaders();
+      const token = localStorage.getItem('crisp_auth_token');
+      
+      // Don't make API calls if we don't have a token (except for auth endpoints)
+      if (!token && !endpoint.includes('/auth/')) {
+        console.warn(`Skipping API call to ${endpoint} - no authentication token`);
+        return null;
+      }
+      
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        headers: getAuthHeaders()
+        headers: headers
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          console.warn(`Authentication failed for ${endpoint} - token may be expired`);
+          // Could trigger re-authentication here if needed
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
       return await response.json();
     } catch (error) {
       console.error(`API Error: ${endpoint}`, error);
@@ -82,12 +98,27 @@ const api = {
   
   post: async (endpoint, data) => {
     try {
+      const headers = getAuthHeaders();
+      const token = localStorage.getItem('crisp_auth_token');
+      
+      // Don't make API calls if we don't have a token (except for auth endpoints)
+      if (!token && !endpoint.includes('/auth/')) {
+        console.warn(`Skipping API call to ${endpoint} - no authentication token`);
+        return null;
+      }
+      
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: headers,
         body: JSON.stringify(data)
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          console.warn(`Authentication failed for ${endpoint} - token may be expired`);
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
       return await response.json();
     } catch (error) {
       console.error(`API Error: ${endpoint}`, error);
@@ -97,12 +128,26 @@ const api = {
   
   put: async (endpoint, data) => {
     try {
+      const headers = getAuthHeaders();
+      const token = localStorage.getItem('crisp_auth_token');
+      
+      if (!token && !endpoint.includes('/auth/')) {
+        console.warn(`Skipping API call to ${endpoint} - no authentication token`);
+        return null;
+      }
+      
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
+        headers: headers,
         body: JSON.stringify(data)
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          console.warn(`Authentication failed for ${endpoint} - token may be expired`);
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
       return await response.json();
     } catch (error) {
       console.error(`API Error: ${endpoint}`, error);
@@ -112,11 +157,25 @@ const api = {
   
   delete: async (endpoint) => {
     try {
+      const headers = getAuthHeaders();
+      const token = localStorage.getItem('crisp_auth_token');
+      
+      if (!token && !endpoint.includes('/auth/')) {
+        console.warn(`Skipping API call to ${endpoint} - no authentication token`);
+        return null;
+      }
+      
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'DELETE',
-        headers: getAuthHeaders()
+        headers: headers
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          console.warn(`Authentication failed for ${endpoint} - token may be expired`);
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
       
       // For DELETE requests, we might get 204 No Content with no response body
       if (response.status === 204) {
@@ -133,63 +192,10 @@ const api = {
   }
 };
 
-function App() {
+function App({ user, onLogout }) {
   // State to manage the active page and navigation parameters
   const [activePage, setActivePage] = useState('dashboard');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAuthenticating, setIsAuthenticating] = useState(true);
 
-  // Automatically login as admin on component mount
-  useEffect(() => {
-    const autoLogin = async () => {
-      // Check if already has valid token
-      const existingToken = localStorage.getItem('crisp_auth_token');
-      if (existingToken) {
-        setIsAuthenticated(true);
-        setIsAuthenticating(false);
-        return;
-      }
-
-      // Auto-login as admin
-      try {
-        console.log('Attempting auto-login...');
-        const response = await fetch(`${API_BASE_URL}/api/auth/login/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: 'admin', password: 'admin123' })
-        });
-
-        console.log('Login response status:', response.status);
-        
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Login response data:', data);
-          if (data.access) {
-            localStorage.setItem('crisp_auth_token', data.access);
-            localStorage.setItem('crisp_refresh_token', data.refresh);
-            localStorage.setItem('crisp_user', JSON.stringify(data.user));
-            console.log('Login successful, token stored');
-            setIsAuthenticated(true);
-            setIsAuthenticating(false);
-          } else {
-            console.error('No access token in response');
-            setIsAuthenticated(false);
-            setIsAuthenticating(false);
-          }
-        } else {
-          console.error('Auto-login failed with status:', response.status, response.statusText);
-          setIsAuthenticated(false);
-          setIsAuthenticating(false);
-        }
-      } catch (error) {
-        console.error('Auto-login error:', error);
-        setIsAuthenticated(false);
-        setIsAuthenticating(false);
-      }
-    };
-
-    autoLogin();
-  }, []);
   const [navigationState, setNavigationState] = useState({
     triggerModal: null,
     modalParams: {}
@@ -248,53 +254,10 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-
-  // Show loading screen during authentication
-  if (isAuthenticating) {
-    return (
-      <div className="App">
-        <div className="loading-screen">
-          <div className="loading-spinner"></div>
-          <h2>Loading CRISP System...</h2>
-          <p>Authenticating...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show login screen when not authenticated
-  if (!isAuthenticated) {
-    return (
-      <div className="App">
-        <div className="login-screen">
-          <div className="login-container">
-            <h2>CRISP System Login</h2>
-            <p>Please login to continue</p>
-            <button 
-              className="btn btn-primary"
-              onClick={() => {
-                setIsAuthenticating(true);
-                setIsAuthenticated(false);
-                // Clear any existing tokens
-                localStorage.removeItem('crisp_auth_token');
-                localStorage.removeItem('crisp_refresh_token');
-                localStorage.removeItem('crisp_user');
-                // Retry auto-login
-                window.location.reload();
-              }}
-            >
-              <i className="fas fa-sign-in-alt"></i> Login as Admin
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="App">
       {/* Header */}
-      <Header showPage={showPage} />
+      <Header showPage={showPage} user={user} onLogout={onLogout} />
       
       {/* Main Navigation */}
       <MainNav activePage={activePage} showPage={showPage} />
@@ -314,8 +277,8 @@ function App() {
           {/* TTP Analysis */}
           <TTPAnalysis active={activePage === 'ttp-analysis'} />
 
-          {/* Institutions */}
-          <Institutions active={activePage === 'institutions'} />
+          {/* Organizations */}
+          <Organizations active={activePage === 'organizations'} />
 
           {/* Reports */}
           <Reports active={activePage === 'reports'} />
@@ -333,7 +296,35 @@ function App() {
 }
 
 // Header Component
-function Header({ showPage }) {
+function Header({ showPage, user, onLogout }) {
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  // Get user information with fallbacks
+  const userInitial = user && user.username ? user.username.charAt(0).toUpperCase() : 'A';
+  const userName = user && user.username ? user.username.split('@')[0] : 'Admin';
+  const userRole = user?.role || 'Security Analyst';
+
+  // Handle user menu click
+  const handleUserMenuClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowUserMenu(!showUserMenu);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.user-profile')) {
+        setShowUserMenu(false);
+      }
+    };
+
+    if (showUserMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showUserMenu]);
+
   return (
     <header>
       <div className="container header-container">
@@ -350,12 +341,55 @@ function Header({ showPage }) {
             <i className="fas fa-bell"></i>
             <span className="notification-count">3</span>
           </div>
-          <div className="user-profile" onClick={() => showPage('profile')} style={{cursor: 'pointer'}}>
-            <div className="avatar">A</div>
-            <div className="user-info">
-              <div className="user-name">Admin</div>
-              <div className="user-role">Security Analyst</div>
-            </div>
+          <div className="user-profile" style={{position: 'relative'}}>
+            <button 
+              className="user-profile-button" 
+              onClick={handleUserMenuClick}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '4px'
+              }}
+            >
+              <div className="avatar">{userInitial}</div>
+              <div className="user-info">
+                <div className="user-name">{userName}</div>
+                <div className="user-role">{userRole}</div>
+              </div>
+              <i className="fas fa-chevron-down"></i>
+            </button>
+            
+            {showUserMenu && (
+              <div className="user-menu-dropdown">
+                <div className="dropdown-header">
+                  <div className="user-avatar-large">{userInitial}</div>
+                  <div>
+                    <div className="user-name-large">{userName}</div>
+                    <div className="user-email">{user?.username || 'admin@example.com'}</div>
+                  </div>
+                </div>
+                <div className="menu-divider"></div>
+                <div className="menu-items">
+                  <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('profile');}} type="button">
+                    <i className="fas fa-user"></i>
+                    <span>My Profile</span>
+                  </button>
+                  <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('account-settings');}} type="button">
+                    <i className="fas fa-cog"></i>
+                    <span>Account Settings</span>
+                  </button>
+                  <div className="menu-divider"></div>
+                  <button className="menu-item logout-item" onClick={() => {setShowUserMenu(false); onLogout();}} type="button">
+                    <i className="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -418,10 +452,10 @@ function MainNav({ activePage, showPage }) {
           </li>
           <li>
             <a 
-              onClick={() => showPage('institutions')} 
-              className={activePage === 'institutions' ? 'active' : ''}
+              onClick={() => showPage('organizations')} 
+              className={activePage === 'organizations' ? 'active' : ''}
             >
-              <i className="fas fa-building"></i> Institutions
+              <i className="fas fa-building"></i> Organizations
             </a>
           </li>
           <li>
@@ -539,27 +573,64 @@ function Dashboard({ active, showPage }) {
   }, [active]);
   
   const fetchDashboardData = async () => {
+    console.log('Fetching dashboard data...');
     const feedsData = await api.get('/api/threat-feeds/');
-    if (feedsData) {
+    console.log('Feeds data received:', feedsData);
+    if (feedsData && Array.isArray(feedsData)) {
       let totalIndicators = 0;
       let totalTTPs = 0;
       
       // Get indicator and TTP counts from each feed
-      if (feedsData.results) {
-        for (const feed of feedsData.results) {
+      for (const feed of feedsData) {
+        try {
           const feedStatus = await api.get(`/api/threat-feeds/${feed.id}/status/`);
           if (feedStatus) {
             totalIndicators += feedStatus.indicator_count || 0;
             totalTTPs += feedStatus.ttp_count || 0;
           }
+        } catch (error) {
+          console.warn(`Failed to get status for feed ${feed.id}:`, error);
+        }
+      }
+      
+      const newStats = {
+        threat_feeds: feedsData.length || 0,
+        indicators: totalIndicators,
+        ttps: totalTTPs,
+        status: 'active'
+      };
+      console.log('Setting dashboard stats:', newStats);
+      setDashboardStats(newStats);
+    } else if (feedsData && feedsData.results) {
+      // Handle paginated response format
+      let totalIndicators = 0;
+      let totalTTPs = 0;
+      
+      for (const feed of feedsData.results) {
+        try {
+          const feedStatus = await api.get(`/api/threat-feeds/${feed.id}/status/`);
+          if (feedStatus) {
+            totalIndicators += feedStatus.indicator_count || 0;
+            totalTTPs += feedStatus.ttp_count || 0;
+          }
+        } catch (error) {
+          console.warn(`Failed to get status for feed ${feed.id}:`, error);
         }
       }
       
       setDashboardStats({
-        threat_feeds: feedsData.count || 0,
+        threat_feeds: feedsData.count || feedsData.results.length || 0,
         indicators: totalIndicators,
         ttps: totalTTPs,
         status: 'active'
+      });
+    } else {
+      console.warn('No feeds data received or invalid format');
+      setDashboardStats({
+        threat_feeds: 0,
+        indicators: 0,
+        ttps: 0,
+        status: 'error'
       });
     }
   };
@@ -571,14 +642,22 @@ function Dashboard({ active, showPage }) {
     
     try {
       const indicatorsData = await api.get('/api/indicators/');
-      if (indicatorsData && indicatorsData.results) {
+      if (indicatorsData && Array.isArray(indicatorsData)) {
         // Transform and limit to most recent 6 IoCs
+        const transformedIoCs = indicatorsData
+          .slice(0, 6)
+          .map(indicator => transformIoCForDashboard(indicator));
+        
+        setRecentIoCs(transformedIoCs);
+      } else if (indicatorsData && indicatorsData.results) {
+        // Handle paginated response format
         const transformedIoCs = indicatorsData.results
           .slice(0, 6)
           .map(indicator => transformIoCForDashboard(indicator));
         
         setRecentIoCs(transformedIoCs);
       } else {
+        console.warn('No indicators data received');
         setRecentIoCs([]);
       }
     } catch (error) {
@@ -1669,10 +1748,10 @@ function Dashboard({ active, showPage }) {
 
         {/* Side Panel */}
         <div className="side-panels">
-          {/* Connected Institutions */}
+          {/* Connected Organizations */}
           <div className="card">
             <div className="card-header">
-              <h2 className="card-title"><i className="fas fa-building card-icon"></i> Connected Institutions</h2>
+              <h2 className="card-title"><i className="fas fa-building card-icon"></i> Connected Organizations</h2>
             </div>
             <div className="card-content">
               <ul className="institution-list">
@@ -2217,8 +2296,13 @@ function ThreatFeeds({ active, navigationState, setNavigationState }) {
   const fetchThreatFeeds = async () => {
     setLoading(true);
     const data = await api.get('/api/threat-feeds/');
-    if (data && data.results) {
+    if (data && Array.isArray(data)) {
+      setThreatFeeds(data);
+    } else if (data && data.results) {
       setThreatFeeds(data.results);
+    } else {
+      console.warn('No threat feeds data received');
+      setThreatFeeds([]);
     }
     setLoading(false);
   };
@@ -2976,6 +3060,8 @@ function IoCManagement({ active }) {
   // Fetch indicators from backend
   useEffect(() => {
     if (active) {
+      console.log('IoC Management activated, fetching data...');
+      console.log('Current auth token:', localStorage.getItem('crisp_auth_token') ? 'Present' : 'Missing');
       fetchIndicators();
       fetchThreatFeeds();
     }
@@ -2998,8 +3084,13 @@ function IoCManagement({ active }) {
   
   const fetchThreatFeeds = async () => {
     const data = await api.get('/api/threat-feeds/');
-    if (data && data.results) {
+    if (data && Array.isArray(data)) {
+      setThreatFeeds(data);
+    } else if (data && data.results) {
       setThreatFeeds(data.results);
+    } else {
+      console.warn('No threat feeds data received');
+      setThreatFeeds([]);
     }
   };
 
@@ -3011,67 +3102,85 @@ function IoCManagement({ active }) {
   const fetchIndicators = async () => {
     setLoading(true);
     try {
-      // Get real indicator data from feeds
-      const feedData = await api.get('/api/threat-feeds/');
-      if (feedData && feedData.results) {
-        let allIndicators = [];
-        let totalIndicatorCount = 0;
-        
-        for (const feed of feedData.results) {
-          const feedStatus = await api.get(`/api/threat-feeds/${feed.id}/status/`);
-          if (feedStatus && feedStatus.indicator_count > 0) {
-            totalIndicatorCount += feedStatus.indicator_count;
-            
-            // Fetch ALL indicators from this feed, not just 50
-            let page = 1;
-            let hasMore = true;
-            
-            while (hasMore) {
-              const indicatorsData = await api.get(`/api/threat-feeds/${feed.id}/indicators/?page=${page}&page_size=100`);
-              if (indicatorsData && indicatorsData.results && indicatorsData.results.length > 0) {
-                const realIndicators = indicatorsData.results.map(indicator => ({
-                  id: indicator.id,
-                  type: indicator.type === 'ip' ? 'IP Address' : 
-                        indicator.type === 'domain' ? 'Domain' :
-                        indicator.type === 'url' ? 'URL' :
-                        indicator.type === 'file_hash' ? 'File Hash' :
-                        indicator.type === 'email' ? 'Email' : 
-                        indicator.type === 'user_agent' ? 'User Agent' :
-                        indicator.type === 'registry' ? 'Registry Key' :
-                        indicator.type === 'mutex' ? 'Mutex' :
-                        indicator.type === 'process' ? 'Process' : indicator.type,
-                  rawType: indicator.type,
-                  title: indicator.name || '',
-                  value: indicator.value,
-                  severity: indicator.confidence >= 75 ? 'High' : 
-                           indicator.confidence >= 50 ? 'Medium' : 'Low',
-                  confidence: indicator.confidence,
-                  source: indicator.source || feed.name || 'Unknown',
-                  description: indicator.description || '',
-                  created: new Date(indicator.created_at).toISOString().split('T')[0],
-                  createdDate: new Date(indicator.created_at),
-                  status: indicator.is_anonymized ? 'Anonymized' : 'Active',
-                  feedId: feed.id,
-                  feedName: feed.name
-                }));
-                allIndicators.push(...realIndicators);
-                
-                // Check if there are more pages
-                hasMore = indicatorsData.next !== null;
-                page++;
-              } else {
-                hasMore = false;
-              }
-            }
-          }
-        }
+      console.log('Fetching indicators for IoC Management...');
+      
+      // Get indicators directly from the indicators API
+      const indicatorsData = await api.get('/api/indicators/');
+      console.log('Indicators data received:', indicatorsData);
+      
+      if (indicatorsData && Array.isArray(indicatorsData)) {
+        // Transform the indicators to match the expected format
+        const transformedIndicators = indicatorsData.map(indicator => ({
+          id: indicator.id,
+          type: indicator.type === 'ip' ? 'IP Address' : 
+                indicator.type === 'domain' ? 'Domain' :
+                indicator.type === 'url' ? 'URL' :
+                indicator.type === 'file_hash' ? 'File Hash' :
+                indicator.type === 'email' ? 'Email' : 
+                indicator.type === 'user_agent' ? 'User Agent' :
+                indicator.type === 'registry' ? 'Registry Key' :
+                indicator.type === 'mutex' ? 'Mutex' :
+                indicator.type === 'process' ? 'Process' : 
+                indicator.type === 'other' ? 'Other' : indicator.type,
+          rawType: indicator.type,
+          title: indicator.description || indicator.value || '',
+          value: indicator.value,
+          severity: indicator.confidence >= 75 ? 'High' : 
+                   indicator.confidence >= 50 ? 'Medium' : 'Low',
+          confidence: indicator.confidence,
+          source: `Feed ${indicator.threat_feed}` || 'Unknown',
+          description: indicator.description || '',
+          created: new Date(indicator.created_at || indicator.first_seen).toISOString().split('T')[0],
+          createdDate: new Date(indicator.created_at || indicator.first_seen),
+          status: indicator.is_anonymized ? 'Anonymized' : 'Active',
+          feedId: indicator.threat_feed,
+          feedName: `Feed ${indicator.threat_feed}`
+        }));
         
         // Sort indicators by creation date (newest first)
-        allIndicators.sort((a, b) => b.createdDate - a.createdDate);
+        transformedIndicators.sort((a, b) => b.createdDate - a.createdDate);
         
-        setIndicators(allIndicators);
-        setTotalItems(allIndicators.length);
-        console.log(`Loaded ${allIndicators.length} indicators from ${feedData.results.length} feeds`);
+        setIndicators(transformedIndicators);
+        setTotalItems(transformedIndicators.length);
+        console.log(`Loaded ${transformedIndicators.length} indicators from API`);
+        
+      } else if (indicatorsData && indicatorsData.results) {
+        // Handle paginated response format
+        const transformedIndicators = indicatorsData.results.map(indicator => ({
+          id: indicator.id,
+          type: indicator.type === 'ip' ? 'IP Address' : 
+                indicator.type === 'domain' ? 'Domain' :
+                indicator.type === 'url' ? 'URL' :
+                indicator.type === 'file_hash' ? 'File Hash' :
+                indicator.type === 'email' ? 'Email' : 
+                indicator.type === 'user_agent' ? 'User Agent' :
+                indicator.type === 'registry' ? 'Registry Key' :
+                indicator.type === 'mutex' ? 'Mutex' :
+                indicator.type === 'process' ? 'Process' : 
+                indicator.type === 'other' ? 'Other' : indicator.type,
+          rawType: indicator.type,
+          title: indicator.description || indicator.value || '',
+          value: indicator.value,
+          severity: indicator.confidence >= 75 ? 'High' : 
+                   indicator.confidence >= 50 ? 'Medium' : 'Low',
+          confidence: indicator.confidence,
+          source: `Feed ${indicator.threat_feed}` || 'Unknown',
+          description: indicator.description || '',
+          created: new Date(indicator.created_at || indicator.first_seen).toISOString().split('T')[0],
+          createdDate: new Date(indicator.created_at || indicator.first_seen),
+          status: indicator.is_anonymized ? 'Anonymized' : 'Active',
+          feedId: indicator.threat_feed,
+          feedName: `Feed ${indicator.threat_feed}`
+        }));
+        
+        transformedIndicators.sort((a, b) => b.createdDate - a.createdDate);
+        setIndicators(transformedIndicators);
+        setTotalItems(transformedIndicators.count || transformedIndicators.length);
+        console.log(`Loaded ${transformedIndicators.length} indicators from paginated API`);
+      } else {
+        console.warn('No indicators data received');
+        setIndicators([]);
+        setTotalItems(0);
       }
     } catch (error) {
       console.error('Error fetching indicators:', error);
@@ -5177,3807 +5286,355 @@ Only patterns and techniques, no indicators</option>
 
 // TTP Analysis Component
 function TTPAnalysis({ active }) {
-  const [ttpData, setTtpData] = useState([]);
-  const [trendsData, setTrendsData] = useState([]);
-  const [matrixData, setMatrixData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [trendsLoading, setTrendsLoading] = useState(false);
-  const [matrixLoading, setMatrixLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
-  
-  // Feed analysis state
-  const [feedComparisonData, setFeedComparisonData] = useState(null);
-  const [frequencyData, setFrequencyData] = useState(null);
-  const [seasonalData, setSeasonalData] = useState(null);
-  const [aggregationLoading, setAggregationLoading] = useState(false);
-  
-  // Table sorting state
-  const [sortBy, setSortBy] = useState('created_at');
-  const [sortOrder, setSortOrder] = useState('desc');
-  
-  // Table pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [totalCount, setTotalCount] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [hasNext, setHasNext] = useState(false);
-  const [hasPrevious, setHasPrevious] = useState(false);
-  
-  // Table filtering state
-  const [showFilters, setShowFilters] = useState(false);
-  const [filterOptions, setFilterOptions] = useState(null);
-  const [filters, setFilters] = useState({
-    search: '',
-    tactics: [],
-    techniques: [],
-    severity_levels: [],
-    date_from: '',
-    date_to: '',
-    threat_feed_ids: [],
-    anonymized_only: '',
-    has_subtechniques: ''
-  });
-  const [activeFiltersCount, setActiveFiltersCount] = useState(0);
-  
-  // TTP Detail Modal state
-  const [showTTPModal, setShowTTPModal] = useState(false);
-  const [selectedTTP, setSelectedTTP] = useState(null);
-  const [ttpDetailLoading, setTtpDetailLoading] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [editFormData, setEditFormData] = useState({});
-
-  
-  // Feed consumption state
-  const [availableFeeds, setAvailableFeeds] = useState([]);
-  const [selectedFeedForConsumption, setSelectedFeedForConsumption] = useState('');
-  const [consumptionInProgress, setConsumptionInProgress] = useState(false);
-  const [consumptionStatus, setConsumptionStatus] = useState('');
-  
-  // TTP Export Modal state
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [exportFormat, setExportFormat] = useState('json');
-  const [exportFilters, setExportFilters] = useState({
-    tactic: '',
-    technique_id: '',
-    feed_id: '',
-    include_anonymized: true,
-    include_original: false,
-    created_after: '',
-    created_before: '',
-    limit: 1000,
-    fields: ''
-  });
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportError, setExportError] = useState('');
-  
-  // Matrix Cell Details Modal state
-  const [showMatrixCellModal, setShowMatrixCellModal] = useState(false);
-  const [matrixCellData, setMatrixCellData] = useState(null);
-  const [matrixCellLoading, setMatrixCellLoading] = useState(false);
-  const [selectedTactic, setSelectedTactic] = useState('');
-  const [selectedTechnique, setSelectedTechnique] = useState('');
-  
-  // Technique Details Modal state
-  const [showTechniqueModal, setShowTechniqueModal] = useState(false);
-  const [techniqueData, setTechniqueData] = useState(null);
-  const [techniqueLoading, setTechniqueLoading] = useState(false);
-  const [selectedTechniqueId, setSelectedTechniqueId] = useState('');
-  
-  const ttpChartRef = useRef(null);
-  
-  // Fetch TTP data from backend
-  useEffect(() => {
-    if (active) {
-      fetchTTPData();
-      fetchMatrixData();
-      fetchFilterOptions();
-      fetchAvailableFeeds();
-      fetchAggregationData();
-    }
-  }, [active]);
-  
-  // Fetch available threat feeds
-  const fetchAvailableFeeds = async () => {
-    try {
-      const response = await api.get('/api/threat-feeds/');
-      if (response && response.results) {
-        setAvailableFeeds(response.results);
-      } else {
-        console.log('No threat feeds found or invalid response:', response);
-        setAvailableFeeds([]);
-      }
-    } catch (error) {
-      console.error('Error fetching available feeds:', error);
-      setAvailableFeeds([]);
-    }
-  };
-
-  // Fetch aggregation data for feed analysis
-  const fetchAggregationData = async () => {
-    setAggregationLoading(true);
-    try {
-      // Fetch multiple aggregation endpoints individually to handle failures gracefully
-      const feedComparisonPromise = api.get('/api/ttps/feed-comparison/?days=30').catch(err => {
-        console.warn('Feed comparison endpoint not available:', err);
-        return null;
-      });
-      
-      const techniqueFreqPromise = api.get('/api/ttps/technique-frequencies/?days=30').catch(err => {
-        console.warn('Technique frequencies endpoint not available:', err);
-        return null;
-      });
-      
-      const seasonalPatternsPromise = api.get('/api/ttps/seasonal-patterns/?days=180').catch(err => {
-        console.warn('Seasonal patterns endpoint not available:', err);
-        return null;
-      });
-
-      const [feedComparison, techniqueFreq, seasonalPatterns] = await Promise.all([
-        feedComparisonPromise,
-        techniqueFreqPromise,
-        seasonalPatternsPromise
-      ]);
-
-      if (feedComparison && feedComparison.success) {
-        setFeedComparisonData(feedComparison);
-      }
-      if (techniqueFreq && techniqueFreq.success) {
-        setFrequencyData(techniqueFreq);
-      }
-      if (seasonalPatterns && seasonalPatterns.success) {
-        setSeasonalData(seasonalPatterns);
-      }
-    } catch (error) {
-      console.error('Error fetching aggregation data:', error);
-    }
-    setAggregationLoading(false);
-  };
-
-  // Trigger feed consumption
-  // Load TTPs from selected feed (like IoC Management)
-  const loadFeedTTPs = async () => {
-    if (!selectedFeedForConsumption) {
-      alert('Please select a threat feed to analyze');
-      return;
-    }
-
-    setConsumptionInProgress(true);
-    setConsumptionStatus('Loading TTPs from feed...');
-
-    try {
-      // First get the feed name for display
-      const selectedFeed = availableFeeds.find(feed => feed.id == selectedFeedForConsumption);
-      const feedName = selectedFeed ? selectedFeed.name : 'Selected Feed';
-
-      // Load TTPs from the specific feed using the same pattern as IoC Management
-      await loadAllFeedTTPs(selectedFeedForConsumption, feedName);
-      
-    } catch (error) {
-      console.error('Error loading feed TTPs:', error);
-      setConsumptionStatus(`❌ Failed to load TTPs: ${error.message || 'Unknown error'}`);
-      
-      // Clear error status after 10 seconds
-      setTimeout(() => {
-        setConsumptionStatus('');
-      }, 10000);
-    } finally {
-      setConsumptionInProgress(false);
-    }
-  };
-
-  // Load all TTPs from feed with pagination (like IoC Management)
-  const loadAllFeedTTPs = async (feedId, feedName) => {
-    let allTTPs = [];
-    let page = 1;
-    let hasMore = true;
-    const pageSize = 100;
-
-    while (hasMore) {
-      try {
-        const response = await api.get(`/api/threat-feeds/${feedId}/ttps/?page=${page}&page_size=${pageSize}`);
-        
-        if (response && response.results) {
-          // Add results from this page (even if 0 results)
-          allTTPs = [...allTTPs, ...response.results];
-          setConsumptionStatus(`Loading TTPs from "${feedName}"... (${allTTPs.length} loaded)`);
-          
-          // Continue pagination based on 'next' field, like IoC Management
-          hasMore = response.next !== null;
-          page++;
-        } else {
-          hasMore = false;
-        }
-      } catch (error) {
-        console.error(`Error loading page ${page} of TTPs:`, error);
-        hasMore = false;
-        throw error;
-      }
-    }
-
-    // Update the TTP data display
-    setTtpData(allTTPs);
-    setTotalCount(allTTPs.length);
-    
-    // Update status
-    setConsumptionStatus(`✅ Loaded ${allTTPs.length} TTPs from "${feedName}"`);
-    
-    // Also refresh other data
-    fetchMatrixData();
-    fetchAggregationData();
-
-    // Clear status after 5 seconds
-    setTimeout(() => {
-      setConsumptionStatus('');
-    }, 5000);
-  };
-  
-  const fetchTTPData = async (sortByField = null, sortOrderValue = null, pageNumber = null, pageSizeValue = null, filtersOverride = null) => {
-    setLoading(true);
-    try {
-      // Use provided parameters or current state
-      const currentSortBy = sortByField || sortBy;
-      const currentSortOrder = sortOrderValue || sortOrder;
-      const currentPageNumber = pageNumber || currentPage;
-      const currentPageSize = pageSizeValue || pageSize;
-      const currentFilters = filtersOverride || filters;
-      
-      // Build API URL with sorting, pagination, and filtering parameters
-      const params = new URLSearchParams();
-      params.append('sort_by', currentSortBy);
-      params.append('sort_order', currentSortOrder);
-      params.append('page', currentPageNumber.toString());
-      params.append('page_size', currentPageSize.toString());
-      
-      // Add filtering parameters
-      if (currentFilters.search && currentFilters.search.trim()) {
-        params.append('search', currentFilters.search.trim());
-      }
-      if (currentFilters.tactics && currentFilters.tactics.length > 0) {
-        params.append('tactics', currentFilters.tactics.join(','));
-      }
-      if (currentFilters.techniques && currentFilters.techniques.length > 0) {
-        params.append('techniques', currentFilters.techniques.join(','));
-      }
-      if (currentFilters.severity_levels && currentFilters.severity_levels.length > 0) {
-        params.append('severity_levels', currentFilters.severity_levels.join(','));
-      }
-      if (currentFilters.date_from && currentFilters.date_from.trim()) {
-        params.append('created_after', currentFilters.date_from.trim());
-      }
-      if (currentFilters.date_to && currentFilters.date_to.trim()) {
-        params.append('created_before', currentFilters.date_to.trim());
-      }
-      if (currentFilters.threat_feed_ids && currentFilters.threat_feed_ids.length > 0) {
-        params.append('threat_feed_ids', currentFilters.threat_feed_ids.join(','));
-      }
-      if (currentFilters.anonymized_only && currentFilters.anonymized_only !== '') {
-        params.append('anonymized_only', currentFilters.anonymized_only);
-      }
-      if (currentFilters.has_subtechniques && currentFilters.has_subtechniques !== '') {
-        params.append('has_subtechniques', currentFilters.has_subtechniques);
-      }
-      
-      const response = await api.get(`/api/ttps/?${params.toString()}`);
-      if (response && response.success) {
-        setTtpData(response.results || []);
-        setTotalCount(response.count || 0);
-        setTotalPages(response.num_pages || 0);
-        setHasNext(response.has_next || false);
-        setHasPrevious(response.has_previous || false);
-      } else {
-        setTtpData([]);
-        setTotalCount(0);
-        setTotalPages(0);
-        setHasNext(false);
-        setHasPrevious(false);
-      }
-    } catch (error) {
-      console.error('Error fetching TTP data:', error);
-      setTtpData([]);
-      setTotalCount(0);
-      setTotalPages(0);
-      setHasNext(false);
-      setHasPrevious(false);
-    }
-    setLoading(false);
-  };
-
-  // Fetch filter options for dropdowns
-  const fetchFilterOptions = async () => {
-    try {
-      const response = await api.get('/api/ttps/filter-options/');
-      if (response && response.success) {
-        setFilterOptions(response.options);
-      }
-    } catch (error) {
-      console.error('Error fetching filter options:', error);
-    }
-  };
-
-  // Handle column sorting
-  const handleSort = (column) => {
-    let newSortOrder = 'asc';
-    
-    // If clicking the same column, toggle sort order
-    if (sortBy === column) {
-      newSortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
-    } else {
-      // New column, default to descending for dates, ascending for others
-      newSortOrder = (column === 'created_at' || column === 'updated_at') ? 'desc' : 'asc';
-    }
-    
-    setSortBy(column);
-    setSortOrder(newSortOrder);
-    
-    // Reset to first page when sorting changes
-    setCurrentPage(1);
-    
-    // Fetch data with new sorting and reset pagination
-    fetchTTPData(column, newSortOrder, 1, pageSize, filters);
-  };
-
-  // Get sort icon for column headers
-  const getSortIcon = (column) => {
-    if (sortBy !== column) {
-      return <i className="fas fa-sort" style={{color: '#ccc', marginLeft: '5px'}}></i>;
-    }
-    
-    const iconClass = sortOrder === 'asc' ? 'fa-sort-up' : 'fa-sort-down';
-    return <i className={`fas ${iconClass}`} style={{color: '#0056b3', marginLeft: '5px'}}></i>;
-  };
-
-  // Handle pagination
-  const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= totalPages && newPage !== currentPage) {
-      setCurrentPage(newPage);
-      fetchTTPData(sortBy, sortOrder, newPage, pageSize, filters);
-    }
-  };
-
-  const handlePageSizeChange = (newPageSize) => {
-    setPageSize(newPageSize);
-    setCurrentPage(1); // Reset to first page when page size changes
-    fetchTTPData(sortBy, sortOrder, 1, newPageSize, filters);
-  };
-
-  // Generate page numbers for pagination display
-  const generatePageNumbers = () => {
-    const pages = [];
-    const maxVisiblePages = 5;
-    
-    if (totalPages <= maxVisiblePages) {
-      // Show all pages if total is small
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      // Show first, last, and pages around current
-      const startPage = Math.max(1, currentPage - 2);
-      const endPage = Math.min(totalPages, currentPage + 2);
-      
-      if (startPage > 1) {
-        pages.push(1);
-        if (startPage > 2) pages.push('...');
-      }
-      
-      for (let i = startPage; i <= endPage; i++) {
-        pages.push(i);
-      }
-      
-      if (endPage < totalPages) {
-        if (endPage < totalPages - 1) pages.push('...');
-        pages.push(totalPages);
-      }
-    }
-    
-    return pages;
-  };
-
-  // Handle filter changes
-  const handleFilterChange = (filterKey, value) => {
-    const newFilters = { ...filters, [filterKey]: value };
-    setFilters(newFilters);
-    
-    // Reset to first page when filters change
-    setCurrentPage(1);
-    
-    // Count active filters
-    const activeCount = countActiveFilters(newFilters);
-    setActiveFiltersCount(activeCount);
-    
-    // For search, use debounced fetch; for others, fetch immediately
-    if (filterKey === 'search') {
-      debouncedFetchTTPData(sortBy, sortOrder, 1, pageSize, newFilters);
-    } else {
-      fetchTTPData(sortBy, sortOrder, 1, pageSize, newFilters);
-    }
-  };
-
-  // Debounced search for better performance
-  const debouncedFetchTTPData = useRef(
-    debounce((sortBy, sortOrder, page, pageSize, filters) => {
-      fetchTTPData(sortBy, sortOrder, page, pageSize, filters);
-    }, 500)
-  ).current;
-
-  // Simple debounce utility
-  function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-      const later = () => {
-        clearTimeout(timeout);
-        func(...args);
-      };
-      clearTimeout(timeout);
-      timeout = setTimeout(later, wait);
-    };
-  }
-
-  // Handle multi-select filter changes (for arrays)
-  const handleMultiSelectFilter = (filterKey, value, isChecked) => {
-    const currentValues = filters[filterKey] || [];
-    let newValues;
-    
-    if (isChecked) {
-      newValues = [...currentValues, value];
-    } else {
-      newValues = currentValues.filter(v => v !== value);
-    }
-    
-    handleFilterChange(filterKey, newValues);
-  };
-
-  // Count active filters
-  const countActiveFilters = (filtersToCount) => {
-    let count = 0;
-    
-    if (filtersToCount.search && filtersToCount.search.trim()) count++;
-    if (filtersToCount.tactics && filtersToCount.tactics.length > 0) count++;
-    if (filtersToCount.techniques && filtersToCount.techniques.length > 0) count++;
-    if (filtersToCount.severity_levels && filtersToCount.severity_levels.length > 0) count++;
-    if (filtersToCount.date_from && filtersToCount.date_from.trim()) count++;
-    if (filtersToCount.date_to && filtersToCount.date_to.trim()) count++;
-    if (filtersToCount.threat_feed_ids && filtersToCount.threat_feed_ids.length > 0) count++;
-    if (filtersToCount.anonymized_only && filtersToCount.anonymized_only !== '') count++;
-    if (filtersToCount.has_subtechniques && filtersToCount.has_subtechniques !== '') count++;
-    
-    return count;
-  };
-
-  // Clear all filters
-  const clearAllFilters = () => {
-    const clearedFilters = {
-      search: '',
-      tactics: [],
-      techniques: [],
-      severity_levels: [],
-      date_from: '',
-      date_to: '',
-      threat_feed_ids: [],
-      anonymized_only: '',
-      has_subtechniques: ''
-    };
-    
-    setFilters(clearedFilters);
-    setActiveFiltersCount(0);
-    setCurrentPage(1);
-    
-    // Fetch data without filters
-    fetchTTPData(sortBy, sortOrder, 1, pageSize, clearedFilters);
-  };
-
-  const fetchTTPTrendsData = async () => {
-    setTrendsLoading(true);
-    try {
-      // Get TTP trends data from the API
-      const response = await api.get('/api/ttps/trends/?days=120&granularity=month&group_by=tactic');
-      if (response && response.series) {
-        setTrendsData(response.series);
-      } else {
-        setTrendsData([]);
-      }
-    } catch (error) {
-      console.error('Error fetching TTP trends data:', error);
-      setTrendsData([]);
-    }
-    setTrendsLoading(false);
-  };
-
-  const fetchMatrixData = async () => {
-    setMatrixLoading(true);
-    try {
-      // Get MITRE matrix data from the API
-      const response = await api.get('/api/ttps/mitre-matrix/');
-      if (response && response.success) {
-        setMatrixData(response);
-      } else {
-        setMatrixData(null);
-      }
-    } catch (error) {
-      console.error('Error fetching MITRE matrix data:', error);
-      setMatrixData(null);
-    }
-    setMatrixLoading(false);
-  };
-
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
-  };
-
-  // Matrix cell click handlers
-  const handleMatrixCellClick = async (tactic, technique = null) => {
-    setSelectedTactic(tactic);
-    setSelectedTechnique(technique || '');
-    setMatrixCellLoading(true);
-    setShowMatrixCellModal(true);
-    
-    try {
-      let url = `/api/ttps/matrix-cell-details/?tactic=${tactic}`;
-      if (technique) {
-        url += `&technique_id=${technique}`;
-      }
-      url += '&include_related=true&page_size=50';
-      
-      const response = await api.get(url);
-      if (response && response.success) {
-        setMatrixCellData(response);
-      } else {
-        setMatrixCellData(null);
-      }
-    } catch (error) {
-      console.error('Error fetching matrix cell details:', error);
-      setMatrixCellData(null);
-    }
-    
-    setMatrixCellLoading(false);
-  };
-
-  const handleTechniqueClick = async (techniqueId) => {
-    setSelectedTechniqueId(techniqueId);
-    setTechniqueLoading(true);
-    setShowTechniqueModal(true);
-    
-    try {
-      const url = `/api/ttps/technique-details/${techniqueId}/`;
-      const response = await api.get(url);
-      if (response && response.success) {
-        setTechniqueData(response);
-      } else {
-        setTechniqueData(null);
-      }
-    } catch (error) {
-      console.error('Error fetching technique details:', error);
-      setTechniqueData(null);
-    }
-    
-    setTechniqueLoading(false);
-  };
-
-  const closeMatrixCellModal = () => {
-    setShowMatrixCellModal(false);
-    setMatrixCellData(null);
-    setSelectedTactic('');
-    setSelectedTechnique('');
-  };
-
-  const closeTechniqueModal = () => {
-    setShowTechniqueModal(false);
-    setTechniqueData(null);
-    setSelectedTechniqueId('');
-  };
-
-  const refreshMatrixData = () => {
-    fetchMatrixData();
-  };
-
-  // TTP Detail Modal functions
-  const openTTPModal = async (ttpId) => {
-    setShowTTPModal(true);
-    setTtpDetailLoading(true);
-    setIsEditMode(false);
-    
-    try {
-      const response = await api.get(`/api/ttps/${ttpId}/`);
-      if (response && response.success) {
-        setSelectedTTP(response.ttp);
-        setEditFormData({
-          name: response.ttp.name || '',
-          description: response.ttp.description || '',
-          mitre_technique_id: response.ttp.mitre_technique_id || '',
-          mitre_tactic: response.ttp.mitre_tactic || '',
-          mitre_subtechnique: response.ttp.mitre_subtechnique || '',
-          threat_feed_id: response.ttp.threat_feed?.id || ''
-        });
-      } else {
-        console.error('Failed to fetch TTP details');
-        setSelectedTTP(null);
-      }
-    } catch (error) {
-      console.error('Error fetching TTP details:', error);
-      setSelectedTTP(null);
-    }
-    setTtpDetailLoading(false);
-  };
-
-  const closeTTPModal = () => {
-    setShowTTPModal(false);
-    setSelectedTTP(null);
-    setIsEditMode(false);
-    setEditFormData({});
-  };
-
-  const toggleEditMode = () => {
-    setIsEditMode(!isEditMode);
-  };
-
-  const handleEditFormChange = (field, value) => {
-    setEditFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const saveTTPChanges = async () => {
-    if (!selectedTTP) return;
-    
-    try {
-      const response = await api.put(`/api/ttps/${selectedTTP.id}/`, editFormData);
-      if (response && response.success) {
-        // Update the TTP in local state
-        setTtpData(prevData => 
-          prevData.map(ttp => 
-            ttp.id === selectedTTP.id 
-              ? { ...ttp, ...editFormData }
-              : ttp
-          )
-        );
-        setSelectedTTP({ ...selectedTTP, ...editFormData });
-        setIsEditMode(false);
-        alert('TTP updated successfully');
-        
-        // Refresh trends data to reflect changes
-        fetchTTPTrendsData();
-      } else {
-        alert('Failed to update TTP');
-      }
-    } catch (error) {
-      console.error('Error updating TTP:', error);
-      alert('Error updating TTP: ' + (error.message || 'Unknown error'));
-    }
-  };
-
-
-
-  // Export Modal functions
-  const openExportModal = () => {
-    setShowExportModal(true);
-    setExportError('');
-  };
-
-  const closeExportModal = () => {
-    setShowExportModal(false);
-    setExportError('');
-  };
-
-  const handleExportFilterChange = (field, value) => {
-    setExportFilters(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const downloadFile = (blob, filename) => {
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  };
-
-  const exportTTPData = async () => {
-    setIsExporting(true);
-    setExportError('');
-    
-    try {
-      // Build query parameters
-      const params = new URLSearchParams();
-      params.append('format', exportFormat);
-      
-      // Add filters if specified
-      if (exportFilters.tactic) params.append('tactic', exportFilters.tactic);
-      if (exportFilters.technique_id) params.append('technique_id', exportFilters.technique_id);
-      if (exportFilters.feed_id) params.append('feed_id', exportFilters.feed_id);
-      if (exportFilters.created_after) params.append('created_after', exportFilters.created_after);
-      if (exportFilters.created_before) params.append('created_before', exportFilters.created_before);
-      if (exportFilters.fields) params.append('fields', exportFilters.fields);
-      
-      params.append('include_anonymized', exportFilters.include_anonymized.toString());
-      params.append('include_original', exportFilters.include_original.toString());
-      params.append('limit', exportFilters.limit.toString());
-      
-      // Make the API request
-      const response = await fetch(`/api/ttps/export/?${params.toString()}`, {
-        method: 'GET',
-        headers: {
-          'Accept': exportFormat === 'csv' ? 'text/csv' : 
-                   exportFormat === 'stix' ? 'application/stix+json' : 
-                   'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Export failed: ${response.status} ${response.statusText}`);
-      }
-      
-      // Get the blob and filename from response
-      const blob = await response.blob();
-      const contentDisposition = response.headers.get('Content-Disposition');
-      let filename = `ttps_export_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.${exportFormat}`;
-      
-      if (contentDisposition) {
-        const matches = contentDisposition.match(/filename="([^"]+)"/);
-        if (matches) {
-          filename = matches[1];
-        }
-      }
-      
-      // Download the file
-      downloadFile(blob, filename);
-      
-      // Close modal and show success message
-      closeExportModal();
-      alert(`Export completed successfully! Downloaded: ${filename}`);
-      
-    } catch (error) {
-      console.error('Export failed:', error);
-      setExportError('Export failed: ' + (error.message || 'Unknown error'));
-    }
-    
-    setIsExporting(false);
-  };
-
-  const renderMatrixHeaders = () => {
-    if (!matrixData || !matrixData.matrix) {
-      return null;
-    }
-
-    // MITRE ATT&CK Enterprise tactics in order with display names
-    const tacticOrder = [
-      { code: 'initial-access', name: 'Initial Access' },
-      { code: 'execution', name: 'Execution' },
-      { code: 'persistence', name: 'Persistence' },
-      { code: 'privilege-escalation', name: 'Privilege Escalation' },
-      { code: 'defense-evasion', name: 'Defense Evasion' },
-      { code: 'credential-access', name: 'Credential Access' },
-      { code: 'discovery', name: 'Discovery' },
-      { code: 'lateral-movement', name: 'Lateral Movement' },
-      { code: 'collection', name: 'Collection' },
-      { code: 'exfiltration', name: 'Exfiltration' },
-      { code: 'impact', name: 'Impact' }
-    ];
-
-    return (
-      <thead>
-        <tr>
-          {tacticOrder.map(tactic => {
-            const tacticData = matrixData.matrix[tactic.code];
-            const count = tacticData ? tacticData.technique_count : 0;
-            return (
-              <th 
-                key={tactic.code} 
-                title={`${count} techniques in ${tactic.name} - Click to view details`}
-                onClick={() => count > 0 && handleMatrixCellClick(tactic.code)}
-                style={{ 
-                  cursor: count > 0 ? 'pointer' : 'default',
-                  backgroundColor: count > 0 ? '#f8f9fa' : 'transparent',
-                  transition: 'background-color 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  if (count > 0) {
-                    e.target.style.backgroundColor = '#e9ecef';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (count > 0) {
-                    e.target.style.backgroundColor = '#f8f9fa';
-                  }
-                }}
-              >
-                {tactic.name}
-                <div className="tactic-count">({count})</div>
-              </th>
-            );
-          })}
-        </tr>
-      </thead>
-    );
-  };
-
-  const renderDynamicMatrix = () => {
-    if (!matrixData || !matrixData.matrix) {
-      return null;
-    }
-
-    const tactics = Object.values(matrixData.matrix);
-    
-    // MITRE ATT&CK Enterprise tactics in order
-    const tacticOrder = [
-      'initial-access',
-      'execution', 
-      'persistence',
-      'privilege-escalation',
-      'defense-evasion',
-      'credential-access',
-      'discovery',
-      'lateral-movement',
-      'collection',
-      'exfiltration',
-      'impact'
-    ];
-
-    // Create rows - we'll show up to 5 techniques per tactic
-    const maxRows = 5;
-    const rows = [];
-
-    for (let rowIndex = 0; rowIndex < maxRows; rowIndex++) {
-      const row = [];
-      
-      tacticOrder.forEach(tacticCode => {
-        const tacticData = matrixData.matrix[tacticCode];
-        if (tacticData && tacticData.techniques && tacticData.techniques.length > rowIndex) {
-          const technique = tacticData.techniques[rowIndex];
-          row.push({
-            technique: technique,
-            hasData: true,
-            isActive: tacticData.technique_count > 0
-          });
-        } else {
-          // Empty cell
-          row.push({
-            technique: null,
-            hasData: false,
-            isActive: false
-          });
-        }
-      });
-      
-      // Only add row if it has at least one technique
-      if (row.some(cell => cell.hasData)) {
-        rows.push(row);
-      }
-    }
-
-    return (
-      <tbody>
-        {rows.map((row, rowIndex) => (
-          <tr key={rowIndex}>
-            {row.map((cell, cellIndex) => {
-              const tacticCode = tacticOrder[cellIndex];
-              return (
-                <td 
-                  key={cellIndex} 
-                  className={`matrix-cell ${cell.isActive ? 'active' : ''} ${cell.technique ? 'clickable' : ''}`}
-                  title={cell.technique ? `${cell.technique.name} (${cell.technique.technique_id}) - Click to view details` : 'No techniques'}
-                  onClick={() => {
-                    if (cell.technique) {
-                      handleTechniqueClick(cell.technique.technique_id);
-                    } else if (cell.isActive && tacticCode) {
-                      // Click on tactic column if no specific technique but tactic has data
-                      handleMatrixCellClick(tacticCode);
-                    }
-                  }}
-                  style={{
-                    cursor: (cell.technique || cell.isActive) ? 'pointer' : 'default',
-                    transition: 'all 0.2s ease',
-                    position: 'relative'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (cell.technique || cell.isActive) {
-                      e.target.style.transform = 'scale(1.02)';
-                      e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-                      e.target.style.zIndex = '1';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (cell.technique || cell.isActive) {
-                      e.target.style.transform = 'scale(1)';
-                      e.target.style.boxShadow = 'none';
-                      e.target.style.zIndex = 'auto';
-                    }
-                  }}
-                >
-                  {cell.technique ? (
-                    <>
-                      <div className="technique-name">
-                        {cell.technique.name.length > 20 
-                          ? cell.technique.name.substring(0, 20) + '...'
-                          : cell.technique.name
-                        }
-                      </div>
-                      {cell.technique.technique_id && (
-                        <div className="technique-id">{cell.technique.technique_id}</div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="empty-cell">
-                      {cell.isActive ? '🔍' : '-'}
-                    </div>
-                  )}
-                </td>
-              );
-            })}
-          </tr>
-        ))}
-      </tbody>
-    );
-  };
-
-  const transformTrendsDataForChart = (apiData) => {
-    // Group data by date and aggregate by tactic
-    const dateMap = new Map();
-    
-    // Process each series (tactic) from the API response
-    apiData.forEach(series => {
-      const tactic = series.group_name ? series.group_name.toLowerCase().replace(/\s+/g, '-') : 'unknown';
-      
-      // Process each data point in the series
-      series.data_points.forEach(point => {
-        const date = point.date;
-        if (!dateMap.has(date)) {
-          dateMap.set(date, {
-            date: date,
-            'initial-access': 0,
-            'execution': 0,
-            'persistence': 0,
-            'defense-evasion': 0,
-            'impact': 0,
-            'privilege-escalation': 0,
-            'discovery': 0,
-            'lateral-movement': 0,
-            'collection': 0,
-            'command-and-control': 0,
-            'exfiltration': 0
-          });
-        }
-        
-        const dateEntry = dateMap.get(date);
-        if (dateEntry.hasOwnProperty(tactic)) {
-          dateEntry[tactic] = point.count || 0;
-        }
-      });
-    });
-    
-    // Convert to array and sort by date
-    return Array.from(dateMap.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
-  };
-
-  const deleteTTP = async (ttpId) => {
-    if (!confirm('Are you sure you want to delete this TTP? This action cannot be undone.')) {
-      return;
-    }
-    
-    try {
-      const response = await api.delete(`/api/ttps/${ttpId}/`);
-      if (response && response.success) {
-        // Remove the deleted TTP from the local state
-        setTtpData(prevData => prevData.filter(ttp => ttp.id !== ttpId));
-        alert('TTP deleted successfully');
-        
-        // Refresh trends data to reflect deletion
-        fetchTTPTrendsData();
-      } else {
-        alert('Failed to delete TTP');
-      }
-    } catch (error) {
-      console.error('Error deleting TTP:', error);
-      alert('Error deleting TTP: ' + (error.message || 'Unknown error'));
-    }
-  };
-  
-  useEffect(() => {
-    if (active && ttpChartRef.current && trendsData.length > 0) {
-      createTTPTrendsChart();
-    }
-  }, [active, trendsData]);
-
-  const createTTPTrendsChart = () => {
-    try {
-      // Clear previous chart if any
-      if (ttpChartRef.current) {
-        d3.select(ttpChartRef.current).selectAll("*").remove();
-      }
-      
-      // Return early if no trends data or ref not available
-      if (!trendsData || trendsData.length === 0 || !ttpChartRef.current) {
-        return;
-      }
-      
-      // Transform API data to chart format
-      const data = transformTrendsDataForChart(trendsData);
-      
-      // Return early if transformed data is empty
-      if (!data || data.length === 0) {
-        console.warn('No chart data available after transformation');
-        return;
-      }
-
-    // Set dimensions and margins for the chart
-    const width = ttpChartRef.current.clientWidth;
-    const height = 300;
-    const margin = { top: 30, right: 120, bottom: 40, left: 50 };
-    const innerWidth = width - margin.left - margin.right;
-    const innerHeight = height - margin.top - margin.bottom;
-
-    // Create the SVG container
-    const svg = d3.select(ttpChartRef.current)
-      .append("svg")
-      .attr("width", width)
-      .attr("height", height)
-      .append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`);
-
-    // Set up scales
-    const x = d3.scalePoint()
-      .domain(data.map(d => d.date))
-      .range([0, innerWidth])
-      .padding(0.5);
-
-    const y = d3.scaleLinear()
-      .domain([0, d3.max(data, d => Math.max(...Object.keys(colors).map(tactic => d[tactic] || 0))) * 1.1])
-      .range([innerHeight, 0]);
-
-    // Define line generator
-    const line = d3.line()
-      .x(d => x(d.date))
-      .y(d => y(d.value))
-      .curve(d3.curveMonotoneX);
-
-    // Define colors for different TTP categories (MITRE ATT&CK tactics)
-    const colors = {
-      'initial-access': "#0056b3",
-      'execution': "#00a0e9", 
-      'persistence': "#38a169",
-      'defense-evasion': "#e53e3e",
-      'impact': "#f6ad55",
-      'privilege-escalation': "#805ad5",
-      'discovery': "#ed8936",
-      'lateral-movement': "#38b2ac",
-      'collection': "#d53f8c",
-      'command-and-control': "#319795",
-      'exfiltration': "#dd6b20"
-    };
-
-    // Get only tactics that have data in the dataset
-    const categories = Object.keys(colors).filter(tactic => 
-      data.some(d => d[tactic] > 0)
-    );
-    
-    const categoryLabels = {
-      'initial-access': "Initial Access",
-      'execution': "Execution",
-      'persistence': "Persistence", 
-      'defense-evasion': "Defense Evasion",
-      'impact': "Impact",
-      'privilege-escalation': "Privilege Escalation",
-      'discovery': "Discovery",
-      'lateral-movement': "Lateral Movement",
-      'collection': "Collection",
-      'command-and-control': "Command and Control",
-      'exfiltration': "Exfiltration"
-    };
-
-    categories.forEach(category => {
-      const categoryData = data.map(d => ({
-        date: d.date,
-        value: d[category]
-      }));
-
-      svg.append("path")
-        .datum(categoryData)
-        .attr("fill", "none")
-        .attr("stroke", colors[category])
-        .attr("stroke-width", 2)
-        .attr("d", line);
-
-      // Add dots
-      svg.selectAll(`.dot-${category}`)
-        .data(categoryData)
-        .enter()
-        .append("circle")
-        .attr("class", `dot-${category}`)
-        .attr("cx", d => x(d.date))
-        .attr("cy", d => y(d.value))
-        .attr("r", 4)
-        .attr("fill", colors[category]);
-    });
-
-    // Add x-axis
-    svg.append("g")
-      .attr("transform", `translate(0,${innerHeight})`)
-      .call(d3.axisBottom(x).tickFormat(d => d));
-
-    // Add y-axis
-    svg.append("g")
-      .call(d3.axisLeft(y));
-
-    // Add title
-    svg.append("text")
-      .attr("x", innerWidth / 2)
-      .attr("y", -10)
-      .attr("text-anchor", "middle")
-      .style("font-size", "16px")
-      .style("font-weight", "600")
-      .style("fill", "#2d3748")
-      .text("TTP Trends Over Time");
-
-    // Add legend
-    const legend = svg.append("g")
-      .attr("transform", `translate(${innerWidth + 10}, 0)`);
-
-    categories.forEach((category, i) => {
-      const legendRow = legend.append("g")
-        .attr("transform", `translate(0, ${i * 20})`);
-      
-      legendRow.append("rect")
-        .attr("width", 10)
-        .attr("height", 10)
-        .attr("fill", colors[category]);
-      
-      legendRow.append("text")
-        .attr("x", 15)
-        .attr("y", 10)
-        .attr("text-anchor", "start")
-        .style("font-size", "12px")
-        .text(categoryLabels[category]);
-    });
-    } catch (error) {
-      console.error('Error creating TTP trends chart:', error);
-      // Display error message in the chart container
-      if (ttpChartRef.current) {
-        d3.select(ttpChartRef.current).selectAll("*").remove();
-        d3.select(ttpChartRef.current)
-          .append("div")
-          .style("text-align", "center")
-          .style("color", "#e53e3e")
-          .style("padding", "20px")
-          .text("Error loading chart data. Please try refreshing.");
-      }
-    }
-  };
+  if (!active) return null;
 
   return (
     <section id="ttp-analysis" className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
-        <div>
-          <h1 className="page-title">TTP Analysis</h1>
-          <p className="page-subtitle">Track and analyze tactics, techniques, and procedures from threat intelligence feeds</p>
-        </div>
-        <div className="action-buttons">
-          <div className="feed-consumption-controls">
-            <div className="feed-selection-wrapper">
-              <select 
-                value={selectedFeedForConsumption} 
-                onChange={(e) => setSelectedFeedForConsumption(e.target.value)}
-                className="form-control feed-selector"
-                disabled={consumptionInProgress}
-              >
-                <option value="">Select Threat Feed to Analyze</option>
-                {availableFeeds.length === 0 ? (
-                  <option disabled>No threat feeds available</option>
-                ) : (
-                  availableFeeds.map(feed => (
-                    <option key={feed.id} value={feed.id}>
-                      {feed.name} - {feed.is_external ? 'External TAXII' : 'Internal'} 
-                      {feed.is_active ? ' ✓' : ' (Inactive)'}
-                      {feed.description ? ` - ${feed.description}` : ''}
-                    </option>
-                  ))
-                )}
-              </select>
-              {selectedFeedForConsumption && (
-                <div className="consumption-options">
-                  <small className="consumption-info">
-                    <i className="fas fa-info-circle"></i>
-                    Will show TTPs from this feed
-                  </small>
-                </div>
-              )}
-            </div>
-            <button 
-              className="btn btn-primary consume-btn" 
-              onClick={loadFeedTTPs}
-              disabled={!selectedFeedForConsumption || consumptionInProgress}
-              title={selectedFeedForConsumption ? 'Load TTPs from selected feed' : 'Select a feed first'}
-            >
-              {consumptionInProgress ? (
-                <>
-                  <i className="fas fa-spinner fa-spin"></i> Loading...
-                </>
-              ) : (
-                <>
-                  <i className="fas fa-download"></i> Load Feed TTPs
-                </>
-              )}
-            </button>
-          </div>
-          <button className="btn btn-outline" onClick={openExportModal}>
-            <i className="fas fa-upload"></i> Export Analysis
-          </button>
-        </div>
+        <h1 className="page-title">TTP Analysis</h1>
+        <p className="page-subtitle">Track and analyze tactics, techniques, and procedures from threat intelligence feeds</p>
       </div>
-
-      {consumptionStatus && (
-        <div className={`alert ${consumptionStatus.includes('failed') ? 'alert-error' : 'alert-success'}`}>
-          <i className={`fas ${consumptionStatus.includes('failed') ? 'fa-exclamation-triangle' : 'fa-check-circle'}`}></i>
-          {consumptionStatus}
-        </div>
-      )}
-
-      <div className="tabs">
-        <div 
-          className={`tab ${activeTab === 'overview' ? 'active' : ''}`}
-          onClick={() => handleTabChange('overview')}
-        >
-          Feed Overview
-        </div>
-        <div 
-          className={`tab ${activeTab === 'matrix' ? 'active' : ''}`}
-          onClick={() => handleTabChange('matrix')}
-        >
-          MITRE ATT&CK Matrix
-        </div>
-        <div 
-          className={`tab ${activeTab === 'list' ? 'active' : ''}`}
-          onClick={() => handleTabChange('list')}
-        >
-          TTP Intelligence
-        </div>
-        <div 
-          className={`tab ${activeTab === 'trends' ? 'active' : ''}`}
-          onClick={() => handleTabChange('trends')}
-        >
-          Trends & Patterns
-        </div>
-      </div>
-
-      {/* Feed Overview Tab */}
-      {activeTab === 'overview' && (
-        <div className="feed-analysis-overview">
-          <div className="overview-cards">
-            <div className="card">
-              <div className="card-header">
-                <h2 className="card-title">
-                  <i className="fas fa-chart-bar card-icon"></i> 
-                  Feed Comparison Statistics
-                </h2>
-                <button 
-                  className="btn btn-outline btn-sm" 
-                  onClick={fetchAggregationData}
-                  disabled={aggregationLoading}
-                >
-                  <i className={`fas ${aggregationLoading ? 'fa-spinner fa-spin' : 'fa-sync-alt'}`}></i> Refresh
-                </button>
-              </div>
-              <div className="card-content">
-                {aggregationLoading ? (
-                  <div className="loading-state">
-                    <i className="fas fa-spinner fa-spin"></i>
-                    <p>Loading feed comparison data...</p>
-                  </div>
-                ) : feedComparisonData ? (
-                  <div className="feed-comparison-grid">
-                    {feedComparisonData.feed_statistics && feedComparisonData.feed_statistics.map((feed, index) => (
-                      <div key={index} className="feed-stat-card">
-                        <div className="feed-name">{feed.threat_feed__name}</div>
-                        <div className="feed-stats">
-                          <div className="stat-item">
-                            <span className="stat-value">{feed.ttp_count}</span>
-                            <span className="stat-label">TTPs</span>
-                          </div>
-                          <div className="stat-item">
-                            <span className="stat-value">{feed.unique_techniques}</span>
-                            <span className="stat-label">Unique Techniques</span>
-                          </div>
-                          <div className="stat-item">
-                            <span className="stat-value">{feed.avg_techniques_per_day}</span>
-                            <span className="stat-label">Avg/Day</span>
-                          </div>
-                        </div>
-                        <div className={`feed-type ${feed.threat_feed__is_external ? 'external' : 'internal'}`}>
-                          {feed.threat_feed__is_external ? 'External Feed' : 'Internal Feed'}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="empty-state">
-                    <i className="fas fa-chart-bar"></i>
-                    <p>No feed comparison data available</p>
-                    <p className="text-muted">Consume threat feeds to see comparison statistics</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="card-header">
-                <h2 className="card-title">
-                  <i className="fas fa-fire card-icon"></i> 
-                  Top Techniques
-                </h2>
-              </div>
-              <div className="card-content">
-                {frequencyData && frequencyData.techniques ? (
-                  <div className="technique-frequency-list">
-                    {Object.entries(frequencyData.techniques)
-                      .sort(([,a], [,b]) => b.count - a.count)
-                      .slice(0, 10)
-                      .map(([techniqueId, data], index) => (
-                        <div key={techniqueId} className="frequency-item">
-                          <div className="technique-rank">#{data.rank}</div>
-                          <div className="technique-details">
-                            <div className="technique-id">{techniqueId}</div>
-                            <div className="technique-stats">
-                              <span className="count">{data.count} occurrences</span>
-                              <span className="percentage">({data.percentage}%)</span>
-                            </div>
-                          </div>
-                          <div className="frequency-bar">
-                            <div 
-                              className="frequency-fill" 
-                              style={{width: `${Math.min(data.percentage * 2, 100)}%`}}
-                            ></div>
-                          </div>
-                        </div>
-                      ))
-                    }
-                  </div>
-                ) : (
-                  <div className="empty-state">
-                    <i className="fas fa-fire"></i>
-                    <p>No technique frequency data available</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-header">
-              <h2 className="card-title">
-                <i className="fas fa-calendar-alt card-icon"></i> 
-                Seasonal Patterns
-              </h2>
-            </div>
-            <div className="card-content">
-              {seasonalData && seasonalData.statistics ? (
-                <div className="seasonal-analysis">
-                  <div className="seasonal-stats">
-                    <div className="stat-card">
-                      <div className="stat-value">{seasonalData.statistics.seasonality_strength}</div>
-                      <div className="stat-label">Seasonality Strength</div>
-                    </div>
-                    <div className="stat-card">
-                      <div className="stat-value">{seasonalData.statistics.peak_period.label}</div>
-                      <div className="stat-label">Peak Period</div>
-                    </div>
-                    <div className="stat-card">
-                      <div className="stat-value">{seasonalData.statistics.valley_period.label}</div>
-                      <div className="stat-label">Valley Period</div>
-                    </div>
-                  </div>
-                  <div className="seasonal-interpretation">
-                    <p>{seasonalData.interpretation}</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="empty-state">
-                  <i className="fas fa-calendar-alt"></i>
-                  <p>No seasonal pattern data available</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MITRE ATT&CK Matrix Tab */}
-      {activeTab === 'matrix' && (
-        <>
-          <div className="card">
-            <div className="card-header">
-              <h2 className="card-title"><i className="fas fa-sitemap card-icon"></i> MITRE ATT&CK Enterprise Matrix</h2>
-          <div className="card-actions">
-            <button 
-              className="btn btn-outline btn-sm" 
-              onClick={refreshMatrixData} 
-              disabled={matrixLoading}
-              title="Refresh matrix data"
-            >
-              <i className={`fas ${matrixLoading ? 'fa-spinner fa-spin' : 'fa-sync-alt'}`}></i> Refresh
-            </button>
-            <button className="btn btn-outline btn-sm"><i className="fas fa-filter"></i> Filter</button>
-          </div>
-        </div>
-        <div className="card-content">
-          <div className="matrix-container">
-            {matrixLoading ? (
-              <div style={{textAlign: 'center', padding: '4rem'}}>
-                <i className="fas fa-spinner fa-spin" style={{fontSize: '2rem', color: '#0056b3'}}></i>
-                <p style={{marginTop: '1rem', color: '#666'}}>Loading MITRE ATT&CK Matrix...</p>
-              </div>
-            ) : matrixData ? (
-              <>
-                <table className="mitre-matrix">
-                  {renderMatrixHeaders()}
-                  {renderDynamicMatrix()}
-                </table>
-                {matrixData.statistics && (
-                  <div className="matrix-stats" style={{marginTop: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '8px'}}>
-                    <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem'}}>
-                      <div>
-                        <strong>Total Techniques:</strong> {matrixData.total_techniques}
-                      </div>
-                      <div>
-                        <strong>Active Tactics:</strong> {matrixData.statistics.tactics_with_techniques}
-                      </div>
-                      <div>
-                        <strong>Avg per Tactic:</strong> {matrixData.statistics.average_techniques_per_tactic}
-                      </div>
-                      {matrixData.statistics.most_common_tactic && (
-                        <div>
-                          <strong>Top Tactic:</strong> {matrixData.matrix[matrixData.statistics.most_common_tactic]?.tactic_name}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div style={{textAlign: 'center', padding: '4rem'}}>
-                <i className="fas fa-sitemap" style={{fontSize: '3rem', color: '#ccc'}}></i>
-                <p style={{marginTop: '1rem', color: '#666'}}>No MITRE ATT&CK data available</p>
-                <p style={{color: '#888', fontSize: '0.9rem'}}>Matrix will populate as TTP data becomes available</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="card mt-4">
-        <div className="card-header">
-          <h2 className="card-title"><i className="fas fa-chart-line card-icon"></i> TTP Trends</h2>
-          <div className="card-actions">
-            <button className="btn btn-outline btn-sm"><i className="fas fa-calendar-alt"></i> Last 90 Days</button>
-          </div>
-        </div>
-        <div className="card-content">
-          <div className="chart-container" ref={ttpChartRef}>
-            {trendsLoading ? (
-              <div style={{textAlign: 'center', padding: '4rem'}}>
-                <i className="fas fa-spinner fa-spin" style={{fontSize: '2rem', color: '#0056b3'}}></i>
-                <p style={{marginTop: '1rem', color: '#666'}}>Loading TTP trends data...</p>
-              </div>
-            ) : trendsData.length === 0 ? (
-              <div style={{textAlign: 'center', padding: '4rem'}}>
-                <i className="fas fa-chart-line" style={{fontSize: '2rem', color: '#ccc'}}></i>
-                <p style={{marginTop: '1rem', color: '#666'}}>No TTP trends data available</p>
-                <p style={{color: '#888', fontSize: '0.9rem'}}>TTP data will appear here as it becomes available</p>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      </div>
-        </>
-      )}
-
-      {/* TTP List Tab */}
-      {activeTab === 'list' && (
-        <div className="card">
-          <div className="card-header">
-            <h2 className="card-title"><i className="fas fa-shield-alt card-icon"></i> TTP Intelligence from Threat Feeds</h2>
-            <div className="card-actions">
-              <button 
-                className="btn btn-outline btn-sm" 
-                onClick={() => setShowFilters(!showFilters)}
-              >
-                <i className="fas fa-filter"></i> Filter
-                {activeFiltersCount > 0 && (
-                  <span className="filter-count">{activeFiltersCount}</span>
-                )}
-              </button>
-              <button className="btn btn-outline btn-sm" onClick={openExportModal}>
-                <i className="fas fa-download"></i> Export
-              </button>
-            </div>
-          </div>
+      
+      <div className="placeholder-content">
+        <div className="content-box">
+          <h2>Tactics, Techniques & Procedures Analysis</h2>
+          <p>This section will contain functionality for analyzing TTPs from threat intelligence feeds.</p>
           
-          <div className="intelligence-summary" style={{padding: '1rem', backgroundColor: '#f8f9fa', borderBottom: '1px solid #dee2e6'}}>
-            <div className="summary-stats">
-              <div className="stat-item">
-                <i className="fas fa-database"></i>
-                <span>{totalCount} TTPs from threat intelligence feeds</span>
-              </div>
-              <div className="stat-item">
-                <i className="fas fa-rss"></i>
-                <span>{availableFeeds.length} connected threat feeds</span>
-              </div>
-              <div className="stat-item">
-                <i className="fas fa-shield-alt"></i>
-                <span>Automatically mapped to MITRE ATT&CK</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="card-content">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th onClick={() => handleSort('id')} style={{cursor: 'pointer'}}>
-                    ID {getSortIcon('id')}
-                  </th>
-                  <th onClick={() => handleSort('name')} style={{cursor: 'pointer'}}>
-                    TTP Name {getSortIcon('name')}
-                  </th>
-                  <th onClick={() => handleSort('mitre_technique_id')} style={{cursor: 'pointer'}}>
-                    MITRE Technique {getSortIcon('mitre_technique_id')}
-                  </th>
-                  <th onClick={() => handleSort('mitre_tactic')} style={{cursor: 'pointer'}}>
-                    Tactic {getSortIcon('mitre_tactic')}
-                  </th>
-                  <th>Source Feed</th>
-                  <th>Intelligence Status</th>
-                  <th onClick={() => handleSort('created_at')} style={{cursor: 'pointer'}}>
-                    Discovered {getSortIcon('created_at')}
-                  </th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan="8" style={{textAlign: 'center', padding: '2rem'}}>
-                      <i className="fas fa-spinner fa-spin"></i> Loading threat intelligence...
-                    </td>
-                  </tr>
-                ) : ttpData.length > 0 ? (
-                  ttpData.map((ttp) => (
-                    <tr key={ttp.id}>
-                      <td>{ttp.id}</td>
-                      <td>
-                        <div className="ttp-name-cell">
-                          <div className="ttp-title">{ttp.name}</div>
-                          {ttp.mitre_subtechnique && (
-                            <div className="ttp-subtechnique">{ttp.mitre_subtechnique}</div>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <span className="technique-badge">{ttp.mitre_technique_id}</span>
-                      </td>
-                      <td>
-                        <span className="tactic-badge">{ttp.mitre_tactic_display || ttp.mitre_tactic}</span>
-                      </td>
-                      <td>
-                        {ttp.threat_feed ? (
-                          <div className="feed-source-cell">
-                            <span className="feed-name">{ttp.threat_feed.name}</span>
-                            <span className={`feed-type ${ttp.threat_feed.is_external ? 'external' : 'internal'}`}>
-                              {ttp.threat_feed.is_external ? 'External' : 'Internal'}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-muted">No Feed</span>
-                        )}
-                      </td>
-                      <td>
-                        <div className="intelligence-status">
-                          {ttp.is_anonymized ? (
-                            <span className="status-badge anonymized">
-                              <i className="fas fa-mask"></i> Anonymized
-                            </span>
-                          ) : (
-                            <span className="status-badge raw">
-                              <i className="fas fa-eye"></i> Raw Intel
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td>{ttp.created_at ? new Date(ttp.created_at).toLocaleDateString() : 'Unknown'}</td>
-                      <td>
-                        <button 
-                          className="btn btn-outline btn-sm" 
-                          onClick={() => openTTPModal(ttp.id)}
-                          title="View Intelligence Details"
-                          style={{marginRight: '5px'}}
-                        >
-                          <i className="fas fa-search"></i>
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="8" style={{textAlign: 'center', padding: '2rem'}}>
-                      <div className="empty-state">
-                        <i className="fas fa-shield-alt"></i>
-                        <p>No TTP intelligence available</p>
-                        <p className="text-muted">
-                          Consume threat feeds to populate TTP intelligence data
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          
-          {/* TTP Pagination Controls */}
-          {(totalPages > 0 || loading) && (
-            <div className="pagination-wrapper" style={{marginTop: '1.5rem'}}>
-              <div className="pagination-info-detailed">
-                <span className="pagination-summary">
-                  {loading ? (
-                    <>
-                      <i className="fas fa-spinner fa-spin" style={{marginRight: '5px'}}></i>
-                      Loading TTPs...
-                    </>
-                  ) : (
-                    <>
-                      Showing <strong>{Math.min((currentPage - 1) * pageSize + 1, totalCount)}</strong> to <strong>{Math.min(currentPage * pageSize, totalCount)}</strong> of <strong>{totalCount}</strong> TTPs
-                    </>
-                  )}
-                </span>
-              </div>
-              
-              {totalPages > 1 && (
-                <div className="pagination-controls-enhanced">
-                  {/* Page Size Selector */}
-                  <div className="items-per-page-selector" style={{marginRight: '1rem'}}>
-                    <label htmlFor="ttp-page-size" style={{fontSize: '0.85rem', marginRight: '0.5rem'}}>
-                      Items per page:
-                    </label>
-                    <select
-                      id="ttp-page-size"
-                      className="form-control-sm"
-                      value={pageSize}
-                      onChange={(e) => handlePageSizeChange(parseInt(e.target.value))}
-                      style={{minWidth: '70px'}}
-                      disabled={loading}
-                    >
-                      <option value={10}>10</option>
-                      <option value={20}>20</option>
-                      <option value={50}>50</option>
-                      <option value={100}>100</option>
-                    </select>
-                  </div>
-
-                  {/* Previous Button */}
-                  <button
-                    className={`btn btn-outline btn-sm ${!hasPrevious || loading ? 'disabled' : ''}`}
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={!hasPrevious || loading}
-                    style={{marginRight: '0.25rem'}}
-                  >
-                    <i className="fas fa-chevron-left"></i>
-                  </button>
-
-                  {/* Page Numbers */}
-                  <div className="pagination-pages">
-                    {generatePageNumbers().map((page, index) => (
-                      page === '...' ? (
-                        <span key={`ellipsis-${index}`} className="pagination-ellipsis">...</span>
-                      ) : (
-                        <button
-                          key={page}
-                          className={`btn btn-sm ${page === currentPage ? 'btn-primary' : 'btn-outline'}`}
-                          onClick={() => handlePageChange(page)}
-                          disabled={loading}
-                        >
-                          {page}
-                        </button>
-                      )
-                    ))}
-                  </div>
-
-                  {/* Next Button */}
-                  <button
-                    className={`btn btn-outline btn-sm ${!hasNext || loading ? 'disabled' : ''}`}
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={!hasNext || loading}
-                    style={{marginLeft: '0.25rem'}}
-                  >
-                    <i className="fas fa-chevron-right"></i>
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* TTP Trends Chart (shared across relevant tabs) */}
-      {(activeTab === 'matrix' || activeTab === 'list') && (
-        <div className="card mt-4">
-          <div className="card-header">
-            <h2 className="card-title"><i className="fas fa-chart-line card-icon"></i> TTP Trends Chart</h2>
-            <div className="card-actions">
-              <button className="btn btn-outline btn-sm"><i className="fas fa-calendar-alt"></i> Last 90 Days</button>
-            </div>
-          </div>
-          <div className="card-content">
-            <div className="chart-container" ref={ttpChartRef}>
-              {trendsLoading ? (
-                <div style={{textAlign: 'center', padding: '4rem'}}>
-                  <i className="fas fa-spinner fa-spin" style={{fontSize: '2rem', color: '#0056b3'}}></i>
-                  <p style={{marginTop: '1rem', color: '#666'}}>Loading TTP trends data...</p>
-                </div>
-              ) : trendsData.length === 0 ? (
-                <div style={{textAlign: 'center', padding: '4rem'}}>
-                  <i className="fas fa-chart-line" style={{fontSize: '2rem', color: '#ccc'}}></i>
-                  <p style={{marginTop: '1rem', color: '#666'}}>No TTP trends data available</p>
-                  <p style={{color: '#888', fontSize: '0.9rem'}}>TTP data will appear here as it becomes available</p>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Threat Actors Tab */}
-      {activeTab === 'trends' && (
-        <div className="trends-analysis">
-          <div className="card">
-            <div className="card-header">
-              <h2 className="card-title"><i className="fas fa-chart-line card-icon"></i> TTP Trends & Patterns</h2>
-              <div className="card-actions">
-                <select className="form-control" style={{width: 'auto', marginRight: '10px'}}>
-                  <option value="30">Last 30 Days</option>
-                  <option value="90">Last 90 Days</option>
-                  <option value="180">Last 6 Months</option>
-                  <option value="365">Last Year</option>
-                </select>
-                <button 
-                  className="btn btn-outline btn-sm"
-                  onClick={fetchAggregationData}
-                  disabled={aggregationLoading}
-                >
-                  <i className={`fas ${aggregationLoading ? 'fa-spinner fa-spin' : 'fa-sync-alt'}`}></i> Refresh
-                </button>
-              </div>
-            </div>
-            <div className="card-content">
-              {aggregationLoading ? (
-                <div className="loading-state">
-                  <i className="fas fa-spinner fa-spin"></i>
-                  <p>Loading trends analysis...</p>
-                </div>
-              ) : (
-                <div className="trends-content">
-                  <div className="trend-charts-grid">
-                    <div className="chart-container">
-                      <h3>Technique Frequency Over Time</h3>
-                      <div 
-                        className="trend-chart" 
-                        ref={ttpChartRef}
-                        style={{minHeight: '300px', width: '100%'}}
-                      >
-                        {/* D3.js Trend Chart will be rendered here */}
-                      </div>
-                    </div>
-                    
-                    <div className="tactic-distribution">
-                      <h3>Tactic Distribution</h3>
-                      {frequencyData && frequencyData.tactics ? (
-                        <div className="tactic-bars">
-                          {Object.entries(frequencyData.tactics)
-                            .sort(([,a], [,b]) => b.count - a.count)
-                            .slice(0, 8)
-                            .map(([tacticId, data]) => (
-                              <div key={tacticId} className="tactic-bar-item">
-                                <div className="tactic-label">{tacticId.replace('-', ' ')}</div>
-                                <div className="bar-container">
-                                  <div 
-                                    className="bar-fill"
-                                    style={{width: `${data.percentage}%`}}
-                                  ></div>
-                                </div>
-                                <div className="bar-value">{data.count}</div>
-                              </div>
-                            ))
-                          }
-                        </div>
-                      ) : (
-                        <div className="empty-state">
-                          <p>No tactic distribution data available</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="trend-insights">
-                    <h3>Key Insights</h3>
-                    <div className="insights-grid">
-                      <div className="insight-card">
-                        <i className="fas fa-trending-up"></i>
-                        <div>
-                          <h4>Emerging Techniques</h4>
-                          <p>New techniques appearing in recent threat intelligence</p>
-                        </div>
-                      </div>
-                      <div className="insight-card">
-                        <i className="fas fa-clock"></i>
-                        <div>
-                          <h4>Seasonal Patterns</h4>
-                          <p>{seasonalData && seasonalData.interpretation ? 
-                            seasonalData.interpretation : 
-                            'Analyzing temporal patterns in TTP usage'
-                          }</p>
-                        </div>
-                      </div>
-                      <div className="insight-card">
-                        <i className="fas fa-exclamation-triangle"></i>
-                        <div>
-                          <h4>High-Frequency TTPs</h4>
-                          <p>Most commonly observed techniques across all feeds</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Recent TTP Analyses (only shown on matrix and list tabs) */}
-      {(activeTab === 'matrix' || activeTab === 'list') && (
-        <div className="card mt-4">
-          <div className="card-header">
-            <div className="filters-header">
-              <h2 className="card-title"><i className="fas fa-tasks card-icon"></i> Recent TTP Analyses</h2>
-              <div className="filter-actions">
-                {loading && (
-                  <span style={{fontSize: '0.85rem', color: '#6c757d'}}>
-                    <i className="fas fa-spinner fa-spin" style={{marginRight: '5px'}}></i>
-                    Filtering...
-                  </span>
-                )}
-                {activeFiltersCount > 0 && (
-                  <span className="filtered-count">
-                    {activeFiltersCount} filter{activeFiltersCount !== 1 ? 's' : ''} applied
-                  </span>
-                )}
-                <button 
-                  className={`btn btn-outline btn-sm ${showFilters ? 'active' : ''}`}
-                  onClick={() => setShowFilters(!showFilters)}
-                  disabled={loading}
-                >
-                  <i className="fas fa-filter"></i> Filters
-                </button>
-                {activeFiltersCount > 0 && (
-                  <button 
-                    className="btn btn-outline btn-sm text-danger"
-                    onClick={clearAllFilters}
-                    title="Clear all filters"
-                  >
-                    <i className="fas fa-times"></i> Clear
-                  </button>
-                )}
-              </div>
-            </div>
-        </div>
-
-          {/* Filter Panel */}
-          {showFilters && (
-            <div className="filters-panel" style={{borderBottom: '1px solid #e9ecef', padding: '1.5rem', background: '#f8f9fa'}}>
-              <div className="filters-grid" style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem'}}>
-                
-                {/* Search Filter */}
-                <div className="filter-group">
-                  <label className="filter-label">
-                    <i className="fas fa-search" style={{marginRight: '5px'}}></i> Search
-                  </label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Search TTPs, techniques, descriptions..."
-                    value={filters.search}
-                    onChange={(e) => handleFilterChange('search', e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        // Force immediate search on Enter key
-                        e.preventDefault();
-                        fetchTTPData(sortBy, sortOrder, 1, pageSize, filters);
-                      }
-                    }}
-                    disabled={loading}
-                  />
-                </div>
-
-                {/* Tactic Filter */}
-                <div className="filter-group">
-                  <label className="filter-label">
-                    <i className="fas fa-crosshairs" style={{marginRight: '5px'}}></i> MITRE Tactics
-                  </label>
-                  <select 
-                    className="form-control"
-                    multiple 
-                    size="4"
-                    value={filters.tactics}
-                    onChange={(e) => {
-                      const values = Array.from(e.target.selectedOptions, option => option.value);
-                      handleFilterChange('tactics', values);
-                    }}
-                    style={{fontSize: '0.85rem'}}
-                    disabled={loading}
-                  >
-                    {filterOptions?.tactics?.map(tactic => (
-                      <option key={tactic.value} value={tactic.value}>
-                        {tactic.label} ({tactic.count || 0})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Severity Filter */}
-                <div className="filter-group">
-                  <label className="filter-label">
-                    <i className="fas fa-exclamation-triangle" style={{marginRight: '5px'}}></i> Severity Levels
-                  </label>
-                  <div className="checkbox-group" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem'}}>
-                    {['critical', 'high', 'medium', 'low'].map(severity => (
-                      <label key={severity} className="checkbox-item" style={{display: 'flex', alignItems: 'center', fontSize: '0.85rem'}}>
-                        <input
-                          type="checkbox"
-                          checked={filters.severity_levels.includes(severity)}
-                          onChange={(e) => handleMultiSelectFilter('severity_levels', severity, e.target.checked)}
-                          style={{marginRight: '5px'}}
-                          disabled={loading}
-                        />
-                        <span className={`severity-badge severity-${severity}`} style={{
-                          padding: '2px 8px', 
-                          borderRadius: '12px', 
-                          fontSize: '0.75rem',
-                          fontWeight: '500',
-                          textTransform: 'capitalize'
-                        }}>
-                          {severity}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Date Range Filter */}
-                <div className="filter-group">
-                  <label className="filter-label">
-                    <i className="fas fa-calendar-alt" style={{marginRight: '5px'}}></i> Date Range
-                  </label>
-                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem'}}>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={filters.date_from}
-                      onChange={(e) => handleFilterChange('date_from', e.target.value)}
-                      placeholder="From"
-                      title="From date"
-                      disabled={loading}
-                    />
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={filters.date_to}
-                      onChange={(e) => handleFilterChange('date_to', e.target.value)}
-                      placeholder="To"
-                      title="To date"
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
-
-                {/* Threat Feed Filter */}
-                <div className="filter-group">
-                  <label className="filter-label">
-                    <i className="fas fa-rss" style={{marginRight: '5px'}}></i> Threat Feeds
-                  </label>
-                  <select 
-                    className="form-control"
-                    multiple 
-                    size="3"
-                    value={filters.threat_feed_ids}
-                    onChange={(e) => {
-                      const values = Array.from(e.target.selectedOptions, option => option.value);
-                      handleFilterChange('threat_feed_ids', values);
-                    }}
-                    style={{fontSize: '0.85rem'}}
-                  >
-                    {filterOptions?.threat_feeds?.map(feed => (
-                      <option key={feed.id} value={feed.id.toString()}>
-                        {feed.name} ({feed.ttp_count || 0})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Status Filters */}
-                <div className="filter-group">
-                  <label className="filter-label">
-                    <i className="fas fa-toggle-on" style={{marginRight: '5px'}}></i> Status Filters
-                  </label>
-                  <div style={{display: 'grid', gap: '0.5rem'}}>
-                    <select
-                      className="form-control"
-                      value={filters.anonymized_only}
-                      onChange={(e) => handleFilterChange('anonymized_only', e.target.value)}
-                      style={{fontSize: '0.85rem'}}
-                    >
-                      <option value="">All TTPs</option>
-                      <option value="true">Anonymized Only</option>
-                      <option value="false">Active Only</option>
-                    </select>
-                    <select
-                      className="form-control"
-                      value={filters.has_subtechniques}
-                      onChange={(e) => handleFilterChange('has_subtechniques', e.target.value)}
-                      style={{fontSize: '0.85rem'}}
-                    >
-                      <option value="">All Techniques</option>
-                      <option value="true">With Sub-techniques</option>
-                      <option value="false">Without Sub-techniques</option>
-                    </select>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          )}
-
-          {/* Active Filters Summary */}
-          {activeFiltersCount > 0 && (
-            <div className="active-filters-summary" style={{padding: '1rem', borderBottom: '1px solid #e9ecef', background: '#fff'}}>
-              <div style={{display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem'}}>
-                <span style={{fontSize: '0.875rem', fontWeight: '600', color: '#495057'}}>
-                  Active Filters:
-                </span>
-                
-                {filters.search && (
-                  <span className="filter-badge" style={{
-                    background: '#e3f2fd', 
-                    color: '#1976d2', 
-                    padding: '2px 8px', 
-                    borderRadius: '12px', 
-                    fontSize: '0.75rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    Search: "{filters.search}"
-                    <button 
-                      onClick={() => handleFilterChange('search', '')}
-                      style={{
-                        background: 'none', 
-                        border: 'none', 
-                        color: '#1976d2', 
-                        cursor: 'pointer', 
-                        padding: '0',
-                        fontSize: '0.75rem'
-                      }}
-                    >
-                      ×
-                    </button>
-                  </span>
-                )}
-                
-                {filters.tactics.length > 0 && (
-                  <span className="filter-badge" style={{
-                    background: '#f3e5f5', 
-                    color: '#7b1fa2', 
-                    padding: '2px 8px', 
-                    borderRadius: '12px', 
-                    fontSize: '0.75rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    {filters.tactics.length} Tactic{filters.tactics.length !== 1 ? 's' : ''}
-                    <button 
-                      onClick={() => handleFilterChange('tactics', [])}
-                      style={{
-                        background: 'none', 
-                        border: 'none', 
-                        color: '#7b1fa2', 
-                        cursor: 'pointer', 
-                        padding: '0',
-                        fontSize: '0.75rem'
-                      }}
-                    >
-                      ×
-                    </button>
-                  </span>
-                )}
-                
-                {filters.severity_levels.length > 0 && (
-                  <span className="filter-badge" style={{
-                    background: '#ffebee', 
-                    color: '#c62828', 
-                    padding: '2px 8px', 
-                    borderRadius: '12px', 
-                    fontSize: '0.75rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    {filters.severity_levels.length} Severity Level{filters.severity_levels.length !== 1 ? 's' : ''}
-                    <button 
-                      onClick={() => handleFilterChange('severity_levels', [])}
-                      style={{
-                        background: 'none', 
-                        border: 'none', 
-                        color: '#c62828', 
-                        cursor: 'pointer', 
-                        padding: '0',
-                        fontSize: '0.75rem'
-                      }}
-                    >
-                      ×
-                    </button>
-                  </span>
-                )}
-                
-                {(filters.date_from || filters.date_to) && (
-                  <span className="filter-badge" style={{
-                    background: '#e8f5e8', 
-                    color: '#2e7d32', 
-                    padding: '2px 8px', 
-                    borderRadius: '12px', 
-                    fontSize: '0.75rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    Date Range
-                    <button 
-                      onClick={() => {
-                        const clearedFilters = { ...filters, date_from: '', date_to: '' };
-                        setFilters(clearedFilters);
-                        setCurrentPage(1);
-                        const activeCount = countActiveFilters(clearedFilters);
-                        setActiveFiltersCount(activeCount);
-                        fetchTTPData(sortBy, sortOrder, 1, pageSize, clearedFilters);
-                      }}
-                      style={{
-                        background: 'none', 
-                        border: 'none', 
-                        color: '#2e7d32', 
-                        cursor: 'pointer', 
-                        padding: '0',
-                        fontSize: '0.75rem'
-                      }}
-                    >
-                      ×
-                    </button>
-                  </span>
-                )}
-                
-                {filters.threat_feed_ids.length > 0 && (
-                  <span className="filter-badge" style={{
-                    background: '#fff3e0', 
-                    color: '#ef6c00', 
-                    padding: '2px 8px', 
-                    borderRadius: '12px', 
-                    fontSize: '0.75rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    {filters.threat_feed_ids.length} Feed{filters.threat_feed_ids.length !== 1 ? 's' : ''}
-                    <button 
-                      onClick={() => handleFilterChange('threat_feed_ids', [])}
-                      style={{
-                        background: 'none', 
-                        border: 'none', 
-                        color: '#ef6c00', 
-                        cursor: 'pointer', 
-                        padding: '0',
-                        fontSize: '0.75rem'
-                      }}
-                    >
-                      ×
-                    </button>
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-        <div className="card-content">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th 
-                  className="sortable-header"
-                  onClick={() => handleSort('id')}
-                  style={{cursor: 'pointer', userSelect: 'none'}}
-                >
-                  ID
-                  {getSortIcon('id')}
-                </th>
-                <th 
-                  className="sortable-header"
-                  onClick={() => handleSort('name')}
-                  style={{cursor: 'pointer', userSelect: 'none'}}
-                >
-                  Name
-                  {getSortIcon('name')}
-                </th>
-                <th 
-                  className="sortable-header"
-                  onClick={() => handleSort('mitre_technique_id')}
-                  style={{cursor: 'pointer', userSelect: 'none'}}
-                >
-                  MITRE Technique
-                  {getSortIcon('mitre_technique_id')}
-                </th>
-                <th 
-                  className="sortable-header"
-                  onClick={() => handleSort('mitre_tactic')}
-                  style={{cursor: 'pointer', userSelect: 'none'}}
-                >
-                  Tactic
-                  {getSortIcon('mitre_tactic')}
-                </th>
-                <th>Threat Feed</th>
-                <th 
-                  className="sortable-header"
-                  onClick={() => handleSort('created_at')}
-                  style={{cursor: 'pointer', userSelect: 'none'}}
-                >
-                  Created
-                  {getSortIcon('created_at')}
-                </th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="8" style={{textAlign: 'center', padding: '2rem'}}>
-                    <i className="fas fa-spinner fa-spin"></i> Loading TTPs...
-                  </td>
-                </tr>
-              ) : ttpData.length > 0 ? (
-                ttpData.map((ttp) => (
-                  <tr key={ttp.id}>
-                    <td>{ttp.id}</td>
-                    <td>{ttp.name}</td>
-                    <td>{ttp.mitre_technique_id}</td>
-                    <td>{ttp.mitre_tactic_display || ttp.mitre_tactic}</td>
-                    <td>{ttp.threat_feed ? ttp.threat_feed.name : 'N/A'}</td>
-                    <td>{new Date(ttp.created_at).toLocaleDateString()}</td>
-                    <td>
-                      <span className={`badge ${ttp.is_anonymized ? 'badge-info' : 'badge-success'}`}>
-                        {ttp.is_anonymized ? 'Anonymized' : 'Active'}
-                      </span>
-                    </td>
-                    <td>
-                      <button 
-                        className="btn btn-outline btn-sm" 
-                        title="View TTP Details"
-                        onClick={() => openTTPModal(ttp.id)}
-                        style={{marginRight: '5px'}}
-                      >
-                        <i className="fas fa-eye"></i>
-                      </button>
-                      <button className="btn btn-outline btn-sm" title="Share" style={{marginRight: '5px'}}>
-                        <i className="fas fa-share-alt"></i>
-                      </button>
-                      <button 
-                        className="btn btn-outline btn-sm text-danger" 
-                        title="Delete TTP"
-                        onClick={() => deleteTTP(ttp.id)}
-                      >
-                        <i className="fas fa-trash"></i>
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="8" style={{textAlign: 'center', padding: '2rem'}}>
-                    No TTPs found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        </div>
-      )}
-
-      {/* TTP Detail Modal */}
-      {showTTPModal && (
-        <div className="modal-overlay" onClick={closeTTPModal}>
-          <div className="modal-content ttp-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>
-                <i className="fas fa-crosshairs"></i> 
-                {isEditMode ? 'Edit TTP Details' : 'TTP Details'}
-              </h2>
-              <button className="modal-close" onClick={closeTTPModal}>
-                <i className="fas fa-times"></i>
-              </button>
+          <div className="feature-list">
+            <div className="feature-item">
+              <h3>MITRE ATT&CK Mapping</h3>
+              <p>Map threat intelligence to MITRE ATT&CK framework</p>
             </div>
             
-            <div className="modal-body">
-              {ttpDetailLoading ? (
-                <div style={{textAlign: 'center', padding: '3rem'}}>
-                  <i className="fas fa-spinner fa-spin" style={{fontSize: '2rem', color: '#0056b3'}}></i>
-                  <p style={{marginTop: '1rem', color: '#666'}}>Loading TTP details...</p>
-                </div>
-              ) : selectedTTP ? (
-                <div className="ttp-detail-content">
-                  {/* TTP Header Info */}
-                  <div className="ttp-header-section">
-                    <div className="ttp-title-section">
-                      {isEditMode ? (
-                        <input
-                          type="text"
-                          className="form-control ttp-name-input"
-                          value={editFormData.name}
-                          onChange={(e) => handleEditFormChange('name', e.target.value)}
-                          placeholder="TTP Name"
-                        />
-                      ) : (
-                        <h3 className="ttp-title">{selectedTTP.name}</h3>
-                      )}
-                      
-                      <div className="ttp-badges">
-                        <span className="badge badge-primary">
-                          {selectedTTP.mitre_technique_id || 'No MITRE ID'}
-                        </span>
-                        <span className="badge badge-secondary">
-                          {selectedTTP.mitre_tactic_display || selectedTTP.mitre_tactic || 'No Tactic'}
-                        </span>
-                        {selectedTTP.is_anonymized && (
-                          <span className="badge badge-info">Anonymized</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* TTP Details Grid */}
-                  <div className="ttp-details-grid">
-                    <div className="detail-section">
-                      <h4><i className="fas fa-info-circle"></i> Basic Information</h4>
-                      <div className="detail-row">
-                        <label>Description:</label>
-                        <div className="detail-value">
-                          {isEditMode ? (
-                            <textarea
-                              className="form-control"
-                              value={editFormData.description}
-                              onChange={(e) => handleEditFormChange('description', e.target.value)}
-                              placeholder="TTP Description"
-                              rows="4"
-                            />
-                          ) : (
-                            <p>{selectedTTP.description || 'No description available'}</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="detail-section">
-                      <h4><i className="fas fa-crosshairs"></i> MITRE ATT&CK Mapping</h4>
-                      <div className="detail-row">
-                        <label>Technique ID:</label>
-                        <div className="detail-value">
-                          {isEditMode ? (
-                            <input
-                              type="text"
-                              className="form-control"
-                              value={editFormData.mitre_technique_id}
-                              onChange={(e) => handleEditFormChange('mitre_technique_id', e.target.value)}
-                              placeholder="e.g., T1566.001"
-                            />
-                          ) : (
-                            <span className="technique-id-display">
-                              {selectedTTP.mitre_technique_id || 'Not specified'}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="detail-row">
-                        <label>Tactic:</label>
-                        <div className="detail-value">
-                          {isEditMode ? (
-                            <select
-                              className="form-control"
-                              value={editFormData.mitre_tactic}
-                              onChange={(e) => handleEditFormChange('mitre_tactic', e.target.value)}
-                            >
-                              <option value="">Select Tactic</option>
-                              <option value="initial-access">Initial Access</option>
-                              <option value="execution">Execution</option>
-                              <option value="persistence">Persistence</option>
-                              <option value="privilege-escalation">Privilege Escalation</option>
-                              <option value="defense-evasion">Defense Evasion</option>
-                              <option value="credential-access">Credential Access</option>
-                              <option value="discovery">Discovery</option>
-                              <option value="lateral-movement">Lateral Movement</option>
-                              <option value="collection">Collection</option>
-                              <option value="command-and-control">Command and Control</option>
-                              <option value="exfiltration">Exfiltration</option>
-                              <option value="impact">Impact</option>
-                            </select>
-                          ) : (
-                            <span>{selectedTTP.mitre_tactic_display || selectedTTP.mitre_tactic || 'Not specified'}</span>
-                          )}
-                        </div>
-                      </div>
-                      {(selectedTTP.mitre_subtechnique || isEditMode) && (
-                        <div className="detail-row">
-                          <label>Sub-technique:</label>
-                          <div className="detail-value">
-                            {isEditMode ? (
-                              <input
-                                type="text"
-                                className="form-control"
-                                value={editFormData.mitre_subtechnique}
-                                onChange={(e) => handleEditFormChange('mitre_subtechnique', e.target.value)}
-                                placeholder="Sub-technique name"
-                              />
-                            ) : (
-                              <span>{selectedTTP.mitre_subtechnique || 'None'}</span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="detail-section">
-                      <h4><i className="fas fa-rss"></i> Threat Feed Information</h4>
-                      <div className="detail-row">
-                        <label>Source Feed:</label>
-                        <div className="detail-value">
-                          {selectedTTP.threat_feed ? (
-                            <div className="feed-info">
-                              <span className="feed-name">{selectedTTP.threat_feed.name}</span>
-                              <span className={`feed-type ${selectedTTP.threat_feed.is_external ? 'external' : 'internal'}`}>
-                                {selectedTTP.threat_feed.is_external ? 'External' : 'Internal'}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="no-data">Manual Entry</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="detail-section">
-                      <h4><i className="fas fa-clock"></i> Metadata</h4>
-                      <div className="detail-row">
-                        <label>Created:</label>
-                        <div className="detail-value">
-                          {selectedTTP.created_at ? new Date(selectedTTP.created_at).toLocaleString() : 'Unknown'}
-                        </div>
-                      </div>
-                      <div className="detail-row">
-                        <label>Last Modified:</label>
-                        <div className="detail-value">
-                          {selectedTTP.updated_at ? new Date(selectedTTP.updated_at).toLocaleString() : 'Never'}
-                        </div>
-                      </div>
-                      {selectedTTP.stix_id && (
-                        <div className="detail-row">
-                          <label>STIX ID:</label>
-                          <div className="detail-value">
-                            <code>{selectedTTP.stix_id}</code>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div style={{textAlign: 'center', padding: '3rem'}}>
-                  <i className="fas fa-exclamation-triangle" style={{fontSize: '2rem', color: '#dc3545'}}></i>
-                  <p style={{marginTop: '1rem', color: '#666'}}>Failed to load TTP details</p>
-                </div>
-              )}
+            <div className="feature-item">
+              <h3>TTP Trend Analysis</h3>
+              <p>Analyze trending tactics and techniques over time</p>
             </div>
-
-            <div className="modal-footer">
-              <button className="btn btn-outline" onClick={closeTTPModal}>
-                Close
-              </button>
-              {selectedTTP && !ttpDetailLoading && (
-                <>
-                  {isEditMode ? (
-                    <>
-                      <button className="btn btn-outline" onClick={toggleEditMode}>
-                        Cancel Edit
-                      </button>
-                      <button className="btn btn-primary" onClick={saveTTPChanges}>
-                        <i className="fas fa-save"></i> Save Changes
-                      </button>
-                    </>
-                  ) : (
-                    <button className="btn btn-primary" onClick={toggleEditMode}>
-                      <i className="fas fa-edit"></i> Edit TTP
-                    </button>
-                  )}
-                </>
-              )}
+            
+            <div className="feature-item">
+              <h3>Threat Actor Profiling</h3>
+              <p>Profile threat actors based on their TTPs</p>
+            </div>
+            
+            <div className="feature-item">
+              <h3>Feed Integration</h3>
+              <p>Consume TTPs from various threat intelligence feeds</p>
             </div>
           </div>
         </div>
-      )}
+      </div>
 
+      <style jsx>{`
+        .page-section {
+          display: none;
+          padding: 20px;
+          max-width: 1200px;
+          margin: 0 auto;
+        }
 
-      {/* TTP Export Modal */}
-      {showExportModal && (
-        <div className="modal-overlay" onClick={closeExportModal}>
-          <div className="modal-content export-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3><i className="fas fa-download"></i> Export TTP Analysis</h3>
-              <button className="modal-close" onClick={closeExportModal}>
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
+        .page-section.active {
+          display: block;
+        }
 
-            <div className="modal-body">
-              {exportError && (
-                <div className="alert alert-error">
-                  <i className="fas fa-exclamation-triangle"></i>
-                  {exportError}
-                </div>
-              )}
+        .page-header {
+          margin-bottom: 30px;
+        }
 
-              <div className="export-info">
-                <div className="info-card">
-                  <i className="fas fa-info-circle"></i>
-                  <div>
-                    <strong>Export Information</strong>
-                    <p>Export your TTP analysis data in multiple formats. You can filter the data and customize the export to meet your specific needs.</p>
-                  </div>
-                </div>
-              </div>
+        .page-title {
+          color: #2c3e50;
+          margin-bottom: 10px;
+        }
 
-              <form>
-                {/* Export Format Selection */}
-                <div className="form-section">
-                  <h4><i className="fas fa-file-alt"></i> Export Format</h4>
-                  <div className="format-options">
-                    <label className="format-option">
-                      <input
-                        type="radio"
-                        name="exportFormat"
-                        value="json"
-                        checked={exportFormat === 'json'}
-                        onChange={(e) => setExportFormat(e.target.value)}
-                      />
-                      <div className="format-card">
-                        <i className="fas fa-code"></i>
-                        <span>JSON</span>
-                        <small>Structured data format</small>
-                      </div>
-                    </label>
-                    <label className="format-option">
-                      <input
-                        type="radio"
-                        name="exportFormat"
-                        value="csv"
-                        checked={exportFormat === 'csv'}
-                        onChange={(e) => setExportFormat(e.target.value)}
-                      />
-                      <div className="format-card">
-                        <i className="fas fa-table"></i>
-                        <span>CSV</span>
-                        <small>Spreadsheet compatible</small>
-                      </div>
-                    </label>
-                    <label className="format-option">
-                      <input
-                        type="radio"
-                        name="exportFormat"
-                        value="stix"
-                        checked={exportFormat === 'stix'}
-                        onChange={(e) => setExportFormat(e.target.value)}
-                      />
-                      <div className="format-card">
-                        <i className="fas fa-shield-alt"></i>
-                        <span>STIX</span>
-                        <small>Threat intelligence standard</small>
-                      </div>
-                    </label>
-                  </div>
-                </div>
+        .page-subtitle {
+          color: #7f8c8d;
+          margin: 0;
+        }
 
-                {/* Export Filters */}
-                <div className="form-section">
-                  <h4><i className="fas fa-filter"></i> Filters</h4>
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label>MITRE Tactic</label>
-                      <select
-                        className="form-control"
-                        value={exportFilters.tactic}
-                        onChange={(e) => handleExportFilterChange('tactic', e.target.value)}
-                      >
-                        <option value="">All Tactics</option>
-                        <option value="initial-access">Initial Access</option>
-                        <option value="execution">Execution</option>
-                        <option value="persistence">Persistence</option>
-                        <option value="privilege-escalation">Privilege Escalation</option>
-                        <option value="defense-evasion">Defense Evasion</option>
-                        <option value="credential-access">Credential Access</option>
-                        <option value="discovery">Discovery</option>
-                        <option value="lateral-movement">Lateral Movement</option>
-                        <option value="collection">Collection</option>
-                        <option value="command-and-control">Command and Control</option>
-                        <option value="exfiltration">Exfiltration</option>
-                        <option value="impact">Impact</option>
-                      </select>
-                    </div>
+        .placeholder-content {
+          margin-top: 30px;
+        }
 
-                    <div className="form-group">
-                      <label>Technique ID</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={exportFilters.technique_id}
-                        onChange={(e) => handleExportFilterChange('technique_id', e.target.value)}
-                        placeholder="e.g., T1059"
-                      />
-                    </div>
+        .content-box {
+          background: white;
+          border-radius: 8px;
+          padding: 30px;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          border-left: 4px solid #9b59b6;
+        }
 
-                    <div className="form-group">
-                      <label>Threat Feed ID</label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        value={exportFilters.feed_id}
-                        onChange={(e) => handleExportFilterChange('feed_id', e.target.value)}
-                        placeholder="Enter feed ID"
-                      />
-                    </div>
+        .content-box h2 {
+          color: #2c3e50;
+          margin-bottom: 15px;
+        }
 
-                    <div className="form-group">
-                      <label>Maximum Records</label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        value={exportFilters.limit}
-                        onChange={(e) => handleExportFilterChange('limit', parseInt(e.target.value) || 1000)}
-                        min="1"
-                        max="10000"
-                      />
-                    </div>
-                  </div>
+        .content-box p {
+          color: #7f8c8d;
+          line-height: 1.6;
+          margin-bottom: 20px;
+        }
 
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Created After</label>
-                      <input
-                        type="date"
-                        className="form-control"
-                        value={exportFilters.created_after}
-                        onChange={(e) => handleExportFilterChange('created_after', e.target.value)}
-                      />
-                    </div>
+        .feature-list {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 20px;
+          margin-top: 20px;
+        }
 
-                    <div className="form-group">
-                      <label>Created Before</label>
-                      <input
-                        type="date"
-                        className="form-control"
-                        value={exportFilters.created_before}
-                        onChange={(e) => handleExportFilterChange('created_before', e.target.value)}
-                      />
-                    </div>
-                  </div>
+        .feature-item {
+          background: #f8f9fa;
+          padding: 20px;
+          border-radius: 6px;
+          border-left: 3px solid #9b59b6;
+        }
 
-                  <div className="form-group">
-                    <label>Specific Fields (comma-separated)</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={exportFilters.fields}
-                      onChange={(e) => handleExportFilterChange('fields', e.target.value)}
-                      placeholder="e.g., id,name,mitre_technique_id,description"
-                    />
-                    <small className="form-help">Leave empty to export all available fields</small>
-                  </div>
-                </div>
+        .feature-item h3 {
+          color: #2c3e50;
+          margin-bottom: 10px;
+          font-size: 16px;
+        }
 
-                {/* Advanced Options */}
-                <div className="form-section">
-                  <h4><i className="fas fa-cog"></i> Advanced Options</h4>
-                  <div className="checkbox-group">
-                    <label className="checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={exportFilters.include_anonymized}
-                        onChange={(e) => handleExportFilterChange('include_anonymized', e.target.checked)}
-                      />
-                      <span>Include anonymized TTPs</span>
-                    </label>
-
-                    <label className="checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={exportFilters.include_original}
-                        onChange={(e) => handleExportFilterChange('include_original', e.target.checked)}
-                      />
-                      <span>Include original data for anonymized TTPs</span>
-                    </label>
-                  </div>
-                </div>
-              </form>
-            </div>
-
-            <div className="modal-footer">
-              <button className="btn btn-outline" onClick={closeExportModal}>
-                Cancel
-              </button>
-              <button 
-                className="btn btn-primary" 
-                onClick={exportTTPData}
-                disabled={isExporting}
-              >
-                {isExporting ? (
-                  <>
-                    <i className="fas fa-spinner fa-spin"></i> Exporting...
-                  </>
-                ) : (
-                  <>
-                    <i className="fas fa-download"></i> Export Data
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Matrix Cell Details Modal */}
-      {showMatrixCellModal && (
-        <div className="modal-overlay" onClick={closeMatrixCellModal}>
-          <div className="modal-content matrix-cell-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>
-                <i className="fas fa-th-large"></i>
-                {selectedTechnique 
-                  ? `Technique ${selectedTechnique} in ${selectedTactic.replace(/_/g, ' ')}`
-                  : `${selectedTactic.replace(/_/g, ' ')} Tactic Details`
-                }
-              </h3>
-              <button className="modal-close" onClick={closeMatrixCellModal}>
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
-            
-            <div className="modal-body">
-              {matrixCellLoading ? (
-                <div className="loading-state">
-                  <i className="fas fa-spinner fa-spin"></i>
-                  <span>Loading matrix cell details...</span>
-                </div>
-              ) : matrixCellData ? (
-                <div className="matrix-cell-details">
-                  {/* Cell Information */}
-                  <div className="cell-info-section">
-                    <div className="info-grid">
-                      <div className="info-item">
-                        <label>Tactic:</label>
-                        <span>{matrixCellData.cell_info.tactic_display}</span>
-                      </div>
-                      <div className="info-item">
-                        <label>Total TTPs:</label>
-                        <span>{matrixCellData.cell_info.total_ttps_in_cell}</span>
-                      </div>
-                      <div className="info-item">
-                        <label>Unique Techniques:</label>
-                        <span>{matrixCellData.cell_info.unique_techniques}</span>
-                      </div>
-                      <div className="info-item">
-                        <label>Threat Feeds:</label>
-                        <span>{matrixCellData.cell_info.threat_feeds_count}</span>
-                      </div>
-                      <div className="info-item">
-                        <label>Recent Activity (30d):</label>
-                        <span>{matrixCellData.cell_info.recent_activity}</span>
-                      </div>
-                      <div className="info-item">
-                        <label>With Subtechniques:</label>
-                        <span>{matrixCellData.cell_info.has_subtechniques}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Related Techniques */}
-                  {matrixCellData.related_techniques && matrixCellData.related_techniques.length > 0 && (
-                    <div className="related-techniques-section">
-                      <h4><i className="fas fa-sitemap"></i> Top Techniques in this Tactic</h4>
-                      <div className="techniques-grid">
-                        {matrixCellData.related_techniques.map((tech, index) => (
-                          <div 
-                            key={tech.mitre_technique_id || index}
-                            className="technique-card clickable"
-                            onClick={() => handleTechniqueClick(tech.mitre_technique_id)}
-                          >
-                            <div className="technique-id">{tech.mitre_technique_id}</div>
-                            <div className="technique-count">{tech.count} TTPs</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* TTPs List */}
-                  <div className="ttps-list-section">
-                    <h4>
-                      <i className="fas fa-list"></i>
-                      TTPs ({matrixCellData.ttps.filtered_count})
-                      {matrixCellData.ttps.has_next && (
-                        <span className="showing-info">
-                          (Showing first {matrixCellData.ttps.page_size})
-                        </span>
-                      )}
-                    </h4>
-                    
-                    {matrixCellData.ttps.results.length > 0 ? (
-                      <div className="ttps-list">
-                        {matrixCellData.ttps.results.map(ttp => (
-                          <div key={ttp.id} className="ttp-item">
-                            <div className="ttp-header">
-                              <div className="ttp-name">{ttp.name}</div>
-                              <div className="ttp-badges">
-                                {ttp.mitre_technique_id && (
-                                  <span className="badge technique-badge">{ttp.mitre_technique_id}</span>
-                                )}
-                                {ttp.severity && (
-                                  <span className={`badge severity-${ttp.severity}`}>{ttp.severity}</span>
-                                )}
-                                {ttp.is_anonymized && (
-                                  <span className="badge anonymized-badge">Anonymized</span>
-                                )}
-                              </div>
-                            </div>
-                            
-                            <div className="ttp-description">
-                              {ttp.description.length > 200 
-                                ? ttp.description.substring(0, 200) + '...'
-                                : ttp.description
-                              }
-                            </div>
-                            
-                            <div className="ttp-meta">
-                              {ttp.threat_feed && (
-                                <div className="feed-info">
-                                  <i className="fas fa-rss"></i>
-                                  <span>{ttp.threat_feed.name}</span>
-                                  {ttp.threat_feed.is_external && (
-                                    <span className="external-indicator">External</span>
-                                  )}
-                                </div>
-                              )}
-                              <div className="created-date">
-                                <i className="fas fa-clock"></i>
-                                {new Date(ttp.created_at).toLocaleDateString()}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="empty-state">
-                        <i className="fas fa-info-circle"></i>
-                        <span>No TTPs found for this matrix cell</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Statistics */}
-                  {matrixCellData.statistics && (
-                    <div className="statistics-section">
-                      <h4><i className="fas fa-chart-bar"></i> Statistics</h4>
-                      <div className="stats-grid">
-                        {matrixCellData.statistics.severity_distribution && (
-                          <div className="stat-item">
-                            <label>Severity Distribution:</label>
-                            <div className="severity-bars">
-                              {Object.entries(matrixCellData.statistics.severity_distribution).map(([severity, count]) => (
-                                <div key={severity} className="severity-bar">
-                                  <span className={`severity-label ${severity}`}>{severity}: {count}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="error-state">
-                  <i className="fas fa-exclamation-triangle"></i>
-                  <span>Failed to load matrix cell details</span>
-                </div>
-              )}
-            </div>
-            
-            <div className="modal-footer">
-              <button className="btn btn-outline" onClick={closeMatrixCellModal}>
-                Close
-              </button>
-              {matrixCellData && matrixCellData.ttps.has_next && (
-                <button className="btn btn-primary">
-                  <i className="fas fa-arrow-right"></i> View All TTPs
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Technique Details Modal */}
-      {showTechniqueModal && (
-        <div className="modal-overlay" onClick={closeTechniqueModal}>
-          <div className="modal-content technique-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>
-                <i className="fas fa-bullseye"></i>
-                Technique Details: {selectedTechniqueId}
-              </h3>
-              <button className="modal-close" onClick={closeTechniqueModal}>
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
-            
-            <div className="modal-body">
-              {techniqueLoading ? (
-                <div className="loading-state">
-                  <i className="fas fa-spinner fa-spin"></i>
-                  <span>Loading technique details...</span>
-                </div>
-              ) : techniqueData ? (
-                <div className="technique-details">
-                  {/* Technique Information */}
-                  <div className="technique-info-section">
-                    <div className="info-header">
-                      <div className="technique-title">
-                        <h4>{techniqueData.technique_info.name || selectedTechniqueId}</h4>
-                        <div className="technique-badges">
-                          <span className="badge technique-badge">{selectedTechniqueId}</span>
-                          <span className={`badge severity-${techniqueData.technique_info.severity}`}>
-                            {techniqueData.technique_info.severity}
-                          </span>
-                          {techniqueData.technique_info.is_subtechnique && (
-                            <span className="badge subtechnique-badge">Subtechnique</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="technique-stats">
-                      <div className="stat-item">
-                        <label>Total TTPs:</label>
-                        <span>{techniqueData.statistics.total_ttps}</span>
-                      </div>
-                      <div className="stat-item">
-                        <label>Threat Feeds:</label>
-                        <span>{techniqueData.statistics.unique_threat_feeds}</span>
-                      </div>
-                      <div className="stat-item">
-                        <label>First Seen:</label>
-                        <span>{techniqueData.statistics.first_seen 
-                          ? new Date(techniqueData.statistics.first_seen).toLocaleDateString() 
-                          : 'N/A'}</span>
-                      </div>
-                      <div className="stat-item">
-                        <label>Last Seen:</label>
-                        <span>{techniqueData.statistics.last_seen 
-                          ? new Date(techniqueData.statistics.last_seen).toLocaleDateString() 
-                          : 'N/A'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Associated Tactics */}
-                  {techniqueData.associated_tactics && techniqueData.associated_tactics.length > 0 && (
-                    <div className="tactics-section">
-                      <h4><i className="fas fa-layer-group"></i> Associated Tactics</h4>
-                      <div className="tactics-grid">
-                        {techniqueData.associated_tactics.map(tactic => (
-                          <div 
-                            key={tactic.tactic}
-                            className="tactic-card clickable"
-                            onClick={() => handleMatrixCellClick(tactic.tactic, selectedTechniqueId)}
-                          >
-                            <div className="tactic-name">{tactic.tactic_display}</div>
-                            <div className="tactic-count">{tactic.count} TTPs</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Technique Variants */}
-                  {techniqueData.variants && techniqueData.variants.length > 0 && (
-                    <div className="variants-section">
-                      <h4><i className="fas fa-code-branch"></i> Related Variants</h4>
-                      <div className="variants-grid">
-                        {techniqueData.variants.map(variant => (
-                          <div 
-                            key={variant.mitre_technique_id}
-                            className="variant-card clickable"
-                            onClick={() => handleTechniqueClick(variant.mitre_technique_id)}
-                          >
-                            <div className="variant-id">{variant.mitre_technique_id}</div>
-                            <div className="variant-count">{variant.count} TTPs</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Recent Activity */}
-                  {techniqueData.statistics.recent_activity && (
-                    <div className="activity-section">
-                      <h4><i className="fas fa-activity"></i> Recent Activity</h4>
-                      <div className="activity-stats">
-                        <div className="activity-item">
-                          <label>Last 24 hours:</label>
-                          <span>{techniqueData.statistics.recent_activity.last_24h}</span>
-                        </div>
-                        <div className="activity-item">
-                          <label>Last 7 days:</label>
-                          <span>{techniqueData.statistics.recent_activity.last_7d}</span>
-                        </div>
-                        <div className="activity-item">
-                          <label>Last 30 days:</label>
-                          <span>{techniqueData.statistics.recent_activity.last_30d}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* TTPs using this technique */}
-                  <div className="technique-ttps-section">
-                    <h4>
-                      <i className="fas fa-list"></i>
-                      TTPs Using This Technique ({techniqueData.ttps.length})
-                    </h4>
-                    
-                    {techniqueData.ttps.length > 0 ? (
-                      <div className="technique-ttps-list">
-                        {techniqueData.ttps.slice(0, 10).map(ttp => (
-                          <div key={ttp.id} className="ttp-item">
-                            <div className="ttp-header">
-                              <div className="ttp-name">{ttp.name}</div>
-                              <div className="ttp-badges">
-                                {ttp.mitre_tactic && (
-                                  <span className="badge tactic-badge">{ttp.mitre_tactic_display}</span>
-                                )}
-                                {ttp.is_anonymized && (
-                                  <span className="badge anonymized-badge">Anonymized</span>
-                                )}
-                              </div>
-                            </div>
-                            
-                            <div className="ttp-description">
-                              {ttp.description.length > 150 
-                                ? ttp.description.substring(0, 150) + '...'
-                                : ttp.description
-                              }
-                            </div>
-                            
-                            <div className="ttp-meta">
-                              {ttp.threat_feed && (
-                                <div className="feed-info">
-                                  <i className="fas fa-rss"></i>
-                                  <span>{ttp.threat_feed.name}</span>
-                                </div>
-                              )}
-                              <div className="created-date">
-                                <i className="fas fa-clock"></i>
-                                {new Date(ttp.created_at).toLocaleDateString()}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                        
-                        {techniqueData.ttps.length > 10 && (
-                          <div className="more-ttps-indicator">
-                            <i className="fas fa-ellipsis-h"></i>
-                            <span>and {techniqueData.ttps.length - 10} more TTPs...</span>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="empty-state">
-                        <i className="fas fa-info-circle"></i>
-                        <span>No TTPs found for this technique</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="error-state">
-                  <i className="fas fa-exclamation-triangle"></i>
-                  <span>Failed to load technique details</span>
-                </div>
-              )}
-            </div>
-            
-            <div className="modal-footer">
-              <button className="btn btn-outline" onClick={closeTechniqueModal}>
-                Close
-              </button>
-              {techniqueData && techniqueData.ttps.length > 10 && (
-                <button className="btn btn-primary">
-                  <i className="fas fa-external-link-alt"></i> View All TTPs
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+        .feature-item p {
+          color: #6c757d;
+          margin: 0;
+          font-size: 14px;
+        }
+      `}</style>
     </section>
   );
 }
 
-// Institutions Component
-function Institutions({ active }) {
-  const [organizations, setOrganizations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedOrg, setSelectedOrg] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    domain: '',
-    contact_email: '',
-    description: '',
-    website: '',
-    organization_type: 'educational',
-    primary_user: {
-      username: '',
-      email: '',
-      password: '',
-      first_name: '',
-      last_name: ''
-    }
-  });
-
-  useEffect(() => {
-    if (active) {
-      fetchOrganizations();
-    }
-  }, [active]);
-
-  const fetchOrganizations = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await api.get('/api/organizations/');
-      console.log('Organizations API response:', response); // Debug log
-      if (response && response.success) {
-        const orgs = response.organizations || [];
-        console.log('Setting organizations:', orgs); // Debug log
-        setOrganizations(orgs);
-      } else {
-        console.error('API response unsuccessful:', response);
-        setError('Failed to load institutions - API response unsuccessful');
-      }
-    } catch (err) {
-      console.error('Error fetching organizations:', err);
-      setError(`Failed to load institutions: ${err.message || 'Unknown error'}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCreateOrganization = async (e) => {
-    e.preventDefault();
-    setError(null); // Clear previous errors
-    try {
-      const response = await api.post('/api/organizations/create/', formData);
-      if (response && response.success) {
-        setShowCreateModal(false);
-        setFormData({
-          name: '',
-          domain: '',
-          contact_email: '',
-          description: '',
-          website: '',
-          organization_type: 'educational',
-          primary_user: {
-            username: '',
-            email: '',
-            password: '',
-            first_name: '',
-            last_name: ''
-          }
-        });
-        fetchOrganizations();
-        setError(null);
-      } else if (response && response.message) {
-        // Show backend error message
-        setError(response.message);
-      } else {
-        setError('Failed to create institution - unknown error');
-      }
-    } catch (err) {
-      console.error('Error creating organization:', err);
-      // Try to extract error message from response
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to create institution';
-      setError(errorMessage);
-    }
-  };
-
+// Organizations Component
+function Organizations({ active }) {
   if (!active) return null;
 
   return (
-    <section id="institutions" className={`page-section ${active ? 'active' : ''}`}>
+    <section id="organizations" className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
-        <div>
-          <h1 className="page-title">Institutions & Organizations</h1>
-          <p className="page-subtitle">Manage connected institutions and organizations</p>
-        </div>
-        <div className="action-buttons">
-          <button 
-            className="btn btn-primary"
-            onClick={() => setShowCreateModal(true)}
-          >
-            <i className="fas fa-plus"></i> Add Institution
-          </button>
+        <h1 className="page-title">Organizations</h1>
+        <p className="page-subtitle">Manage participating institutions and organizations</p>
+      </div>
+      
+      <div className="placeholder-content">
+        <div className="content-box">
+          <h2>Institution Management</h2>
+          <p>This section will contain tools for managing participating institutions and organizations in the threat intelligence sharing network.</p>
+          
+          <div className="feature-list">
+            <div className="feature-item">
+              <h3>Register Institution</h3>
+              <p>Add new institutions to the network</p>
+            </div>
+            
+            <div className="feature-item">
+              <h3>View Network</h3>
+              <p>See all connected institutions</p>
+            </div>
+            
+            <div className="feature-item">
+              <h3>Trust Management</h3>
+              <p>Manage trust relationships between institutions</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {error && (
-        <div className="error-message">
-          <i className="fas fa-exclamation-triangle"></i>
-          {error}
-        </div>
-      )}
+      <style jsx>{`
+        .page-section {
+          display: none;
+          padding: 20px;
+          max-width: 1200px;
+          margin: 0 auto;
+        }
 
-      {loading ? (
-        <div className="loading-state">
-          <i className="fas fa-spinner fa-spin"></i>
-          <p>Loading institutions...</p>
-        </div>
-      ) : (
-        <div className="institutions-grid">
-          <div className="stats-row">
-            <div className="stat-card">
-              <div className="stat-icon">
-                <i className="fas fa-building"></i>
-              </div>
-              <div className="stat-content">
-                <h3>{organizations.length}</h3>
-                <p>Total Organizations</p>
-              </div>
-            </div>
-            
-            <div className="stat-card">
-              <div className="stat-icon">
-                <i className="fas fa-users"></i>
-              </div>
-              <div className="stat-content">
-                <h3>{organizations.reduce((sum, org) => sum + (org.member_count || 0), 0)}</h3>
-                <p>Total Members</p>
-              </div>
-            </div>
-            
-            <div className="stat-card">
-              <div className="stat-icon">
-                <i className="fas fa-handshake"></i>
-              </div>
-              <div className="stat-content">
-                <h3>{organizations.filter(org => org.trust_relationships_count > 0).length}</h3>
-                <p>Connected Orgs</p>
-              </div>
-            </div>
-            
-            <div className="stat-card">
-              <div className="stat-icon">
-                <i className="fas fa-shield-alt"></i>
-              </div>
-              <div className="stat-content">
-                <h3>{organizations.filter(org => org.is_active).length}</h3>
-                <p>Active Orgs</p>
-              </div>
-            </div>
-          </div>
+        .page-section.active {
+          display: block;
+        }
 
-          <div className="organizations-list">
-            {organizations.length === 0 ? (
-              <div className="empty-state">
-                <i className="fas fa-building" style={{fontSize: '48px', color: '#dee2e6'}}></i>
-                <h3>No institutions found</h3>
-                <p>Create your first institution to get started with threat intelligence sharing.</p>
-                <button 
-                  className="btn btn-primary"
-                  onClick={() => setShowCreateModal(true)}
-                >
-                  <i className="fas fa-plus"></i> Create Institution
-                </button>
-              </div>
-            ) : (
-              <div className="organizations-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Institution</th>
-                      <th>Type</th>
-                      <th>Domain</th>
-                      <th>Members</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {organizations.map(org => (
-                      <tr key={org.id}>
-                        <td>
-                          <div className="org-info">
-                            <div className="org-icon">
-                              <i className="fas fa-building"></i>
-                            </div>
-                            <div>
-                              <div className="org-name">{org.name}</div>
-                              <div className="org-description">{org.description || 'No description'}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <span className="org-type">{org.organization_type || 'Unknown'}</span>
-                        </td>
-                        <td>{org.domain || 'N/A'}</td>
-                        <td>{org.member_count || 0}</td>
-                        <td>
-                          <span className={`status-badge ${org.is_active ? 'active' : 'inactive'}`}>
-                            {org.is_active ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="actions">
-                            <button 
-                              className="btn btn-sm btn-outline"
-                              onClick={() => setSelectedOrg(org)}
-                            >
-                              <i className="fas fa-eye"></i>
-                            </button>
-                            <button className="btn btn-sm btn-outline">
-                              <i className="fas fa-edit"></i>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+        .page-header {
+          margin-bottom: 30px;
+        }
 
-      {/* Create Organization Modal */}
-      {showCreateModal && (
-        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Create New Institution</h3>
-              <button 
-                className="close-btn"
-                onClick={() => setShowCreateModal(false)}
-              >
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
-            <form onSubmit={handleCreateOrganization}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label>Institution Name</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label>Domain</label>
-                  <input
-                    type="text"
-                    value={formData.domain}
-                    onChange={(e) => setFormData({...formData, domain: e.target.value})}
-                    placeholder="example.edu"
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label>Contact Email</label>
-                  <input
-                    type="email"
-                    value={formData.contact_email}
-                    onChange={(e) => setFormData({...formData, contact_email: e.target.value})}
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label>Organization Type</label>
-                  <select
-                    value={formData.organization_type}
-                    onChange={(e) => setFormData({...formData, organization_type: e.target.value})}
-                  >
-                    <option value="educational">Educational</option>
-                    <option value="government">Government</option>
-                    <option value="private">Private</option>
-                    <option value="nonprofit">Non-profit</option>
-                    <option value="healthcare">Healthcare</option>
-                    <option value="financial">Financial</option>
-                  </select>
-                </div>
-                
-                <div className="form-group">
-                  <label>Description</label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    rows="3"
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label>Website</label>
-                  <input
-                    type="url"
-                    value={formData.website}
-                    onChange={(e) => setFormData({...formData, website: e.target.value})}
-                    placeholder="https://example.edu"
-                  />
-                </div>
-                
-                <div className="form-section">
-                  <h4 style={{marginBottom: '1rem', paddingTop: '1rem', borderTop: '1px solid #ddd', color: '#333'}}>
-                    Primary Administrator
-                  </h4>
-                  
-                  <div className="form-group">
-                    <label>Username *</label>
-                    <input
-                      type="text"
-                      value={formData.primary_user.username}
-                      onChange={(e) => setFormData({
-                        ...formData, 
-                        primary_user: {...formData.primary_user, username: e.target.value}
-                      })}
-                      required
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label>Email *</label>
-                    <input
-                      type="email"
-                      value={formData.primary_user.email}
-                      onChange={(e) => setFormData({
-                        ...formData, 
-                        primary_user: {...formData.primary_user, email: e.target.value}
-                      })}
-                      required
-                    />
-                  </div>
-                  
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>First Name *</label>
-                      <input
-                        type="text"
-                        value={formData.primary_user.first_name}
-                        onChange={(e) => setFormData({
-                          ...formData, 
-                          primary_user: {...formData.primary_user, first_name: e.target.value}
-                        })}
-                        required
-                      />
-                    </div>
-                    
-                    <div className="form-group">
-                      <label>Last Name *</label>
-                      <input
-                        type="text"
-                        value={formData.primary_user.last_name}
-                        onChange={(e) => setFormData({
-                          ...formData, 
-                          primary_user: {...formData.primary_user, last_name: e.target.value}
-                        })}
-                        required
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="form-group">
-                    <label>Password *</label>
-                    <input
-                      type="password"
-                      value={formData.primary_user.password}
-                      onChange={(e) => setFormData({
-                        ...formData, 
-                        primary_user: {...formData.primary_user, password: e.target.value}
-                      })}
-                      required
-                      placeholder="Minimum 8 characters"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button 
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowCreateModal(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Create Institution
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+        .page-title {
+          color: #2c3e50;
+          margin-bottom: 10px;
+        }
 
-      {/* Organization Details Modal */}
-      {selectedOrg && (
-        <div className="modal-overlay" onClick={() => setSelectedOrg(null)}>
-          <div className="modal large" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{selectedOrg.name}</h3>
-              <button 
-                className="close-btn"
-                onClick={() => setSelectedOrg(null)}
-              >
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="org-details">
-                <div className="detail-row">
-                  <label>Name:</label>
-                  <span>{selectedOrg.name}</span>
-                </div>
-                <div className="detail-row">
-                  <label>Type:</label>
-                  <span>{selectedOrg.organization_type || 'Not specified'}</span>
-                </div>
-                <div className="detail-row">
-                  <label>Domain:</label>
-                  <span>{selectedOrg.domain || 'Not specified'}</span>
-                </div>
-                <div className="detail-row">
-                  <label>Contact Email:</label>
-                  <span>{selectedOrg.contact_email || 'Not specified'}</span>
-                </div>
-                <div className="detail-row">
-                  <label>Website:</label>
-                  <span>
-                    {selectedOrg.website ? (
-                      <a href={selectedOrg.website} target="_blank" rel="noopener noreferrer">
-                        {selectedOrg.website}
-                      </a>
-                    ) : 'Not specified'}
-                  </span>
-                </div>
-                <div className="detail-row">
-                  <label>Description:</label>
-                  <span>{selectedOrg.description || 'No description provided'}</span>
-                </div>
-                <div className="detail-row">
-                  <label>Members:</label>
-                  <span>{selectedOrg.member_count || 0}</span>
-                </div>
-                <div className="detail-row">
-                  <label>Status:</label>
-                  <span className={`status-badge ${selectedOrg.is_active ? 'active' : 'inactive'}`}>
-                    {selectedOrg.is_active ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button 
-                className="btn btn-secondary"
-                onClick={() => setSelectedOrg(null)}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        .page-subtitle {
+          color: #7f8c8d;
+          margin: 0;
+        }
+
+        .placeholder-content {
+          margin-top: 30px;
+        }
+
+        .content-box {
+          background: white;
+          border-radius: 8px;
+          padding: 30px;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          border-left: 4px solid #3498db;
+        }
+
+        .content-box h2 {
+          color: #2c3e50;
+          margin-bottom: 15px;
+        }
+
+        .content-box p {
+          color: #7f8c8d;
+          line-height: 1.6;
+          margin-bottom: 20px;
+        }
+
+        .feature-list {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 20px;
+          margin-top: 20px;
+        }
+
+        .feature-item {
+          background: #f8f9fa;
+          padding: 20px;
+          border-radius: 6px;
+          border-left: 3px solid #3498db;
+        }
+
+        .feature-item h3 {
+          color: #2c3e50;
+          margin-bottom: 10px;
+          font-size: 16px;
+        }
+
+        .feature-item p {
+          color: #6c757d;
+          margin: 0;
+          font-size: 14px;
+        }
+      `}</style>
     </section>
   );
 }
 
-// Reports Component  
+// Reports Component
 function Reports({ active }) {
-  const [reports, setReports] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  const sampleReports = [
-    {
-      id: 1,
-      title: "Weekly Threat Intelligence Summary",
-      type: "summary",
-      date: "2025-01-08",
-      status: "completed",
-      description: "Comprehensive overview of threat landscape for the week"
-    },
-    {
-      id: 2,
-      title: "APT Campaign Analysis",
-      type: "campaign", 
-      date: "2025-01-05",
-      status: "completed",
-      description: "Deep dive into recent APT activities and TTPs"
-    },
-    {
-      id: 3,
-      title: "Vulnerability Trend Report",
-      type: "trend",
-      date: "2025-01-01",
-      status: "draft",
-      description: "Analysis of vulnerability trends and exploitation patterns"
-    }
-  ];
-
-  useEffect(() => {
-    if (active) {
-      setLoading(true);
-      // Simulate API call
-      setTimeout(() => {
-        setReports(sampleReports);
-        setLoading(false);
-      }, 1000);
-    }
-  }, [active]);
-
   if (!active) return null;
 
   return (
     <section id="reports" className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
-        <div>
-          <h1 className="page-title">Reports & Analytics</h1>
-          <p className="page-subtitle">Generate and manage threat intelligence reports</p>
-        </div>
-        <div className="action-buttons">
-          <button className="btn btn-primary">
-            <i className="fas fa-plus"></i> Generate Report
-          </button>
+        <h1 className="page-title">Reports</h1>
+        <p className="page-subtitle">Generate and view various threat intelligence reports</p>
+      </div>
+      
+      <div className="placeholder-content">
+        <div className="content-box">
+          <h2>Report Generation</h2>
+          <p>This section will contain functionality for generating and managing various types of threat intelligence reports.</p>
+          
+          <div className="feature-list">
+            <div className="feature-item">
+              <h3>Threat Intelligence Summary</h3>
+              <p>Generate comprehensive threat intelligence reports</p>
+            </div>
+            
+            <div className="feature-item">
+              <h3>TTP Analysis Report</h3>
+              <p>Detailed analysis of tactics, techniques, and procedures</p>
+            </div>
+            
+            <div className="feature-item">
+              <h3>Trust Relationship Reports</h3>
+              <p>Reports on organizational trust metrics</p>
+            </div>
+            
+            <div className="feature-item">
+              <h3>STIX/TAXII Feed Reports</h3>
+              <p>Analysis of threat intelligence feeds</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {loading ? (
-        <div className="loading-state">
-          <i className="fas fa-spinner fa-spin"></i>
-          <p>Loading reports...</p>
-        </div>
-      ) : (
-        <div className="reports-grid">
-          <div className="stats-row">
-            <div className="stat-card">
-              <div className="stat-icon">
-                <i className="fas fa-file-alt"></i>
-              </div>
-              <div className="stat-content">
-                <h3>{reports.length}</h3>
-                <p>Total Reports</p>
-              </div>
-            </div>
-            
-            <div className="stat-card">
-              <div className="stat-icon">
-                <i className="fas fa-check-circle"></i>
-              </div>
-              <div className="stat-content">
-                <h3>{reports.filter(r => r.status === 'completed').length}</h3>
-                <p>Completed</p>
-              </div>
-            </div>
-            
-            <div className="stat-card">
-              <div className="stat-icon">
-                <i className="fas fa-edit"></i>
-              </div>
-              <div className="stat-content">
-                <h3>{reports.filter(r => r.status === 'draft').length}</h3>
-                <p>Drafts</p>
-              </div>
-            </div>
-          </div>
+      <style jsx>{`
+        .page-section {
+          display: none;
+          padding: 20px;
+          max-width: 1200px;
+          margin: 0 auto;
+        }
 
-          <div className="reports-list">
-            <h3 style={{marginBottom: '1rem', color: '#333'}}>Recent Reports</h3>
-            {reports.length === 0 ? (
-              <div className="empty-state">
-                <i className="fas fa-file-alt" style={{fontSize: '48px', color: '#dee2e6'}}></i>
-                <h3>No reports available</h3>
-                <p>Generate your first threat intelligence report.</p>
-                <button className="btn btn-primary">
-                  <i className="fas fa-plus"></i> Generate Report
-                </button>
-              </div>
-            ) : (
-              <div className="reports-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Report Title</th>
-                      <th>Type</th>
-                      <th>Date</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reports.map(report => (
-                      <tr key={report.id}>
-                        <td>
-                          <div className="report-info">
-                            <div className="report-title">{report.title}</div>
-                            <div className="report-description">{report.description}</div>
-                          </div>
-                        </td>
-                        <td>
-                          <span className="report-type">{report.type}</span>
-                        </td>
-                        <td>{report.date}</td>
-                        <td>
-                          <span className={`status-badge ${report.status}`}>
-                            {report.status}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="actions">
-                            <button className="btn btn-sm btn-outline">
-                              <i className="fas fa-eye"></i>
-                            </button>
-                            <button className="btn btn-sm btn-outline">
-                              <i className="fas fa-download"></i>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+        .page-section.active {
+          display: block;
+        }
+
+        .page-header {
+          margin-bottom: 30px;
+        }
+
+        .page-title {
+          color: #2c3e50;
+          margin-bottom: 10px;
+        }
+
+        .page-subtitle {
+          color: #7f8c8d;
+          margin: 0;
+        }
+
+        .placeholder-content {
+          margin-top: 30px;
+        }
+
+        .content-box {
+          background: white;
+          border-radius: 8px;
+          padding: 30px;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          border-left: 4px solid #e74c3c;
+        }
+
+        .content-box h2 {
+          color: #2c3e50;
+          margin-bottom: 15px;
+        }
+
+        .content-box p {
+          color: #7f8c8d;
+          line-height: 1.6;
+          margin-bottom: 20px;
+        }
+
+        .feature-list {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 20px;
+          margin-top: 20px;
+        }
+
+        .feature-item {
+          background: #f8f9fa;
+          padding: 20px;
+          border-radius: 6px;
+          border-left: 3px solid #e74c3c;
+        }
+
+        .feature-item h3 {
+          color: #2c3e50;
+          margin-bottom: 10px;
+          font-size: 16px;
+        }
+
+        .feature-item p {
+          color: #6c757d;
+          margin: 0;
+          font-size: 14px;
+        }
+      `}</style>
     </section>
   );
 }
-
-// CSS Styles
 function CSSStyles() {
   return (
     <style>
@@ -11858,11 +8515,11 @@ function UserProfile({ active }) {
 }
 
 // Entry point
-function CRISPApp() {
+function CRISPApp({ user, onLogout, isAdmin }) {
   return (
     <>
       <CSSStyles />
-      <App />
+      <App user={user} onLogout={onLogout} />
     </>
   );
 }
