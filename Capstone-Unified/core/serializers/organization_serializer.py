@@ -27,7 +27,7 @@ class OrganizationDetailSerializer(serializers.ModelSerializer):
         model = Organization
         fields = [
             'id', 'name', 'domain', 'organization_type', 'description',
-            'contact_email', 'contact_phone', 'is_active', 'member_count',
+            'contact_email', 'website', 'is_active', 'member_count',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'domain', 'created_at', 'updated_at']
@@ -39,7 +39,7 @@ class OrganizationCreateSerializer(serializers.ModelSerializer):
         model = Organization
         fields = [
             'name', 'domain', 'organization_type', 'description',
-            'contact_email', 'contact_phone'
+            'contact_email', 'website'
         ]
     
     def validate_domain(self, value):
@@ -60,7 +60,7 @@ class OrganizationUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organization
         fields = [
-            'name', 'description', 'contact_email', 'contact_phone', 'is_active'
+            'name', 'description', 'contact_email', 'website', 'is_active'
         ]
     
     def validate_contact_email(self, value):

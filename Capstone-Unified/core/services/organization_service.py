@@ -482,7 +482,7 @@ class OrganizationService:
                         'organization_name': organization.name,
                         'user_count': user_count,
                         'reason': reason,
-                        'action_type': 'organization_deleted'
+                        'action_type': 'organization_deactivated'
                     }
                 )
                 

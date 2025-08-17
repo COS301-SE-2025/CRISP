@@ -167,7 +167,7 @@ def create_organization(request):
         "organization_type": "string",
         "description": "string",
         "contact_email": "string",
-        "contact_phone": "string"
+        "website": "string"
     }
     """
     try:
@@ -234,7 +234,7 @@ def update_organization(request, organization_id):
         "name": "string",
         "description": "string",
         "contact_email": "string",
-        "contact_phone": "string",
+        "website": "string",
         "is_active": boolean
     }
     """
