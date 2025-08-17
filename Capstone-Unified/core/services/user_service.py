@@ -548,6 +548,24 @@ class UserService:
                     setattr(user, field, value)
                     updated_fields.append(field)
         
+        # Handle organization assignment (only for BlueVisionAdmin)
+        if updated_by.role == 'BlueVisionAdmin' and 'organization_id' in update_data:
+            new_org_id = update_data['organization_id']
+            current_org_id = str(user.organization.id) if user.organization else None
+            
+            if new_org_id != current_org_id:
+                if new_org_id:
+                    try:
+                        from core.models.models import Organization
+                        new_organization = Organization.objects.get(id=new_org_id)
+                        user.organization = new_organization
+                        updated_fields.append('organization')
+                    except Organization.DoesNotExist:
+                        logger.warning(f"Organization {new_org_id} not found during user update")
+                else:
+                    user.organization = None
+                    updated_fields.append('organization')
+        
         if updated_fields:
             user.save(update_fields=updated_fields + ['updated_at'])
             

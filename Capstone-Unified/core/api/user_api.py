@@ -234,13 +234,15 @@ def update_user(request, user_id):
     """
     Update user details
     
-    PUT /api/users/{user_id}/
+    PUT /api/users/{user_id}/update/
     Body: {
         "first_name": "string",
         "last_name": "string",
         "email": "string",
         "role": "string",
-        "is_active": boolean
+        "organization_id": "uuid",
+        "is_active": boolean,
+        "is_verified": boolean
     }
     """
     try:
