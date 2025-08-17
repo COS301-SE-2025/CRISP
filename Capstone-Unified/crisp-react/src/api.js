@@ -102,7 +102,7 @@ export const createUser = async (userData) => {
 };
 
 export const updateUser = async (userId, userData) => {
-  const response = await fetch(`${API_BASE_URL}/api/users/${userId}/`, {
+  const response = await fetch(`${API_BASE_URL}/api/users/${userId}/update/`, {
     method: 'PUT',
     headers: getAuthHeaders(),
     body: JSON.stringify(userData),
