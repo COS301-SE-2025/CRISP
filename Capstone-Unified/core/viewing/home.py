@@ -1,10 +1,29 @@
 from django.shortcuts import render
 from django.http import HttpResponse
+from django.conf import settings
+from django.templatetags.static import static
+import os
 
 def home(request):
     """
     Homepage view for the CRISP application.
+    Serves the React frontend if available, otherwise shows a simple landing page.
     """
+    # Try to serve React app
+    react_index_path = os.path.join(settings.BASE_DIR, 'static', 'react', 'index.html')
+    
+    if os.path.exists(react_index_path):
+        try:
+            with open(react_index_path, 'r', encoding='utf-8') as f:
+                react_html = f.read()
+            
+            # Update asset paths to work with Django static files
+            react_html = react_html.replace('/assets/', static('react/assets/'))
+            return HttpResponse(react_html)
+        except Exception:
+            pass
+    
+    # Fallback to simple landing page
     html_content = """
     <html>
         <head>

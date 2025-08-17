@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: crisp
+      POSTGRES_USER: crisp_user
+      POSTGRES_PASSWORD: crisp_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crisp_user -d crisp"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    networks:
+      - crisp-network
+
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=your-secret-key-change-in-production
+      - DB_NAME=crisp
+      - DB_USER=crisp_user
+      - DB_PASSWORD=crisp_password
+      - DB_HOST=db
+      - DB_PORT=5432
+      - ALLOWED_HOSTS=localhost,127.0.0.1,web
+    volumes:
+      - ./logs:/app/logs
+      - ./media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - crisp-network
+    command: >
+      sh -c "until pg_isready -h db -p 5432; do echo 'Waiting for db...'; sleep 2; done &&
+             python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 120 crisp_unified.wsgi:application"
+
+volumes:
+  postgres_data:
+
+networks:
+  crisp-network:
+    driver: bridge
