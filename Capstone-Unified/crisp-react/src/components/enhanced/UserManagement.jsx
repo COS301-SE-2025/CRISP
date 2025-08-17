@@ -166,7 +166,23 @@ const UserManagement = ({ active = true, initialSection = null }) => {
     try {
       const response = await api.getOrganizations();
       console.log('Organizations API response:', response); // Debug log
-      const orgData = response.data?.organizations || response.organizations || response.data || [];
+      
+      // Handle paginated response format
+      let orgData = [];
+      if (response.results && response.results.organizations) {
+        // Django REST Framework pagination with custom wrapper
+        orgData = response.results.organizations;
+      } else if (response.data && response.data.organizations) {
+        orgData = response.data.organizations;
+      } else if (response.organizations) {
+        orgData = response.organizations;
+      } else if (response.data && Array.isArray(response.data)) {
+        orgData = response.data;
+      } else if (Array.isArray(response)) {
+        orgData = response;
+      }
+      
+      console.log('Extracted organizations data:', orgData); // Debug log
       setOrganizations(Array.isArray(orgData) ? orgData : []);
     } catch (err) {
       console.error('Failed to load organizations:', err);
