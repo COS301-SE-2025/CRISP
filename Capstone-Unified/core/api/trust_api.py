@@ -5,12 +5,13 @@ Handles bilateral trust, community trust, and trust level operations
 
 import logging
 from django.db.models import Q
+from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
-from core.models.models import TrustRelationship, TrustGroup, Organization, CustomUser
+from core.models.models import TrustRelationship, TrustGroup, Organization, CustomUser, TrustLevel
 from core.services.trust_service import TrustService
 from core.services.access_control_service import AccessControlService
 from core.serializers.trust_serializer import (
@@ -72,8 +73,8 @@ def list_bilateral_trusts(request):
         organization_id = request.GET.get('organization')
         if organization_id:
             queryset = queryset.filter(
-                Q(requesting_organization_id=organization_id) | 
-                Q(responding_organization_id=organization_id)
+                Q(source_organization_id=organization_id) | 
+                Q(target_organization_id=organization_id)
             )
         
         trust_status = request.GET.get('status')
@@ -86,7 +87,7 @@ def list_bilateral_trusts(request):
         
         # Order by created_at descending
         queryset = queryset.select_related(
-            'requesting_organization', 'responding_organization'
+            'source_organization', 'target_organization', 'trust_level'
         ).order_by('-created_at')
         
         # Paginate results
@@ -142,6 +143,13 @@ def request_bilateral_trust(request):
         trust_level = request.data.get('trust_level', 'minimal')
         message = request.data.get('message', '')
         
+        # Check if user has an organization
+        if not request.user.organization:
+            return Response({
+                'success': False,
+                'message': 'User must belong to an organization to create trust relationships'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
         if not responding_org_id:
             return Response({
                 'success': False,
@@ -157,29 +165,48 @@ def request_bilateral_trust(request):
                 'message': 'Responding organization not found'
             }, status=status.HTTP_404_NOT_FOUND)
         
-        # Request trust
-        result = trust_service.request_bilateral_trust(
-            requesting_org=request.user.organization,
-            responding_org=responding_org,
-            trust_level=trust_level,
-            message=message,
-            requested_by=request.user
-        )
+        # Get trust level object - try both level and name fields
+        try:
+            trust_level_obj = TrustLevel.objects.get(level=trust_level)
+        except TrustLevel.DoesNotExist:
+            try:
+                # Fallback: try by name field
+                trust_level_obj = TrustLevel.objects.get(name=trust_level)
+            except TrustLevel.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': f'Trust level "{trust_level}" not found'
+                }, status=status.HTTP_400_BAD_REQUEST)
         
-        if result['success']:
-            trust_relationship = TrustRelationship.objects.get(id=result['trust_id'])
+        # Create trust relationship
+        try:
+            trust_relationship = trust_service.create_trust_relationship(
+                source_org_id=request.user.organization.id,
+                target_org_id=responding_org_id,
+                trust_level_id=trust_level_obj.id,
+                created_by_user=request.user,
+                relationship_type='bilateral'
+            )
+            
             serializer = TrustRelationshipSerializer(trust_relationship)
             
             return Response({
                 'success': True,
-                'message': result['message'],
+                'message': f'Trust relationship request sent to {responding_org.name}',
                 'trust': serializer.data
             }, status=status.HTTP_201_CREATED)
-        else:
+            
+        except ValidationError as e:
             return Response({
                 'success': False,
-                'message': result['message']
+                'message': str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Error creating trust relationship: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Failed to create trust relationship'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
     except Exception as e:
         logger.error(f"Error requesting bilateral trust: {str(e)}")
@@ -539,4 +566,31 @@ def get_trust_dashboard(request):
         return Response({
             'success': False,
             'message': 'Failed to get trust dashboard data'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_trust_levels(request):
+    """
+    List all available trust levels
+    
+    GET /api/trust/levels/
+    """
+    try:
+        # Get all active trust levels ordered by numerical value
+        trust_levels = TrustLevel.objects.filter(is_active=True).order_by('numerical_value')
+        
+        serializer = TrustLevelSerializer(trust_levels, many=True)
+        
+        return Response({
+            'success': True,
+            'trust_levels': serializer.data,
+            'count': trust_levels.count()
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error listing trust levels: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to list trust levels'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -135,6 +135,26 @@ function TrustManagement({ active, initialTab = null }) {
         trustLevels: trustLevelsResponse
       });
       
+      console.log('🔍 RELATIONSHIPS RESPONSE ANALYSIS:');
+      console.log('📊 Response keys:', Object.keys(relationshipsResponse || {}));
+      
+      // Try to stringify safely
+      try {
+        console.log('📋 Full JSON:', JSON.stringify(relationshipsResponse, null, 2));
+      } catch (e) {
+        console.log('❌ JSON stringify failed:', e.message);
+        console.log('📋 Raw response:', relationshipsResponse);
+      }
+      
+      console.log('🔍 Property checks:');
+      console.log('  - success:', relationshipsResponse?.success);
+      console.log('  - trusts:', relationshipsResponse?.trusts);
+      console.log('  - data:', relationshipsResponse?.data);
+      console.log('  - results:', relationshipsResponse?.results);
+      console.log('  - count:', relationshipsResponse?.count);
+      console.log('  - next:', relationshipsResponse?.next);
+      console.log('  - previous:', relationshipsResponse?.previous);
+      
       console.log('🔍 TRUST LEVELS DETAILED:', {
         trustLevelsResponse,
         isArray: Array.isArray(trustLevelsResponse),
@@ -143,17 +163,53 @@ function TrustManagement({ active, initialTab = null }) {
         allItems: Array.isArray(trustLevelsResponse) ? trustLevelsResponse : 'Not an array'
       });
 
+      // Extract relationships with detailed logging
+      let extractedRelationships = [];
+      
+      console.log('🔄 Attempting relationship extraction...');
+      
+      if (Array.isArray(relationshipsResponse?.trusts)) {
+        extractedRelationships = relationshipsResponse.trusts;
+        console.log('✅ Extracted relationships from .trusts property:', extractedRelationships.length);
+      } else if (Array.isArray(relationshipsResponse?.results?.trusts)) {
+        // Handle paginated response: { results: { trusts: [...] } }
+        extractedRelationships = relationshipsResponse.results.trusts;
+        console.log('✅ Extracted relationships from .results.trusts property:', extractedRelationships.length);
+      } else if (relationshipsResponse?.results?.success && Array.isArray(relationshipsResponse?.results?.trusts)) {
+        // Handle DRF paginated response: { results: { success: true, trusts: [...] } }
+        extractedRelationships = relationshipsResponse.results.trusts;
+        console.log('✅ Extracted relationships from paginated .results.trusts property:', extractedRelationships.length);
+      } else if (Array.isArray(relationshipsResponse?.data?.trusts)) {
+        // Handle nested response: { data: { trusts: [...] } }
+        extractedRelationships = relationshipsResponse.data.trusts;
+        console.log('✅ Extracted relationships from .data.trusts property:', extractedRelationships.length);
+      } else if (Array.isArray(relationshipsResponse?.data)) {
+        extractedRelationships = relationshipsResponse.data;
+        console.log('✅ Extracted relationships from .data property:', extractedRelationships.length);
+      } else if (Array.isArray(relationshipsResponse?.results)) {
+        extractedRelationships = relationshipsResponse.results;
+        console.log('✅ Extracted relationships from .results property:', extractedRelationships.length);
+      } else if (Array.isArray(relationshipsResponse)) {
+        extractedRelationships = relationshipsResponse;
+        console.log('✅ Using relationships response directly:', extractedRelationships.length);
+      } else {
+        console.log('❌ Could not extract relationships array from response');
+        console.log('📋 Available properties:', Object.keys(relationshipsResponse || {}));
+        console.log('📋 Type of response:', typeof relationshipsResponse);
+      }
+
       setTrustData({
-        relationships: Array.isArray(relationshipsResponse.data) ? relationshipsResponse.data : 
-                      Array.isArray(relationshipsResponse) ? relationshipsResponse : [],
+        relationships: extractedRelationships,
         groups: Array.isArray(groupsResponse.data) ? groupsResponse.data : 
                 Array.isArray(groupsResponse) ? groupsResponse : [],
         metrics: (metricsResponse.data && typeof metricsResponse.data === 'object') ? metricsResponse.data : 
                 (metricsResponse && typeof metricsResponse === 'object') ? metricsResponse : {},
-        organizations: Array.isArray(orgsResponse.data?.organizations) ? orgsResponse.data.organizations : 
+        organizations: Array.isArray(orgsResponse.results?.organizations) ? orgsResponse.results.organizations :
+                      Array.isArray(orgsResponse.data?.organizations) ? orgsResponse.data.organizations : 
                       Array.isArray(orgsResponse.data) ? orgsResponse.data : 
                       Array.isArray(orgsResponse) ? orgsResponse : [],
-        trustLevels: Array.isArray(trustLevelsResponse.data) ? trustLevelsResponse.data : 
+        trustLevels: Array.isArray(trustLevelsResponse.trust_levels) ? trustLevelsResponse.trust_levels : 
+                    Array.isArray(trustLevelsResponse.data) ? trustLevelsResponse.data : 
                     Array.isArray(trustLevelsResponse) ? trustLevelsResponse : []
       });
     } catch (err) {
@@ -361,10 +417,10 @@ function TrustManagement({ active, initialTab = null }) {
               }
             });
             
-            // Create payload with both trust level formats to be compatible with different backends
+            // Create payload with IDs for backend API
             const relationshipData = {
-              source_organization: sourceOrgName,
-              target_organization: targetOrgName,
+              source_organization: formData.source_organization,  // Send ID, not name
+              target_organization: formData.target_organization,  // Send ID, not name
               trust_level: finalTrustLevelName,  // Use case-corrected name
               trust_level_id: trustLevelId,  // Add ID version as backup
               relationship_type: formData.relationship_type,
@@ -442,13 +498,22 @@ function TrustManagement({ active, initialTab = null }) {
       case 'activate':
         setConfirmationData({
           title: 'Activate Relationship',
-          message: `Are you sure you want to activate the relationship with ${item.target_organization_name || item.target_organization}?`,
+          message: `Are you sure you want to activate the relationship with ${item.target_organization?.name || item.target_organization_name || 'the selected organization'}?`,
           confirmText: 'Activate',
           isDestructive: false,
           actionType: 'default',
           action: async () => {
             try {
-              await api.updateTrustRelationship(item.id, { status: 'active' });
+              // Extract trust level from the item - API expects the trust level name
+              // Format: "Public (public)" -> extract "public" from parentheses
+              let trustLevelName = 'public';
+              if (item.trust_level) {
+                const match = item.trust_level.match(/\(([^)]+)\)/);
+                trustLevelName = match ? match[1] : item.trust_level.toLowerCase().split(' ')[0];
+              }
+              
+              // Use the respond API to accept the trust relationship
+              await api.respondToTrustRelationship(item.id, 'accept', trustLevelName, 'Relationship activated');
               setSuccess('Relationship activated successfully');
               setTimeout(() => setSuccess(null), 5000);
               closeActionsPopup();
@@ -464,13 +529,24 @@ function TrustManagement({ active, initialTab = null }) {
       case 'suspend':
         setConfirmationData({
           title: 'Suspend Relationship',
-          message: `Are you sure you want to suspend the relationship with ${item.target_organization_name || item.target_organization}?`,
+          message: `Are you sure you want to suspend the relationship with ${item.target_organization?.name || item.target_organization_name || 'the selected organization'}?`,
           confirmText: 'Suspend',
           isDestructive: true,
           actionType: 'destructive',
           action: async () => {
             try {
-              await api.updateTrustRelationship(item.id, { status: 'suspended' });
+              // Extract trust level from the item - API expects the trust level name
+              // Format: "Public (public)" -> extract "public" from parentheses
+              let trustLevelName = 'public';
+              if (item.trust_level) {
+                const match = item.trust_level.match(/\(([^)]+)\)/);
+                trustLevelName = match ? match[1] : item.trust_level.toLowerCase().split(' ')[0];
+              }
+              
+              await api.updateTrustRelationship(item.id, { 
+                trust_level: trustLevelName,
+                message: 'Relationship suspended'
+              });
               setSuccess('Relationship suspended successfully');
               setTimeout(() => setSuccess(null), 5000);
               closeActionsPopup();
@@ -485,7 +561,7 @@ function TrustManagement({ active, initialTab = null }) {
         
       case 'delete':
         const itemName = activeTab === 'relationships' ? 
-          `relationship with ${item.target_organization_name || item.target_organization}` :
+          `relationship with ${item.target_organization?.name || item.target_organization_name || 'the selected organization'}` :
           `group "${item.name}"`;
           
         setConfirmationData({
@@ -497,7 +573,7 @@ function TrustManagement({ active, initialTab = null }) {
           action: async () => {
             try {
               if (activeTab === 'relationships') {
-                await api.deleteTrustRelationship(item.id);
+                await api.deleteTrustRelationship(item.id, 'Relationship deleted by user');
                 setSuccess('Trust relationship deleted successfully');
               } else {
                 await api.deleteTrustGroup(item.id);
@@ -545,7 +621,7 @@ function TrustManagement({ active, initialTab = null }) {
     let filtered = data.filter(item => {
       const matchesSearch = searchTerm === '' || 
         (activeTab === 'relationships' ? 
-          (item.target_organization_name || item.target_organization || '').toLowerCase().includes(searchTerm.toLowerCase()) :
+          (item.target_organization?.name || item.target_organization_name || item.source_organization?.name || item.source_organization_name || '').toLowerCase().includes(searchTerm.toLowerCase()) :
           (item.name || '').toLowerCase().includes(searchTerm.toLowerCase())
         );
       
@@ -816,7 +892,7 @@ function TrustManagement({ active, initialTab = null }) {
                           flexWrap: 'wrap'
                         }}>
                           <div style={{ fontWeight: '600', color: '#212529', fontSize: '1.1rem' }}>
-                            {item.source_organization_name} → {item.target_organization_name || item.target_organization}
+                            {item.source_organization?.name || item.source_organization_name || 'Unknown'} → {item.target_organization?.name || item.target_organization_name || 'Unknown'}
                           </div>
                           <span style={{
                             padding: '0.25rem 0.5rem',
@@ -1296,7 +1372,7 @@ function TrustManagement({ active, initialTab = null }) {
                 lineHeight: '1.3'
               }}>
                 {activeTab === 'relationships' ? 
-                  `${selectedItemForActions.source_organization_name} → ${selectedItemForActions.target_organization_name || selectedItemForActions.target_organization}` :
+                  `${selectedItemForActions.source_organization?.name || selectedItemForActions.source_organization_name || 'Unknown'} → ${selectedItemForActions.target_organization?.name || selectedItemForActions.target_organization_name || 'Unknown'}` :
                   selectedItemForActions.name
                 }
               </h3>
@@ -1625,11 +1701,11 @@ function TrustManagement({ active, initialTab = null }) {
                   }}>
                     <div>
                       <strong>Source Organization:</strong><br/>
-                      {detailItem.source_organization_name}
+                      {detailItem.source_organization?.name || detailItem.source_organization_name || 'Unknown'}
                     </div>
                     <div>
                       <strong>Target Organization:</strong><br/>
-                      {detailItem.target_organization_name || detailItem.target_organization}
+                      {detailItem.target_organization?.name || detailItem.target_organization_name || 'Unknown'}
                     </div>
                     <div>
                       <strong>Trust Level:</strong><br/>

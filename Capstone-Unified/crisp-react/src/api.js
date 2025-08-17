@@ -300,7 +300,7 @@ export const getOrganizationTypes = async () => {
 // Trust Management Functions
 export const getTrustRelationships = async (queryParams = {}) => {
   const params = new URLSearchParams(queryParams).toString();
-  const url = `${API_BASE_URL}/api/trust-management/relationships/${params ? `?${params}` : ''}`;
+  const url = `${API_BASE_URL}/api/trust/bilateral/${params ? `?${params}` : ''}`;
   
   const response = await fetch(url, {
     method: 'GET',
@@ -316,10 +316,17 @@ export const getTrustRelationships = async (queryParams = {}) => {
 };
 
 export const createTrustRelationship = async (relationshipData) => {
-  const response = await fetch(`${API_BASE_URL}/api/trust-management/relationships/`, {
+  // Map frontend field names to backend expectations
+  const mappedData = {
+    responding_organization_id: relationshipData.target_organization,
+    trust_level: relationshipData.trust_level,
+    message: relationshipData.notes || ''
+  };
+  
+  const response = await fetch(`${API_BASE_URL}/api/trust/bilateral/request/`, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify(relationshipData),
+    body: JSON.stringify(mappedData),
   });
 
   if (!response.ok) {
@@ -331,7 +338,7 @@ export const createTrustRelationship = async (relationshipData) => {
 };
 
 export const updateTrustRelationship = async (relationshipId, relationshipData) => {
-  const response = await fetch(`${API_BASE_URL}/api/trust-management/relationships/${relationshipId}/`, {
+  const response = await fetch(`${API_BASE_URL}/api/trust/bilateral/${relationshipId}/update/`, {
     method: 'PUT',
     headers: getAuthHeaders(),
     body: JSON.stringify(relationshipData),
@@ -345,10 +352,30 @@ export const updateTrustRelationship = async (relationshipId, relationshipData) 
   return await response.json();
 };
 
-export const deleteTrustRelationship = async (relationshipId) => {
-  const response = await fetch(`${API_BASE_URL}/api/trust-management/relationships/${relationshipId}/`, {
+export const respondToTrustRelationship = async (relationshipId, action, trustLevel = null, message = '') => {
+  const response = await fetch(`${API_BASE_URL}/api/trust/bilateral/${relationshipId}/respond/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      action: action, // 'accept' or 'reject'
+      trust_level: trustLevel,
+      message: message
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to respond to trust relationship');
+  }
+
+  return await response.json();
+};
+
+export const deleteTrustRelationship = async (relationshipId, reason = '') => {
+  const response = await fetch(`${API_BASE_URL}/api/trust/bilateral/${relationshipId}/revoke/`, {
     method: 'DELETE',
     headers: getAuthHeaders(),
+    body: JSON.stringify({ message: reason }),
   });
 
   if (!response.ok) {
@@ -361,7 +388,7 @@ export const deleteTrustRelationship = async (relationshipId) => {
 
 export const getTrustGroups = async (queryParams = {}) => {
   const params = new URLSearchParams(queryParams).toString();
-  const url = `${API_BASE_URL}/api/trust-management/groups/${params ? `?${params}` : ''}`;
+  const url = `${API_BASE_URL}/api/trust/community/${params ? `?${params}` : ''}`;
   
   const response = await fetch(url, {
     method: 'GET',
@@ -377,7 +404,7 @@ export const getTrustGroups = async (queryParams = {}) => {
 };
 
 export const createTrustGroup = async (groupData) => {
-  const response = await fetch(`${API_BASE_URL}/api/trust-management/groups/`, {
+  const response = await fetch(`${API_BASE_URL}/api/trust/community/`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(groupData),
@@ -449,7 +476,7 @@ export const getTrustMetrics = async () => {
 };
 
 export const getTrustLevels = async () => {
-  const response = await fetch(`${API_BASE_URL}/api/trust-management/levels/`, {
+  const response = await fetch(`${API_BASE_URL}/api/trust/levels/`, {
     method: 'GET',
     headers: getAuthHeaders(),
   });

@@ -115,6 +115,260 @@ class TrustService:
             logger.error(f"Error approving trust relationship: {e}")
             raise
     
+    def accept_bilateral_trust(self, trust_id, trust_level=None, message='', accepted_by=None):
+        """Accept a bilateral trust request"""
+        try:
+            relationship = TrustRelationship.objects.get(id=trust_id)
+            
+            if not accepted_by or not accepted_by.organization:
+                raise ValidationError("User must belong to an organization")
+            
+            # Check if user can accept this relationship
+            # BlueVisionAdmin can accept any relationship, others can only accept for their own organization
+            if accepted_by.role != 'BlueVisionAdmin':
+                if accepted_by.organization != relationship.target_organization:
+                    raise ValidationError("User can only accept requests for their own organization")
+            
+            # Update trust level if provided
+            if trust_level:
+                try:
+                    trust_level_obj = TrustLevel.objects.get(level=trust_level)
+                    relationship.trust_level = trust_level_obj
+                except TrustLevel.DoesNotExist:
+                    pass  # Keep existing trust level
+            
+            # Set approval status based on user's organization or admin status
+            if accepted_by.role == 'BlueVisionAdmin':
+                # BlueVisionAdmin can approve for both sides, so approve both
+                relationship.approved_by_source = True
+                relationship.approved_by_target = True
+                relationship.approved_by_source_user = accepted_by
+                relationship.approved_by_target_user = accepted_by
+                relationship.source_approval_status = 'approved'
+                relationship.target_approval_status = 'approved'
+                relationship.status = 'active'
+                relationship.activated_at = timezone.now()
+            elif accepted_by.organization == relationship.target_organization:
+                # Target organization accepting
+                relationship.approved_by_target = True
+                relationship.approved_by_target_user = accepted_by
+                relationship.target_approval_status = 'approved'
+                
+                # Check if both sides have approved
+                if relationship.approved_by_source and relationship.approved_by_target:
+                    relationship.status = 'active'
+                    relationship.activated_at = timezone.now()
+                else:
+                    relationship.status = 'pending'
+            elif accepted_by.organization == relationship.source_organization:
+                # Source organization accepting (shouldn't normally happen, but handle it)
+                relationship.approved_by_source = True
+                relationship.approved_by_source_user = accepted_by
+                relationship.source_approval_status = 'approved'
+                
+                # Check if both sides have approved
+                if relationship.approved_by_source and relationship.approved_by_target:
+                    relationship.status = 'active'
+                    relationship.activated_at = timezone.now()
+                else:
+                    relationship.status = 'pending'
+            
+            relationship.save()
+            
+            # Log the acceptance
+            TrustLog.log_trust_event(
+                action='relationship_approved',
+                source_organization=relationship.source_organization,
+                target_organization=relationship.target_organization,
+                trust_relationship=relationship,
+                user=accepted_by,
+                success=True,
+                details={'action': 'accepted', 'message': message}
+            )
+            
+            logger.info(f"Trust relationship accepted by {accepted_by.organization.name}")
+            
+            return {
+                'success': True,
+                'message': f'Trust relationship accepted successfully',
+                'relationship': relationship
+            }
+            
+        except Exception as e:
+            logger.error(f"Error accepting bilateral trust: {e}")
+            return {
+                'success': False,
+                'message': str(e)
+            }
+    
+    def reject_bilateral_trust(self, trust_id, message='', rejected_by=None):
+        """Reject a bilateral trust request"""
+        try:
+            relationship = TrustRelationship.objects.get(id=trust_id)
+            
+            if not rejected_by or not rejected_by.organization:
+                raise ValidationError("User must belong to an organization")
+            
+            # Check if user's organization is the target organization
+            if rejected_by.organization != relationship.target_organization:
+                raise ValidationError("User can only reject requests for their own organization")
+            
+            # Set rejection status
+            relationship.status = 'rejected'
+            relationship.approved_by_target = False
+            relationship.target_approval_status = 'rejected'
+            
+            relationship.save()
+            
+            # Log the rejection
+            TrustLog.log_trust_event(
+                action='relationship_rejected',
+                source_organization=relationship.source_organization,
+                target_organization=relationship.target_organization,
+                trust_relationship=relationship,
+                user=rejected_by,
+                success=True,
+                details={'action': 'rejected', 'message': message}
+            )
+            
+            logger.info(f"Trust relationship rejected by {rejected_by.organization.name}")
+            
+            return {
+                'success': True,
+                'message': f'Trust relationship rejected successfully',
+                'relationship': relationship
+            }
+            
+        except Exception as e:
+            logger.error(f"Error rejecting bilateral trust: {e}")
+            return {
+                'success': False,
+                'message': str(e)
+            }
+    
+    def update_bilateral_trust(self, trust_id, trust_level, message='', updated_by=None):
+        """Update a bilateral trust relationship"""
+        try:
+            relationship = TrustRelationship.objects.get(id=trust_id)
+            
+            # Update trust level if provided
+            if trust_level:
+                try:
+                    trust_level_obj = TrustLevel.objects.get(level=trust_level)
+                    relationship.trust_level = trust_level_obj
+                except TrustLevel.DoesNotExist:
+                    return {
+                        'success': False,
+                        'message': f'Trust level "{trust_level}" not found'
+                    }
+            
+            relationship.save()
+            
+            # Log the update
+            TrustLog.log_trust_event(
+                action='relationship_modified',
+                source_organization=relationship.source_organization,
+                target_organization=relationship.target_organization,
+                trust_relationship=relationship,
+                user=updated_by,
+                success=True,
+                details={'message': message, 'new_trust_level': trust_level}
+            )
+            
+            logger.info(f"Trust relationship updated: {relationship.id}")
+            
+            return {
+                'success': True,
+                'message': 'Trust relationship updated successfully',
+                'relationship': relationship
+            }
+            
+        except Exception as e:
+            logger.error(f"Error updating bilateral trust: {e}")
+            return {
+                'success': False,
+                'message': str(e)
+            }
+    
+    def revoke_bilateral_trust(self, trust_id, message='', revoked_by=None):
+        """Revoke a bilateral trust relationship"""
+        try:
+            relationship = TrustRelationship.objects.get(id=trust_id)
+            
+            relationship.status = 'revoked'
+            relationship.revoked_by = revoked_by
+            relationship.revoked_at = timezone.now()
+            relationship.is_active = False
+            
+            relationship.save()
+            
+            # Log the revocation
+            TrustLog.log_trust_event(
+                action='relationship_revoked',
+                source_organization=relationship.source_organization,
+                target_organization=relationship.target_organization,
+                trust_relationship=relationship,
+                user=revoked_by,
+                success=True,
+                details={'message': message}
+            )
+            
+            logger.info(f"Trust relationship revoked: {relationship.id}")
+            
+            return {
+                'success': True,
+                'message': 'Trust relationship revoked successfully'
+            }
+            
+        except Exception as e:
+            logger.error(f"Error revoking bilateral trust: {e}")
+            return {
+                'success': False,
+                'message': str(e)
+            }
+    
+    def get_trust_level(self, org1, org2):
+        """Get trust level between two organizations"""
+        try:
+            relationship = TrustRelationship.objects.filter(
+                Q(source_organization=org1, target_organization=org2) |
+                Q(source_organization=org2, target_organization=org1),
+                status='active',
+                is_active=True
+            ).first()
+            
+            if relationship:
+                return relationship.trust_level.level if relationship.trust_level else 'none'
+            return 'none'
+            
+        except Exception as e:
+            logger.error(f"Error getting trust level: {e}")
+            return 'none'
+    
+    def get_trust_dashboard_data(self, organization):
+        """Get trust dashboard data for an organization"""
+        try:
+            relationships = TrustRelationship.objects.filter(
+                Q(source_organization=organization) | Q(target_organization=organization)
+            )
+            
+            dashboard_data = {
+                'total_relationships': relationships.count(),
+                'active_relationships': relationships.filter(status='active').count(),
+                'pending_relationships': relationships.filter(status='pending').count(),
+                'trust_levels': {
+                    'high': relationships.filter(trust_level__level='restricted').count(),
+                    'medium': relationships.filter(trust_level__level='trusted').count(),
+                    'low': relationships.filter(trust_level__level='public').count(),
+                }
+            }
+            
+            return dashboard_data
+            
+        except Exception as e:
+            logger.error(f"Error getting trust dashboard data: {e}")
+            return {}
+    
     def can_access_organization_data(self, requesting_org_id, target_org_id):
         """Check if requesting organization can access target organization's data"""
         try:

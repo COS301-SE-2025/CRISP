@@ -3,7 +3,10 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 import json
 
-from core.models.models import Organization, STIXObject, Collection, CollectionObject, Feed, Identity, CustomUser
+from core.models.models import (
+    Organization, STIXObject, Collection, CollectionObject, Feed, Identity, CustomUser,
+    TrustLevel, TrustRelationship, TrustGroup, TrustGroupMembership
+)
 
 try:
     from core.models.models import Institution, Indicator, ThreatFeed, TTPData
@@ -197,6 +200,62 @@ class CustomUserAdmin(admin.ModelAdmin):
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('organization')
+
+
+@admin.register(TrustLevel)
+class TrustLevelAdmin(admin.ModelAdmin):
+    list_display = ['name', 'level', 'numerical_value', 'default_anonymization_level', 'created_at']
+    list_filter = ['level', 'default_anonymization_level', 'created_at']
+    search_fields = ['name', 'description']
+    readonly_fields = ['id', 'created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'level', 'description', 'numerical_value')
+        }),
+        ('Configuration', {
+            'fields': ('default_anonymization_level', 'sharing_policy', 'access_control_policy')
+        }),
+        ('Metadata', {
+            'fields': ('id', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(TrustRelationship)
+class TrustRelationshipAdmin(admin.ModelAdmin):
+    list_display = ['source_organization', 'target_organization', 'trust_level', 'status', 'created_at']
+    list_filter = ['trust_level', 'status', 'created_at']
+    search_fields = ['source_organization__name', 'target_organization__name']
+    readonly_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            'source_organization', 'target_organization', 'trust_level'
+        )
+
+
+@admin.register(TrustGroup)
+class TrustGroupAdmin(admin.ModelAdmin):
+    list_display = ['name', 'group_type', 'created_by', 'is_active', 'created_at']
+    list_filter = ['group_type', 'is_active', 'created_at']
+    search_fields = ['name', 'description', 'created_by']
+    readonly_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('default_trust_level')
+
+
+@admin.register(TrustGroupMembership)
+class TrustGroupMembershipAdmin(admin.ModelAdmin):
+    list_display = ['trust_group', 'organization', 'membership_type', 'is_active', 'joined_at']
+    list_filter = ['membership_type', 'is_active', 'joined_at']
+    search_fields = ['trust_group__name', 'organization__name']
+    readonly_fields = ['id', 'joined_at']
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('trust_group', 'organization')
 
 
 # Simple indicator model that works with existing tables

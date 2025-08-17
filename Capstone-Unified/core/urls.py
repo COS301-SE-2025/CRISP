@@ -58,6 +58,7 @@ trust_urlpatterns = [
     path('bilateral/<uuid:trust_id>/update/', trust_api.update_bilateral_trust, name='trust_bilateral_update'),
     path('bilateral/<uuid:trust_id>/revoke/', trust_api.revoke_bilateral_trust, name='trust_bilateral_revoke'),
     path('level/<uuid:organization_id>/', trust_api.get_trust_level, name='trust_level'),
+    path('levels/', trust_api.list_trust_levels, name='trust_levels_list'),
     path('community/', trust_api.list_community_trusts, name='trust_community_list'),
     path('dashboard/', trust_api.get_trust_dashboard, name='trust_dashboard'),
 ]

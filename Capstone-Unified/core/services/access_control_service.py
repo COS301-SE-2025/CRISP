@@ -488,6 +488,58 @@ class AccessControlService:
         # Only admins and BlueVision admins can manage trust groups
         return user.role in ['admin', 'BlueVisionAdmin']
     
+    def can_view_trust_relationships(self, user) -> bool:
+        """Check if user can view trust relationships"""
+        if not user:
+            return False
+        
+        # Publishers and above can view trust relationships
+        return user.role in ['publisher', 'admin', 'BlueVisionAdmin']
+    
+    def can_respond_to_trust_request(self, user, trust_relationship) -> bool:
+        """Check if user can respond to a trust request"""
+        if not user or not trust_relationship:
+            return False
+        
+        # BlueVision admins can respond to any trust request
+        if user.role == 'BlueVisionAdmin':
+            return True
+        
+        # Publishers and admins can respond if the request is for their organization
+        if user.role in ['publisher', 'admin'] and user.organization:
+            return trust_relationship.target_organization.id == user.organization.id
+        
+        return False
+    
+    def can_modify_trust_relationship(self, user, trust_relationship) -> bool:
+        """Check if user can modify a trust relationship"""
+        if not user or not trust_relationship:
+            return False
+        
+        # BlueVision admins can modify any trust relationship
+        if user.role == 'BlueVisionAdmin':
+            return True
+        
+        # Publishers and admins can modify relationships involving their organization
+        if user.role in ['publisher', 'admin'] and user.organization:
+            return (trust_relationship.source_organization.id == user.organization.id or
+                   trust_relationship.target_organization.id == user.organization.id)
+        
+        return False
+    
+    def can_revoke_trust_relationship(self, user, trust_relationship) -> bool:
+        """Check if user can revoke a trust relationship"""
+        # Same logic as modify for now
+        return self.can_modify_trust_relationship(user, trust_relationship)
+    
+    def can_view_community_trusts(self, user) -> bool:
+        """Check if user can view community trust groups"""
+        if not user:
+            return False
+        
+        # Publishers and above can view community trusts
+        return user.role in ['publisher', 'admin', 'BlueVisionAdmin']
+    
     def get_role_hierarchy_level(self, role: str) -> int:
         """Get the hierarchy level of a role (higher number = more permissions)"""
         hierarchy = {
