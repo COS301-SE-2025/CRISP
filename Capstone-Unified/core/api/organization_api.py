@@ -126,7 +126,7 @@ def get_organization(request, organization_id):
         # Get organization
         try:
             organization = Organization.objects.annotate(
-                member_count=Count('customuser')
+                member_count=Count('users')
             ).get(id=organization_id)
         except Organization.DoesNotExist:
             return Response({
@@ -258,26 +258,19 @@ def update_organization(request, organization_id):
             }, status=status.HTTP_403_FORBIDDEN)
         
         org_service = OrganizationService()
-        result = org_service.update_organization(
+        updated_organization = org_service.update_organization(
+            updating_user=request.user,
             organization_id=organization_id,
-            update_data=request.data,
-            updated_by=request.user
+            update_data=request.data
         )
         
-        if result['success']:
-            organization.refresh_from_db()
-            serializer = OrganizationDetailSerializer(organization)
-            
-            return Response({
-                'success': True,
-                'message': result['message'],
-                'organization': serializer.data
-            }, status=status.HTTP_200_OK)
-        else:
-            return Response({
-                'success': False,
-                'message': result['message']
-            }, status=status.HTTP_400_BAD_REQUEST)
+        serializer = OrganizationDetailSerializer(updated_organization)
+        
+        return Response({
+            'success': True,
+            'message': 'Organization updated successfully',
+            'organization': serializer.data
+        }, status=status.HTTP_200_OK)
             
     except Exception as e:
         logger.error(f"Error updating organization {organization_id}: {str(e)}")
