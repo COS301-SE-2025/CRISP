@@ -286,56 +286,6 @@ def update_organization(request, organization_id):
             'message': 'Failed to update organization'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
-def delete_organization(request, organization_id):
-    """
-    Delete/deactivate organization (BlueVision admins only)
-    
-    DELETE /api/organizations/{organization_id}/
-    """
-    try:
-        access_control = AccessControlService()
-        
-        # Get organization
-        try:
-            organization = Organization.objects.get(id=organization_id)
-        except Organization.DoesNotExist:
-            return Response({
-                'success': False,
-                'message': 'Organization not found'
-            }, status=status.HTTP_404_NOT_FOUND)
-        
-        # Check permissions (only BlueVision admins)
-        if not access_control.can_delete_organization(request.user, organization):
-            return Response({
-                'success': False,
-                'message': 'Insufficient permissions to delete this organization'
-            }, status=status.HTTP_403_FORBIDDEN)
-        
-        org_service = OrganizationService()
-        result = org_service.delete_organization(
-            deleting_user=request.user,
-            organization_id=organization_id
-        )
-        
-        if result['success']:
-            return Response({
-                'success': True,
-                'message': result['message']
-            }, status=status.HTTP_200_OK)
-        else:
-            return Response({
-                'success': False,
-                'message': result['message']
-            }, status=status.HTTP_400_BAD_REQUEST)
-            
-    except Exception as e:
-        logger.error(f"Error deleting organization {organization_id}: {str(e)}")
-        return Response({
-            'success': False,
-            'message': 'Failed to delete organization'
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -704,4 +654,77 @@ def deactivate_organization(request, organization_id):
         return Response({
             'success': False,
             'message': 'Failed to deactivate organization'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_organization_permanently(request, organization_id):
+    """
+    Permanently delete an organization and all related data (BlueVision admins only)
+    
+    DELETE /api/organizations/{organization_id}/delete-permanently/
+    Body: {
+        "reason": "string",
+        "confirm": true
+    }
+    """
+    try:
+        access_control = AccessControlService()
+        
+        # Get organization
+        try:
+            organization = Organization.objects.get(id=organization_id)
+        except Organization.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Organization not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check permissions (only BlueVision admins)
+        if not access_control.can_delete_organization(request.user, organization):
+            return Response({
+                'success': False,
+                'message': 'Insufficient permissions to permanently delete this organization'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Require confirmation
+        if not request.data.get('confirm', False):
+            return Response({
+                'success': False,
+                'message': 'Permanent deletion requires confirmation. Set "confirm": true in request body.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Prevent deletion of own organization
+        if request.user.organization and request.user.organization.id == organization.id:
+            return Response({
+                'success': False,
+                'message': 'Cannot permanently delete your own organization'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        org_service = OrganizationService()
+        reason = request.data.get('reason', '')
+        
+        result = org_service.delete_organization_permanently(
+            deleting_user=request.user,
+            organization_id=organization_id,
+            reason=reason
+        )
+        
+        if result['success']:
+            return Response({
+                'success': True,
+                'message': result['message'],
+                'users_affected': result.get('users_affected', 0)
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'success': False,
+                'message': result['message']
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+    except Exception as e:
+        logger.error(f"Error permanently deleting organization {organization_id}: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to permanently delete organization'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

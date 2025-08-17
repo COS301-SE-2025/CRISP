@@ -490,7 +490,7 @@ class OrganizationService:
                 
                 return {
                     'success': True,
-                    'message': f"Organization '{organization.name}' has been deleted successfully",
+                    'message': f"Organization '{organization.name}' has been deactivated successfully",
                     'organization_id': str(organization.id),
                     'users_affected': user_count
                 }
@@ -500,6 +500,77 @@ class OrganizationService:
             return {
                 'success': False,
                 'message': f"Failed to delete organization: {str(e)}"
+            }
+    
+    def delete_organization_permanently(self, deleting_user, organization_id, reason=''):
+        """Permanently delete an organization and all related data from the database"""
+        try:
+            organization = Organization.objects.get(id=organization_id)
+        except Organization.DoesNotExist:
+            raise ValidationError("Organization not found")
+        
+        # Check permissions - only BlueVisionAdmin can permanently delete organizations
+        if deleting_user.role != 'BlueVisionAdmin':
+            raise PermissionDenied("Only BlueVision administrators can permanently delete organizations")
+        
+        # Prevent deletion of own organization
+        if deleting_user.organization and deleting_user.organization.id == organization.id:
+            raise PermissionDenied("Cannot delete your own organization")
+        
+        organization_name = organization.name
+        
+        try:
+            with transaction.atomic():
+                # Get organization users before deletion
+                org_users = CustomUser.objects.filter(organization=organization)
+                user_count = org_users.count()
+                
+                # Delete all trust relationships involving this organization
+                trust_relationships = TrustRelationship.objects.filter(
+                    Q(source_organization=organization) | Q(target_organization=organization)
+                )
+                trust_relationships.delete()
+                
+                # Remove from trust groups
+                trust_memberships = TrustGroupMembership.objects.filter(
+                    organization=organization
+                )
+                trust_memberships.delete()
+                
+                # Delete all users in the organization
+                org_users.delete()
+                
+                # Log the permanent deletion before deleting the organization
+                AuthenticationLog.log_authentication_event(
+                    user=deleting_user,
+                    action='organization_delete_permanent',
+                    success=True,
+                    additional_data={
+                        'organization_id': str(organization.id),
+                        'organization_name': organization_name,
+                        'user_count': user_count,
+                        'reason': reason,
+                        'action_type': 'organization_permanently_deleted'
+                    }
+                )
+                
+                # Permanently delete the organization
+                organization.delete()
+                
+                logger.info(f"Organization '{organization_name}' permanently deleted by {deleting_user.username}")
+                
+                return {
+                    'success': True,
+                    'message': f"Organization '{organization_name}' has been permanently deleted",
+                    'organization_id': str(organization_id),
+                    'users_affected': user_count
+                }
+                
+        except Exception as e:
+            logger.error(f"Error permanently deleting organization {organization_id}: {e}")
+            return {
+                'success': False,
+                'message': f"Failed to permanently delete organization: {str(e)}"
             }
     
     def reactivate_organization(self, reactivating_user, organization_id, reason=''):

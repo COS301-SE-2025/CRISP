@@ -254,16 +254,19 @@ export const reactivateOrganization = async (orgId, reason = '') => {
   return await response.json();
 };
 
-export const deleteOrganization = async (orgId, reason = '') => {
-  const response = await fetch(`${API_BASE_URL}/api/organizations/${orgId}/delete/`, {
+export const deleteOrganizationPermanently = async (orgId, reason = '') => {
+  const response = await fetch(`${API_BASE_URL}/api/organizations/${orgId}/delete-permanently/`, {
     method: 'DELETE',
     headers: getAuthHeaders(),
-    body: JSON.stringify({ reason }),
+    body: JSON.stringify({ 
+      confirm: true,
+      reason 
+    }),
   });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || 'Failed to delete organization');
+    throw new Error(errorData.message || 'Failed to permanently delete organization');
   }
 
   return await response.json();
