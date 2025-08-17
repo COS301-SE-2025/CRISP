@@ -418,3 +418,225 @@ class UserService:
                           f"{device_info.get('language', '')}"
         
         return hashlib.sha256(fingerprint_data.encode()).hexdigest()[:32]
+    
+    def delete_user(self, user_id, deleted_by, reason=''):
+        """Delete/deactivate a user and handle related data"""
+        try:
+            user = CustomUser.objects.get(id=user_id)
+        except CustomUser.DoesNotExist:
+            return {
+                'success': False,
+                'message': 'User not found'
+            }
+        
+        # Check permissions - only BlueVisionAdmin or organization admins can delete users
+        if deleted_by.role not in ['BlueVisionAdmin', 'publisher']:
+            return {
+                'success': False,
+                'message': 'Insufficient permissions to delete users'
+            }
+        
+        # Additional permission check for non-BlueVisionAdmin users
+        if deleted_by.role != 'BlueVisionAdmin':
+            if not deleted_by.organization or deleted_by.organization != user.organization:
+                return {
+                    'success': False,
+                    'message': 'Can only delete users from your own organization'
+                }
+        
+        # Prevent self-deletion
+        if user.id == deleted_by.id:
+            return {
+                'success': False,
+                'message': 'Cannot delete your own account'
+            }
+        
+        try:
+            with transaction.atomic():
+                # Deactivate all user sessions
+                UserSession.objects.filter(user=user, is_active=True).update(is_active=False)
+                
+                # Invalidate any pending invitations sent by this user
+                UserInvitation.objects.filter(
+                    inviter=user,
+                    status='pending'
+                ).update(status='cancelled')
+                
+                # Invalidate password reset tokens
+                PasswordResetToken.objects.filter(
+                    user=user,
+                    used_at__isnull=True
+                ).update(used_at=timezone.now())
+                
+                # Deactivate trusted devices
+                TrustedDevice.objects.filter(user=user).update(is_active=False)
+                
+                # Mark user as inactive instead of hard delete
+                user.is_active = False
+                user.save()
+                
+                # Log the deletion
+                AuthenticationLog.log_authentication_event(
+                    user=deleted_by,
+                    action='user_delete',
+                    success=True,
+                    additional_data={
+                        'deleted_user_id': str(user.id),
+                        'deleted_user_username': user.username,
+                        'deleted_user_email': user.email,
+                        'reason': reason,
+                        'action_type': 'user_deleted'
+                    }
+                )
+                
+                logger.info(f"User '{user.username}' deleted by {deleted_by.username}")
+                
+                return {
+                    'success': True,
+                    'message': f"User '{user.username}' has been deleted successfully",
+                    'user_id': str(user.id)
+                }
+                
+        except Exception as e:
+            logger.error(f"Error deleting user {user_id}: {e}")
+            return {
+                'success': False,
+                'message': f"Failed to delete user: {str(e)}"
+            }
+    
+    def update_user(self, user_id, update_data, updated_by):
+        """Update user information"""
+        try:
+            user = CustomUser.objects.get(id=user_id)
+        except CustomUser.DoesNotExist:
+            return {
+                'success': False,
+                'message': 'User not found'
+            }
+        
+        # Check permissions
+        if updated_by.role not in ['BlueVisionAdmin', 'publisher']:
+            return {
+                'success': False,
+                'message': 'Insufficient permissions to update users'
+            }
+        
+        # Additional permission check for non-BlueVisionAdmin users
+        if updated_by.role != 'BlueVisionAdmin':
+            if not updated_by.organization or updated_by.organization != user.organization:
+                return {
+                    'success': False,
+                    'message': 'Can only update users from your own organization'
+                }
+        
+        # Define updatable fields based on user role
+        if updated_by.role == 'BlueVisionAdmin':
+            updatable_fields = {
+                'first_name', 'last_name', 'email', 'role', 
+                'is_active', 'is_verified', 'is_publisher'
+            }
+        else:
+            updatable_fields = {
+                'first_name', 'last_name', 'email'
+            }
+        
+        # Apply updates
+        updated_fields = []
+        for field, value in update_data.items():
+            if field in updatable_fields and hasattr(user, field):
+                if getattr(user, field) != value:
+                    setattr(user, field, value)
+                    updated_fields.append(field)
+        
+        if updated_fields:
+            user.save(update_fields=updated_fields + ['updated_at'])
+            
+            # Log user update
+            AuthenticationLog.log_authentication_event(
+                user=updated_by,
+                action='user_modified',
+                success=True,
+                additional_data={
+                    'modified_user_id': str(user.id),
+                    'modified_user_username': user.username,
+                    'updated_fields': updated_fields,
+                    'action_type': 'user_updated'
+                }
+            )
+            
+            logger.info(f"User '{user.username}' updated by {updated_by.username}")
+        
+        return {
+            'success': True,
+            'message': f"User '{user.username}' updated successfully",
+            'user': user
+        }
+    
+    def reactivate_user(self, user_id, reactivated_by, reason=''):
+        """Reactivate a deactivated user"""
+        try:
+            user = CustomUser.objects.get(id=user_id)
+        except CustomUser.DoesNotExist:
+            return {
+                'success': False,
+                'message': 'User not found'
+            }
+        
+        # Check permissions - only BlueVisionAdmin or organization admins can reactivate users
+        if reactivated_by.role not in ['BlueVisionAdmin', 'publisher']:
+            return {
+                'success': False,
+                'message': 'Insufficient permissions to reactivate users'
+            }
+        
+        # Additional permission check for non-BlueVisionAdmin users
+        if reactivated_by.role != 'BlueVisionAdmin':
+            if not reactivated_by.organization or reactivated_by.organization != user.organization:
+                return {
+                    'success': False,
+                    'message': 'Can only reactivate users from your own organization'
+                }
+        
+        # Check if user is already active
+        if user.is_active:
+            return {
+                'success': False,
+                'message': 'User is already active'
+            }
+        
+        try:
+            with transaction.atomic():
+                # Reactivate the user
+                user.is_active = True
+                user.failed_login_attempts = 0  # Reset failed attempts
+                user.account_locked_until = None  # Unlock account if locked
+                user.save()
+                
+                # Log the reactivation
+                AuthenticationLog.log_authentication_event(
+                    user=reactivated_by,
+                    action='user_reactivate',
+                    success=True,
+                    additional_data={
+                        'reactivated_user_id': str(user.id),
+                        'reactivated_user_username': user.username,
+                        'reactivated_user_email': user.email,
+                        'reason': reason,
+                        'action_type': 'user_reactivated'
+                    }
+                )
+                
+                logger.info(f"User '{user.username}' reactivated by {reactivated_by.username}")
+                
+                return {
+                    'success': True,
+                    'message': f"User '{user.username}' has been reactivated successfully",
+                    'user_id': str(user.id)
+                }
+                
+        except Exception as e:
+            logger.error(f"Error reactivating user {user_id}: {e}")
+            return {
+                'success': False,
+                'message': f"Failed to reactivate user: {str(e)}"
+            }

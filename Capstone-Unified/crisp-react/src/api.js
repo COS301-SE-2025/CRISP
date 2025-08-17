@@ -147,7 +147,7 @@ export const reactivateUser = async (userId, reason = '') => {
 };
 
 export const deleteUser = async (userId, reason = '') => {
-  const response = await fetch(`${API_BASE_URL}/api/users/${userId}/`, {
+  const response = await fetch(`${API_BASE_URL}/api/users/${userId}/delete/`, {
     method: 'DELETE',
     headers: getAuthHeaders(),
     body: JSON.stringify({ reason }),

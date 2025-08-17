@@ -422,3 +422,137 @@ class OrganizationService:
             logger.error(f"Error getting users for organization {organization.id}: {e}")
         
         return users
+    
+    def delete_organization(self, deleting_user, organization_id, reason=''):
+        """Delete/deactivate an organization and handle related data"""
+        try:
+            organization = Organization.objects.get(id=organization_id)
+        except Organization.DoesNotExist:
+            raise ValidationError("Organization not found")
+        
+        # Check permissions - only BlueVisionAdmin can delete organizations
+        if deleting_user.role != 'BlueVisionAdmin':
+            raise PermissionDenied("Only BlueVision administrators can delete organizations")
+        
+        # Prevent deletion of own organization
+        if deleting_user.organization and deleting_user.organization.id == organization.id:
+            raise PermissionDenied("Cannot delete your own organization")
+        
+        try:
+            with transaction.atomic():
+                # Get organization users before deletion
+                org_users = CustomUser.objects.filter(organization=organization)
+                user_count = org_users.count()
+                
+                # Deactivate all trust relationships involving this organization
+                trust_relationships = TrustRelationship.objects.filter(
+                    Q(source_organization=organization) | Q(target_organization=organization)
+                )
+                
+                for relationship in trust_relationships:
+                    relationship.status = 'revoked'
+                    relationship.revoked_by = deleting_user
+                    relationship.revoked_at = timezone.now()
+                    relationship.is_active = False
+                    relationship.save()
+                
+                # Remove from trust groups
+                trust_memberships = TrustGroupMembership.objects.filter(
+                    organization=organization
+                )
+                trust_memberships.update(is_active=False)
+                
+                # Deactivate all users in the organization
+                org_users.update(
+                    is_active=False,
+                    organization=None  # Remove organization association
+                )
+                
+                # Mark organization as inactive instead of hard delete
+                organization.is_active = False
+                organization.save()
+                
+                # Log the deletion
+                AuthenticationLog.log_authentication_event(
+                    user=deleting_user,
+                    action='organization_delete',
+                    success=True,
+                    additional_data={
+                        'organization_id': str(organization.id),
+                        'organization_name': organization.name,
+                        'user_count': user_count,
+                        'reason': reason,
+                        'action_type': 'organization_deleted'
+                    }
+                )
+                
+                logger.info(f"Organization '{organization.name}' deleted by {deleting_user.username}")
+                
+                return {
+                    'success': True,
+                    'message': f"Organization '{organization.name}' has been deleted successfully",
+                    'organization_id': str(organization.id),
+                    'users_affected': user_count
+                }
+                
+        except Exception as e:
+            logger.error(f"Error deleting organization {organization_id}: {e}")
+            return {
+                'success': False,
+                'message': f"Failed to delete organization: {str(e)}"
+            }
+    
+    def reactivate_organization(self, reactivating_user, organization_id, reason=''):
+        """Reactivate a deactivated organization"""
+        try:
+            organization = Organization.objects.get(id=organization_id)
+        except Organization.DoesNotExist:
+            raise ValidationError("Organization not found")
+        
+        # Check permissions - only BlueVisionAdmin can reactivate organizations
+        if reactivating_user.role != 'BlueVisionAdmin':
+            raise PermissionDenied("Only BlueVision administrators can reactivate organizations")
+        
+        # Check if organization is already active
+        if organization.is_active:
+            return {
+                'success': False,
+                'message': 'Organization is already active'
+            }
+        
+        try:
+            with transaction.atomic():
+                # Reactivate the organization
+                organization.is_active = True
+                organization.save()
+                
+                # Reactivate all users in the organization (optional - could be selective)
+                # For now, let's not automatically reactivate users - let them be reactivated individually
+                
+                # Log the reactivation
+                AuthenticationLog.log_authentication_event(
+                    user=reactivating_user,
+                    action='organization_reactivate',
+                    success=True,
+                    additional_data={
+                        'organization_id': str(organization.id),
+                        'organization_name': organization.name,
+                        'reason': reason,
+                        'action_type': 'organization_reactivated'
+                    }
+                )
+                
+                logger.info(f"Organization '{organization.name}' reactivated by {reactivating_user.username}")
+                
+                return {
+                    'success': True,
+                    'message': f"Organization '{organization.name}' has been reactivated successfully",
+                    'organization_id': str(organization.id)
+                }
+                
+        except Exception as e:
+            logger.error(f"Error reactivating organization {organization_id}: {e}")
+            return {
+                'success': False,
+                'message': f"Failed to reactivate organization: {str(e)}"
+            }

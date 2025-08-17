@@ -315,8 +315,8 @@ def delete_organization(request, organization_id):
         
         org_service = OrganizationService()
         result = org_service.delete_organization(
-            organization_id=organization_id,
-            deleted_by=request.user
+            deleting_user=request.user,
+            organization_id=organization_id
         )
         
         if result['success']:
@@ -567,4 +567,141 @@ def get_organization_types(request):
         return Response({
             'success': False,
             'message': 'Failed to get organization types'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def reactivate_organization(request, organization_id):
+    """
+    Reactivate a deactivated organization (BlueVision admins only)
+    
+    POST /api/organizations/{organization_id}/reactivate/
+    Body: {
+        "reason": "string"
+    }
+    """
+    try:
+        access_control = AccessControlService()
+        
+        # Get organization
+        try:
+            organization = Organization.objects.get(id=organization_id)
+        except Organization.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Organization not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check permissions (only BlueVision admins)
+        if not access_control.can_modify_organization(request.user, organization):
+            return Response({
+                'success': False,
+                'message': 'Insufficient permissions to reactivate this organization'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        org_service = OrganizationService()
+        reason = request.data.get('reason', '')
+        
+        result = org_service.reactivate_organization(
+            reactivating_user=request.user,
+            organization_id=organization_id,
+            reason=reason
+        )
+        
+        if result['success']:
+            organization.refresh_from_db()
+            serializer = OrganizationDetailSerializer(organization)
+            
+            return Response({
+                'success': True,
+                'message': result['message'],
+                'organization': serializer.data
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'success': False,
+                'message': result['message']
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+    except Exception as e:
+        logger.error(f"Error reactivating organization {organization_id}: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to reactivate organization'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def deactivate_organization(request, organization_id):
+    """
+    Deactivate an organization (soft delete without full deletion)
+    
+    POST /api/organizations/{organization_id}/deactivate/
+    Body: {
+        "reason": "string"
+    }
+    """
+    try:
+        access_control = AccessControlService()
+        
+        # Get organization
+        try:
+            organization = Organization.objects.get(id=organization_id)
+        except Organization.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Organization not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check permissions (only BlueVision admins)
+        if not access_control.can_delete_organization(request.user, organization):
+            return Response({
+                'success': False,
+                'message': 'Insufficient permissions to deactivate this organization'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Prevent deactivation of own organization
+        if request.user.organization and request.user.organization.id == organization.id:
+            return Response({
+                'success': False,
+                'message': 'Cannot deactivate your own organization'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if organization is already inactive
+        if not organization.is_active:
+            return Response({
+                'success': False,
+                'message': 'Organization is already deactivated'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        org_service = OrganizationService()
+        reason = request.data.get('reason', '')
+        
+        # Use the existing delete_organization method which does soft delete
+        result = org_service.delete_organization(
+            deleting_user=request.user,
+            organization_id=organization_id,
+            reason=reason
+        )
+        
+        if result['success']:
+            organization.refresh_from_db()
+            serializer = OrganizationDetailSerializer(organization)
+            
+            return Response({
+                'success': True,
+                'message': f"Organization '{organization.name}' has been deactivated successfully",
+                'organization': serializer.data
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'success': False,
+                'message': result['message']
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+    except Exception as e:
+        logger.error(f"Error deactivating organization {organization_id}: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to deactivate organization'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

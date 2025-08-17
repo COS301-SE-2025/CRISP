@@ -531,3 +531,140 @@ def cancel_invitation(request, invitation_id):
             'success': False,
             'message': 'Failed to cancel invitation'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def reactivate_user(request, user_id):
+    """
+    Reactivate a deactivated user
+    
+    POST /api/users/{user_id}/reactivate/
+    Body: {
+        "reason": "string"
+    }
+    """
+    try:
+        access_control = AccessControlService()
+        
+        # Get user
+        try:
+            user = CustomUser.objects.get(id=user_id)
+        except CustomUser.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'User not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check permissions
+        if not access_control.can_modify_user(request.user, user):
+            return Response({
+                'success': False,
+                'message': 'Insufficient permissions to reactivate this user'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        user_service = UserService()
+        reason = request.data.get('reason', '')
+        
+        result = user_service.reactivate_user(
+            user_id=user_id,
+            reactivated_by=request.user,
+            reason=reason
+        )
+        
+        if result['success']:
+            user.refresh_from_db()
+            serializer = UserSerializer(user)
+            
+            return Response({
+                'success': True,
+                'message': result['message'],
+                'user': serializer.data
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'success': False,
+                'message': result['message']
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+    except Exception as e:
+        logger.error(f"Error reactivating user {user_id}: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to reactivate user'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def deactivate_user(request, user_id):
+    """
+    Deactivate a user (soft delete without full deletion)
+    
+    POST /api/users/{user_id}/deactivate/
+    Body: {
+        "reason": "string"
+    }
+    """
+    try:
+        access_control = AccessControlService()
+        
+        # Get user
+        try:
+            user = CustomUser.objects.get(id=user_id)
+        except CustomUser.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'User not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check permissions
+        if not access_control.can_modify_user(request.user, user):
+            return Response({
+                'success': False,
+                'message': 'Insufficient permissions to deactivate this user'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Prevent self-deactivation
+        if user.id == request.user.id:
+            return Response({
+                'success': False,
+                'message': 'Cannot deactivate your own account'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if user is already inactive
+        if not user.is_active:
+            return Response({
+                'success': False,
+                'message': 'User is already deactivated'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        user_service = UserService()
+        reason = request.data.get('reason', '')
+        
+        # Use the existing delete_user method which does soft delete
+        result = user_service.delete_user(
+            user_id=user_id,
+            deleted_by=request.user,
+            reason=reason
+        )
+        
+        if result['success']:
+            user.refresh_from_db()
+            serializer = UserSerializer(user)
+            
+            return Response({
+                'success': True,
+                'message': f"User '{user.username}' has been deactivated successfully",
+                'user': serializer.data
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'success': False,
+                'message': result['message']
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+    except Exception as e:
+        logger.error(f"Error deactivating user {user_id}: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to deactivate user'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
