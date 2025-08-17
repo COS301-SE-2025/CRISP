@@ -1,0 +1,140 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: crisp
+      POSTGRES_USER: crisp_user
+      POSTGRES_PASSWORD: crisp_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crisp_user -d crisp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - crisp-network
+
+  # Redis for Celery
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - crisp-network
+
+  # Django Web Application
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=your-secret-key-change-in-production
+      - DB_NAME=crisp
+      - DB_USER=crisp_user
+      - DB_PASSWORD=crisp_password
+      - DB_HOST=db
+      - DB_PORT=5432
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - ALLOWED_HOSTS=localhost,127.0.0.1,web
+    volumes:
+      - ./logs:/app/logs
+      - ./media:/app/media
+      - static_files:/app/staticfiles
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - crisp-network
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 120 crisp_settings.wsgi:application"
+
+  # Celery Worker
+  celery-worker:
+    build: .
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=your-secret-key-change-in-production
+      - DB_NAME=crisp
+      - DB_USER=crisp_user
+      - DB_PASSWORD=crisp_password
+      - DB_HOST=db
+      - DB_PORT=5432
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    volumes:
+      - ./logs:/app/logs
+      - ./media:/app/media
+    depends_on:
+      - db
+      - redis
+      - web
+    networks:
+      - crisp-network
+    command: celery -A crisp_settings worker --loglevel=info
+
+  # Celery Beat (Scheduler)
+  celery-beat:
+    build: .
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=your-secret-key-change-in-production
+      - DB_NAME=crisp
+      - DB_USER=crisp_user
+      - DB_PASSWORD=crisp_password
+      - DB_HOST=db
+      - DB_PORT=5432
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    volumes:
+      - ./logs:/app/logs
+      - ./media:/app/media
+    depends_on:
+      - db
+      - redis
+      - web
+    networks:
+      - crisp-network
+    command: celery -A crisp_settings beat --loglevel=info
+
+  # Nginx reverse proxy (optional, for production)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - static_files:/var/www/static
+      - ./media:/var/www/media
+    depends_on:
+      - web
+    networks:
+      - crisp-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_files:
+
+networks:
+  crisp-network:
+    driver: bridge

@@ -1,0 +1,105 @@
+services:
+  # Test Database
+  db-test:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: crisp_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - test_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d crisp_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-network
+
+  # Test Redis
+  redis-test:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    volumes:
+      - test_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-network
+
+  # Django Web Application for Testing
+  web-test:
+    build: .
+    ports:
+      - "8001:8000"
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=test-secret-key-for-testing
+      - DB_NAME=crisp_test
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_HOST=db-test
+      - DB_PORT=5432
+      - CELERY_BROKER_URL=redis://redis-test:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis-test:6379/0
+      - ALLOWED_HOSTS=localhost,127.0.0.1,web-test
+      - DJANGO_SETTINGS_MODULE=crisp_settings.test_settings
+    volumes:
+      - ./logs:/app/logs
+      - ./test_media:/app/media
+    depends_on:
+      db-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    networks:
+      - test-network
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             python manage.py loaddata core/tests/test_data_fixtures.py &&
+             gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 crisp_settings.wsgi:application"
+
+  # Test Runner Service
+  test-runner:
+    build: .
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=test-secret-key-for-testing
+      - DB_NAME=crisp_test
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_HOST=db-test
+      - DB_PORT=5432
+      - CELERY_BROKER_URL=redis://redis-test:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis-test:6379/0
+      - DJANGO_SETTINGS_MODULE=crisp_settings.test_settings
+    volumes:
+      - ./logs:/app/logs
+      - ./test_results:/app/test_results
+      - ./coverage_reports:/app/coverage_reports
+    depends_on:
+      - db-test
+      - redis-test
+    networks:
+      - test-network
+    command: >
+      sh -c "python manage.py migrate &&
+             coverage run --source='.' manage.py test --verbosity=2 &&
+             coverage report &&
+             coverage html -d /app/coverage_reports/htmlcov &&
+             coverage xml -o /app/coverage_reports/coverage.xml"
+
+volumes:
+  test_postgres_data:
+  test_redis_data:
+
+networks:
+  test-network:
+    driver: bridge
