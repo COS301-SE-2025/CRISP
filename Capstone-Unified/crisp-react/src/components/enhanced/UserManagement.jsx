@@ -510,7 +510,8 @@ const UserManagement = ({ active = true, initialSection = null }) => {
           
           if (modalMode === 'add') {
             console.log('Creating user with data:', formData);
-            await api.createUser(formData);
+            const createResult = await api.createUser(formData);
+            console.log('User creation successful:', createResult);
           } else if (modalMode === 'edit') {
             const updateData = { ...formData };
             if (!updateData.password) {
@@ -534,7 +535,9 @@ const UserManagement = ({ active = true, initialSection = null }) => {
           }
           setShowModal(false);
           setError(null); // Clear any previous errors
-          loadUsers();
+          console.log('About to reload users...');
+          await loadUsers();
+          console.log('Users reloaded successfully');
         } catch (err) {
           console.error('Error in handleSubmit:', err);
           // Handle different error types

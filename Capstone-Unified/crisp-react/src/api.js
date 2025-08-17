@@ -87,7 +87,7 @@ export const getUserDetails = async (userId) => {
 };
 
 export const createUser = async (userData) => {
-  const response = await fetch(`${API_BASE_URL}/api/users/`, {
+  const response = await fetch(`${API_BASE_URL}/api/users/create/`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(userData),

@@ -5,6 +5,7 @@ Handles user CRUD operations, invitations, and organization management
 
 import logging
 from django.db.models import Q
+from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -195,30 +196,46 @@ def create_user(request):
                 }, status=status.HTTP_400_BAD_REQUEST)
         
         # Create user
-        result = user_service.create_user(
-            username=request.data.get('username'),
-            email=request.data.get('email'),
-            password=request.data.get('password'),
-            first_name=request.data.get('first_name', ''),
-            last_name=request.data.get('last_name', ''),
-            role=request.data.get('role', 'viewer'),
-            organization_id=organization_id,
-            created_by=request.user
-        )
-        
-        if result['success']:
-            user = CustomUser.objects.get(id=result['user_id'])
+        try:
+            user = user_service.create_user(
+                username=request.data.get('username'),
+                email=request.data.get('email'),
+                password=request.data.get('password'),
+                first_name=request.data.get('first_name', ''),
+                last_name=request.data.get('last_name', ''),
+                role=request.data.get('role', 'viewer'),
+                organization_id=organization_id,
+                created_by=request.user
+            )
+            
             serializer = UserSerializer(user)
             
             return Response({
                 'success': True,
-                'message': result['message'],
+                'message': 'User created successfully',
                 'user': serializer.data
             }, status=status.HTTP_201_CREATED)
-        else:
+            
+        except ValidationError as e:
             return Response({
                 'success': False,
-                'message': result['message']
+                'message': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        except Exception as e:
+            # Handle database constraint errors and other exceptions
+            error_message = str(e)
+            if 'duplicate key value violates unique constraint' in error_message:
+                if 'username' in error_message:
+                    error_message = 'Username already exists. Please choose a different username.'
+                elif 'email' in error_message:
+                    error_message = 'Email address already exists. Please use a different email.'
+                else:
+                    error_message = 'A user with this information already exists.'
+            
+            return Response({
+                'success': False,
+                'message': error_message
             }, status=status.HTTP_400_BAD_REQUEST)
             
     except Exception as e:
