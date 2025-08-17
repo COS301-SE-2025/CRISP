@@ -9289,6 +9289,7 @@ function CSSStyles() {
             background-color: var(--light-gray);
             color: var(--text-dark);
             min-height: 100vh;
+            overscroll-behavior: none;
         }
         
         /* Loading Screen */
@@ -9416,7 +9417,7 @@ function CSSStyles() {
             border-radius: 6px;
             border: 1px solid var(--medium-gray);
             width: 240px;
-            background-color: var(--light-gray);
+            background-color: white;
             font-size: 14px;
             transition: all 0.3s;
         }
@@ -9615,6 +9616,7 @@ function CSSStyles() {
         
         .user-role {
             font-size: 12px;
+            color: var(--primary-blue);
             opacity: 0.8;
         }
         
@@ -10087,6 +10089,7 @@ function CSSStyles() {
             border-radius: 6px;
             border: 1px solid var(--medium-gray);
             font-size: 14px;
+            background-color: white;
             flex: 1;
         }
         
@@ -10175,10 +10178,20 @@ function CSSStyles() {
         }
         
         .activity-item {
-            padding: 15px 0;
+            padding: 15px;
             display: flex;
             gap: 15px;
             border-bottom: 1px solid var(--medium-gray);
+            background-color: white;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: all 0.2s ease;
+        }
+        
+        .activity-item:hover {
+            background-color: var(--light-blue);
+            transform: translateX(4px);
+            box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
         }
         
         .activity-item:last-child {
@@ -10603,6 +10616,7 @@ function CSSStyles() {
             border: 1px solid #ced4da;
             border-radius: 4px;
             font-size: 0.9rem;
+            background-color: white;
             transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
         }
 
@@ -11237,6 +11251,7 @@ function CSSStyles() {
             border: 2px solid var(--medium-gray);
             border-radius: 6px;
             font-size: 0.875rem;
+            background-color: white;
             transition: all 0.2s;
             box-sizing: border-box;
         }
