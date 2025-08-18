@@ -157,89 +157,6 @@ const api = {
 function App({ user, onLogout, isAdmin }) {
   // State to manage the active page and navigation parameters
   const [activePage, setActivePage] = useState('dashboard');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAuthenticating, setIsAuthenticating] = useState(true);
-
-  // Automatically login as admin on component mount
-  useEffect(() => {
-    const validateToken = async (token) => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/profile/`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        return response.ok;
-      } catch (error) {
-        console.error('Token validation error:', error);
-        return false;
-      }
-    };
-
-    const autoLogin = async () => {
-      setIsAuthenticating(true);
-      
-      // Check if already has valid token
-      const existingToken = localStorage.getItem('crisp_auth_token');
-      if (existingToken) {
-        console.log('Validating existing token...');
-        const isTokenValid = await validateToken(existingToken);
-        if (isTokenValid) {
-          console.log('Existing token is valid');
-          setIsAuthenticated(true);
-          setIsAuthenticating(false);
-          return;
-        } else {
-          console.log('Existing token is invalid, clearing and re-authenticating...');
-          localStorage.removeItem('crisp_auth_token');
-          localStorage.removeItem('crisp_refresh_token');
-          localStorage.removeItem('crisp_user');
-        }
-      }
-
-      // Auto-login as admin
-      try {
-        console.log('Attempting auto-login as admin...');
-        const response = await fetch(`${API_BASE_URL}/api/auth/login/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: 'admin', password: 'admin123' })
-        });
-
-        console.log('Login response status:', response.status);
-        
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Login response data:', data);
-          if (data.access) {
-            localStorage.setItem('crisp_auth_token', data.access);
-            if (data.refresh) {
-              localStorage.setItem('crisp_refresh_token', data.refresh);
-            }
-            if (data.user) {
-              localStorage.setItem('crisp_user', JSON.stringify(data.user));
-            }
-            console.log('Auto-login successful, token stored');
-            setIsAuthenticated(true);
-          } else {
-            console.error('No access token in response');
-            setIsAuthenticated(false);
-          }
-        } else {
-          const errorText = await response.text();
-          console.error('Auto-login failed with status:', response.status, response.statusText);
-          console.error('Error response:', errorText);
-          setIsAuthenticated(false);
-        }
-      } catch (error) {
-        console.error('Auto-login error:', error);
-        console.error('This might indicate the backend server is not running');
-        setIsAuthenticated(false);
-      }
-      
-      setIsAuthenticating(false);
-    };
-
-    autoLogin();
-  }, []);
   const [navigationState, setNavigationState] = useState({
     triggerModal: null,
     modalParams: {}
@@ -318,33 +235,6 @@ function App({ user, onLogout, isAdmin }) {
   }
 
   // Show login screen when not authenticated
-  if (!isAuthenticated) {
-    return (
-      <div className="App">
-        <div className="login-screen">
-          <div className="login-container">
-            <h2>CRISP System Login</h2>
-            <p>Please login to continue</p>
-            <button 
-              className="btn btn-primary"
-              onClick={() => {
-                setIsAuthenticating(true);
-                setIsAuthenticated(false);
-                // Clear any existing tokens
-                localStorage.removeItem('crisp_auth_token');
-                localStorage.removeItem('crisp_refresh_token');
-                localStorage.removeItem('crisp_user');
-                // Retry auto-login
-                window.location.reload();
-              }}
-            >
-              <i className="fas fa-sign-in-alt"></i> Login as Admin
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="App">
