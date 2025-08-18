@@ -52,6 +52,7 @@ services:
       - DB_PORT=5432
       - REDIS_URL=redis://redis:6379/0
       - ALLOWED_HOSTS=localhost,127.0.0.1,backend,frontend
+      - POPULATE_TEST_DATA=true
     volumes:
       - ./logs:/app/logs
       - ./media:/app/media
@@ -67,6 +68,10 @@ services:
       sh -c "until pg_isready -h db -p 5432; do echo 'Waiting for db...'; sleep 2; done &&
              python manage.py migrate &&
              python manage.py setup_base_users &&
+             if [ \"$$POPULATE_TEST_DATA\" = \"true\" ]; then
+               echo 'Populating test data...' &&
+               python manage.py populate_database --no-input;
+             fi &&
              python manage.py collectstatic --noinput &&
              python manage.py runserver 0.0.0.0:8000"
 
@@ -87,10 +92,111 @@ services:
     networks:
       - crisp-network
 
+  # Testing Backend with Large Dataset
+  backend-test:
+    build:
+      context: .
+      target: backend
+    ports:
+      - "8001:8000"
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=your-secret-key-change-in-production-test
+      - DB_NAME=crisp_test
+      - DB_USER=crisp_user
+      - DB_PASSWORD=crisp_password
+      - DB_HOST=db-test
+      - DB_PORT=5432
+      - REDIS_URL=redis://redis-test:6379/0
+      - ALLOWED_HOSTS=localhost,127.0.0.1,backend-test,frontend-test
+      - POPULATE_TEST_DATA=false
+    volumes:
+      - ./logs:/app/logs
+      - ./media:/app/media
+      - .:/app
+    depends_on:
+      db-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    networks:
+      - crisp-test-network
+    command: >
+      sh -c "until pg_isready -h db-test -p 5432; do echo 'Waiting for test db...'; sleep 2; done &&
+             python manage.py migrate &&
+             python manage.py setup_base_users &&
+             if [ \"$$POPULATE_TEST_DATA\" = \"true\" ]; then
+               echo 'Populating test data...' &&
+               python manage.py populate_database --no-input;
+             fi &&
+             python manage.py collectstatic --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
+    profiles: ["test"]
+
+  # Testing PostgreSQL Database
+  db-test:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: crisp_test
+      POSTGRES_USER: crisp_user
+      POSTGRES_PASSWORD: crisp_password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crisp_user -d crisp_test"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    networks:
+      - crisp-test-network
+    profiles: ["test"]
+
+  # Testing Redis Cache
+  redis-test:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_test_data:/data
+    networks:
+      - crisp-test-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles: ["test"]
+
+  # Testing Vite Frontend
+  frontend-test:
+    build:
+      context: .
+      target: frontend-dev
+    ports:
+      - "5174:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8001
+    volumes:
+      - ./crisp-react:/app
+      - /app/node_modules
+    depends_on:
+      - backend-test
+    networks:
+      - crisp-test-network
+    profiles: ["test"]
+
 volumes:
   postgres_data:
   redis_data:
+  postgres_test_data:
+  redis_test_data:
 
 networks:
   crisp-network:
+    driver: bridge
+  crisp-test-network:
     driver: bridge

@@ -4,6 +4,7 @@ import UserProfile from './components/user/UserProfile.jsx';
 import UserManagement from './components/enhanced/UserManagement.jsx';
 import OrganisationManagement from './components/enhanced/OrganisationManagement.jsx';
 import TrustManagement from './components/enhanced/TrustManagement.jsx';
+import Institutions from './components/institutions/Institutions.jsx';
 
 // Error Boundary for Chart Component
 class ChartErrorBoundary extends React.Component {
@@ -368,8 +369,10 @@ function App({ user, onLogout, isAdmin }) {
           {/* TTP Analysis */}
           <TTPAnalysis active={activePage === 'ttp-analysis'} />
 
-          {/* Institutions */}
-          <Institutions active={activePage === 'institutions'} />
+          {/* Organisations */}
+          <Institutions active={activePage === 'institutions'} api={api} showPage={showPage} />
+
+          
 
           {/* Reports */}
           <Reports active={activePage === 'reports'} />
@@ -588,7 +591,7 @@ function MainNav({ activePage, showPage, user, onLogout, isAdmin }) {
               onClick={() => showPage('institutions')} 
               className={activePage === 'institutions' ? 'active' : ''}
             >
-              <i className="fas fa-building"></i> Institutions
+              <i className="fas fa-building"></i> Organisations
             </a>
           </li>
           <li>
@@ -685,7 +688,7 @@ function MainNav({ activePage, showPage, user, onLogout, isAdmin }) {
                             onClick={() => { showPage('institutions'); setShowUserMenu(false); setShowManagementSubmenu(false); }}
                           >
                             <i className="fas fa-university"></i>
-                            <span>Institution Management</span>
+                            <span>Organisation Management</span>
                           </button>
                           <button 
                             className="submenu-item" 
@@ -1942,18 +1945,18 @@ function Dashboard({ active, showPage, isAuthenticated, isAuthenticating }) {
 
         {/* Side Panel */}
         <div className="side-panels">
-          {/* Connected Institutions */}
+          {/* Connected Organisations */}
           <div className="card">
             <div className="card-header">
-              <h2 className="card-title"><i className="fas fa-building card-icon"></i> Connected Institutions</h2>
+              <h2 className="card-title"><i className="fas fa-building card-icon"></i> Connected Organisations</h2>
             </div>
             <div className="card-content">
-              <ul className="institution-list">
-                <li className="institution-item">
-                  <div className="institution-logo">UP</div>
-                  <div className="institution-details">
-                    <div className="institution-name">University of Pretoria</div>
-                    <div className="institution-stats">
+              <ul className="organisation-list">
+                <li className="organisation-item">
+                  <div className="organisation-logo">UP</div>
+                  <div className="organisation-details">
+                    <div className="organisation-name">University of Pretoria</div>
+                    <div className="organisation-stats">
                       <div className="stat-item"><i className="fas fa-exchange-alt"></i> 125 IoCs</div>
                       <div className="stat-item"><i className="fas fa-clock"></i> 5m ago</div>
                     </div>
@@ -1962,11 +1965,11 @@ function Dashboard({ active, showPage, isAuthenticated, isAuthenticating }) {
                     <div className="trust-fill" style={{ width: '90%' }}></div>
                   </div>
                 </li>
-                <li className="institution-item">
-                  <div className="institution-logo">CS</div>
-                  <div className="institution-details">
-                    <div className="institution-name">Cyber Security Hub</div>
-                    <div className="institution-stats">
+                <li className="organisation-item">
+                  <div className="organisation-logo">CS</div>
+                  <div className="organisation-details">
+                    <div className="organisation-name">Cyber Security Hub</div>
+                    <div className="organisation-stats">
                       <div className="stat-item"><i className="fas fa-exchange-alt"></i> 342 IoCs</div>
                       <div className="stat-item"><i className="fas fa-clock"></i> 17m ago</div>
                     </div>
@@ -1975,11 +1978,11 @@ function Dashboard({ active, showPage, isAuthenticated, isAuthenticating }) {
                     <div className="trust-fill" style={{ width: '85%' }}></div>
                   </div>
                 </li>
-                <li className="institution-item">
-                  <div className="institution-logo">SR</div>
-                  <div className="institution-details">
-                    <div className="institution-name">SANReN CSIRT</div>
-                    <div className="institution-stats">
+                <li className="organisation-item">
+                  <div className="organisation-logo">SR</div>
+                  <div className="organisation-details">
+                    <div className="organisation-name">SANReN CSIRT</div>
+                    <div className="organisation-stats">
                       <div className="stat-item"><i className="fas fa-exchange-alt"></i> 208 IoCs</div>
                       <div className="stat-item"><i className="fas fa-clock"></i> 32m ago</div>
                     </div>
@@ -1988,11 +1991,11 @@ function Dashboard({ active, showPage, isAuthenticated, isAuthenticating }) {
                     <div className="trust-fill" style={{ width: '75%' }}></div>
                   </div>
                 </li>
-                <li className="institution-item">
-                  <div className="institution-logo">SB</div>
-                  <div className="institution-details">
-                    <div className="institution-name">SABRIC</div>
-                    <div className="institution-stats">
+                <li className="organisation-item">
+                  <div className="organisation-logo">SB</div>
+                  <div className="organisation-details">
+                    <div className="organisation-name">SABRIC</div>
+                    <div className="organisation-stats">
                       <div className="stat-item"><i className="fas fa-exchange-alt"></i> 156 IoCs</div>
                       <div className="stat-item"><i className="fas fa-clock"></i> 1h ago</div>
                     </div>
@@ -3181,23 +3184,23 @@ function IoCManagement({ active }) {
   const [showShareModal, setShowShareModal] = useState(false);
   const [sharingIndicator, setSharingIndicator] = useState(null);
   const [shareFormData, setShareFormData] = useState({
-    institutions: [],
+    organisations: [],
     anonymizationLevel: 'medium',
     shareMethod: 'taxii'
   });
   const [sharing, setSharing] = useState(false);
-  const [institutionSearch, setInstitutionSearch] = useState('');
-  const [showInstitutionDropdown, setShowInstitutionDropdown] = useState(false);
-  const [selectedInstitutionIndex, setSelectedInstitutionIndex] = useState(-1);
-  const [shareInstitutionMode, setShareInstitutionMode] = useState('existing');
-  const [institutionDropdownSearch, setInstitutionDropdownSearch] = useState('');
-  const [showInstitutionSelectDropdown, setShowInstitutionSelectDropdown] = useState(false);
+  const [organisationSearch, setOrganisationSearch] = useState('');
+  const [showOrganisationDropdown, setShowOrganisationDropdown] = useState(false);
+  const [selectedOrganisationIndex, setSelectedOrganisationIndex] = useState(-1);
+  const [shareOrganisationMode, setShareOrganisationMode] = useState('existing');
+  const [organisationDropdownSearch, setOrganisationDropdownSearch] = useState('');
+  const [showOrganisationSelectDropdown, setShowOrganisationSelectDropdown] = useState(false);
   
   // Threat feeds for Add IoC modal
   const [threatFeeds, setThreatFeeds] = useState([]);
   
-  // Mock institutions list - in real app, this would come from API
-  const availableInstitutions = [
+  // Mock organisations list - in real app, this would come from API
+  const availableOrganisations = [
     'University of Pretoria',
     'Cyber Security Hub',
     'SANReN CSIRT',
@@ -3261,9 +3264,9 @@ function IoCManagement({ active }) {
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
-      if (showInstitutionDropdown && !event.target.closest('.institution-search-container')) {
-        setShowInstitutionDropdown(false);
-        setSelectedInstitutionIndex(-1);
+      if (showOrganisationDropdown && !event.target.closest('.organisation-search-container')) {
+        setShowOrganisationDropdown(false);
+        setSelectedOrganisationIndex(-1);
       }
     }
 
@@ -3271,7 +3274,7 @@ function IoCManagement({ active }) {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showInstitutionDropdown]);
+  }, [showOrganisationDropdown]);
   
   const fetchThreatFeeds = async () => {
     const data = await api.get('/api/threat-feeds/');
@@ -4427,7 +4430,7 @@ function IoCManagement({ active }) {
                     Target Organizations
                   </label>
                   <p className="form-description">
-                    Select trusted institutions to share this threat intelligence with
+                    Select trusted organisations to share this threat intelligence with
                   </p>
                   
                   {/* Sleek Organization Selector */}
@@ -4437,16 +4440,16 @@ function IoCManagement({ active }) {
                       <input
                         type="text"
                         className="sleek-search-input"
-                        value={institutionDropdownSearch}
+                        value={organisationDropdownSearch}
                         onChange={(e) => {
-                          setInstitutionDropdownSearch(e.target.value);
-                          setShowInstitutionSelectDropdown(true);
+                          setOrganisationDropdownSearch(e.target.value);
+                          setShowOrganisationSelectDropdown(true);
                         }}
-                        onFocus={() => setShowInstitutionSelectDropdown(true)}
+                        onFocus={() => setShowOrganisationSelectDropdown(true)}
                         onBlur={(e) => {
                           setTimeout(() => {
                             if (!e.relatedTarget || !e.relatedTarget.closest('.results-list')) {
-                              setShowInstitutionSelectDropdown(false);
+                              setShowOrganisationSelectDropdown(false);
                             }
                           }, 200);
                         }}
@@ -4456,33 +4459,33 @@ function IoCManagement({ active }) {
                     </div>
                     
                     {/* Results List */}
-                    {showInstitutionSelectDropdown && institutionDropdownSearch && (
+                    {showOrganisationSelectDropdown && organisationDropdownSearch && (
                       <div className="results-list">
-                        {availableInstitutions
-                          .filter(institution => 
-                            !shareFormData.institutions.includes(institution) &&
-                            institution.toLowerCase().includes(institutionDropdownSearch.toLowerCase())
+                        {availableOrganisations
+                          .filter(organisation => 
+                            !shareFormData.organisations.includes(organisation) &&
+                            organisation.toLowerCase().includes(organisationDropdownSearch.toLowerCase())
                           )
                           .slice(0, 5)
-                          .map(institution => (
+                          .map(organisation => (
                             <div
-                              key={institution}
+                              key={organisation}
                               className="result-item"
                               onClick={() => {
-                                addInstitution(institution);
-                                setInstitutionDropdownSearch('');
-                                setShowInstitutionSelectDropdown(false);
+                                addOrganisation(organisation);
+                                setOrganisationDropdownSearch('');
+                                setShowOrganisationSelectDropdown(false);
                               }}
                             >
-                              <span className="result-name">{institution}</span>
+                              <span className="result-name">{organisation}</span>
                               <i className="fas fa-plus add-icon"></i>
                             </div>
                           ))
                         }
-                        {availableInstitutions
-                          .filter(institution => 
-                            !shareFormData.institutions.includes(institution) &&
-                            institution.toLowerCase().includes(institutionDropdownSearch.toLowerCase())
+                        {availableOrganisations
+                          .filter(organisation => 
+                            !shareFormData.organisations.includes(organisation) &&
+                            organisation.toLowerCase().includes(organisationDropdownSearch.toLowerCase())
                           ).length === 0 && (
                             <div className="no-results">
                               No organizations found
@@ -4493,19 +4496,19 @@ function IoCManagement({ active }) {
                     )}
                     
                     {/* Selected Organizations */}
-                    {shareFormData.institutions.length > 0 && (
+                    {shareFormData.organisations.length > 0 && (
                       <div className="selected-orgs">
                         <div className="selected-label">
-                          Selected ({shareFormData.institutions.length})
+                          Selected ({shareFormData.organisations.length})
                         </div>
                         <div className="org-tags">
-                          {shareFormData.institutions.map(institution => (
-                            <div key={institution} className="org-tag">
-                              <span>{institution}</span>
+                          {shareFormData.organisations.map(organisation => (
+                            <div key={organisation} className="org-tag">
+                              <span>{organisation}</span>
                               <button 
                                 type="button" 
                                 className="remove-tag"
-                                onClick={() => removeInstitution(institution)}
+                                onClick={() => removeOrganisation(organisation)}
                               >
                                 ×
                               </button>
@@ -4560,11 +4563,11 @@ Only patterns and techniques, no indicators</option>
                   <button type="button" className="btn btn-outline" onClick={closeShareModal} disabled={sharing}>
                     Cancel
                   </button>
-                  <button type="submit" className="btn btn-primary" disabled={sharing || shareFormData.institutions.length === 0}>
+                  <button type="submit" className="btn btn-primary" disabled={sharing || shareFormData.organisations.length === 0}>
                     {sharing ? (
                       <><i className="fas fa-spinner fa-spin"></i> Sharing...</>
                     ) : (
-                      <><i className="fas fa-share-alt"></i> Share with {shareFormData.institutions.length} Institution(s)</>
+                      <><i className="fas fa-share-alt"></i> Share with {shareFormData.organisations.length} Organisation(s)</>
                     )}
                   </button>
                 </div>
@@ -5291,7 +5294,7 @@ Only patterns and techniques, no indicators</option>
   function handleShareIndicator(indicator) {
     setSharingIndicator(indicator);
     setShareFormData({
-      institutions: [],
+      organisations: [],
       anonymizationLevel: 'medium',
       shareMethod: 'taxii'
     });
@@ -5302,67 +5305,67 @@ Only patterns and techniques, no indicators</option>
     setShowShareModal(false);
     setSharingIndicator(null);
     setShareFormData({
-      institutions: [],
+      organisations: [],
       anonymizationLevel: 'medium',
       shareMethod: 'taxii'
     });
-    setInstitutionSearch('');
-    setShowInstitutionDropdown(false);
-    setSelectedInstitutionIndex(-1);
+    setOrganisationSearch('');
+    setShowOrganisationDropdown(false);
+    setSelectedOrganisationIndex(-1);
   }
 
-  // Institution search helper functions
-  function getFilteredInstitutions() {
-    return availableInstitutions.filter(institution =>
-      institution.toLowerCase().includes(institutionSearch.toLowerCase()) &&
-      !shareFormData.institutions.includes(institution)
+  // Organisation search helper functions
+  function getFilteredOrganisations() {
+    return availableOrganisations.filter(organisation =>
+      organisation.toLowerCase().includes(organisationSearch.toLowerCase()) &&
+      !shareFormData.organisations.includes(organisation)
     );
   }
 
-  function addInstitution(institution) {
+  function addOrganisation(organisation) {
     setShareFormData(prev => ({
       ...prev,
-      institutions: [...prev.institutions, institution]
+      organisations: [...prev.organisations, organisation]
     }));
-    setInstitutionSearch('');
-    setShowInstitutionDropdown(false);
-    setSelectedInstitutionIndex(-1);
+    setOrganisationSearch('');
+    setShowOrganisationDropdown(false);
+    setSelectedOrganisationIndex(-1);
   }
 
   function handleKeyDown(e) {
-    const filteredInstitutions = getFilteredInstitutions().slice(0, 10);
+    const filteredOrganisations = getFilteredOrganisations().slice(0, 10);
     
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelectedInstitutionIndex(prev => 
-        prev < filteredInstitutions.length - 1 ? prev + 1 : prev
+      setSelectedOrganisationIndex(prev => 
+        prev < filteredOrganisations.length - 1 ? prev + 1 : prev
       );
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setSelectedInstitutionIndex(prev => prev > 0 ? prev - 1 : -1);
+      setSelectedOrganisationIndex(prev => prev > 0 ? prev - 1 : -1);
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (selectedInstitutionIndex >= 0 && selectedInstitutionIndex < filteredInstitutions.length) {
-        addInstitution(filteredInstitutions[selectedInstitutionIndex]);
+      if (selectedOrganisationIndex >= 0 && selectedOrganisationIndex < filteredOrganisations.length) {
+        addOrganisation(filteredOrganisations[selectedOrganisationIndex]);
       }
     } else if (e.key === 'Escape') {
-      setShowInstitutionDropdown(false);
-      setSelectedInstitutionIndex(-1);
+      setShowOrganisationDropdown(false);
+      setSelectedOrganisationIndex(-1);
     }
   }
 
-  function removeInstitution(institution) {
+  function removeOrganisation(organisation) {
     setShareFormData(prev => ({
       ...prev,
-      institutions: prev.institutions.filter(inst => inst !== institution)
+      institutions: prev.institutions.filter(inst => inst !== organisation)
     }));
   }
 
   async function handleShareIndicatorSubmit(e) {
     e.preventDefault();
     
-    if (!sharingIndicator || shareFormData.institutions.length === 0) {
-      alert('Please select at least one institution to share with.');
+    if (!sharingIndicator || shareFormData.organisations.length === 0) {
+      alert('Please select at least one organisation to share with.');
       return;
     }
     
@@ -5370,7 +5373,7 @@ Only patterns and techniques, no indicators</option>
     
     try {
       const shareData = {
-        institutions: shareFormData.institutions,
+        institutions: shareFormData.organisations,
         anonymization_level: shareFormData.anonymizationLevel,
         share_method: shareFormData.shareMethod
       };
@@ -5379,7 +5382,7 @@ Only patterns and techniques, no indicators</option>
       
       if (response && response.success) {
         closeShareModal();
-        alert(`Indicator shared with ${response.shared_with} institution(s) successfully!`);
+        alert(`Indicator shared with ${response.shared_with} organisation(s) successfully!`);
       } else {
         throw new Error('Failed to share indicator');
       }
@@ -8615,8 +8618,11 @@ function TTPAnalysis({ active }) {
   );
 }
 
-// Institutions Component
-function Institutions({ active }) {
+// Organisations Component
+
+
+// Reports Component  
+function Organisations({ active }) {
   const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -8694,12 +8700,12 @@ function Institutions({ active }) {
         // Show backend error message
         setError(response.message);
       } else {
-        setError('Failed to create institution - unknown error');
+        setError('Failed to create organisation - unknown error');
       }
     } catch (err) {
       console.error('Error creating organization:', err);
       // Try to extract error message from response
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to create institution';
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to create organisation';
       setError(errorMessage);
     }
   };
@@ -8710,15 +8716,15 @@ function Institutions({ active }) {
     <section id="institutions" className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Institutions & Organizations</h1>
-          <p className="page-subtitle">Manage connected institutions and organizations</p>
+          <h1 className="page-title">Organisations & Organizations</h1>
+          <p className="page-subtitle">Manage connected organisations and organizations</p>
         </div>
         <div className="action-buttons">
           <button 
             className="btn btn-primary"
             onClick={() => setShowCreateModal(true)}
           >
-            <i className="fas fa-plus"></i> Add Institution
+            <i className="fas fa-plus"></i> Add Organisation
           </button>
         </div>
       </div>
@@ -8784,12 +8790,12 @@ function Institutions({ active }) {
               <div className="empty-state">
                 <i className="fas fa-building" style={{fontSize: '48px', color: '#dee2e6'}}></i>
                 <h3>No institutions found</h3>
-                <p>Create your first institution to get started with threat intelligence sharing.</p>
+                <p>Create your first organisation to get started with threat intelligence sharing.</p>
                 <button 
                   className="btn btn-primary"
                   onClick={() => setShowCreateModal(true)}
                 >
-                  <i className="fas fa-plus"></i> Create Institution
+                  <i className="fas fa-plus"></i> Create Organisation
                 </button>
               </div>
             ) : (
@@ -8797,7 +8803,7 @@ function Institutions({ active }) {
                 <table>
                   <thead>
                     <tr>
-                      <th>Institution</th>
+                      <th>Organisation</th>
                       <th>Type</th>
                       <th>Domain</th>
                       <th>Members</th>
@@ -8857,7 +8863,7 @@ function Institutions({ active }) {
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Create New Institution</h3>
+              <h3>Create New Organisation</h3>
               <button 
                 className="close-btn"
                 onClick={() => setShowCreateModal(false)}
@@ -8868,7 +8874,7 @@ function Institutions({ active }) {
             <form onSubmit={handleCreateOrganization}>
               <div className="modal-body">
                 <div className="form-group">
-                  <label>Institution Name</label>
+                  <label>Organisation Name</label>
                   <input
                     type="text"
                     value={formData.name}
@@ -9014,7 +9020,7 @@ function Institutions({ active }) {
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary">
-                  Create Institution
+                  Create Organisation
                 </button>
               </div>
             </form>
@@ -10099,12 +10105,12 @@ function CSSStyles() {
             border-color: var(--secondary-blue);
         }
         
-        /* Institutions List */
-        .institution-list {
+        /* Organisations List */
+        .organisation-list {
             list-style: none;
         }
         
-        .institution-item {
+        .organisation-item {
             display: flex;
             align-items: center;
             gap: 12px;
@@ -10112,11 +10118,11 @@ function CSSStyles() {
             border-bottom: 1px solid var(--medium-gray);
         }
         
-        .institution-item:last-child {
+        .organisation-item:last-child {
             border-bottom: none;
         }
         
-        .institution-logo {
+        .organisation-logo {
             width: 40px;
             height: 40px;
             border-radius: 8px;
@@ -10128,21 +10134,21 @@ function CSSStyles() {
             font-weight: 600;
         }
         
-        .institution-details {
+        .organisation-details {
             flex: 1;
         }
         
-        .institution-name {
+        .organisation-name {
             font-weight: 600;
             margin-bottom: 2px;
         }
         
-        .institution-meta {
+        .organisation-meta {
             font-size: 13px;
             color: var(--text-muted);
         }
         
-        .institution-stats {
+        .organisation-stats {
             display: flex;
             gap: 15px;
             margin-top: 5px;

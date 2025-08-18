@@ -695,7 +695,7 @@ section#ioc-management .card-actions .btn-sm {
   min-height: 40px;
 }
 
-.selected-institution-tag {
+.selected-organisation-tag {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -710,7 +710,7 @@ section#ioc-management .card-actions .btn-sm {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.selected-institution-tag:hover {
+.selected-organisation-tag:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
 }
@@ -743,11 +743,11 @@ section#ioc-management .card-actions .btn-sm {
   transform: scale(0.95);
 }
 
-.institution-search-container {
+.organisation-search-container {
   position: relative;
 }
 
-.institution-dropdown {
+.organisation-dropdown {
   position: absolute;
   top: 100%;
   left: 0;
@@ -774,7 +774,7 @@ section#ioc-management .card-actions .btn-sm {
   }
 }
 
-.institution-option {
+.organisation-option {
   padding: 0.75rem 1rem;
   cursor: pointer !important;
   border-bottom: 1px solid #f1f3f4;
@@ -787,7 +787,7 @@ section#ioc-management .card-actions .btn-sm {
   user-select: none;
 }
 
-.institution-option:hover {
+.organisation-option:hover {
   background: #007bff !important;
   color: white !important;
   cursor: pointer !important;
@@ -797,14 +797,14 @@ section#ioc-management .card-actions .btn-sm {
   padding-left: calc(1rem - 4px);
 }
 
-.institution-option:active {
+.organisation-option:active {
   background: #0056b3 !important;
   color: white !important;
   cursor: pointer !important;
   transform: scale(0.98);
 }
 
-.institution-option.selected {
+.organisation-option.selected {
   background: #007bff !important;
   color: white !important;
   cursor: pointer !important;
@@ -814,11 +814,11 @@ section#ioc-management .card-actions .btn-sm {
   padding-left: calc(1rem - 4px);
 }
 
-.institution-option:last-child {
+.organisation-option:last-child {
   border-bottom: none;
 }
 
-.institution-option.no-results {
+.organisation-option.no-results {
   color: #6c757d !important;
   font-style: italic;
   cursor: default !important;
@@ -826,7 +826,7 @@ section#ioc-management .card-actions .btn-sm {
   background: #f8f9fa !important;
 }
 
-.institution-option.no-results:hover {
+.organisation-option.no-results:hover {
   background: #f8f9fa !important;
   transform: none !important;
   border-left: none !important;
@@ -837,7 +837,7 @@ section#ioc-management .card-actions .btn-sm {
   box-shadow: none !important;
 }
 
-.institution-option.more-results {
+.organisation-option.more-results {
   color: #6c757d !important;
   font-size: 0.8rem;
   cursor: default !important;
@@ -846,7 +846,7 @@ section#ioc-management .card-actions .btn-sm {
   font-weight: 500;
 }
 
-.institution-option.more-results:hover {
+.organisation-option.more-results:hover {
   background: #f8f9fa !important;
   transform: none !important;
   border-left: none !important;
@@ -858,23 +858,23 @@ section#ioc-management .card-actions .btn-sm {
 }
 
 /* Improve search input interaction */
-.institution-search-container .form-control:focus {
+.organisation-search-container .form-control:focus {
   border-color: #007bff;
   box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
   outline: 0;
 }
 
-.institution-search-container .form-control {
+.organisation-search-container .form-control {
   padding-right: 2.5rem;
   cursor: text !important;
 }
 
-.institution-search-container .form-control:focus {
+.organisation-search-container .form-control:focus {
   cursor: text !important;
 }
 
 /* Search icon */
-.institution-search-container::after {
+.organisation-search-container::after {
   content: '\f002';
   font-family: 'Font Awesome 5 Free';
   font-weight: 900;
@@ -887,21 +887,21 @@ section#ioc-management .card-actions .btn-sm {
 }
 
 /* Scrollbar styling for dropdown */
-.institution-dropdown::-webkit-scrollbar {
+.organisation-dropdown::-webkit-scrollbar {
   width: 6px;
 }
 
-.institution-dropdown::-webkit-scrollbar-track {
+.organisation-dropdown::-webkit-scrollbar-track {
   background: #f1f1f1;
   border-radius: 3px;
 }
 
-.institution-dropdown::-webkit-scrollbar-thumb {
+.organisation-dropdown::-webkit-scrollbar-thumb {
   background: #c1c1c1;
   border-radius: 3px;
 }
 
-.institution-dropdown::-webkit-scrollbar-thumb:hover {
+.organisation-dropdown::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
 
@@ -1000,7 +1000,7 @@ section#ioc-management .card-actions .btn-sm {
   line-height: 1.5;
 }
 
-.elite-institution-selector {
+.elite-organisation-selector {
   background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
   border: 1px solid #e9ecef;
   border-radius: 16px;
@@ -1436,7 +1436,7 @@ section#ioc-management .card-actions .btn-sm {
   transform: translateY(0) scale(0.98);
 }
 
-.institution-selector {
+.organisation-selector {
   position: relative;
   margin-bottom: 1.5rem;
 }
@@ -1455,7 +1455,7 @@ section#ioc-management .card-actions .btn-sm {
   font-size: 0.9rem;
 }
 
-.institution-search-input {
+.organisation-search-input {
   width: 100%;
   padding: 0.8rem 1rem 0.8rem 2.5rem;
   border: 2px solid #e9ecef;
@@ -1466,14 +1466,14 @@ section#ioc-management .card-actions .btn-sm {
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
-.institution-search-input:focus {
+.organisation-search-input:focus {
   outline: none;
   border-color: #007bff;
   box-shadow: 0 4px 20px rgba(0, 123, 255, 0.15);
   transform: translateY(-1px);
 }
 
-.institution-results {
+.organisation-results {
   position: absolute;
   top: 100%;
   left: 0;
@@ -1516,7 +1516,7 @@ section#ioc-management .card-actions .btn-sm {
   overflow-y: auto;
 }
 
-.institution-result-item {
+.organisation-result-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1526,34 +1526,34 @@ section#ioc-management .card-actions .btn-sm {
   border-bottom: 1px solid #f1f3f4;
 }
 
-.institution-result-item:hover {
+.organisation-result-item:hover {
   background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
   color: white;
   transform: translateX(4px);
 }
 
-.institution-result-item:last-child {
+.organisation-result-item:last-child {
   border-bottom: none;
 }
 
-.institution-info {
+.organisation-info {
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
-.institution-icon {
+.organisation-icon {
   color: #007bff;
   font-size: 0.9rem;
   width: 16px;
   text-align: center;
 }
 
-.institution-result-item:hover .institution-icon {
+.organisation-result-item:hover .organisation-icon {
   color: white;
 }
 
-.institution-name {
+.organisation-name {
   font-size: 0.9rem;
   font-weight: 500;
 }
@@ -1565,7 +1565,7 @@ section#ioc-management .card-actions .btn-sm {
   transition: all 0.2s ease;
 }
 
-.institution-result-item:hover .add-icon {
+.organisation-result-item:hover .add-icon {
   color: white;
   opacity: 1;
   transform: scale(1.1);
@@ -1608,7 +1608,7 @@ section#ioc-management .card-actions .btn-sm {
   gap: 0.75rem;
 }
 
-.selected-institution-card {
+.selected-organisation-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1620,24 +1620,24 @@ section#ioc-management .card-actions .btn-sm {
   transition: all 0.2s ease;
 }
 
-.selected-institution-card:hover {
+.selected-organisation-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0,0,0,0.1);
 }
 
-.institution-card-content {
+.organisation-card-content {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   flex: 1;
 }
 
-.institution-card-content i {
+.organisation-card-content i {
   color: #007bff;
   font-size: 0.9rem;
 }
 
-.institution-card-name {
+.organisation-card-name {
   font-size: 0.85rem;
   font-weight: 500;
   color: #333;

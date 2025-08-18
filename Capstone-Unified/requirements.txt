@@ -25,3 +25,5 @@ gunicorn==21.2.0
 python-dotenv==1.0.0
 whitenoise==6.5.0
 psutil>=5.9.0
+faker==19.6.2
+tqdm==4.66.1

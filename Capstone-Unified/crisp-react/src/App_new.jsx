@@ -5,7 +5,7 @@ import UserManagement from './components/enhanced/UserManagement';
 import TrustManagement from './components/trust/TrustManagement';
 import UserProfile from './components/user/UserProfile';
 import Notifications from './components/notifications/Notifications';
-import Institutions from './components/institutions/Institutions';
+import Organisations from './components/institutions/Institutions';
 import Reports from './components/reports/Reports';
 import ThreatFeedList from './components/threat/ThreatFeedList';
 import IndicatorTable from './components/threat/IndicatorTable';
@@ -30,7 +30,7 @@ function App() {
       case 'notifications':
         return <Notifications />;
       case 'institutions':
-        return <Institutions />;
+        return <Organisations />;
       case 'reports':
         return <Reports />;
       case 'threat-feeds':
@@ -99,7 +99,7 @@ function App() {
             onClick={() => setActivePage('institutions')}
           >
             <i className="fas fa-building"></i>
-            <span>Institutions</span>
+            <span>Organisations</span>
           </button>
           
           <button 

@@ -313,7 +313,7 @@ window.addEventListener("popstate", () => {
 
 function AuthWrapper() {
   return (
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <Router basename="/static/react" future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthRoutes />
     </Router>
   );
