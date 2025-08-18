@@ -32,11 +32,7 @@ Four specialized Docker containers providing distributed services:
 
 **Containerization**: Docker provides consistent packaging and deployment across environments. Docker Compose orchestrates multi-container applications for development and smaller deployments.
 
-**Orchestration**: Kubernetes supports larger production deployments requiring advanced scaling, rolling updates, and comprehensive health monitoring across distributed nodes.
-
 **Development Pipeline**: GitHub Actions implements CI/CD with automated testing, security scanning, and deployment procedures. Infrastructure as Code principles ensure reproducible, version-controlled deployments.
-
-**Monitoring Stack**: Prometheus for metrics collection, Grafana for visualization and alerting, and ELK stack (Elasticsearch, Logstash, Kibana) for centralized logging and analysis.
 
 ## Quality Requirements Support
 
