@@ -18,7 +18,9 @@
 6. [Service Contracts](#6-service-contracts)
 7. [Architectural Requirements](#7-architectural-requirements)
 8. [Technology Requirements](#8-technology-requirements)
-9. [Appendices](#9-appendices)
+9. [Deployment Model](#9-deployment-model)
+10. [Architecture Diagram](#10-architecture-diagram)
+11. [Appendices](#11-appendices)
 
 ---
 
@@ -805,9 +807,9 @@ The architecture scales from single-server proof-of-concept deployments to distr
 
 ---
 
-## 9. Appendices
+## 11. Appendices
 
-### 9.1 Glossary
+### 11.1 Glossary
 - **Anonymization**: Process of removing or masking identifying information while preserving analytical value
 - **CRISP Instance**: Individual deployment of the CRISP platform serving specific Institutions
 - **Educational Institution**: Universities, colleges, schools, and other learning Institutions
@@ -815,14 +817,14 @@ The architecture scales from single-server proof-of-concept deployments to distr
 - **Threat Actor**: Individual or group responsible for cyber attacks and malicious activities
 - **Trust Relationship**: Defined level of data sharing permission between Institutions
 
-### 9.2 References
+### 11.2 References
 - STIX 2.1 Specification: https://docs.oasis-open.org/cti/stix/v2.1/
 - TAXII 2.1 Specification: https://docs.oasis-open.org/cti/taxii/v2.1/
 - NIST Cybersecurity Framework: https://www.nist.gov/cyberframework
 - Django Documentation: https://docs.djangoproject.com/
 - React Documentation: https://react.dev/
 
-### 9.3 Revision History
+### 11.3 Revision History
 | Version | Date | Changes | Author/s |
 |---------|------|---------|--------|
 | 1.0 | May 24, 2025 | Initial version | Dreas Vermaak |

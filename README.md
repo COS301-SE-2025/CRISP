@@ -8,7 +8,7 @@ CRISP (Cyber Risk Information Sharing Platform) is a secure threat intelligence 
 - **[PDF user manual](https://github.com/COS301-SE-2025/CRISP/blob/documents/CRISP%20User%20Manual.pdf)** - **Done by Liam, double check before demo (2025-08-09)**
 - **[Technical installation manual]()** - **NEEDS TO BE IMPLEMENTED (2025-08-09)**
 - **[Coding standards/quality](https://github.com/COS301-SE-2025/CRISP/wiki/Coding-Standards-Document)** 
-- **[Functional Requirements (SRS) Document](https://github.com/COS301-SE-2025/CRISP/blob/documents/SRS.md)** - Detailed system requirements and specifications **NBNB please update(2025-08-13) need updated diagrams , Architectural structural design & requirements , Deployment Model(in progress)**
+- **[Functional Requirements (SRS) Document](https://github.com/COS301-SE-2025/CRISP/blob/documents/SRS.md)** - Detailed system requirements and specifications **NBNB please update(2025-08-13) need updated diagrams, Diaan Check asb die ArchitectureDiagram se documentation**
 - **[GitHub Project Board](https://github.com/orgs/COS301-SE-2025/projects/205)** - Track our development progress and sprint planning
 - **[Coding standards document](https://github.com/COS301-SE-2025/CRISP/wiki/Coding-Standards-Document)** - **Update the file structure of repo and code before demo(2025-08-09)**
 
