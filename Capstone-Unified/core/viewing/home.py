@@ -18,7 +18,9 @@ def home(request):
                 react_html = f.read()
             
             # Update asset paths to work with Django static files
-            react_html = react_html.replace('/assets/', static('react/assets/'))
+            react_html = react_html.replace('href="/assets/', 'href="/static/react/assets/')
+            react_html = react_html.replace('src="/assets/', 'src="/static/react/assets/')
+            react_html = react_html.replace('href="/vite.svg', 'href="/static/react/vite.svg')
             return HttpResponse(react_html)
         except Exception:
             pass

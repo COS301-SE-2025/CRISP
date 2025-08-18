@@ -19,6 +19,16 @@ urlpatterns = [
     path('', home, name='home'),  # Home page
     path('admin/', admin.site.urls),
     
+    # React Router routes - serve React app for all frontend routes
+    path('dashboard/', home, name='dashboard'),
+    path('login/', home, name='react-login'),
+    path('user-management/', home, name='user-management'),
+    path('trust-management/', home, name='trust-management'),
+    path('register-user/', home, name='register-user'),
+    path('forgot-password/', home, name='forgot-password'),
+    path('reset-password/', home, name='reset-password'),
+    path('construction/', home, name='construction'),
+    
     # Unified API endpoints
     path('api/', include('core.urls')),
     

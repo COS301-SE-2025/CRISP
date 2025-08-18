@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import App from "./App.jsx";
+import CRISPApp from "./App.jsx";
 import RegisterUser from "./RegisterUser.jsx";
 import CrispLogin from "./crisp_login.jsx";
 import LandingPage from "./LandingPage.jsx";
@@ -15,11 +15,17 @@ import "./assets/trust-management.css";
 // Import Font Awesome
 import "@fortawesome/fontawesome-free/css/all.min.css";
 
+// Wrapper component to ensure props are passed correctly
+function AppWrapper({ user, onLogout, isAdmin }) {
+  return <CRISPApp user={user} onLogout={onLogout} isAdmin={isAdmin} />;
+}
+
 function AuthRoutes() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userData, setUserData] = useState(null);
   const navigate = useNavigate();
+  
 
   // Check if user is already authenticated on app load
   useEffect(() => {
@@ -146,12 +152,19 @@ function AuthRoutes() {
   );
 
 
+
   return (
     <Routes>
-        {/* Landing page route - accessible to everyone */}
+        {/* Landing page route - redirect to dashboard if authenticated */}
         <Route
           path="/"
-          element={<LandingPage />}
+          element={
+            isAuthenticated ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <LandingPage />
+            )
+          }
         />
 
         {/* Construction page route - accessible to everyone */}
@@ -224,7 +237,7 @@ function AuthRoutes() {
           path="/dashboard"
           element={
             isAuthenticated ? (
-              <App user={userData} onLogout={handleLogout} isAdmin={isAdmin} />
+              <AppWrapper user={userData} onLogout={handleLogout} isAdmin={isAdmin} />
             ) : (
               <Navigate to="/login" replace />
             )
@@ -237,7 +250,7 @@ function AuthRoutes() {
           element={
             isAuthenticated ? (
               isAdmin ? (
-                <App user={userData} onLogout={handleLogout} isAdmin={isAdmin} />
+                <AppWrapper user={userData} onLogout={handleLogout} isAdmin={isAdmin} />
               ) : (
                 <Navigate to="/dashboard" replace />
               )
@@ -253,7 +266,7 @@ function AuthRoutes() {
           element={
             isAuthenticated ? (
               (userData?.role === 'publisher' || userData?.role === 'BlueVisionAdmin' || isAdmin) ? (
-                <App user={userData} onLogout={handleLogout} isAdmin={isAdmin} />
+                <AppWrapper user={userData} onLogout={handleLogout} isAdmin={isAdmin} />
               ) : (
                 <Navigate to="/dashboard" replace />
               )
@@ -279,7 +292,7 @@ window.addEventListener("popstate", () => {
 
 function AuthWrapper() {
   return (
-    <Router basename="/static/react" future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthRoutes />
     </Router>
   );

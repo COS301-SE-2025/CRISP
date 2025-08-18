@@ -56,6 +56,56 @@ class ChartErrorBoundary extends React.Component {
   }
 }
 
+// Error Boundary for ThreatFeeds Component
+class ThreatFeedsErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('ThreatFeeds Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          padding: '20px',
+          textAlign: 'center',
+          background: '#fff5f5',
+          border: '1px solid #fed7d7',
+          borderRadius: '4px',
+          color: '#c53030'
+        }}>
+          <i className="fas fa-exclamation-triangle" style={{fontSize: '24px', marginBottom: '10px'}}></i>
+          <h3>Threat Feeds Error</h3>
+          <p>Something went wrong with the threat feeds component.</p>
+          <button 
+            onClick={() => this.setState({ hasError: false, error: null })}
+            style={{
+              background: '#c53030',
+              color: 'white',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 // API Configuration
 const API_BASE_URL = 'http://localhost:8000';
 
@@ -183,6 +233,7 @@ const api = {
 };
 
 function App({ user, onLogout, isAdmin }) {
+  
   // State to manage the active page and navigation parameters
   const [activePage, setActivePage] = useState('dashboard');
   const [isLoading, setIsLoading] = useState(true);
@@ -316,7 +367,9 @@ function App({ user, onLogout, isAdmin }) {
           <Dashboard active={activePage === 'dashboard'} showPage={showPage} user={user} />
 
           {/* Threat Feeds */}
-          <ThreatFeeds active={activePage === 'threat-feeds'} navigationState={navigationState} setNavigationState={setNavigationState} />
+          <ThreatFeedsErrorBoundary>
+            <ThreatFeeds active={activePage === 'threat-feeds'} navigationState={navigationState} setNavigationState={setNavigationState} />
+          </ThreatFeedsErrorBoundary>
 
           {/* IoC Management */}
           <IoCManagement active={activePage === 'ioc-management'} />
@@ -351,6 +404,7 @@ function App({ user, onLogout, isAdmin }) {
 
 // Header Component with Enhanced Profile Dropdown
 function Header({ showPage, user, onLogout, isAdmin, navigateToRegisterUser }) {
+  
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showManagementSubmenu, setShowManagementSubmenu] = useState(false);
   
@@ -473,7 +527,16 @@ function Header({ showPage, user, onLogout, isAdmin, navigateToRegisterUser }) {
                   )}
                 </div>
                 <div className="menu-divider"></div>
-                <button className="menu-item logout-item" onClick={() => {setShowUserMenu(false); onLogout();}} type="button">
+                <button className="menu-item logout-item" onClick={() => {
+                  setShowUserMenu(false); 
+                  console.log('Logout button clicked - onLogout:', onLogout, typeof onLogout);
+                  if (typeof onLogout === 'function') {
+                    onLogout();
+                  } else {
+                    console.error('onLogout is not a function:', onLogout);
+                    alert('Logout function not available. Please refresh the page.');
+                  }
+                }} type="button">
                   <i className="fas fa-sign-out-alt"></i>
                   <span>Logout</span>
                 </button>
@@ -489,8 +552,6 @@ function Header({ showPage, user, onLogout, isAdmin, navigateToRegisterUser }) {
 // Main Navigation Component
 function MainNav({ activePage, showPage, user, onLogout, isAdmin }) {
   const [systemStatus, setSystemStatus] = useState('loading');
-  const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showManagementSubmenu, setShowManagementSubmenu] = useState(false);
   
   // Check system status periodically
   useEffect(() => {
@@ -572,110 +633,6 @@ function MainNav({ activePage, showPage, user, onLogout, isAdmin }) {
                systemStatus === 'loading' ? 'Checking...' : 'System Offline'}
             </span>
           </div>
-          
-          {/* User Profile Dropdown */}
-          {user && (
-            <div className="user-profile-container">
-              <button 
-                className="user-profile" 
-                onClick={() => setShowUserMenu(!showUserMenu)}
-              >
-                <div className="avatar">
-                  {(user.first_name || user.username || 'U').charAt(0).toUpperCase()}
-                </div>
-                <div className="user-info">
-                  <div className="user-name">
-                    {user.first_name && user.last_name 
-                      ? `${user.first_name} ${user.last_name}`
-                      : user.username
-                    }
-                  </div>
-                  <div className="user-role">{user.role}</div>
-                </div>
-                <i className="fas fa-chevron-down"></i>
-              </button>
-              
-              {showUserMenu && (
-                <div className="user-menu-dropdown">
-                  <div className="dropdown-header">
-                    <div className="user-avatar-large">
-                      {(user.first_name || user.username || 'U').charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="user-name-large">
-                        {user.first_name && user.last_name 
-                          ? `${user.first_name} ${user.last_name}`
-                          : user.username
-                        }
-                      </div>
-                      <div className="user-email">{user.email || user.username}</div>
-                    </div>
-                  </div>
-                  <div className="menu-divider"></div>
-                  <div className="menu-items">
-                    {/* Profile & Settings */}
-                    <button className="menu-item" onClick={() => { showPage('profile'); setShowUserMenu(false); }}>
-                      <i className="fas fa-user"></i>
-                      <span>My Profile</span>
-                    </button>
-                    
-                    {/* Management Submenu */}
-                    <div className="menu-item-submenu">
-                      <button 
-                        className="menu-item" 
-                        onClick={() => setShowManagementSubmenu(!showManagementSubmenu)}
-                      >
-                        <i className="fas fa-users"></i>
-                        <span>Management</span>
-                        <i className={`fas fa-chevron-${showManagementSubmenu ? 'up' : 'down'} submenu-arrow`}></i>
-                      </button>
-                      {showManagementSubmenu && (
-                        <div className="submenu">
-                          <button 
-                            className="submenu-item" 
-                            onClick={() => { showPage('user-management'); setShowUserMenu(false); setShowManagementSubmenu(false); }}
-                          >
-                            <i className="fas fa-users"></i>
-                            <span>User Management</span>
-                          </button>
-                          <button 
-                            className="submenu-item" 
-                            onClick={() => { showPage('institutions'); setShowUserMenu(false); setShowManagementSubmenu(false); }}
-                          >
-                            <i className="fas fa-university"></i>
-                            <span>Organisation Management</span>
-                          </button>
-                          <button 
-                            className="submenu-item" 
-                            onClick={() => { showPage('trust-management'); setShowUserMenu(false); setShowManagementSubmenu(false); }}
-                          >
-                            <i className="fas fa-handshake"></i>
-                            <span>Trust Management</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Admin-only options */}
-                    {isAdmin && (
-                      <button 
-                        className="menu-item" 
-                        onClick={() => { showPage('notifications'); setShowUserMenu(false); }}
-                      >
-                        <i className="fas fa-shield-alt"></i>
-                        <span>Admin Settings</span>
-                      </button>
-                    )}
-                  </div>
-                  <div className="menu-divider"></div>
-                  <button className="menu-item logout-item" onClick={() => { onLogout(); setShowUserMenu(false); }}>
-                    <i className="fas fa-sign-out-alt"></i>
-                    <span>Logout</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </nav>
@@ -2006,27 +1963,34 @@ function Dashboard({ active, showPage, user }) {
                   <p className="text-muted">System activities will appear here</p>
                 </div>
               ) : (
-                <ul className="activity-stream">
-                  {recentActivities.map((activity) => (
-                    <li key={activity.id} className="activity-item">
-                      <div className="activity-icon">
-                        <i className={activity.icon}></i>
-                      </div>
-                      <div className="activity-details">
-                        <div className="activity-text">{activity.title}</div>
-                        {activity.description && (
-                          <div className="activity-description">{activity.description}</div>
-                        )}
-                        <div className="activity-meta">
-                          <div className="activity-time">{activity.time_ago}</div>
-                          <span className={`badge ${activity.badge_type}`}>
-                            {activity.badge_text}
-                          </span>
+                <div className="activity-container">
+                  {recentActivities.length > 5 && (
+                    <div className="activity-scroll-indicator visible">
+                      <i className="fas fa-arrows-alt-v"></i> Scroll for more
+                    </div>
+                  )}
+                  <ul className={`activity-stream ${recentActivities.length > 5 ? 'has-scroll' : ''}`}>
+                    {recentActivities.map((activity) => (
+                      <li key={activity.id} className="activity-item">
+                        <div className="activity-icon">
+                          <i className={activity.icon}></i>
                         </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                        <div className="activity-details">
+                          <div className="activity-text">{activity.title}</div>
+                          {activity.description && (
+                            <div className="activity-description">{activity.description}</div>
+                          )}
+                          <div className="activity-meta">
+                            <div className="activity-time">{activity.time_ago}</div>
+                            <span className={`badge ${activity.badge_type}`}>
+                              {activity.badge_text}
+                            </span>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
           </div>
@@ -2412,7 +2376,6 @@ function Dashboard({ active, showPage, user }) {
 
 // Threat Feeds Component
 function ThreatFeeds({ active, navigationState, setNavigationState }) {
-  if (!active) return null;
   
   const [threatFeeds, setThreatFeeds] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -2439,11 +2402,15 @@ function ThreatFeeds({ active, navigationState, setNavigationState }) {
   });
 
   // Feed consumption and deletion states
-  const [consumingFeeds, setConsumingFeeds] = useState(new Set());
-  const [feedProgress, setFeedProgress] = useState(new Map());
+  const [consumingFeeds, setConsumingFeeds] = useState([]);
+  const [feedProgress, setFeedProgress] = useState({});
   const [showDeleteFeedModal, setShowDeleteFeedModal] = useState(false);
   const [feedToDelete, setFeedToDelete] = useState(null);
   const [deletingFeed, setDeletingFeed] = useState(false);
+  
+  // Refs to track intervals and timeouts for cleanup
+  const activeIntervals = useRef([]);
+  const activeTimeouts = useRef([]);
   
   // Fetch threat feeds from backend
   useEffect(() => {
@@ -2463,6 +2430,65 @@ function ThreatFeeds({ active, navigationState, setNavigationState }) {
       });
     }
   }, [active, navigationState, setNavigationState]);
+
+  // Cleanup intervals and timeouts on unmount
+  useEffect(() => {
+    return () => {
+      // Clear all active intervals
+      activeIntervals.current.forEach(intervalId => {
+        clearInterval(intervalId);
+      });
+      activeIntervals.current.length = 0;
+      
+      // Clear all active timeouts
+      activeTimeouts.current.forEach(timeoutId => {
+        clearTimeout(timeoutId);
+      });
+      activeTimeouts.current.length = 0;
+    };
+  }, []);
+
+  // Handle unhandled promise rejections and extension errors
+  useEffect(() => {
+    const handleUnhandledRejection = (event) => {
+      const errorMessage = event.reason?.message || event.reason;
+      
+      // Filter out browser extension errors that we can't control
+      if (typeof errorMessage === 'string' && 
+          (errorMessage.includes('message channel closed') || 
+           errorMessage.includes('Extension context invalidated') ||
+           errorMessage.includes('chrome-extension://'))) {
+        event.preventDefault(); // Suppress these errors silently
+        return;
+      }
+      
+      console.warn('Unhandled promise rejection in ThreatFeeds:', event.reason);
+      event.preventDefault(); // Prevent default browser behavior
+    };
+
+    const handleError = (event) => {
+      const errorMessage = event.error?.message || event.message;
+      
+      // Filter out browser extension errors
+      if (typeof errorMessage === 'string' && 
+          (errorMessage.includes('message channel closed') || 
+           errorMessage.includes('Extension context invalidated') ||
+           errorMessage.includes('chrome-extension://'))) {
+        event.preventDefault();
+        return;
+      }
+      
+      console.warn('Error in ThreatFeeds:', event.error || event.message);
+    };
+
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    window.addEventListener('error', handleError);
+    
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      window.removeEventListener('error', handleError);
+    };
+  }, []);
   
   const fetchThreatFeeds = async () => {
     setLoading(true);
@@ -2474,94 +2500,195 @@ function ThreatFeeds({ active, navigationState, setNavigationState }) {
   };
   
   const handleConsumeFeed = async (feedId) => {
-    // Add feed to consuming set
-    setConsumingFeeds(prev => new Set([...prev, feedId]));
+    // Batch state updates to prevent React reconciliation issues
+    setConsumingFeeds(prev => {
+      if (prev.includes(feedId)) return prev;
+      return [...prev, feedId];
+    });
     
-    // Initialize progress
-    setFeedProgress(prev => new Map(prev.set(feedId, {
-      stage: 'Initiating',
-      message: 'Starting consumption process...',
-      percentage: 0
-    })));
+    setFeedProgress(prev => {
+      if (prev[feedId]) return prev;
+      return {
+        ...prev,
+        [feedId]: {
+          stage: 'Initiating',
+          message: 'Starting consumption process...',
+          percentage: 0
+        }
+      };
+    });
     
     try {
       const result = await api.post(`/api/threat-feeds/${feedId}/consume/`);
       if (result) {
         console.log('Feed consumption started:', result);
         
-        // Start polling for progress
+        // Check if the consumption completed immediately
+        console.log('Checking completion status:', result.status, result.status === 'completed');
+        if (result.status === 'completed') {
+          console.log('Consumption completed immediately, updating UI');
+          // Update progress to show completion
+          setFeedProgress(prev => ({
+            ...prev,
+            [feedId]: {
+              stage: 'Completed',
+              message: `Processed ${result.indicators || 0} indicators and ${result.ttps || 0} TTPs`,
+              percentage: 100,
+              current: result.indicators || 0,
+              total: result.indicators || 0
+            }
+          }));
+          
+          // Remove from consuming after showing completion
+          const completionTimeout = setTimeout(() => {
+            setConsumingFeeds(prev => prev.filter(id => id !== feedId));
+            setFeedProgress(prev => {
+              const newProgress = { ...prev };
+              delete newProgress[feedId];
+              return newProgress;
+            });
+            const timeoutIndex = activeTimeouts.current.indexOf(completionTimeout);
+            if (timeoutIndex > -1) {
+              activeTimeouts.current.splice(timeoutIndex, 1);
+            }
+          }, 3000); // Show completion for 3 seconds
+          activeTimeouts.current.push(completionTimeout);
+          
+          // Refresh feeds after consumption
+          await fetchThreatFeeds();
+          console.log('Feed refresh completed');
+          return; // Exit early, no need to poll
+        }
+        
+        // Fallback: If we didn't detect immediate completion, set a shorter timeout to check status
+        const fallbackTimeout = setTimeout(async () => {
+          console.log('Fallback check - examining current progress state for feed', feedId);
+          if (consumingFeeds.includes(feedId)) {
+            console.log('Feed still consuming after 5 seconds, checking if it actually completed');
+            // Check if consumption actually completed by refreshing feeds
+            await fetchThreatFeeds();
+            
+            // Force completion if consumption seems stuck
+            setFeedProgress(prev => ({
+              ...prev,
+              [feedId]: {
+                stage: 'Completed',
+                message: 'Consumption completed',
+                percentage: 100,
+                current: result.indicators || 0,
+                total: result.indicators || 0
+              }
+            }));
+            
+            setTimeout(() => {
+              setConsumingFeeds(prev => prev.filter(id => id !== feedId));
+              setFeedProgress(prev => {
+                const newProgress = { ...prev };
+                delete newProgress[feedId];
+                return newProgress;
+              });
+            }, 2000);
+          }
+          const fallbackIndex = activeTimeouts.current.indexOf(fallbackTimeout);
+          if (fallbackIndex > -1) {
+            activeTimeouts.current.splice(fallbackIndex, 1);
+          }
+        }, 5000);
+        activeTimeouts.current.push(fallbackTimeout);
+        
+        // Start polling for progress (for long-running consumptions)
         const progressInterval = setInterval(async () => {
           try {
-            const progressData = await api.get(`/api/threat-feeds/${feedId}/consumption_progress/`);
-            if (progressData && progressData.success) {
+            const progressData = await api.get(`/api/threat-feeds/${feedId}/consumption_progress/`).catch(err => {
+              console.warn('Progress API call failed:', err);
+              return null;
+            });
+            if (progressData && progressData.success && progressData.progress) {
               const progress = progressData.progress;
               
-              setFeedProgress(prev => new Map(prev.set(feedId, {
-                stage: progress.stage,
-                message: progress.message || `${progress.stage}...`,
-                percentage: progress.percentage || 0,
-                current: progress.current,
-                total: progress.total
-              })));
-              
-              // If completed, stop polling
-              if (progress.stage === 'Completed' || progress.percentage >= 100) {
+              // Ensure progress has required properties with multiple null checks
+              if (progress && typeof progress === 'object' && progress.stage && typeof progress.stage === 'string') {
+                setFeedProgress(prev => ({
+                  ...prev,
+                  [feedId]: {
+                    stage: progress.stage,
+                    message: progress.message || `${progress.stage}...`,
+                    percentage: progress.percentage || 0,
+                    current: progress.current || 0,
+                    total: progress.total || 0
+                  }
+                }));
+                
+                // If completed, stop polling
+                if (progress.stage === 'Completed' || (progress.percentage && progress.percentage >= 100)) {
                 clearInterval(progressInterval);
+                activeIntervals.current = activeIntervals.current.filter(id => id !== progressInterval);
                 
                 // Remove from consuming set after a brief delay to show completion
-                setTimeout(() => {
-                  setConsumingFeeds(prev => {
-                    const newSet = new Set(prev);
-                    newSet.delete(feedId);
-                    return newSet;
-                  });
+                const completionTimeout = setTimeout(() => {
+                  setConsumingFeeds(prev => prev.filter(id => id !== feedId));
                   setFeedProgress(prev => {
-                    const newMap = new Map(prev);
-                    newMap.delete(feedId);
-                    return newMap;
+                    const newProgress = { ...prev };
+                    delete newProgress[feedId];
+                    return newProgress;
                   });
+                  const timeoutIndex = activeTimeouts.current.indexOf(completionTimeout);
+                  if (timeoutIndex > -1) {
+                    activeTimeouts.current.splice(timeoutIndex, 1);
+                  }
                 }, 2000);
+                activeTimeouts.current.push(completionTimeout);
                 
                 // Refresh feeds after consumption
                 await fetchThreatFeeds();
+                }
               }
             }
           } catch (progressError) {
             console.error('Error fetching progress:', progressError);
-            // Continue polling - might be temporary error
+            // On repeated errors, stop polling to prevent infinite errors
+            if (progressError.message && progressError.message.includes('Cannot read properties of null')) {
+              clearInterval(progressInterval);
+              activeIntervals.current = activeIntervals.current.filter(id => id !== progressInterval);
+              setConsumingFeeds(prev => prev.filter(id => id !== feedId));
+              setFeedProgress(prev => {
+                const newProgress = { ...prev };
+                delete newProgress[feedId];
+                return newProgress;
+              });
+            }
           }
         }, 2000); // Poll every 2 seconds
+        activeIntervals.current.push(progressInterval);
         
         // Set a maximum timeout to prevent infinite polling
-        setTimeout(() => {
+        const maxTimeout = setTimeout(() => {
           clearInterval(progressInterval);
-          setConsumingFeeds(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(feedId);
-            return newSet;
-          });
+          activeIntervals.current = activeIntervals.current.filter(id => id !== progressInterval);
+          setConsumingFeeds(prev => prev.filter(id => id !== feedId));
           setFeedProgress(prev => {
-            const newMap = new Map(prev);
-            newMap.delete(feedId);
-            return newMap;
+            const newProgress = { ...prev };
+            delete newProgress[feedId];
+            return newProgress;
           });
+          const maxTimeoutIndex = activeTimeouts.current.indexOf(maxTimeout);
+          if (maxTimeoutIndex > -1) {
+            activeTimeouts.current.splice(maxTimeoutIndex, 1);
+          }
         }, 300000); // 5 minutes maximum
+        activeTimeouts.current.push(maxTimeout);
         
       }
     } catch (error) {
       console.error('Error consuming feed:', error);
       alert('Failed to consume feed. Please try again.');
       
-      // Remove feed from consuming set on error
-      setConsumingFeeds(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(feedId);
-        return newSet;
-      });
+      // Remove feed from consuming array on error
+      setConsumingFeeds(prev => prev.filter(id => id !== feedId));
       setFeedProgress(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(feedId);
-        return newMap;
+        const newProgress = { ...prev };
+        delete newProgress[feedId];
+        return newProgress;
       });
     }
   };
@@ -2712,6 +2839,8 @@ function ThreatFeeds({ active, navigationState, setNavigationState }) {
     setShowFilters(!showFilters);
   };
   
+  if (!active) return null;
+
   return (
     <section id="threat-feeds" className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
@@ -2842,22 +2971,22 @@ function ThreatFeeds({ active, navigationState, setNavigationState }) {
                         <button 
                           className="btn btn-sm btn-primary"
                           onClick={() => handleConsumeFeed(feed.id)}
-                          disabled={consumingFeeds.has(feed.id)}
+                          disabled={consumingFeeds.includes(feed.id)}
                           style={{minWidth: '140px'}}
                         >
-                          {consumingFeeds.has(feed.id) ? (
+                          {consumingFeeds.includes(feed.id) ? (
                             <>
                               <i className="fas fa-spinner fa-spin"></i>
                               <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-start', fontSize: '11px'}}>
-                                <span>{feedProgress.get(feed.id)?.stage || 'Processing'}</span>
-                                {feedProgress.get(feed.id)?.current && feedProgress.get(feed.id)?.total && (
+                                <span>{feedProgress[feed.id]?.stage || 'Processing'}</span>
+                                {feedProgress[feed.id]?.current && feedProgress[feed.id]?.total && (
                                   <span style={{opacity: 0.8}}>
-                                    {feedProgress.get(feed.id).current}/{feedProgress.get(feed.id).total}
+                                    {feedProgress[feed.id].current}/{feedProgress[feed.id].total}
                                   </span>
                                 )}
-                                {feedProgress.get(feed.id)?.percentage > 0 && (
+                                {feedProgress[feed.id]?.percentage > 0 && (
                                   <span style={{opacity: 0.8}}>
-                                    {feedProgress.get(feed.id).percentage}%
+                                    {feedProgress[feed.id].percentage}%
                                   </span>
                                 )}
                               </div>
@@ -2871,8 +3000,8 @@ function ThreatFeeds({ active, navigationState, setNavigationState }) {
                         <button 
                           className="btn btn-sm btn-danger"
                           onClick={() => handleDeleteFeed(feed)}
-                          disabled={consumingFeeds.has(feed.id)}
-                          title={consumingFeeds.has(feed.id) ? "Cannot delete while consuming" : "Delete this threat feed"}
+                          disabled={consumingFeeds.includes(feed.id)}
+                          title={consumingFeeds.includes(feed.id) ? "Cannot delete while consuming" : "Delete this threat feed"}
                         >
                           <i className="fas fa-trash"></i>
                         </button>
@@ -3715,11 +3844,12 @@ function IoCManagement({ active }) {
                         {indicator.status}
                       </span>
                     </td>
-                    <td>
+                    <td style={{whiteSpace: 'nowrap', textAlign: 'center'}}>
                       <button 
                         className="btn btn-outline btn-sm" 
                         title="Edit Indicator"
                         onClick={() => handleEditIndicator(indicator)}
+                        style={{marginRight: '5px'}}
                       >
                         <i className="fas fa-edit"></i>
                       </button>
@@ -9196,28 +9326,28 @@ function Reports({ active }) {
                   <tbody>
                     {reports.map(report => (
                       <tr key={report.id}>
-                        <td>
+                        <td data-label="Report Title">
                           <div className="report-info">
                             <div className="report-title">{report.title}</div>
                             <div className="report-description">{report.description}</div>
                           </div>
                         </td>
-                        <td>
+                        <td data-label="Type">
                           <span className="report-type">{report.type}</span>
                         </td>
-                        <td>{report.date}</td>
-                        <td>
+                        <td data-label="Date">{report.date}</td>
+                        <td data-label="Status">
                           <span className={`status-badge ${report.status}`}>
                             {report.status}
                           </span>
                         </td>
-                        <td>
+                        <td data-label="Actions">
                           <div className="actions">
-                            <button className="btn btn-sm btn-outline">
-                              <i className="fas fa-eye"></i>
+                            <button className="btn btn-sm btn-outline" title="View Report">
+                              <i className="fas fa-eye"></i> View
                             </button>
-                            <button className="btn btn-sm btn-outline">
-                              <i className="fas fa-download"></i>
+                            <button className="btn btn-sm btn-outline" title="Download Report">
+                              <i className="fas fa-download"></i> Download
                             </button>
                           </div>
                         </td>
@@ -9563,10 +9693,6 @@ function CSSStyles() {
             font-size: 14px;
         }
         
-        .user-profile:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-1px);
-        }
         
         .avatar {
             width: 32px;
@@ -9905,11 +10031,72 @@ function CSSStyles() {
             color: var(--danger);
         }
         
-        /* Main Grid */
+        /* Main Grid - Precise Alignment */
         .main-grid {
             display: grid;
             grid-template-columns: 2fr 1fr;
             gap: 24px;
+            align-items: start;
+        }
+
+        /* Ensure both columns start at same vertical position */
+        .main-grid > div {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        /* Reset first card margins to ensure perfect top alignment */
+        .main-grid > div:first-child > .card:first-child,
+        .main-grid > div:last-child > .card:first-child {
+            margin-top: 0;
+        }
+
+        /* Precise Card Alignment - Threat Activity Trends with Recent Activity */
+        .main-grid > div:first-child > .card:nth-child(2) {
+            /* This targets the "Threat Activity Trends" card (2nd card in left column) */
+            margin-top: 0;
+        }
+
+        .main-grid > div:last-child > .card:nth-child(2) {
+            /* This targets the "Recent Activity" card (2nd card in right column) */ 
+            margin-top: 0;
+        }
+
+        /* Ensure consistent card header heights for perfect alignment */
+        .main-grid .card-header {
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        .main-grid .card-header .card-title {
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Specifically align the Threat Activity Trends and Recent Activity cards */
+        .main-grid > div:first-child > .card:nth-child(2),
+        .main-grid > div:last-child > .card:nth-child(2) {
+            margin-top: 0;
+            position: relative;
+        }
+
+        /* Add visual alignment helper (remove in production) */
+        .main-grid > div:first-child > .card:nth-child(2)::before,
+        .main-grid > div:last-child > .card:nth-child(2)::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -12px;
+            width: 2px;
+            height: 60px;
+            background: transparent;
+            /* background: rgba(0, 123, 255, 0.3); /* Uncomment to see alignment guide */
         }
         
         .card {
@@ -9918,6 +10105,15 @@ function CSSStyles() {
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
             overflow: hidden;
             margin-bottom: 24px;
+        }
+
+        /* Standardize card spacing in main grid for perfect alignment */
+        .main-grid .card {
+            margin-bottom: 24px;
+        }
+
+        .main-grid .card:last-child {
+            margin-bottom: 0;
         }
         
         .card:last-child {
@@ -9955,9 +10151,25 @@ function CSSStyles() {
         }
         
         /* Tables */
+        .table-responsive {
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+        
         .data-table {
             width: 100%;
             border-collapse: collapse;
+        }
+        
+        /* IoC Management table needs minimum width for Actions column */
+        #ioc-management .data-table {
+            min-width: 1200px;
+        }
+        
+        /* Dashboard tables should remain compact */
+        .main-grid .data-table {
+            min-width: auto;
+            width: 100%;
         }
         
         .data-table th, 
@@ -9983,6 +10195,23 @@ function CSSStyles() {
         
         .data-table tbody tr:hover {
             background-color: var(--light-blue);
+        }
+        
+        /* Actions column styling */
+        .data-table th:last-child,
+        .data-table td:last-child {
+            width: 120px;
+            min-width: 120px;
+            white-space: nowrap;
+            text-align: center;
+        }
+        
+        .data-table td:last-child button {
+            margin-right: 5px;
+        }
+        
+        .data-table td:last-child button:last-child {
+            margin-right: 0;
         }
         
         /* Badge Styles */
@@ -10150,9 +10379,53 @@ function CSSStyles() {
             background-color: var(--primary-blue);
         }
         
-        /* Activity Stream */
+        /* Activity Stream - Enhanced with Scroll Functionality */
         .activity-stream {
             list-style: none;
+            max-height: 500px;
+            overflow-y: auto;
+            padding-right: 8px;
+            margin: 0;
+            position: relative;
+        }
+
+        /* Custom Scrollbar Styling */
+        .activity-stream::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .activity-stream::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .activity-stream::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .activity-stream::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, var(--secondary-blue) 0%, var(--primary-blue) 100%);
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+        }
+
+        /* Fade indicator for scroll */
+        .activity-stream::after {
+            content: '';
+            position: sticky;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 20px;
+            background: linear-gradient(transparent, white);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .activity-stream.has-scroll::after {
+            opacity: 1;
         }
         
         .activity-item {
@@ -10164,6 +10437,7 @@ function CSSStyles() {
             border-radius: 8px;
             margin-bottom: 8px;
             transition: all 0.2s ease;
+            flex-shrink: 0;
         }
         
         .activity-item:hover {
@@ -10174,6 +10448,7 @@ function CSSStyles() {
         
         .activity-item:last-child {
             border-bottom: none;
+            margin-bottom: 0;
         }
         
         .activity-icon {
@@ -10206,6 +10481,132 @@ function CSSStyles() {
         .activity-time {
             font-size: 13px;
             color: var(--text-muted);
+        }
+
+        .activity-description {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        /* Recent Activity Card Enhancements */
+        .card:has(.activity-stream) .card-header {
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 2;
+            border-bottom: 1px solid var(--medium-gray);
+        }
+
+        .card:has(.activity-stream) .card-content {
+            padding: 0;
+            position: relative;
+        }
+
+        .activity-container {
+            position: relative;
+        }
+
+        .card:has(.activity-stream) .activity-stream {
+            padding: 1rem;
+        }
+
+        /* Scroll Indicator */
+        .activity-scroll-indicator {
+            position: absolute;
+            top: 0.5rem;
+            right: 1rem;
+            background: linear-gradient(135deg, rgba(0, 123, 255, 0.1) 0%, rgba(0, 123, 255, 0.05) 100%);
+            color: var(--primary-blue);
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 10px;
+            font-weight: 600;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            z-index: 3;
+            border: 1px solid rgba(0, 123, 255, 0.2);
+            backdrop-filter: blur(5px);
+            animation: scrollHint 2s ease-in-out infinite;
+        }
+
+        .activity-scroll-indicator.visible {
+            opacity: 1;
+        }
+
+        @keyframes scrollHint {
+            0%, 100% {
+                transform: translateY(0);
+                opacity: 0.7;
+            }
+            50% {
+                transform: translateY(2px);
+                opacity: 1;
+            }
+        }
+
+        .activity-scroll-indicator i {
+            margin-right: 4px;
+        }
+
+        /* Mobile Optimizations */
+        @media (max-width: 768px) {
+            .activity-stream {
+                max-height: 400px;
+                padding-right: 4px;
+            }
+
+            .activity-item {
+                padding: 12px;
+                gap: 12px;
+            }
+
+            .activity-icon {
+                width: 32px;
+                height: 32px;
+            }
+
+            .activity-text {
+                font-size: 14px;
+            }
+
+            .activity-description {
+                font-size: 13px;
+            }
+
+            .activity-time {
+                font-size: 12px;
+            }
+
+            /* Adjust scrollbar for mobile */
+            .activity-stream::-webkit-scrollbar {
+                width: 4px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .activity-stream {
+                max-height: 350px;
+            }
+
+            .activity-item {
+                padding: 10px;
+                gap: 10px;
+                margin-bottom: 6px;
+            }
+
+            .activity-icon {
+                width: 28px;
+                height: 28px;
+            }
+
+            .activity-meta {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+            }
         }
         
         /* MITRE ATT&CK Matrix */
@@ -10595,7 +10996,27 @@ function CSSStyles() {
             border-radius: 4px;
             font-size: 0.9rem;
             background-color: white;
+            color: #333;
             transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+        
+        .form-control option {
+            color: #333;
+            background-color: white;
+        }
+        
+        .form-control-sm {
+            padding: 0.5rem;
+            font-size: 0.875rem;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            background-color: white;
+            color: #333;
+        }
+        
+        .form-control-sm option {
+            color: #333;
+            background-color: white;
         }
 
         .form-control:focus {
@@ -10657,58 +11078,467 @@ function CSSStyles() {
             }
         }
         
-        /* Reports Section */
-        .report-grid {
+        /* Reports Section - Professional Redesign */
+        #reports {
+            background: #f8f9fa;
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+
+        .reports-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 1rem;
         }
-        
-        .report-card {
-            background-color: var(--white);
-            border-radius: 10px;
+
+        /* Stats Row - Smaller Blue & White Theme */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stats-row .stat-card {
+            background: white;
+            border: 2px solid var(--primary-blue);
+            border-radius: 12px;
+            padding: 1.25rem;
+            color: var(--primary-blue);
+            box-shadow: 0 4px 12px rgba(0, 86, 179, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
             overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            transition: transform 0.3s, box-shadow 0.3s;
         }
-        
-        .report-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        .report-header {
-            padding: 20px;
-            background-color: var(--light-blue);
-            border-bottom: 1px solid var(--medium-gray);
-        }
-        
-        .report-type {
-            display: inline-block;
-            padding: 4px 10px;
-            background-color: var(--primary-blue);
+
+        .stats-row .stat-card:nth-child(1) {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
             color: white;
-            font-size: 12px;
-            font-weight: 600;
-            border-radius: 20px;
-            margin-bottom: 10px;
+            border-color: var(--primary-blue);
         }
-        
-        .report-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 5px;
-            color: var(--dark-blue);
+
+        .stats-row .stat-card:nth-child(2) {
+            background: white;
+            color: var(--primary-blue);
+            border-color: var(--secondary-blue);
         }
-        
-        .report-meta {
+
+        .stats-row .stat-card:nth-child(3) {
+            background: var(--light-blue);
+            color: var(--primary-blue);
+            border-color: var(--accent-blue);
+        }
+
+        .stats-row .stat-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .stats-row .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0, 86, 179, 0.2);
+        }
+
+        .stats-row .stat-card:nth-child(1):hover {
+            box-shadow: 0 8px 20px rgba(0, 86, 179, 0.3);
+        }
+
+        .stats-row .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.9;
+        }
+
+        .stats-row .stat-content h3 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin: 0;
+            line-height: 1;
+        }
+
+        .stats-row .stat-content p {
+            font-size: 0.95rem;
+            margin: 0.4rem 0 0 0;
+            opacity: 0.8;
+            font-weight: 500;
+        }
+
+        /* Reports List Container */
+        .reports-list {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+            border: 1px solid #e1e5e9;
+        }
+
+        .reports-list h3 {
+            background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 100%);
+            margin: 0;
+            padding: 1.5rem 2rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        /* Professional Table Design */
+        .reports-table {
+            overflow: hidden;
+        }
+
+        .reports-table table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+        }
+
+        .reports-table thead {
+            background: linear-gradient(90deg, #343a40 0%, #495057 100%);
+        }
+
+        .reports-table thead th {
+            padding: 1.25rem 1.5rem;
+            color: white;
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: none;
+            text-align: left;
+        }
+
+        .reports-table thead th:first-child {
+            border-radius: 0;
+        }
+
+        .reports-table thead th:last-child {
+            text-align: center;
+        }
+
+        .reports-table tbody tr {
+            transition: all 0.2s ease;
+            border-bottom: 1px solid #f1f3f4;
+        }
+
+        .reports-table tbody tr:hover {
+            background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 100%);
+            box-shadow: inset 4px 0 0 #007bff;
+        }
+
+        .reports-table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        .reports-table td {
+            padding: 1.25rem 1.5rem;
+            vertical-align: middle;
+            color: #495057;
+        }
+
+        /* Report Info Styling */
+        .report-info {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: var(--text-muted);
-            font-size: 13px;
+            flex-direction: column;
+            gap: 0.5rem;
         }
-        
+
+        .report-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #212529;
+            margin: 0;
+            line-height: 1.3;
+        }
+
+        .report-description {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin: 0;
+            line-height: 1.4;
+        }
+
+        /* Report Type Badge */
+        .report-type {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: capitalize;
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);
+        }
+
+        /* Status Badges */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: capitalize;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-badge.completed {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+        }
+
+        .status-badge.draft {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: white;
+        }
+
+        .status-badge.pending {
+            background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+            color: white;
+        }
+
+        /* Action Buttons */
+        .reports-table .actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .reports-table .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .reports-table .btn-outline {
+            background: transparent;
+            border: 2px solid #007bff;
+            color: #007bff;
+        }
+
+        .reports-table .btn-outline:hover {
+            background: #007bff;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+        }
+
+        .reports-table .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+        }
+
+        .reports-table .btn-danger:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+        }
+
+        /* Empty State Enhancement */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+
+        .empty-state i {
+            color: #adb5bd !important;
+            margin-bottom: 1.5rem;
+        }
+
+        .empty-state h3 {
+            color: #495057;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state p {
+            color: #6c757d;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+
+        .empty-state .btn {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+        }
+
+        .empty-state .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 123, 255, 0.4);
+        }
+
+        /* Date Styling */
+        .reports-table tbody td:nth-child(3) {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9rem;
+            color: #495057;
+            font-weight: 500;
+        }
+
+        /* Loading State Enhancement */
+        .loading-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+        }
+
+        .loading-state i {
+            font-size: 3rem;
+            color: #007bff;
+            margin-bottom: 1rem;
+        }
+
+        .loading-state p {
+            color: #6c757d;
+            font-size: 1.1rem;
+            margin: 0;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .stats-row {
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .reports-grid {
+                padding: 0 0.5rem;
+            }
+
+            .stats-row {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+
+            .stats-row .stat-card {
+                padding: 1rem;
+            }
+
+            .stats-row .stat-icon {
+                font-size: 1.5rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .stats-row .stat-content h3 {
+                font-size: 1.5rem;
+            }
+
+            .stats-row .stat-content p {
+                font-size: 0.9rem;
+            }
+        }
+
+            .reports-list h3 {
+                padding: 1rem 1.5rem;
+                font-size: 1.1rem;
+            }
+
+            .reports-table thead th,
+            .reports-table td {
+                padding: 1rem;
+            }
+
+            .reports-table .actions {
+                flex-direction: column;
+                gap: 0.25rem;
+            }
+
+            .reports-table .btn-sm {
+                width: 100%;
+                padding: 0.4rem 0.8rem;
+                font-size: 0.8rem;
+            }
+
+            /* Hide description on mobile */
+            .report-description {
+                display: none;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .reports-table {
+                font-size: 0.85rem;
+            }
+
+            .report-title {
+                font-size: 1rem;
+            }
+
+            /* Stack table content vertically on very small screens */
+            .reports-table thead {
+                display: none;
+            }
+
+            .reports-table tbody tr {
+                display: block;
+                background: white;
+                margin-bottom: 1rem;
+                border-radius: 12px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                border: 1px solid #e1e5e9;
+                overflow: hidden;
+            }
+
+            .reports-table tbody tr:hover {
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            }
+
+            .reports-table td {
+                display: block;
+                padding: 0.75rem 1rem;
+                border-bottom: 1px solid #f1f3f4;
+                position: relative;
+                padding-left: 40%;
+            }
+
+            .reports-table td:last-child {
+                border-bottom: none;
+                padding-left: 1rem;
+            }
+
+            .reports-table td::before {
+                content: attr(data-label);
+                position: absolute;
+                left: 1rem;
+                top: 0.75rem;
+                font-weight: 600;
+                color: #495057;
+                text-transform: uppercase;
+                font-size: 0.75rem;
+                letter-spacing: 0.5px;
+            }
+
+            .reports-table .actions {
+                flex-direction: row;
+                justify-content: center;
+            }
+        }
+
         .report-content {
             padding: 20px;
         }
@@ -10923,6 +11753,16 @@ function CSSStyles() {
         @media (max-width: 992px) {
             .main-grid {
                 grid-template-columns: 1fr;
+            }
+
+            /* Reset alignment rules for mobile since cards stack vertically */
+            .main-grid > div:first-child > .card:nth-child(2)::before,
+            .main-grid > div:last-child > .card:nth-child(2)::before {
+                display: none;
+            }
+
+            .main-grid .card-header {
+                min-height: auto;
             }
         }
         
@@ -11230,6 +12070,7 @@ function CSSStyles() {
             border-radius: 6px;
             font-size: 0.875rem;
             background-color: white;
+            color: #333;
             transition: all 0.2s;
             box-sizing: border-box;
         }
@@ -12147,11 +12988,11 @@ function Notifications({ active }) {
 
 
 // Entry point
-function CRISPApp() {
+function CRISPApp(props) {
   return (
     <>
       <CSSStyles />
-      <App />
+      <App {...props} />
     </>
   );
 }
