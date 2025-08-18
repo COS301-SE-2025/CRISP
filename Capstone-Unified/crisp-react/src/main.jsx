@@ -32,12 +32,6 @@ function AuthRoutes() {
           const userObj = JSON.parse(userStr);
           setUserData(userObj);
           setIsAuthenticated(true);
-          console.log("Session validated for user:", userObj.username);
-          console.log("User admin fields on session restore:", {
-            is_admin: userObj.is_admin,
-            is_staff: userObj.is_staff,
-            role: userObj.role
-          });
         }
       } catch (error) {
         console.error("Error validating session:", error);
@@ -54,15 +48,6 @@ function AuthRoutes() {
 
   // Callback for when login is successful
   const handleLoginSuccess = (authData) => {
-    console.log("Login successful for user:", authData.user.username);
-    console.log("Full auth data received:", authData);
-    console.log("Token received:", authData.tokens?.access ? authData.tokens.access.substring(0, 50) + '...' : 'No token');
-    console.log("User admin status:", {
-      is_admin: authData.user.is_admin,
-      is_staff: authData.user.is_staff,
-      role: authData.user.role
-    });
-
     try {
       // Store authentication data
       localStorage.setItem("crisp_auth_token", authData.tokens.access);
@@ -83,8 +68,6 @@ function AuthRoutes() {
 
   // Callback for when registration is successful
   const handleRegisterSuccess = (authData) => {
-    console.log("Registration successful for user:", authData.user.username);
-
     try {
       // Store authentication data
       localStorage.setItem("crisp_auth_token", authData.tokens.access);
@@ -102,7 +85,6 @@ function AuthRoutes() {
 
   // Function to handle logout
   const handleLogout = () => {
-    console.log("Logging out user");
     localStorage.removeItem("crisp_auth_token");
     localStorage.removeItem("crisp_user");
     setIsAuthenticated(false);
@@ -163,22 +145,6 @@ function AuthRoutes() {
     (userData.role && userData.role.toLowerCase().includes('admin'))
   );
 
-  // Enhanced logging for admin detection debugging
-  console.log("Auth state:", { 
-    isAuthenticated, 
-    isAdmin, 
-    userData,
-    adminChecks: userData ? {
-      is_admin: userData.is_admin,
-      is_staff: userData.is_staff,
-      role: userData.role,
-      roleLower: userData.role?.toLowerCase(),
-      adminRoleMatch: userData.role && [
-        'admin', 'administrator', 'bluevisionadmin', 'superuser', 'super_user'
-      ].includes(userData.role.toLowerCase()),
-      legacyAdminMatch: userData.role && userData.role.toLowerCase().includes('admin')
-    } : null
-  });
 
   return (
     <Routes>

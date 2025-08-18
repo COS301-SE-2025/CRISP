@@ -157,10 +157,21 @@ const api = {
 function App({ user, onLogout, isAdmin }) {
   // State to manage the active page and navigation parameters
   const [activePage, setActivePage] = useState('dashboard');
+  const [isLoading, setIsLoading] = useState(true);
   const [navigationState, setNavigationState] = useState({
     triggerModal: null,
     modalParams: {}
   });
+
+  // Initialize app
+  useEffect(() => {
+    // Small delay to prevent flash and ensure everything is ready
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   // Function to switch between pages with optional modal triggers
   const showPage = (pageId, modalTrigger = null, modalParams = {}) => {
@@ -221,20 +232,46 @@ function App({ user, onLogout, isAdmin }) {
   }, []);
 
 
-  // Show loading screen during authentication
-  if (isAuthenticating) {
+  // Show loading screen during app initialization
+  if (isLoading) {
     return (
-      <div className="App">
-        <div className="loading-screen">
-          <div className="loading-spinner"></div>
-          <h2>Loading CRISP System...</h2>
-          <p>Authenticating...</p>
-        </div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          flexDirection: "column",
+          gap: "20px",
+          fontFamily: "Segoe UI, Tahoma, Geneva, Verdana, sans-serif",
+          backgroundColor: "#0a0b0d",
+          color: "#ffffff",
+        }}
+      >
+        <div
+          style={{
+            width: "40px",
+            height: "40px",
+            border: "4px solid #333",
+            borderTop: "4px solid #0056b3",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite",
+          }}
+        ></div>
+        <p style={{ color: "#718096", fontSize: "16px" }}>
+          Loading CRISP System...
+        </p>
+        <style>
+          {`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}
+        </style>
       </div>
     );
   }
-
-  // Show login screen when not authenticated
 
   return (
     <div className="App">
@@ -248,7 +285,7 @@ function App({ user, onLogout, isAdmin }) {
       <main className="main-content">
         <div className="container">
           {/* Dashboard */}
-          <Dashboard active={activePage === 'dashboard'} showPage={showPage} isAuthenticated={isAuthenticated} isAuthenticating={isAuthenticating} />
+          <Dashboard active={activePage === 'dashboard'} showPage={showPage} />
 
           {/* Threat Feeds */}
           <ThreatFeeds active={activePage === 'threat-feeds'} navigationState={navigationState} setNavigationState={setNavigationState} />
@@ -618,7 +655,7 @@ function MainNav({ activePage, showPage, user, onLogout, isAdmin }) {
 }
 
 // Dashboard Component
-function Dashboard({ active, showPage, isAuthenticated, isAuthenticating }) {
+function Dashboard({ active, showPage }) {
   if (!active) return null;
   
   // State for dashboard data
@@ -677,32 +714,32 @@ function Dashboard({ active, showPage, isAuthenticated, isAuthenticating }) {
   
   // Fetch dashboard data from backend
   useEffect(() => {
-    if (active && !isAuthenticating && isAuthenticated) {
+    if (active) {
       fetchDashboardData();
       fetchRecentIoCs();
       fetchChartData();
       fetchSystemHealth();
       fetchRecentActivities();
     }
-  }, [active, isAuthenticated, isAuthenticating]);
+  }, [active]);
 
   // Refetch chart data when filters change
   useEffect(() => {
-    if (active && !isAuthenticating && isAuthenticated) {
+    if (active) {
       fetchChartData();
     }
-  }, [chartFilters, active, isAuthenticated, isAuthenticating]);
+  }, [chartFilters, active]);
 
   // Auto-refresh system health every 30 seconds
   useEffect(() => {
-    if (!active || isAuthenticating || !isAuthenticated) return;
+    if (!active) return;
     
     const interval = setInterval(() => {
       fetchSystemHealth();
     }, 30000);
     
     return () => clearInterval(interval);
-  }, [active, isAuthenticated, isAuthenticating]);
+  }, [active]);
   
   const fetchDashboardData = async () => {
     const feedsData = await api.get('/api/threat-feeds/');
