@@ -756,6 +756,10 @@ Our frontend implements the MVC pattern using React to separate presentation con
 
 ![Deployment Diagram](Deployment%20Diagram/DeploymentDiagram_v1.png)
 
+## 10. Architecture Diagram
+
+![View Architecture Diagram](Architecture%20Diagram/ArchitectureDiagram_v1.png)
+
 ---
 
 ## 9. Appendices
@@ -781,4 +785,5 @@ Our frontend implements the MVC pattern using React to separate presentation con
 | 1.0 | May 24, 2025 | Initial version | Dreas Vermaak |
 | 1.1 | May 26, 2025 | Restructured to match specification requirements | Armand van der Colf|
 | 1.2 | August 13, 2025 | Service Contracts Updated | Dreas Vermaak |
+| 1.3 | August 18, 2025 | Added Updated diagrams with descriptions | Dreas Vermaak & Liam van Kasterop |
 ---
