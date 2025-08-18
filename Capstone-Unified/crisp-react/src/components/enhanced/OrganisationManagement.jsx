@@ -7,7 +7,6 @@ import Pagination from './Pagination.jsx';
 import * as api from '../../api.js';
 
 const OrganisationManagement = ({ active = true, initialSection = null }) => {
-  console.log('OrganisationManagement rendered with props:', { active, initialSection });
   const [organizations, setOrganizations] = useState([]); // This will be filtered/paginated organizations
   const [organizationTypes, setOrganizationTypes] = useState(['educational', 'government', 'private']);
   const [loading, setLoading] = useState(true);

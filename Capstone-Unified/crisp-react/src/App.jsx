@@ -90,7 +90,6 @@ const api = {
       
       // Don't make API calls if we don't have a token (except for auth endpoints)
       if (!token && !endpoint.includes('/auth/')) {
-        console.warn(`Skipping API call to ${endpoint} - no authentication token`);
         return null;
       }
       
@@ -100,8 +99,10 @@ const api = {
       
       if (!response.ok) {
         if (response.status === 401) {
-          console.warn(`Authentication failed for ${endpoint} - token may be expired`);
-          // Could trigger re-authentication here if needed
+          // Token expired or invalid - redirect to login with proper base path
+          localStorage.removeItem('crisp_auth_token');
+          localStorage.removeItem('crisp_user');
+          window.location.href = '/static/react/login';
         }
         throw new Error(`HTTP ${response.status}`);
       }
@@ -120,7 +121,10 @@ const api = {
       
       return data;
     } catch (error) {
-      console.error(`API Error: ${endpoint}`, error);
+      // Only log non-auth errors to reduce console spam
+      if (!error.message.includes('401')) {
+        console.error(`API Error: ${endpoint}`, error);
+      }
       return null;
     }
   },
@@ -309,7 +313,7 @@ function App({ user, onLogout, isAdmin }) {
       <main className="main-content">
         <div className="container">
           {/* Dashboard */}
-          <Dashboard active={activePage === 'dashboard'} showPage={showPage} />
+          <Dashboard active={activePage === 'dashboard'} showPage={showPage} user={user} />
 
           {/* Threat Feeds */}
           <ThreatFeeds active={activePage === 'threat-feeds'} navigationState={navigationState} setNavigationState={setNavigationState} />
@@ -321,7 +325,7 @@ function App({ user, onLogout, isAdmin }) {
           <TTPAnalysis active={activePage === 'ttp-analysis'} />
 
           {/* Organisations */}
-          <Institutions active={activePage === 'institutions'} api={api} showPage={showPage} />
+          <Institutions active={activePage === 'institutions'} api={api} showPage={showPage} user={user} />
 
           
 
@@ -679,7 +683,7 @@ function MainNav({ activePage, showPage, user, onLogout, isAdmin }) {
 }
 
 // Dashboard Component
-function Dashboard({ active, showPage }) {
+function Dashboard({ active, showPage, user }) {
   if (!active) return null;
   
   // State for dashboard data
@@ -736,35 +740,46 @@ function Dashboard({ active, showPage }) {
   const [dashboardExportFormat, setDashboardExportFormat] = useState('json');
   const [dashboardExporting, setDashboardExporting] = useState(false);
   
-  // Fetch dashboard data from backend
+  // Fetch dashboard data from backend - only if user is authenticated
   useEffect(() => {
     if (active) {
-      // Batch all dashboard data fetching to reduce API calls
-      Promise.all([
-        fetchDashboardData(),
-        fetchRecentIoCs(),
-        fetchChartData(),
-        fetchSystemHealth(),
-        fetchRecentActivities()
-      ]).catch(error => {
-        console.error('Dashboard data fetch error:', error);
-      });
+      // Check if user has valid token before making API calls
+      const token = localStorage.getItem('crisp_auth_token');
+      const userStr = localStorage.getItem('crisp_user');
+      
+      if (token && userStr) {
+        // Fetch dashboard data individually to handle failures gracefully
+        fetchDashboardData().catch(error => console.error('Dashboard data error:', error));
+        fetchRecentIoCs().catch(error => console.error('Recent IoCs error:', error));
+        fetchChartData().catch(error => console.error('Chart data error:', error));
+        fetchSystemHealth().catch(error => console.error('System health error:', error));
+        fetchRecentActivities().catch(error => console.error('Recent activities error:', error));
+      }
     }
   }, [active]);
 
-  // Refetch chart data when filters change
+  // Refetch chart data when filters change - only if user is authenticated
   useEffect(() => {
     if (active) {
-      fetchChartData();
+      const token = localStorage.getItem('crisp_auth_token');
+      if (token) {
+        fetchChartData();
+      }
     }
   }, [chartFilters, active]);
 
-  // Auto-refresh system health every 5 minutes (reduced from 30 seconds for production)
+  // Auto-refresh system health every 5 minutes - only if user is authenticated
   useEffect(() => {
     if (!active) return;
     
+    const token = localStorage.getItem('crisp_auth_token');
+    if (!token) return;
+    
     const interval = setInterval(() => {
-      fetchSystemHealth();
+      const currentToken = localStorage.getItem('crisp_auth_token');
+      if (currentToken) {
+        fetchSystemHealth();
+      }
     }, 5 * 60 * 1000); // 5 minutes instead of 30 seconds
     
     return () => clearInterval(interval);
@@ -798,7 +813,7 @@ function Dashboard({ active, showPage }) {
   };
 
   // Fetch recent IoCs for dashboard table
-  const fetchRecentIoCs = async () => {
+  async function fetchRecentIoCs() {
     setIocLoading(true);
     setIocError(null);
     
@@ -821,10 +836,10 @@ function Dashboard({ active, showPage }) {
     } finally {
       setIocLoading(false);
     }
-  };
+  }
 
   // Fetch chart data from API
-  const fetchChartData = async () => {
+  async function fetchChartData() {
     setChartLoading(true);
     setChartError(null);
     
@@ -860,10 +875,10 @@ function Dashboard({ active, showPage }) {
     } finally {
       setChartLoading(false);
     }
-  };
+  }
 
   // Fetch system health data from API
-  const fetchSystemHealth = async () => {
+  async function fetchSystemHealth() {
     setHealthLoading(true);
     setHealthError(null);
     
@@ -895,7 +910,7 @@ function Dashboard({ active, showPage }) {
     } finally {
       setHealthLoading(false);
     }
-  };
+  }
 
   // Transform IoC data for dashboard display
   const transformIoCForDashboard = (indicator) => {
@@ -972,7 +987,7 @@ function Dashboard({ active, showPage }) {
   };
 
   // Fetch recent activities
-  const fetchRecentActivities = async () => {
+  async function fetchRecentActivities() {
     setActivitiesLoading(true);
     setActivitiesError(null);
     
@@ -989,7 +1004,7 @@ function Dashboard({ active, showPage }) {
     } finally {
       setActivitiesLoading(false);
     }
-  };
+  }
 
   // Utility functions for system health display
   const getStatusColor = (status) => {
@@ -9538,8 +9553,8 @@ function CSSStyles() {
             display: flex;
             align-items: center;
             gap: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
+            background: var(--primary-blue);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 25px;
             padding: 8px 15px;
             color: white;
@@ -9575,12 +9590,12 @@ function CSSStyles() {
         .user-name {
             font-weight: 600;
             font-size: 14px;
+            color: white;
         }
         
         .user-role {
             font-size: 12px;
-            color: var(--primary-blue);
-            opacity: 0.8;
+            color: rgba(255, 255, 255, 0.8);
         }
         
         .user-profile i {

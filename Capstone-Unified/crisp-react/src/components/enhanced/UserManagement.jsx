@@ -8,7 +8,6 @@ import Pagination from './Pagination.jsx';
 import * as api from '../../api.js';
 
 const UserManagement = ({ active = true, initialSection = null }) => {
-  console.log('UserManagement rendered with props:', { active, initialSection });
   const [users, setUsers] = useState([]); // This will be filtered/paginated users
   const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(true);

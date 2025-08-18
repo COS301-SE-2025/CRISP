@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 
-const Institutions = ({ active, api, showPage }) => {
+const Institutions = ({ active, api, showPage, user }) => {
   const [organizations, setOrganizations] = useState([]);
   const [trustRelationships, setTrustRelationships] = useState([]);
   const [trustGroups, setTrustGroups] = useState([]);
@@ -18,8 +18,13 @@ const Institutions = ({ active, api, showPage }) => {
   const trustLevelChartRef = useRef(null);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (active && user) {
+      const token = localStorage.getItem('crisp_auth_token');
+      if (token) {
+        fetchData();
+      }
+    }
+  }, [active, user]);
 
   useEffect(() => {
     if (organizations.length > 0 && !loading) {

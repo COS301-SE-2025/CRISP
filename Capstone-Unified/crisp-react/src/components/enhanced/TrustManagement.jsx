@@ -5,10 +5,6 @@ import ConfirmationModal from './ConfirmationModal.jsx';
 import Pagination from './Pagination.jsx';
 
 function TrustManagement({ active, initialTab = null }) {
-  // Reduced logging to minimize console noise
-  if (process.env.NODE_ENV === 'development') {
-    console.log('TrustManagement rendered with props:', { active, initialTab });
-  }
   
   // State management
   const [trustData, setTrustData] = useState({
