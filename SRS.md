@@ -50,7 +50,7 @@ The platform will facilitate both consumption of external threat feeds and publi
 - **Armand van der Colf** - u22574982 (Full Stack Developer & Security)
 - **Jadyn Stoltz** - u22609653 (Team Lead & AI/ML Systems Engineer)
 - **Diaan Botes** - u22598538 (Full Stack Developer & Data Scientist)
-- **Liam van Kasterop** - u22539761 (Backend Developer)
+- **Liam van Kasterop** - u22539761 (Full Stack Developer)
 - **Dreas Vermaak** - u22497618 (Backend Developer)
 
 ---
