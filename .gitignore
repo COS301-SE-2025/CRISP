@@ -26,6 +26,7 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 media
+.claude/
 
 # Node
 node_modules/

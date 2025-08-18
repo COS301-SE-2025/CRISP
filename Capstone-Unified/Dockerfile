@@ -1,19 +1,22 @@
-# Multi-stage build: React frontend + Django backend
+# Frontend development stage
+FROM node:18-slim AS frontend-dev
+WORKDIR /app
+COPY crisp-react/package*.json ./
+RUN npm install
+COPY crisp-react/ ./
+EXPOSE 5173
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+# Frontend production build stage
 FROM node:18-slim AS frontend-builder
-
 WORKDIR /app/frontend
-
-# Copy React package files
 COPY crisp-react/package*.json ./
 RUN rm -rf node_modules package-lock.json && npm install
-
-# Copy React source and build
 COPY crisp-react/ ./
 RUN npm run build
 
 # Django backend stage
-FROM python:3.11
-
+FROM python:3.11 AS backend
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV DJANGO_SETTINGS_MODULE=crisp_unified.settings
@@ -29,10 +32,6 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Create django user
-RUN addgroup --system --gid 1001 django && \
-    adduser --system --uid 1001 --ingroup django django
-
 # Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
@@ -41,19 +40,14 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy Django application
 COPY . .
 
-# Copy built React frontend to Django static files
-COPY --from=frontend-builder /app/frontend/dist /app/static/react
-
-# Create necessary directories and set permissions
+# Create necessary directories
 RUN mkdir -p /app/logs /app/media /app/staticfiles && \
-    touch /app/crisp_unified.log && \
-    chown -R django:django /app
-
-# Collect static files (including React build)
-RUN python manage.py collectstatic --noinput
-
-USER django
+    touch /app/crisp_unified.log
 
 EXPOSE 8000
 
+# Production backend with static files
+FROM backend AS production
+COPY --from=frontend-builder /app/frontend/dist /app/static/react
+RUN python manage.py collectstatic --noinput
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120", "crisp_unified.wsgi:application"]

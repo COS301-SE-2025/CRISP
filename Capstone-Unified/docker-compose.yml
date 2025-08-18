@@ -1,10 +1,12 @@
 services:
+  # PostgreSQL Database
   db:
     image: postgres:15-alpine
     environment:
       POSTGRES_DB: crisp
       POSTGRES_USER: crisp_user
       POSTGRES_PASSWORD: crisp_password
+      POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -18,35 +20,76 @@ services:
     networks:
       - crisp-network
 
-  web:
-    build: .
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - crisp-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Django Backend
+  backend:
+    build:
+      context: .
+      target: backend
     ports:
       - "8000:8000"
     environment:
-      - DEBUG=False
+      - DEBUG=True
       - SECRET_KEY=your-secret-key-change-in-production
       - DB_NAME=crisp
       - DB_USER=crisp_user
       - DB_PASSWORD=crisp_password
       - DB_HOST=db
       - DB_PORT=5432
-      - ALLOWED_HOSTS=localhost,127.0.0.1,web
+      - REDIS_URL=redis://redis:6379/0
+      - ALLOWED_HOSTS=localhost,127.0.0.1,backend,frontend
     volumes:
       - ./logs:/app/logs
       - ./media:/app/media
+      - .:/app
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - crisp-network
     command: >
       sh -c "until pg_isready -h db -p 5432; do echo 'Waiting for db...'; sleep 2; done &&
              python manage.py migrate &&
+             python manage.py setup_base_users &&
              python manage.py collectstatic --noinput &&
-             gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 120 crisp_unified.wsgi:application"
+             python manage.py runserver 0.0.0.0:8000"
+
+  # Vite Frontend
+  frontend:
+    build:
+      context: .
+      target: frontend-dev
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    volumes:
+      - ./crisp-react:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - crisp-network
 
 volumes:
   postgres_data:
+  redis_data:
 
 networks:
   crisp-network:
