@@ -752,6 +752,10 @@ Our frontend implements the MVC pattern using React to separate presentation con
 - **Grafana**: Metrics visualization and dashboards
 - **Structured Logging**: JSON-based logging for better analysis and monitoring
 
+## 9. Deployment Model
+
+![Deployment Diagram](Deployment%20Diagram/DeploymentDiagram_v1.png)
+
 ---
 
 ## 9. Appendices
