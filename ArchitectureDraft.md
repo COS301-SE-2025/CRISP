@@ -1,10 +1,10 @@
-# Architectural Structural Design & Requirements
+## 10. Architectural Structural Design & Requirements
 
-## 10. System Architecture Overview
+### 10. System Architecture Overview
 
 The threat intelligence platform employs a **hybrid architectural approach** combining **N-tier layered architecture** with **Service-Oriented Architecture (SOA)** principles and **Model-View-Controller (MVC)** patterns.
 
-### 10.1 Architectural Layers
+#### 10.1 Architectural Layers
 
 The system is structured across four distinct layers:
 
@@ -16,7 +16,7 @@ The system is structured across four distinct layers:
 
 **Data Layer** centralizes persistent storage using institution, threat feed, indicator, TTP, and trust group models, ensuring data integrity and consistency.
 
-### 10.2 Architectural Justification
+#### 10.2 Architectural Justification
 
 The **N-tier architecture** provides clear separation of concerns, enabling independent scaling and maintenance of each layer. **SOA implementation** allows individual services to be developed, deployed, and scaled independently, crucial for a threat intelligence platform requiring high availability and performance.
 
