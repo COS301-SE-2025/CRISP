@@ -59,6 +59,10 @@ class ChartErrorBoundary extends React.Component {
 // API Configuration
 const API_BASE_URL = 'http://localhost:8000';
 
+// Simple cache for API responses to prevent duplicate requests
+const apiCache = new Map();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 // API Helper Functions with Authentication
 const getAuthHeaders = () => {
   const token = localStorage.getItem('crisp_auth_token');
@@ -74,6 +78,13 @@ const getAuthHeaders = () => {
 const api = {
   get: async (endpoint) => {
     try {
+      // Check cache first
+      const cacheKey = endpoint;
+      const cached = apiCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        return cached.data;
+      }
+
       const headers = getAuthHeaders();
       const token = localStorage.getItem('crisp_auth_token');
       
@@ -94,7 +105,20 @@ const api = {
         }
         throw new Error(`HTTP ${response.status}`);
       }
-      return await response.json();
+      
+      const data = await response.json();
+      
+      // Cache the response for dashboard endpoints only
+      if (endpoint.includes('/api/threat-feeds/') || 
+          endpoint.includes('/api/system-health/') ||
+          endpoint.includes('/api/organizations/')) {
+        apiCache.set(cacheKey, {
+          data: data,
+          timestamp: Date.now()
+        });
+      }
+      
+      return data;
     } catch (error) {
       console.error(`API Error: ${endpoint}`, error);
       return null;
@@ -715,11 +739,16 @@ function Dashboard({ active, showPage }) {
   // Fetch dashboard data from backend
   useEffect(() => {
     if (active) {
-      fetchDashboardData();
-      fetchRecentIoCs();
-      fetchChartData();
-      fetchSystemHealth();
-      fetchRecentActivities();
+      // Batch all dashboard data fetching to reduce API calls
+      Promise.all([
+        fetchDashboardData(),
+        fetchRecentIoCs(),
+        fetchChartData(),
+        fetchSystemHealth(),
+        fetchRecentActivities()
+      ]).catch(error => {
+        console.error('Dashboard data fetch error:', error);
+      });
     }
   }, [active]);
 
@@ -730,13 +759,13 @@ function Dashboard({ active, showPage }) {
     }
   }, [chartFilters, active]);
 
-  // Auto-refresh system health every 30 seconds
+  // Auto-refresh system health every 5 minutes (reduced from 30 seconds for production)
   useEffect(() => {
     if (!active) return;
     
     const interval = setInterval(() => {
       fetchSystemHealth();
-    }, 30000);
+    }, 5 * 60 * 1000); // 5 minutes instead of 30 seconds
     
     return () => clearInterval(interval);
   }, [active]);
@@ -747,14 +776,15 @@ function Dashboard({ active, showPage }) {
       let totalIndicators = 0;
       let totalTTPs = 0;
       
-      // Get indicator and TTP counts from each feed
-      if (feedsData.results) {
-        for (const feed of feedsData.results) {
-          const feedStatus = await api.get(`/api/threat-feeds/${feed.id}/status/`);
-          if (feedStatus) {
-            totalIndicators += feedStatus.indicator_count || 0;
-            totalTTPs += feedStatus.ttp_count || 0;
-          }
+      // Limit to first 3 feeds to reduce API calls - for performance in production
+      const limitedFeeds = (feedsData.results || []).slice(0, 3);
+      
+      // Get indicator and TTP counts from limited feeds only
+      for (const feed of limitedFeeds) {
+        const feedStatus = await api.get(`/api/threat-feeds/${feed.id}/status/`);
+        if (feedStatus) {
+          totalIndicators += feedStatus.indicator_count || 0;
+          totalTTPs += feedStatus.ttp_count || 0;
         }
       }
       

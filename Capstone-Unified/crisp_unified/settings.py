@@ -204,6 +204,8 @@ SIMPLE_JWT = {
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5173').split(',')
 CORS_ALLOW_CREDENTIALS = True
+# Cache preflight requests for 1 hour to reduce OPTIONS requests
+CORS_PREFLIGHT_MAX_AGE = 3600
 
 # Email Configuration
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')

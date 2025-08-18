@@ -31,7 +31,16 @@ class AuditMiddleware(MiddlewareMixin):
             '/admin/jsi18n/',
             '/static/',
             '/media/',
-            '/favicon.ico'
+            '/favicon.ico',
+            # Exclude high-frequency dashboard endpoints to prevent DB flooding
+            '/api/threat-feeds/',
+            '/api/indicators/',
+            '/api/system-health/',
+            '/api/threat-activity-chart/',
+            '/api/recent-activities/',
+            '/api/organizations/',
+            '/api/trust/bilateral/',
+            '/api/trust/community/'
         }
         
         # Sensitive fields that should be redacted in logs
