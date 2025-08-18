@@ -571,7 +571,7 @@ interface AlertService {
 - **SEC1.3** API authentication via JWT tokens with 24-hour expiration and refresh capability
 - **SEC1.4** Role-based access control with principle of least privilege enforcement
 - **SEC1.5** All data in transit encrypted using TLS 1.2 or higher
-- **SEC1.6** Sensitive data at rest encrypted using SHA-256 encryption
+- **SEC1.6** Sensitive data at rest encrypted using AES-256 encryption
 - **SEC1.7** Data anonymization effectiveness target of 95% (analytical value preserved)
 - **SEC1.8** Comprehensive audit logs retained for 12 months with tamper-proof storage
 - **SEC1.9** Input validation and sanitization for all user inputs to prevent injection attacks
