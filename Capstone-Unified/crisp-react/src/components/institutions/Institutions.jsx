@@ -7,7 +7,6 @@ const Institutions = ({ active, api, showPage, user }) => {
   const [trustGroups, setTrustGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState(null);
   const [activeView, setActiveView] = useState('overview');
   
@@ -497,9 +496,6 @@ const Institutions = ({ active, api, showPage, user }) => {
           </button>
           <button className="btn btn-outline" onClick={() => setActiveView('trust-groups')}>
             <i className="fas fa-users"></i> Trust Groups
-          </button>
-          <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
-            <i className="fas fa-plus"></i> Add Organization
           </button>
         </div>
       </div>
@@ -1133,33 +1129,6 @@ const Institutions = ({ active, api, showPage, user }) => {
         </div>
       )}
 
-      {showCreateModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
-              <h3>Create New Institution</h3>
-              <button 
-                className="close-btn"
-                onClick={() => setShowCreateModal(false)}
-              >
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
-            <div className="modal-body">
-              <p>Institution creation form will be implemented here.</p>
-              <p>This requires backend integration for organization management.</p>
-            </div>
-            <div className="modal-footer">
-              <button 
-                className="btn btn-secondary"
-                onClick={() => setShowCreateModal(false)}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {selectedOrg && (
         <div className="modal-overlay">
