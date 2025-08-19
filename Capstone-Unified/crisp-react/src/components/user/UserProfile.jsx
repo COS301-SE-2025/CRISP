@@ -124,144 +124,141 @@ const UserProfile = ({ active }) => {
 
       <div className="profile-card">
         <div className="profile-header">
-          <div className="profile-avatar">
-            <i className="fas fa-user"></i>
+          <div className="profile-info">
+            <div className="profile-avatar">
+              <i className="fas fa-user"></i>
+            </div>
+            <div className="profile-title">
+              <h3>{editMode ? `${editData.first_name} ${editData.last_name}` : `${profile.first_name} ${profile.last_name}`}</h3>
+              <p className="profile-role">{profile.role}</p>
+            </div>
           </div>
-          <div className="profile-title">
-            <h3>{profile.first_name} {profile.last_name}</h3>
-            <p className="profile-role">{profile.role}</p>
-          </div>
+          {!editMode && (
+            <div className="header-actions">
+              <button 
+                className="btn btn-outline"
+                onClick={() => setEditMode(true)}
+              >
+                <i className="fas fa-edit"></i>
+                Edit Profile
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="profile-details">
-          {editMode ? (
-            <form className="edit-form">
-              <div className="form-row">
-                <div className="form-group">
-                  <label>First Name</label>
-                  <input
-                    type="text"
-                    value={editData.first_name}
-                    onChange={(e) => setEditData({...editData, first_name: e.target.value})}
-                    className="form-input"
-                    placeholder="Enter your first name"
-                  />
+          <div className="profile-content">
+            <div className="info-section">
+              <h4>Personal Information</h4>
+              <div className="info-grid">
+                <div className="info-item">
+                  <label>Username</label>
+                  <span>{profile.username}</span>
                 </div>
                 
-                <div className="form-group">
-                  <label>Last Name</label>
-                  <input
-                    type="text"
-                    value={editData.last_name}
-                    onChange={(e) => setEditData({...editData, last_name: e.target.value})}
-                    className="form-input"
-                    placeholder="Enter your last name"
-                  />
-                </div>
-              </div>
-              
-              <div className="form-group">
-                <label>Email Address</label>
-                <input
-                  type="email"
-                  value={editData.email}
-                  onChange={(e) => setEditData({...editData, email: e.target.value})}
-                  className="form-input"
-                  placeholder="Enter your email address"
-                />
-              </div>
-
-              <div className="form-actions">
-                <button type="button" onClick={handleSave} className="btn btn-primary">
-                  <i className="fas fa-save"></i>
-                  Save Changes
-                </button>
-                <button type="button" onClick={handleCancel} className="btn btn-secondary">
-                  <i className="fas fa-times"></i>
-                  Cancel
-                </button>
-              </div>
-            </form>
-          ) : (
-            <div className="profile-content">
-              <div className="info-section">
-                <h4>Personal Information</h4>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <label>Username</label>
-                    <span>{profile.username}</span>
-                  </div>
-                  
-                  <div className="info-item">
-                    <label>Email Address</label>
+                <div className="info-item">
+                  <label>Email Address</label>
+                  {editMode ? (
+                    <input
+                      type="email"
+                      value={editData.email}
+                      onChange={(e) => setEditData({...editData, email: e.target.value})}
+                      className="form-input inline-edit"
+                      placeholder="Enter your email address"
+                    />
+                  ) : (
                     <span>{profile.email}</span>
-                  </div>
-                  
-                  <div className="info-item">
-                    <label>First Name</label>
+                  )}
+                </div>
+                
+                <div className="info-item">
+                  <label>First Name</label>
+                  {editMode ? (
+                    <input
+                      type="text"
+                      value={editData.first_name}
+                      onChange={(e) => setEditData({...editData, first_name: e.target.value})}
+                      className="form-input inline-edit"
+                      placeholder="Enter your first name"
+                    />
+                  ) : (
                     <span>{profile.first_name || 'Not set'}</span>
-                  </div>
-                  
-                  <div className="info-item">
-                    <label>Last Name</label>
+                  )}
+                </div>
+                
+                <div className="info-item">
+                  <label>Last Name</label>
+                  {editMode ? (
+                    <input
+                      type="text"
+                      value={editData.last_name}
+                      onChange={(e) => setEditData({...editData, last_name: e.target.value})}
+                      className="form-input inline-edit"
+                      placeholder="Enter your last name"
+                    />
+                  ) : (
                     <span>{profile.last_name || 'Not set'}</span>
-                  </div>
+                  )}
                 </div>
-              </div>
-
-              <div className="info-section">
-                <h4>Account Information</h4>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <label>Organization</label>
-                    <span>{profile.organization?.name || 'No organization'}</span>
-                  </div>
-                  
-                  <div className="info-item">
-                    <label>Role</label>
-                    <span className={`role-badge ${profile.role?.toLowerCase()}`}>
-                      {profile.role}
-                    </span>
-                  </div>
-                  
-                  <div className="info-item">
-                    <label>Account Status</label>
-                    <span className={`status-badge ${profile.is_active ? 'active' : 'inactive'}`}>
-                      {profile.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
-                  
-                  <div className="info-item">
-                    <label>Verified</label>
-                    <span className={`status-badge ${profile.is_verified ? 'verified' : 'unverified'}`}>
-                      {profile.is_verified ? 'Verified' : 'Unverified'}
-                    </span>
-                  </div>
-                  
-                  <div className="info-item">
-                    <label>Member Since</label>
-                    <span>{new Date(profile.created_at || profile.date_joined).toLocaleDateString()}</span>
-                  </div>
-                  
-                  <div className="info-item">
-                    <label>Last Login</label>
-                    <span>{profile.last_login ? new Date(profile.last_login).toLocaleString() : 'Never'}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="profile-actions">
-                <h2>My Profile</h2>
-                <button 
-                  className="btn btn-primary"
-                  onClick={() => setEditMode(true)}
-                >
-                  <i className="fas fa-edit"></i>
-                  Edit Profile
-                </button>
               </div>
             </div>
-          )}
+
+            <div className="info-section">
+              <h4>Account Information</h4>
+              <div className="info-grid">
+                <div className="info-item">
+                  <label>Organization</label>
+                  <span>{profile.organization?.name || 'No organization'}</span>
+                </div>
+                
+                <div className="info-item">
+                  <label>Role</label>
+                  <span className={`role-badge ${profile.role?.toLowerCase()}`}>
+                    {profile.role}
+                  </span>
+                </div>
+                
+                <div className="info-item">
+                  <label>Account Status</label>
+                  <span className={`status-badge ${profile.is_active ? 'active' : 'inactive'}`}>
+                    {profile.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+                
+                <div className="info-item">
+                  <label>Verified</label>
+                  <span className={`status-badge ${profile.is_verified ? 'verified' : 'unverified'}`}>
+                    {profile.is_verified ? 'Verified' : 'Unverified'}
+                  </span>
+                </div>
+                
+                <div className="info-item">
+                  <label>Member Since</label>
+                  <span>{new Date(profile.created_at || profile.date_joined).toLocaleDateString()}</span>
+                </div>
+                
+                <div className="info-item">
+                  <label>Last Login</label>
+                  <span>{profile.last_login ? new Date(profile.last_login).toLocaleString() : 'Never'}</span>
+                </div>
+              </div>
+            </div>
+
+            {editMode && (
+              <div className="save-section">
+                <div className="form-actions">
+                  <button type="button" onClick={handleSave} className="btn btn-primary">
+                    <i className="fas fa-save"></i>
+                    Save Changes
+                  </button>
+                  <button type="button" onClick={handleCancel} className="btn btn-secondary">
+                    <i className="fas fa-times"></i>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -272,20 +269,6 @@ const UserProfile = ({ active }) => {
           margin: 0 auto;
         }
 
-        .profile-actions {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-top: 30px;
-          padding-top: 20px;
-          border-top: 2px solid #f1f3f4;
-        }
-
-        .profile-actions h2 {
-          margin: 0;
-          color: #333;
-          font-size: 28px;
-        }
 
         .success-message {
           background: #d4edda;
@@ -324,7 +307,19 @@ const UserProfile = ({ active }) => {
           padding: 30px;
           display: flex;
           align-items: center;
+          justify-content: space-between;
           gap: 20px;
+        }
+
+        .profile-header .profile-info {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+        }
+
+        .header-actions {
+          display: flex;
+          gap: 10px;
         }
 
         .profile-avatar {
@@ -394,29 +389,6 @@ const UserProfile = ({ active }) => {
           color: #333;
         }
 
-        .edit-form {
-          display: flex;
-          flex-direction: column;
-          gap: 25px;
-        }
-
-        .form-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
-        }
-
-        .form-group {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .form-group label {
-          font-weight: 600;
-          color: #495057;
-          font-size: 14px;
-        }
 
         .form-input {
           padding: 12px;
@@ -474,6 +446,45 @@ const UserProfile = ({ active }) => {
 
         .btn-secondary:hover {
           background: #5a6268;
+        }
+
+        .btn-outline {
+          background: transparent;
+          color: white;
+          border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-outline:hover {
+          background: rgba(255, 255, 255, 0.1);
+          border-color: rgba(255, 255, 255, 0.5);
+          color: white;
+        }
+
+        .inline-edit {
+          background: #f8f9fa;
+          border: 2px solid #e9ecef;
+          padding: 8px 12px;
+          font-size: 16px;
+          color: #333;
+          width: 100%;
+          max-width: 300px;
+        }
+
+        .inline-edit:focus {
+          background: white;
+          border-color: #0056b3;
+          box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1);
+        }
+
+        .save-section {
+          margin-top: 30px;
+          padding-top: 20px;
+          border-top: 2px solid #f1f3f4;
+        }
+
+        .save-section .form-actions {
+          justify-content: center;
+          margin-top: 0;
         }
 
         .role-badge,
@@ -540,23 +551,38 @@ const UserProfile = ({ active }) => {
             padding: 10px;
           }
 
-          .profile-actions {
-            flex-direction: column;
-            gap: 15px;
-            align-items: flex-start;
-          }
-
-          .form-row {
-            grid-template-columns: 1fr;
-          }
-
           .profile-header {
+            flex-direction: column;
+            text-align: center;
+            gap: 15px;
+          }
+
+          .profile-info {
             flex-direction: column;
             text-align: center;
           }
 
+          .header-actions {
+            width: 100%;
+            justify-content: center;
+          }
+
           .info-grid {
             grid-template-columns: 1fr;
+          }
+
+          .inline-edit {
+            max-width: 100%;
+          }
+
+          .save-section .form-actions {
+            flex-direction: column;
+            gap: 10px;
+          }
+
+          .save-section .form-actions .btn {
+            width: 100%;
+            justify-content: center;
           }
         }
       `}</style>
