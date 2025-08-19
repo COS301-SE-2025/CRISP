@@ -246,7 +246,7 @@ class TrustService:
                 'message': str(e)
             }
     
-    def update_bilateral_trust(self, trust_id, trust_level, message='', updated_by=None):
+    def update_bilateral_trust(self, trust_id, trust_level=None, status=None, notes=None, message='', updated_by=None):
         """Update a bilateral trust relationship"""
         try:
             relationship = TrustRelationship.objects.get(id=trust_id)
@@ -262,9 +262,35 @@ class TrustService:
                         'message': f'Trust level "{trust_level}" not found'
                     }
             
+            # Update status if provided
+            if status:
+                valid_statuses = ['pending', 'active', 'suspended', 'revoked', 'expired']
+                if status not in valid_statuses:
+                    return {
+                        'success': False,
+                        'message': f'Invalid status "{status}". Valid options: {", ".join(valid_statuses)}'
+                    }
+                relationship.status = status
+            
+            # Update notes if provided
+            if notes is not None:  # Allow empty string to clear notes
+                relationship.notes = notes
+            
+            # Update last modified info
+            if updated_by:
+                relationship.last_modified_by = updated_by
+            
             relationship.save()
             
             # Log the update
+            log_details = {'message': message}
+            if trust_level:
+                log_details['new_trust_level'] = trust_level
+            if status:
+                log_details['new_status'] = status
+            if notes is not None:
+                log_details['notes_updated'] = True
+                
             TrustLog.log_trust_event(
                 action='relationship_modified',
                 source_organization=relationship.source_organization,
@@ -272,7 +298,7 @@ class TrustService:
                 trust_relationship=relationship,
                 user=updated_by,
                 success=True,
-                details={'message': message, 'new_trust_level': trust_level}
+                details=log_details
             )
             
             logger.info(f"Trust relationship updated: {relationship.id}")

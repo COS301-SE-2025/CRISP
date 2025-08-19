@@ -162,7 +162,14 @@ function TrustManagement({ active, initialTab = null }) {
         isArray: Array.isArray(trustLevelsResponse),
         length: Array.isArray(trustLevelsResponse) ? trustLevelsResponse.length : 'N/A',
         firstItem: Array.isArray(trustLevelsResponse) && trustLevelsResponse.length > 0 ? trustLevelsResponse[0] : 'None',
-        allItems: Array.isArray(trustLevelsResponse) ? trustLevelsResponse : 'Not an array'
+        allItems: Array.isArray(trustLevelsResponse) ? trustLevelsResponse : 'Not an array',
+        hasProperty: {
+          trust_levels: trustLevelsResponse?.trust_levels !== undefined,
+          data: trustLevelsResponse?.data !== undefined,
+          success: trustLevelsResponse?.success !== undefined
+        },
+        trust_levels_content: trustLevelsResponse?.trust_levels,
+        data_content: trustLevelsResponse?.data
       });
 
       // Extract relationships with detailed logging
@@ -216,9 +223,20 @@ function TrustManagement({ active, initialTab = null }) {
                       Array.isArray(orgsResponse.data?.organizations) ? orgsResponse.data.organizations : 
                       Array.isArray(orgsResponse.data) ? orgsResponse.data : 
                       Array.isArray(orgsResponse) ? orgsResponse : [],
-        trustLevels: Array.isArray(trustLevelsResponse.trust_levels) ? trustLevelsResponse.trust_levels : 
-                    Array.isArray(trustLevelsResponse.data) ? trustLevelsResponse.data : 
+        trustLevels: Array.isArray(trustLevelsResponse?.trust_levels) ? trustLevelsResponse.trust_levels : 
+                    Array.isArray(trustLevelsResponse?.data) ? trustLevelsResponse.data : 
                     Array.isArray(trustLevelsResponse) ? trustLevelsResponse : []
+      });
+
+      // Debug what trust levels were actually extracted
+      const extractedTrustLevels = Array.isArray(trustLevelsResponse?.trust_levels) ? trustLevelsResponse.trust_levels : 
+                                   Array.isArray(trustLevelsResponse?.data) ? trustLevelsResponse.data : 
+                                   Array.isArray(trustLevelsResponse) ? trustLevelsResponse : [];
+      
+      console.log('✅ EXTRACTED TRUST LEVELS:', {
+        count: extractedTrustLevels.length,
+        levels: extractedTrustLevels.map(level => ({ id: level.id, name: level.name, level: level.level })),
+        firstLevel: extractedTrustLevels.length > 0 ? extractedTrustLevels[0] : null
       });
     } catch (err) {
       console.error('Error fetching trust data:', err);
@@ -249,62 +267,56 @@ function TrustManagement({ active, initialTab = null }) {
     
     if (mode === 'edit' && item) {
       if (type === 'relationship') {
-        // Map trust level string back to ID for dropdown - handle case variations
-        // Backend stores as "HIGH" but form expects lowercase "high" IDs
-        const trustLevelId = trustData.trustLevels.find(
+        // Map trust level string back to level code for dropdown 
+        // Backend returns trust level as uppercase string like "HIGH", "MEDIUM", "LOW"
+        // We need to find the matching level object and use its 'level' field
+        const trustLevelObj = trustData.trustLevels.find(
           level => level.name.toLowerCase().trim() === item.trust_level.toLowerCase().trim() ||
                    level.name.toUpperCase().trim() === item.trust_level.toUpperCase().trim() ||
-                   String(level.id).toLowerCase().trim() === item.trust_level.toLowerCase().trim() ||
+                   level.level.toLowerCase().trim() === item.trust_level.toLowerCase().trim() ||
+                   level.level.toUpperCase().trim() === item.trust_level.toUpperCase().trim() ||
                    level.name === item.trust_level ||
-                   level.id === item.trust_level ||
-                   String(level.id) === String(item.trust_level)
-        )?.id || item.trust_level.toLowerCase() || '';
+                   level.level === item.trust_level
+        );
+        const trustLevelCode = trustLevelObj?.level || item.trust_level.toLowerCase() || '';
         
         console.log('🔍 TRUST LEVEL MAPPING:', {
           itemTrustLevel: item.trust_level,
           itemTrustLevelLower: item.trust_level.toLowerCase(),
-          availableLevels: trustData.trustLevels.map(l => ({ id: l.id, name: l.name })),
-          mappedId: trustLevelId,
+          availableLevels: trustData.trustLevels.map(l => ({ id: l.id, name: l.name, level: l.level })),
+          mappedCode: trustLevelCode,
+          foundTrustLevelObj: trustLevelObj,
           mapping: {
-            exactMatch: trustData.trustLevels.find(l => l.name === item.trust_level),
-            lowerMatch: trustData.trustLevels.find(l => l.name.toLowerCase() === item.trust_level.toLowerCase()),
-            upperMatch: trustData.trustLevels.find(l => l.name.toUpperCase() === item.trust_level.toUpperCase()),
-            idMatch: trustData.trustLevels.find(l => l.id === item.trust_level.toLowerCase())
+            exactNameMatch: trustData.trustLevels.find(l => l.name === item.trust_level),
+            lowerNameMatch: trustData.trustLevels.find(l => l.name.toLowerCase() === item.trust_level.toLowerCase()),
+            upperNameMatch: trustData.trustLevels.find(l => l.name.toUpperCase() === item.trust_level.toUpperCase()),
+            levelMatch: trustData.trustLevels.find(l => l.level === item.trust_level.toLowerCase())
           }
         });
         
-        // Map organization names back to IDs for dropdowns
+        // Map organization objects to IDs for dropdowns
+        // Backend sends: { source_organization: { id, name, domain, organization_type }, ... }
         console.log('🔧 EDIT MODE - Mapping organizations for relationship:', {
           relationshipItem: item,
           sourceOrg: item.source_organization,
-          sourceOrgName: item.source_organization_name, 
           targetOrg: item.target_organization,
-          targetOrgName: item.target_organization_name,
           trustLevel: item.trust_level,
           availableOrgs: trustData.organizations.map(o => ({ id: o.id, name: o.name })),
-          availableTrustLevels: trustData.trustLevels.map(t => ({ id: t.id, name: t.name }))
+          availableTrustLevels: trustData.trustLevels.map(t => ({ id: t.id, name: t.name, level: t.level }))
         });
         
-        const sourceOrgId = trustData.organizations.find(
-          org => org.name === item.source_organization || 
-                 org.name === item.source_organization_name ||
-                 org.id === item.source_organization
-        )?.id || item.source_organization || '';
-        
-        const targetOrgId = trustData.organizations.find(
-          org => org.name === item.target_organization || 
-                 org.name === item.target_organization_name ||
-                 org.id === item.target_organization
-        )?.id || item.target_organization || '';
+        // Extract IDs from the organization objects
+        const sourceOrgId = item.source_organization?.id || '';
+        const targetOrgId = item.target_organization?.id || '';
         
         console.log('✅ MAPPED - Organization IDs:', { 
           sourceOrgId, 
           targetOrgId, 
-          trustLevelId,
+          trustLevelCode,
           finalFormData: {
             source_organization: sourceOrgId,
             target_organization: targetOrgId,
-            trust_level: trustLevelId,
+            trust_level: trustLevelCode,
             relationship_type: item.relationship_type || 'bilateral',
             notes: item.notes || ''
           }
@@ -313,18 +325,28 @@ function TrustManagement({ active, initialTab = null }) {
         setFormData({
           source_organization: sourceOrgId,
           target_organization: targetOrgId,
-          trust_level: trustLevelId,
+          trust_level: trustLevelCode,
           relationship_type: item.relationship_type || 'bilateral',
           notes: item.notes || ''
         });
       } else if (type === 'group') {
+        // For groups, we need to map from the trust level ID to the level code
+        const groupTrustLevelObj = trustData.trustLevels.find(level => level.id === item.default_trust_level_id);
+        const groupTrustLevelCode = groupTrustLevelObj?.level || '';
+        
+        console.log('🔧 GROUP EDIT - Trust level mapping:', {
+          item_default_trust_level_id: item.default_trust_level_id,
+          foundTrustLevelObj: groupTrustLevelObj,
+          mappedCode: groupTrustLevelCode
+        });
+        
         setFormData({
           name: item.name || '',
           description: item.description || '',
           group_type: item.group_type || 'industry',
           is_public: item.is_public || false,
           requires_approval: item.requires_approval || true,
-          trust_level: item.default_trust_level_id || ''
+          trust_level: groupTrustLevelCode
         });
       }
     } else {
@@ -378,59 +400,50 @@ function TrustManagement({ active, initialTab = null }) {
             console.log('🚀 SUBMIT - Converting form data to API format:', {
               formData,
               availableTrustLevels: trustData.trustLevels,
-              selectedTrustLevelId: formData.trust_level
+              selectedTrustLevelId: formData.trust_level,
+              trustLevelCount: trustData.trustLevels.length,
+              trustLevelStructure: trustData.trustLevels.map(tl => ({ 
+                id: tl.id, 
+                name: tl.name, 
+                level: tl.level,
+                type_id: typeof tl.id,
+                type_name: typeof tl.name 
+              }))
             });
 
             const sourceOrgName = trustData.organizations.find(org => org.id === formData.source_organization)?.name || formData.source_organization;
             const targetOrgName = trustData.organizations.find(org => org.id === formData.target_organization)?.name || formData.target_organization;
             
-            // Find trust level object - handle both string and numeric IDs
-            const trustLevelObj = trustData.trustLevels.find(level => 
-              level.id === formData.trust_level || 
-              level.id == formData.trust_level ||  // Loose equality to handle string/number
-              level.name === formData.trust_level ||
-              level.name.toLowerCase() === formData.trust_level.toLowerCase()
-            );
-            let trustLevelName = trustLevelObj?.name || null;
-            const trustLevelId = trustLevelObj?.id || formData.trust_level;
+            // Form data now contains the level code directly (e.g., "high", "medium", "low")
+            // Backend API expects this level code as-is
+            const trustLevelCode = formData.trust_level;
             
-            // If we couldn't find the name, this is an error - don't send ID as name
-            if (!trustLevelName) {
-              console.error('❌ TRUST LEVEL ERROR: Could not find trust level name for ID:', formData.trust_level);
-              console.error('Available trust levels:', trustData.trustLevels);
-              throw new Error(`Trust level not found for ID: ${formData.trust_level}`);
+            // Verify the trust level exists in our available trust levels
+            const trustLevelObj = trustData.trustLevels.find(level => level.level === trustLevelCode);
+            if (!trustLevelObj) {
+              console.error('❌ TRUST LEVEL ERROR: Could not find trust level for code:', trustLevelCode);
+              console.error('Available trust levels:', trustData.trustLevels.map(tl => ({ level: tl.level, name: tl.name })));
+              throw new Error(`Trust level not found for code: ${trustLevelCode}`);
             }
-            
-            // Backend expects lowercase trust level names in the database
-            // API handler converts to lowercase and does exact match against DB
-            let finalTrustLevelName = trustLevelName.toLowerCase();
 
             console.log('🔄 CONVERTED - API data:', {
               sourceOrgName,
               targetOrgName, 
-              originalTrustLevelName: trustLevelName,
-              finalTrustLevelName,
-              trustLevelId,
-              originalTrustLevelId: formData.trust_level,
+              trustLevelCode,
               trustLevelObj,
-              currentItemTrustLevel: selectedItem?.trust_level,
-              backendExpectation: 'Backend expects lowercase names like "high", "medium", "low"',
-              conversionProcess: {
-                input: formData.trust_level,
-                foundObject: trustLevelObj,
-                outputName: trustLevelName,
-                finalOutputName: finalTrustLevelName,
-                outputId: trustLevelId,
-                willMatch: ['high', 'medium', 'low'].includes(finalTrustLevelName)
-              }
+              backendExpectation: 'Backend expects level code like "high", "medium", "low", "public", etc.'
             });
             
-            // Create payload with IDs for backend API
-            const relationshipData = {
+            // Create payload for backend API
+            // For edit mode, only send the fields that can be updated
+            const relationshipData = modalMode === 'edit' ? {
+              trust_level: trustLevelCode,  // Send level code (e.g., "high", "medium", "low")
+              notes: formData.notes,  // Notes field for updates
+              message: 'Relationship updated via UI'  // Log message
+            } : {
               source_organization: formData.source_organization,  // Send ID, not name
               target_organization: formData.target_organization,  // Send ID, not name
-              trust_level: finalTrustLevelName,  // Use case-corrected name
-              trust_level_id: trustLevelId,  // Add ID version as backup
+              trust_level: trustLevelCode,  // Send level code (e.g., "high", "medium", "low")
               relationship_type: formData.relationship_type,
               notes: formData.notes
             };
@@ -552,7 +565,7 @@ function TrustManagement({ active, initialTab = null }) {
               }
               
               await api.updateTrustRelationship(item.id, { 
-                trust_level: trustLevelName,
+                status: 'suspended',
                 message: 'Relationship suspended'
               });
               setSuccess('Relationship suspended successfully');
@@ -1155,7 +1168,10 @@ function TrustManagement({ active, initialTab = null }) {
                     </label>
                     <select
                       value={formData.trust_level}
-                      onChange={(e) => setFormData({...formData, trust_level: e.target.value})}
+                      onChange={(e) => {
+                        console.log('🔧 TRUST LEVEL SELECTED:', e.target.value);
+                        setFormData({...formData, trust_level: e.target.value});
+                      }}
                       required
                       style={{
                         width: '100%',
@@ -1165,9 +1181,15 @@ function TrustManagement({ active, initialTab = null }) {
                       }}
                     >
                       <option value="">Select Trust Level</option>
-                      {trustData.trustLevels.map(level => (
-                        <option key={level.id} value={level.id}>{level.name}</option>
-                      ))}
+                      {trustData.trustLevels.length === 0 && (
+                        <option disabled>No trust levels available</option>
+                      )}
+                      {trustData.trustLevels.map(level => {
+                        console.log('🔧 RENDERING TRUST LEVEL OPTION:', { id: level.id, name: level.name, level: level.level });
+                        return (
+                          <option key={level.id} value={level.level}>{level.name}</option>
+                        );
+                      })}
                     </select>
                   </div>
                   
@@ -1286,7 +1308,7 @@ function TrustManagement({ active, initialTab = null }) {
                     >
                       <option value="">Select Trust Level</option>
                       {trustData.trustLevels.map(level => (
-                        <option key={level.id} value={level.id}>{level.name}</option>
+                        <option key={level.id} value={level.level}>{level.name}</option>
                       ))}
                     </select>
                   </div>

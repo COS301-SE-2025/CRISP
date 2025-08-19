@@ -300,12 +300,14 @@ def respond_bilateral_trust(request, trust_id):
 @permission_classes([IsAuthenticated])
 def update_bilateral_trust(request, trust_id):
     """
-    Update bilateral trust level
+    Update bilateral trust level, status, and/or notes
     
-    PUT /api/trust/bilateral/{trust_id}/
+    PUT /api/trust/bilateral/{trust_id}/update/
     Body: {
-        "trust_level": "string",
-        "message": "string"
+        "trust_level": "string (optional)",
+        "status": "string (optional: pending, active, suspended, revoked, expired)",
+        "notes": "string (optional)",
+        "message": "string (optional - used for logging)"
     }
     """
     try:
@@ -329,17 +331,22 @@ def update_bilateral_trust(request, trust_id):
             }, status=status.HTTP_403_FORBIDDEN)
         
         trust_level = request.data.get('trust_level')
+        trust_status = request.data.get('status')
+        notes = request.data.get('notes')
         message = request.data.get('message', '')
         
-        if not trust_level:
+        # At least one field must be provided to update
+        if not any([trust_level, trust_status, notes is not None]):
             return Response({
                 'success': False,
-                'message': 'trust_level is required'
+                'message': 'At least one field (trust_level, status, or notes) must be provided'
             }, status=status.HTTP_400_BAD_REQUEST)
         
         result = trust_service.update_bilateral_trust(
             trust_id=trust_id,
             trust_level=trust_level,
+            status=trust_status,
+            notes=notes,
             message=message,
             updated_by=request.user
         )
