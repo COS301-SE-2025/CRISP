@@ -540,6 +540,14 @@ class AccessControlService:
         # Publishers and above can view community trusts
         return user.role in ['publisher', 'admin', 'BlueVisionAdmin']
     
+    def can_view_reports(self, user) -> bool:
+        """Check if user can view threat intelligence reports"""
+        if not user:
+            return False
+        
+        # All authenticated users can view reports, but data access is filtered by trust relationships
+        return user.role in ['viewer', 'publisher', 'admin', 'BlueVisionAdmin']
+    
     def get_role_hierarchy_level(self, role: str) -> int:
         """Get the hierarchy level of a role (higher number = more permissions)"""
         hierarchy = {

@@ -161,7 +161,14 @@ export const deleteUserPermanently = async (userId, reason = '') => {
     throw new Error(errorData.message || 'Failed to permanently delete user');
   }
 
-  return await response.json();
+  // For DELETE requests, we might get 204 No Content with no response body
+  if (response.status === 204) {
+    return { success: true };
+  }
+  
+  // Try to parse JSON, but handle empty responses
+  const text = await response.text();
+  return text ? JSON.parse(text) : { success: true };
 };
 
 
@@ -258,7 +265,14 @@ export const deleteOrganizationPermanently = async (orgId, reason = '') => {
     throw new Error(errorData.message || 'Failed to permanently delete organization');
   }
 
-  return await response.json();
+  // For DELETE requests, we might get 204 No Content with no response body
+  if (response.status === 204) {
+    return { success: true };
+  }
+  
+  // Try to parse JSON, but handle empty responses
+  const text = await response.text();
+  return text ? JSON.parse(text) : { success: true };
 };
 
 export const getOrganizationDetails = async (orgId) => {
@@ -320,7 +334,23 @@ export const getOrganizationTrustGroups = async (orgId) => {
 
 // Trust Management Functions
 export const getTrustRelationships = async (queryParams = {}) => {
-  const params = new URLSearchParams(queryParams).toString();
+  // By default, exclude revoked relationships unless specifically requested
+  const defaultParams = {
+    // Only include active, pending, and suspended relationships by default
+    // Exclude 'revoked' and 'expired' unless explicitly overridden
+    ...queryParams
+  };
+  
+  // If no status filter is provided, exclude revoked relationships
+  if (!defaultParams.status) {
+    // We'll filter out revoked relationships in the response instead
+    // This way users can still see them if they specifically request 'revoked' status
+  }
+  
+  // Cache-busting temporarily disabled to avoid CORS issues
+  // defaultParams._t = Date.now();
+  
+  const params = new URLSearchParams(defaultParams).toString();
   const url = `${API_BASE_URL}/api/trust/bilateral/${params ? `?${params}` : ''}`;
   
   const response = await fetch(url, {
@@ -333,7 +363,34 @@ export const getTrustRelationships = async (queryParams = {}) => {
     throw new Error(errorData.message || 'Failed to fetch trust relationships');
   }
 
-  return await response.json();
+  const data = await response.json();
+  
+  // Filter out revoked and expired relationships unless specifically requested
+  if (!queryParams.status || !['revoked', 'expired'].includes(queryParams.status)) {
+    // Filter data.trusts if it exists (direct array)
+    if (data.trusts && Array.isArray(data.trusts)) {
+      const originalCount = data.trusts.length;
+      data.trusts = data.trusts.filter(trust => 
+        trust.status && 
+        !['revoked', 'expired'].includes(trust.status.toLowerCase())
+      );
+      console.log(`🔍 Filtered trust relationships: ${originalCount} -> ${data.trusts.length} (excluded revoked/expired)`);
+    }
+    
+    // Filter data.results.trusts if it exists (paginated response)
+    if (data.results && data.results.trusts && Array.isArray(data.results.trusts)) {
+      const originalCount = data.results.trusts.length;
+      data.results.trusts = data.results.trusts.filter(trust => 
+        trust.status && 
+        !['revoked', 'expired'].includes(trust.status.toLowerCase())
+      );
+      console.log(`🔍 Filtered paginated trust relationships: ${originalCount} -> ${data.results.trusts.length} (excluded revoked/expired)`);
+    }
+  } else {
+    console.log(`🔍 Showing ALL '${queryParams.status}' relationships (no filtering)`);
+  }
+  
+  return data;
 };
 
 export const createTrustRelationship = async (relationshipData) => {
@@ -404,10 +461,18 @@ export const deleteTrustRelationship = async (relationshipId, reason = '') => {
     throw new Error(errorData.message || 'Failed to delete trust relationship');
   }
 
-  return await response.json();
+  // For DELETE requests, we might get 204 No Content with no response body
+  if (response.status === 204) {
+    return { success: true };
+  }
+  
+  // Try to parse JSON, but handle empty responses
+  const text = await response.text();
+  return text ? JSON.parse(text) : { success: true };
 };
 
 export const getTrustGroups = async (queryParams = {}) => {
+  // Cache-busting temporarily disabled to avoid CORS issues  
   const params = new URLSearchParams(queryParams).toString();
   const url = `${API_BASE_URL}/api/trust/community/${params ? `?${params}` : ''}`;
   
@@ -465,7 +530,14 @@ export const deleteTrustGroup = async (groupId) => {
     throw new Error(errorData.message || 'Failed to delete trust group');
   }
 
-  return await response.json();
+  // For DELETE requests, we might get 204 No Content with no response body
+  if (response.status === 204) {
+    return { success: true };
+  }
+  
+  // Try to parse JSON, but handle empty responses
+  const text = await response.text();
+  return text ? JSON.parse(text) : { success: true };
 };
 
 export const joinTrustGroup = async (groupId) => {
@@ -756,6 +828,24 @@ export const getTechniqueDetails = async (techniqueId) => {
 // Generic API helper functions for backward compatibility
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache duration
 const apiCache = new Map();
+
+// Function to clear API cache
+export const clearApiCache = () => {
+  console.log('🧹 Clearing API cache...', `${apiCache.size} items removed`);
+  apiCache.clear();
+};
+
+// Function to clear specific cache entries
+export const clearCacheForEndpoint = (endpoint) => {
+  const keysToRemove = [];
+  for (const key of apiCache.keys()) {
+    if (key.includes(endpoint)) {
+      keysToRemove.push(key);
+    }
+  }
+  keysToRemove.forEach(key => apiCache.delete(key));
+  console.log(`🧹 Cleared ${keysToRemove.length} cache entries for ${endpoint}`);
+};
 
 export const get = async (endpoint) => {
   try {
