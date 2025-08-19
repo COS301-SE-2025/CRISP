@@ -55,6 +55,11 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
     }
   });
 
+  // Real-time validation state
+  const [validationErrors, setValidationErrors] = useState({});
+  const [validationChecking, setValidationChecking] = useState({});
+  const [isFormValid, setIsFormValid] = useState(false);
+
   const loadOrganizationTypes = async () => {
     try {
       const response = await api.getOrganizationTypes();
@@ -244,6 +249,9 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
     setModalMode('add');
     setSelectedOrganization(null);
     setError(null); // Clear any previous errors
+    setValidationErrors({}); // Clear validation errors
+    setValidationChecking({}); // Clear validation checking states
+    setIsFormValid(false); // Start with invalid form
     setFormData({
       name: '',
       domain: '',
@@ -310,6 +318,9 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
       
       console.log('Setting form data for edit:', formDataToSet);
       setFormData(formDataToSet);
+      setValidationErrors({}); // Clear validation errors
+      setValidationChecking({}); // Clear validation checking states
+      setIsFormValid(true); // Edit starts with valid data
       setShowModal(true);
     } catch (err) {
       console.error('Error in handleEditOrganization:', err);
@@ -448,6 +459,201 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
     setShowConfirmation(true);
   };
 
+  // Real-time validation functions
+  const validateOrganizationName = async (name) => {
+    if (!name || name.length === 0) {
+      return { isValid: modalMode === 'view', message: modalMode === 'add' || modalMode === 'edit' ? 'Organization name is required' : '' };
+    }
+    
+    if (name.length < 2) {
+      return { isValid: false, message: 'Organization name must be at least 2 characters' };
+    }
+    
+    if (name.length > 100) {
+      return { isValid: false, message: 'Organization name cannot exceed 100 characters' };
+    }
+    
+    // Check if organization name exists (only for new organizations or when name changes)
+    if (modalMode === 'add' || (modalMode === 'edit' && selectedOrganization?.name !== name)) {
+      const existingOrg = allOrganizations.find(org => org.name.toLowerCase() === name.toLowerCase());
+      if (existingOrg) {
+        return { isValid: false, message: 'Organization name already exists. Please choose a different name.' };
+      }
+    }
+    
+    return { isValid: true, message: '' };
+  };
+
+  const validateDomain = (domain) => {
+    if (!domain || domain.length === 0) {
+      return { isValid: true, message: '' }; // Domain is optional
+    }
+    
+    // Basic domain validation
+    const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?\.[a-zA-Z]{2,}$/;
+    if (!domainRegex.test(domain)) {
+      return { isValid: false, message: 'Please enter a valid domain (e.g., university.edu)' };
+    }
+    
+    // Check if domain exists (only for new organizations or when domain changes)
+    if (modalMode === 'add' || (modalMode === 'edit' && selectedOrganization?.domain !== domain)) {
+      const existingOrg = allOrganizations.find(org => org.domain && org.domain.toLowerCase() === domain.toLowerCase());
+      if (existingOrg) {
+        return { isValid: false, message: 'Domain already exists. Please use a different domain.' };
+      }
+    }
+    
+    return { isValid: true, message: '' };
+  };
+
+  const validateContactEmail = (email) => {
+    if (!email || email.length === 0) {
+      return { isValid: modalMode === 'view', message: modalMode === 'add' || modalMode === 'edit' ? 'Contact email is required' : '' };
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return { isValid: false, message: 'Please enter a valid email address' };
+    }
+    
+    // Check if contact email exists (only for new organizations or when email changes)
+    if (modalMode === 'add' || (modalMode === 'edit' && selectedOrganization?.contact_email !== email)) {
+      const existingOrg = allOrganizations.find(org => org.contact_email && org.contact_email.toLowerCase() === email.toLowerCase());
+      if (existingOrg) {
+        return { isValid: false, message: 'Contact email already exists. Please use a different email.' };
+      }
+    }
+    
+    return { isValid: true, message: '' };
+  };
+
+  const validateAdminUsername = async (username) => {
+    if (!username || username.length === 0) {
+      return { isValid: modalMode !== 'add', message: modalMode === 'add' ? 'Username is required' : '' };
+    }
+    
+    if (username.length < 3) {
+      return { isValid: false, message: 'Username must be at least 3 characters' };
+    }
+    
+    if (username.length > 30) {
+      return { isValid: false, message: 'Username cannot exceed 30 characters' };
+    }
+    
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      return { isValid: false, message: 'Username can only contain letters, numbers, and underscores' };
+    }
+    
+    // For new organizations, check if username exists across all users
+    if (modalMode === 'add') {
+      // We need to check against existing users - we'll assume we have access to users list
+      // This would typically require an API call or access to users from the parent component
+      // For now, we'll do a basic validation
+      const commonUsernames = ['admin', 'administrator', 'root', 'user', 'test'];
+      if (commonUsernames.includes(username.toLowerCase())) {
+        return { isValid: false, message: 'Username is not available. Please choose a different username.' };
+      }
+    }
+    
+    return { isValid: true, message: '' };
+  };
+
+  const validateAdminEmail = (email) => {
+    if (!email || email.length === 0) {
+      return { isValid: modalMode !== 'add', message: modalMode === 'add' ? 'Email is required' : '' };
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return { isValid: false, message: 'Please enter a valid email address' };
+    }
+    
+    // Check if admin email is the same as contact email
+    if (formData.contact_email && email.toLowerCase() === formData.contact_email.toLowerCase()) {
+      return { isValid: false, message: 'Admin email cannot be the same as organization contact email.' };
+    }
+    
+    return { isValid: true, message: '' };
+  };
+
+  const validateField = async (fieldName, value) => {
+    let result = { isValid: true, message: '' };
+    
+    switch (fieldName) {
+      case 'name':
+        result = await validateOrganizationName(value);
+        break;
+      case 'domain':
+        result = validateDomain(value);
+        break;
+      case 'contact_email':
+        result = validateContactEmail(value);
+        break;
+      case 'primary_user.username':
+        result = await validateAdminUsername(value);
+        break;
+      case 'primary_user.email':
+        result = validateAdminEmail(value);
+        break;
+      case 'primary_user.first_name':
+        if (modalMode === 'add' && (!value || value.length === 0)) {
+          result = { isValid: false, message: 'First name is required' };
+        } else if (value && value.length > 150) {
+          result = { isValid: false, message: 'First name cannot exceed 150 characters' };
+        }
+        break;
+      case 'primary_user.last_name':
+        if (modalMode === 'add' && (!value || value.length === 0)) {
+          result = { isValid: false, message: 'Last name is required' };
+        } else if (value && value.length > 150) {
+          result = { isValid: false, message: 'Last name cannot exceed 150 characters' };
+        }
+        break;
+      case 'primary_user.password':
+        if (modalMode === 'add' && (!value || value.length === 0)) {
+          result = { isValid: false, message: 'Password is required for admin user' };
+        } else if (value && value.length > 0 && value.length < 6) {
+          result = { isValid: false, message: 'Password must be at least 6 characters' };
+        }
+        break;
+    }
+    
+    return result;
+  };
+
+  // Update validation state and check overall form validity
+  const updateValidation = async (fieldName, value) => {
+    setValidationChecking(prev => ({ ...prev, [fieldName]: true }));
+    
+    const validation = await validateField(fieldName, value);
+    
+    setValidationErrors(prev => ({
+      ...prev,
+      [fieldName]: validation.message
+    }));
+    
+    setValidationChecking(prev => ({ ...prev, [fieldName]: false }));
+    
+    // Check overall form validity
+    const updatedErrors = { ...validationErrors, [fieldName]: validation.message };
+    const hasErrors = Object.values(updatedErrors).some(error => error.length > 0);
+    
+    // Required fields check (skip for view mode)
+    if (modalMode === 'view') {
+      setIsFormValid(true);
+      return;
+    }
+    
+    const orgRequiredFieldsFilled = formData.name && formData.contact_email;
+    const adminRequiredFieldsFilled = modalMode !== 'add' || (
+      formData.primary_user.username && formData.primary_user.email && 
+      formData.primary_user.first_name && formData.primary_user.last_name && 
+      formData.primary_user.password
+    );
+    
+    setIsFormValid(!hasErrors && orgRequiredFieldsFilled && adminRequiredFieldsFilled);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     
@@ -514,6 +720,20 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
         ...prev,
         [name]: value
       }));
+    }
+    
+    // Trigger real-time validation
+    if (modalMode !== 'view') {
+      updateValidation(name, value);
+      
+      // Cross-validate contact email and admin email
+      if (name === 'contact_email') {
+        // Re-validate admin email when contact email changes
+        updateValidation('primary_user.email', formData.primary_user.email);
+      } else if (name === 'primary_user.email') {
+        // Re-validate contact email when admin email changes  
+        updateValidation('contact_email', formData.contact_email);
+      }
     }
   };
 
@@ -825,7 +1045,7 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
             <form onSubmit={handleSubmit}>
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                  Organisation Name *
+                  Organisation Name {!formData.name && modalMode === 'add' && <span style={{ color: 'red' }}>*</span>}
                 </label>
                 <input
                   type="text"
@@ -837,12 +1057,22 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
                   style={{
                     width: '100%',
                     padding: '0.5rem',
-                    border: '1px solid #ddd',
+                    border: `1px solid ${validationErrors.name ? '#dc3545' : '#ddd'}`,
                     borderRadius: '4px',
                     backgroundColor: modalMode === 'view' ? '#f8f9fa' : 'white',
                     color: '#333'
                   }}
                 />
+                {validationChecking.name && (
+                  <div style={{ fontSize: '0.875rem', color: '#6c757d', marginTop: '0.25rem' }}>
+                    Checking availability...
+                  </div>
+                )}
+                {validationErrors.name && !validationChecking.name && (
+                  <div style={{ fontSize: '0.875rem', color: '#dc3545', marginTop: '0.25rem' }}>
+                    {validationErrors.name}
+                  </div>
+                )}
               </div>
 
               <div style={{ marginBottom: '1rem' }}>
@@ -859,17 +1089,27 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
                   style={{
                     width: '100%',
                     padding: '0.5rem',
-                    border: '1px solid #ddd',
+                    border: `1px solid ${validationErrors.domain ? '#dc3545' : '#ddd'}`,
                     borderRadius: '4px',
                     backgroundColor: modalMode === 'view' ? '#f8f9fa' : 'white',
                     color: '#333'
                   }}
                 />
+                {validationChecking.domain && (
+                  <div style={{ fontSize: '0.875rem', color: '#6c757d', marginTop: '0.25rem' }}>
+                    Checking availability...
+                  </div>
+                )}
+                {validationErrors.domain && !validationChecking.domain && (
+                  <div style={{ fontSize: '0.875rem', color: '#dc3545', marginTop: '0.25rem' }}>
+                    {validationErrors.domain}
+                  </div>
+                )}
               </div>
 
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                  Contact Email *
+                  Contact Email {!formData.contact_email && modalMode === 'add' && <span style={{ color: 'red' }}>*</span>}
                 </label>
                 <input
                   type="email"
@@ -881,12 +1121,22 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
                   style={{
                     width: '100%',
                     padding: '0.5rem',
-                    border: '1px solid #ddd',
+                    border: `1px solid ${validationErrors.contact_email ? '#dc3545' : '#ddd'}`,
                     borderRadius: '4px',
                     backgroundColor: modalMode === 'view' ? '#f8f9fa' : 'white',
                     color: '#333'
                   }}
                 />
+                {validationChecking.contact_email && (
+                  <div style={{ fontSize: '0.875rem', color: '#6c757d', marginTop: '0.25rem' }}>
+                    Checking availability...
+                  </div>
+                )}
+                {validationErrors.contact_email && !validationChecking.contact_email && (
+                  <div style={{ fontSize: '0.875rem', color: '#dc3545', marginTop: '0.25rem' }}>
+                    {validationErrors.contact_email}
+                  </div>
+                )}
               </div>
 
               <div style={{ marginBottom: '1rem' }}>
@@ -975,15 +1225,30 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
                         value={formData.primary_user.username}
                         onChange={handleInputChange}
                         required
+                        pattern="[a-zA-Z0-9_]+"
+                        title="Username can only contain letters, numbers, and underscores"
                         style={{
                           width: '100%',
                           padding: '0.5rem',
-                          border: '1px solid #ddd',
+                          border: `1px solid ${validationErrors['primary_user.username'] ? '#dc3545' : '#ddd'}`,
                           borderRadius: '4px',
                           backgroundColor: 'white',
                           color: '#000'
                         }}
                       />
+                      {validationChecking['primary_user.username'] && (
+                        <div style={{ fontSize: '0.875rem', color: '#6c757d', marginTop: '0.25rem' }}>
+                          Checking availability...
+                        </div>
+                      )}
+                      {validationErrors['primary_user.username'] && !validationChecking['primary_user.username'] && (
+                        <div style={{ fontSize: '0.875rem', color: '#dc3545', marginTop: '0.25rem' }}>
+                          {validationErrors['primary_user.username']}
+                        </div>
+                      )}
+                      <div style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.25rem' }}>
+                        Only letters, numbers, and underscores allowed (minimum 3 characters)
+                      </div>
                     </div>
                     <div style={{ flex: 1 }}>
                       <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
@@ -998,12 +1263,17 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
                         style={{
                           width: '100%',
                           padding: '0.5rem',
-                          border: '1px solid #ddd',
+                          border: `1px solid ${validationErrors['primary_user.email'] ? '#dc3545' : '#ddd'}`,
                           borderRadius: '4px',
                           backgroundColor: 'white',
                           color: '#000'
                         }}
                       />
+                      {validationErrors['primary_user.email'] && (
+                        <div style={{ fontSize: '0.875rem', color: '#dc3545', marginTop: '0.25rem' }}>
+                          {validationErrors['primary_user.email']}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1021,12 +1291,17 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
                         style={{
                           width: '100%',
                           padding: '0.5rem',
-                          border: '1px solid #ddd',
+                          border: `1px solid ${validationErrors['primary_user.first_name'] ? '#dc3545' : '#ddd'}`,
                           borderRadius: '4px',
                           backgroundColor: 'white',
                           color: '#000'
                         }}
                       />
+                      {validationErrors['primary_user.first_name'] && (
+                        <div style={{ fontSize: '0.875rem', color: '#dc3545', marginTop: '0.25rem' }}>
+                          {validationErrors['primary_user.first_name']}
+                        </div>
+                      )}
                     </div>
                     <div style={{ flex: 1 }}>
                       <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
@@ -1041,12 +1316,17 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
                         style={{
                           width: '100%',
                           padding: '0.5rem',
-                          border: '1px solid #ddd',
+                          border: `1px solid ${validationErrors['primary_user.last_name'] ? '#dc3545' : '#ddd'}`,
                           borderRadius: '4px',
                           backgroundColor: 'white',
                           color: '#000'
                         }}
                       />
+                      {validationErrors['primary_user.last_name'] && (
+                        <div style={{ fontSize: '0.875rem', color: '#dc3545', marginTop: '0.25rem' }}>
+                          {validationErrors['primary_user.last_name']}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1063,12 +1343,17 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
                       style={{
                         width: '100%',
                         padding: '0.5rem',
-                        border: '1px solid #ddd',
+                        border: `1px solid ${validationErrors['primary_user.password'] ? '#dc3545' : '#ddd'}`,
                         borderRadius: '4px',
                         backgroundColor: 'white',
                         color: '#999'
                       }}
                     />
+                    {validationErrors['primary_user.password'] && (
+                      <div style={{ fontSize: '0.875rem', color: '#dc3545', marginTop: '0.25rem' }}>
+                        {validationErrors['primary_user.password']}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1091,16 +1376,18 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
                 {modalMode !== 'view' && (
                   <button
                     type="submit"
+                    disabled={!isFormValid || submitting}
                     style={{
                       padding: '0.5rem 1rem',
-                      backgroundColor: '#007bff',
+                      backgroundColor: (!isFormValid || submitting) ? '#6c757d' : '#007bff',
                       color: 'white',
                       border: 'none',
                       borderRadius: '4px',
-                      cursor: 'pointer'
+                      cursor: (!isFormValid || submitting) ? 'not-allowed' : 'pointer',
+                      opacity: (!isFormValid || submitting) ? 0.6 : 1
                     }}
                   >
-                    {modalMode === 'add' ? 'Add Organisation' : 'Update Organisation'}
+                    {submitting ? 'Processing...' : (modalMode === 'add' ? 'Add Organisation' : 'Update Organisation')}
                   </button>
                 )}
               </div>

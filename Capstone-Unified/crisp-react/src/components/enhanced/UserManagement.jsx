@@ -53,6 +53,11 @@ const UserManagement = ({ active = true, initialSection = null }) => {
     is_active: true
   });
 
+  // Real-time validation state
+  const [validationErrors, setValidationErrors] = useState({});
+  const [validationChecking, setValidationChecking] = useState({});
+  const [isFormValid, setIsFormValid] = useState(false);
+
   const roles = ['admin', 'publisher', 'viewer'];
 
   // Get current user and check if user is a publisher
@@ -238,6 +243,9 @@ const UserManagement = ({ active = true, initialSection = null }) => {
     setModalMode('add');
     setSelectedUser(null);
     setError(null); // Clear any previous errors
+    setValidationErrors({}); // Clear validation errors
+    setValidationChecking({}); // Clear validation checking states
+    setIsFormValid(false); // Start with invalid form
     const defaultRole = isPublisher ? 'viewer' : 'viewer'; // Publishers can only create viewers
     setFormData({
       username: '',
@@ -308,6 +316,9 @@ const UserManagement = ({ active = true, initialSection = null }) => {
       
       console.log('Setting form data for edit:', formDataToSet);
       setFormData(formDataToSet);
+      setValidationErrors({}); // Clear validation errors
+      setValidationChecking({}); // Clear validation checking states
+      setIsFormValid(true); // Edit starts with valid data
       setShowModal(true);
     } catch (err) {
       console.error('Error in handleEditUser:', err);
@@ -544,17 +555,129 @@ const UserManagement = ({ active = true, initialSection = null }) => {
     setShowConfirmation(true);
   };
 
+  // Real-time validation functions
+  const validateUsername = async (username, isCurrentUser = false) => {
+    if (!username || username.length === 0) {
+      return { isValid: false, message: 'Username is required' };
+    }
+    
+    if (username.length < 3) {
+      return { isValid: false, message: 'Username must be at least 3 characters' };
+    }
+    
+    if (username.length > 30) {
+      return { isValid: false, message: 'Username cannot exceed 30 characters' };
+    }
+    
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      return { isValid: false, message: 'Username can only contain letters, numbers, and underscores' };
+    }
+    
+    // Check if username exists (only for new users or when username changes)
+    if (modalMode === 'add' || (modalMode === 'edit' && selectedUser?.username !== username)) {
+      const existingUser = allUsers.find(user => user.username.toLowerCase() === username.toLowerCase());
+      if (existingUser) {
+        return { isValid: false, message: 'Username already exists. Please choose a different username.' };
+      }
+    }
+    
+    return { isValid: true, message: '' };
+  };
+
+  const validateEmail = (email) => {
+    if (!email || email.length === 0) {
+      return { isValid: modalMode === 'view', message: modalMode === 'add' ? 'Email is required' : '' };
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return { isValid: false, message: 'Please enter a valid email address' };
+    }
+    
+    // Check if email exists (only for new users or when email changes)
+    if (modalMode === 'add' || (modalMode === 'edit' && selectedUser?.email !== email)) {
+      const existingUser = allUsers.find(user => user.email.toLowerCase() === email.toLowerCase());
+      if (existingUser) {
+        return { isValid: false, message: 'Email already exists. Please use a different email.' };
+      }
+    }
+    
+    return { isValid: true, message: '' };
+  };
+
+  const validateField = async (fieldName, value) => {
+    let result = { isValid: true, message: '' };
+    
+    switch (fieldName) {
+      case 'username':
+        result = await validateUsername(value);
+        break;
+      case 'email':
+        result = validateEmail(value);
+        break;
+      case 'first_name':
+        if (value && value.length > 150) {
+          result = { isValid: false, message: 'First name cannot exceed 150 characters' };
+        }
+        break;
+      case 'last_name':
+        if (value && value.length > 150) {
+          result = { isValid: false, message: 'Last name cannot exceed 150 characters' };
+        }
+        break;
+      case 'password':
+        if (modalMode === 'add' && (!value || value.length === 0)) {
+          result = { isValid: false, message: 'Password is required for new users' };
+        } else if (value && value.length > 0 && value.length < 6) {
+          result = { isValid: false, message: 'Password must be at least 6 characters' };
+        }
+        break;
+    }
+    
+    return result;
+  };
+
+  // Update validation state and check overall form validity
+  const updateValidation = async (fieldName, value) => {
+    setValidationChecking(prev => ({ ...prev, [fieldName]: true }));
+    
+    const validation = await validateField(fieldName, value);
+    
+    setValidationErrors(prev => ({
+      ...prev,
+      [fieldName]: validation.message
+    }));
+    
+    setValidationChecking(prev => ({ ...prev, [fieldName]: false }));
+    
+    // Check overall form validity
+    const updatedErrors = { ...validationErrors, [fieldName]: validation.message };
+    const hasErrors = Object.values(updatedErrors).some(error => error.length > 0);
+    const requiredFieldsFilled = formData.username && (modalMode === 'view' || formData.email) && 
+                                 (modalMode !== 'add' || formData.password);
+    
+    setIsFormValid(!hasErrors && requiredFieldsFilled);
+  };
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    console.log('Input change:', { name, value, type, checked });
+    const newValue = type === 'checkbox' ? checked : value;
+    
+    console.log('Input change:', { name, value: newValue, type, checked });
+    
     setFormData(prev => {
       const newData = {
         ...prev,
-        [name]: type === 'checkbox' ? checked : value
+        [name]: newValue
       };
       console.log('Updated form data:', newData);
       return newData;
     });
+    
+    // Trigger real-time validation
+    if (modalMode !== 'view') {
+      updateValidation(name, newValue);
+    }
   };
 
   // Get total items for pagination
@@ -866,12 +989,22 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                   style={{
                     width: '100%',
                     padding: '0.5rem',
-                    border: '1px solid #ddd',
+                    border: `1px solid ${validationErrors.username ? '#dc3545' : '#ddd'}`,
                     borderRadius: '4px',
                     backgroundColor: modalMode === 'view' ? '#f8f9fa' : 'white',
                     color: modalMode === 'view' ? '#333' : '#000'
                   }}
                 />
+                {validationChecking.username && (
+                  <div style={{ fontSize: '0.875rem', color: '#6c757d', marginTop: '0.25rem' }}>
+                    Checking availability...
+                  </div>
+                )}
+                {validationErrors.username && !validationChecking.username && (
+                  <div style={{ fontSize: '0.875rem', color: '#dc3545', marginTop: '0.25rem' }}>
+                    {validationErrors.username}
+                  </div>
+                )}
                 {modalMode === 'edit' && (
                   <div style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.25rem' }}>
                     Only letters, numbers, and underscores allowed (minimum 3 characters)
@@ -894,12 +1027,17 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                   style={{
                     width: '100%',
                     padding: '0.5rem',
-                    border: '1px solid #ddd',
+                    border: `1px solid ${validationErrors.email ? '#dc3545' : '#ddd'}`,
                     borderRadius: '4px',
                     backgroundColor: modalMode === 'view' ? '#f8f9fa' : 'white',
                     color: modalMode === 'view' ? '#333' : '#000'
                   }}
                 />
+                {validationErrors.email && (
+                  <div style={{ fontSize: '0.875rem', color: '#dc3545', marginTop: '0.25rem' }}>
+                    {validationErrors.email}
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
@@ -959,12 +1097,17 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                     style={{
                       width: '100%',
                       padding: '0.5rem',
-                      border: '1px solid #ddd',
+                      border: `1px solid ${validationErrors.password ? '#dc3545' : '#ddd'}`,
                       borderRadius: '4px',
                       backgroundColor: 'white',
                       color: '#999'
                     }}
                   />
+                  {validationErrors.password && (
+                    <div style={{ fontSize: '0.875rem', color: '#dc3545', marginTop: '0.25rem' }}>
+                      {validationErrors.password}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -981,12 +1124,17 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                     style={{
                       width: '100%',
                       padding: '0.5rem',
-                      border: '1px solid #ddd',
+                      border: `1px solid ${validationErrors.password ? '#dc3545' : '#ddd'}`,
                       borderRadius: '4px',
                       backgroundColor: 'white',
                       color: '#999'
                     }}
                   />
+                  {validationErrors.password && (
+                    <div style={{ fontSize: '0.875rem', color: '#dc3545', marginTop: '0.25rem' }}>
+                      {validationErrors.password}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1091,16 +1239,18 @@ const UserManagement = ({ active = true, initialSection = null }) => {
                 {modalMode !== 'view' && (
                   <button
                     type="submit"
+                    disabled={!isFormValid || submitting}
                     style={{
                       padding: '0.5rem 1rem',
-                      backgroundColor: '#007bff',
+                      backgroundColor: (!isFormValid || submitting) ? '#6c757d' : '#007bff',
                       color: 'white',
                       border: 'none',
                       borderRadius: '4px',
-                      cursor: 'pointer'
+                      cursor: (!isFormValid || submitting) ? 'not-allowed' : 'pointer',
+                      opacity: (!isFormValid || submitting) ? 0.6 : 1
                     }}
                   >
-                    {modalMode === 'add' ? 'Add User' : 'Update User'}
+                    {submitting ? 'Processing...' : (modalMode === 'add' ? 'Add User' : 'Update User')}
                   </button>
                 )}
               </div>

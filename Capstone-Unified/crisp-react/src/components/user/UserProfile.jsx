@@ -1,21 +1,23 @@
 import React, { useState, useEffect } from 'react';
 
-const UserProfile = ({ active = true }) => {
+const UserProfile = ({ active }) => {
+  if (!active) return null;
+  
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [editData, setEditData] = useState({});
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
-    if (active) {
-      fetchProfile();
-    }
-  }, [active]);
+    fetchProfile();
+  }, []);
 
   const fetchProfile = async () => {
     try {
       setLoading(true);
+      setError(null);
       const token = localStorage.getItem('crisp_auth_token');
       const response = await fetch('http://localhost:8000/api/auth/profile/', {
         headers: {
@@ -26,31 +28,16 @@ const UserProfile = ({ active = true }) => {
       
       if (response.ok) {
         const data = await response.json();
-        console.log('Profile data:', data);
-        
-        let userProfile = null;
-        if (data.success && data.data?.user) {
-          userProfile = data.data.user;
-        } else if (data.user) {
-          userProfile = data.user;
-        } else if (data.success && data.user) {
-          userProfile = data.user;
-        } else {
-          throw new Error('Invalid profile response format');
-        }
-        
-        setProfile(userProfile);
+        setProfile(data.user);
         setEditData({
-          first_name: userProfile.first_name || '',
-          last_name: userProfile.last_name || '',
-          email: userProfile.email || ''
+          first_name: data.user.first_name || '',
+          last_name: data.user.last_name || '',
+          email: data.user.email || ''
         });
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to fetch profile');
+        throw new Error('Failed to fetch profile');
       }
     } catch (err) {
-      console.error('Profile fetch error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -60,7 +47,7 @@ const UserProfile = ({ active = true }) => {
   const handleSave = async () => {
     try {
       const token = localStorage.getItem('crisp_auth_token');
-      const response = await fetch('http://localhost:8000/api/auth/profile/', {
+      const response = await fetch('http://localhost:8000/api/auth/profile/update/', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -71,25 +58,15 @@ const UserProfile = ({ active = true }) => {
 
       if (response.ok) {
         const data = await response.json();
-        
-        let updatedProfile = null;
-        if (data.success && data.data?.user) {
-          updatedProfile = data.data.user;
-        } else if (data.user) {
-          updatedProfile = data.user;
-        } else {
-          throw new Error('Invalid update response format');
-        }
-        
-        setProfile(updatedProfile);
+        setProfile(data.user);
         setEditMode(false);
-        setError(null);
+        setSuccessMessage('Profile updated successfully!');
+        setTimeout(() => setSuccessMessage(''), 3000);
       } else {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to update profile');
       }
     } catch (err) {
-      console.error('Profile update error:', err);
       setError(err.message);
     }
   };
@@ -103,8 +80,6 @@ const UserProfile = ({ active = true }) => {
     setEditMode(false);
     setError(null);
   };
-
-  if (!active) return null;
 
   if (loading) {
     return (
@@ -131,90 +106,68 @@ const UserProfile = ({ active = true }) => {
     );
   }
 
-  if (!profile) {
-    return (
-      <div className="user-profile">
-        <div className="error-state">
-          <i className="fas fa-user-slash"></i>
-          <p>No profile data available</p>
-          <button onClick={fetchProfile} className="btn btn-primary">
-            Refresh
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="user-profile">
-      <div className="header">
-        <h1>My Profile</h1>
-      </div>
+      {successMessage && (
+        <div className="success-message">
+          <i className="fas fa-check-circle"></i>
+          {successMessage}
+        </div>
+      )}
 
-      {error && (
-        <div className="error-banner">
+      {error && !loading && (
+        <div className="error-message">
           <i className="fas fa-exclamation-triangle"></i>
-          <span>{error}</span>
-          <button onClick={() => setError(null)} className="close-btn">
-            <i className="fas fa-times"></i>
-          </button>
+          {error}
         </div>
       )}
 
       <div className="profile-card">
         <div className="profile-header">
-          <div className="profile-info">
-            <div className="profile-avatar">
-              <i className="fas fa-user"></i>
-            </div>
-            <div className="profile-title">
-              <h2>{profile.first_name} {profile.last_name}</h2>
-              <span className={`role-badge ${profile.role?.toLowerCase()}`}>
-                {profile.role}
-              </span>
-            </div>
+          <div className="profile-avatar">
+            <i className="fas fa-user"></i>
           </div>
-          {!editMode && (
-            <button 
-              className="edit-profile-btn"
-              onClick={() => setEditMode(true)}
-            >
-              <i className="fas fa-edit"></i>
-              Edit Profile
-            </button>
-          )}
+          <div className="profile-title">
+            <h3>{profile.first_name} {profile.last_name}</h3>
+            <p className="profile-role">{profile.role}</p>
+          </div>
         </div>
 
         <div className="profile-details">
           {editMode ? (
-            <form className="edit-form" onSubmit={(e) => e.preventDefault()}>
-              <div className="form-group">
-                <label>First Name</label>
-                <input
-                  type="text"
-                  value={editData.first_name}
-                  onChange={(e) => setEditData({...editData, first_name: e.target.value})}
-                  className="form-input"
-                />
+            <form className="edit-form">
+              <div className="form-row">
+                <div className="form-group">
+                  <label>First Name</label>
+                  <input
+                    type="text"
+                    value={editData.first_name}
+                    onChange={(e) => setEditData({...editData, first_name: e.target.value})}
+                    className="form-input"
+                    placeholder="Enter your first name"
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label>Last Name</label>
+                  <input
+                    type="text"
+                    value={editData.last_name}
+                    onChange={(e) => setEditData({...editData, last_name: e.target.value})}
+                    className="form-input"
+                    placeholder="Enter your last name"
+                  />
+                </div>
               </div>
               
               <div className="form-group">
-                <label>Last Name</label>
-                <input
-                  type="text"
-                  value={editData.last_name}
-                  onChange={(e) => setEditData({...editData, last_name: e.target.value})}
-                  className="form-input"
-                />
-              </div>
-              
-              <div className="form-group">
-                <label>Email</label>
+                <label>Email Address</label>
                 <input
                   type="email"
                   value={editData.email}
                   onChange={(e) => setEditData({...editData, email: e.target.value})}
                   className="form-input"
+                  placeholder="Enter your email address"
                 />
               </div>
 
@@ -230,49 +183,82 @@ const UserProfile = ({ active = true }) => {
               </div>
             </form>
           ) : (
-            <div className="info-grid">
-              <div className="info-item">
-                <label>Username</label>
-                <span>{profile.username}</span>
+            <div className="profile-content">
+              <div className="info-section">
+                <h4>Personal Information</h4>
+                <div className="info-grid">
+                  <div className="info-item">
+                    <label>Username</label>
+                    <span>{profile.username}</span>
+                  </div>
+                  
+                  <div className="info-item">
+                    <label>Email Address</label>
+                    <span>{profile.email}</span>
+                  </div>
+                  
+                  <div className="info-item">
+                    <label>First Name</label>
+                    <span>{profile.first_name || 'Not set'}</span>
+                  </div>
+                  
+                  <div className="info-item">
+                    <label>Last Name</label>
+                    <span>{profile.last_name || 'Not set'}</span>
+                  </div>
+                </div>
               </div>
-              
-              <div className="info-item">
-                <label>Email</label>
-                <span>{profile.email || 'Not provided'}</span>
+
+              <div className="info-section">
+                <h4>Account Information</h4>
+                <div className="info-grid">
+                  <div className="info-item">
+                    <label>Organization</label>
+                    <span>{profile.organization?.name || 'No organization'}</span>
+                  </div>
+                  
+                  <div className="info-item">
+                    <label>Role</label>
+                    <span className={`role-badge ${profile.role?.toLowerCase()}`}>
+                      {profile.role}
+                    </span>
+                  </div>
+                  
+                  <div className="info-item">
+                    <label>Account Status</label>
+                    <span className={`status-badge ${profile.is_active ? 'active' : 'inactive'}`}>
+                      {profile.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  
+                  <div className="info-item">
+                    <label>Verified</label>
+                    <span className={`status-badge ${profile.is_verified ? 'verified' : 'unverified'}`}>
+                      {profile.is_verified ? 'Verified' : 'Unverified'}
+                    </span>
+                  </div>
+                  
+                  <div className="info-item">
+                    <label>Member Since</label>
+                    <span>{new Date(profile.created_at || profile.date_joined).toLocaleDateString()}</span>
+                  </div>
+                  
+                  <div className="info-item">
+                    <label>Last Login</label>
+                    <span>{profile.last_login ? new Date(profile.last_login).toLocaleString() : 'Never'}</span>
+                  </div>
+                </div>
               </div>
-              
-              <div className="info-item">
-                <label>First Name</label>
-                <span>{profile.first_name || 'Not set'}</span>
-              </div>
-              
-              <div className="info-item">
-                <label>Last Name</label>
-                <span>{profile.last_name || 'Not set'}</span>
-              </div>
-              
-              <div className="info-item">
-                <label>Organization</label>
-                <span>{profile.organization?.name || 'No organization'}</span>
-              </div>
-              
-              <div className="info-item">
-                <label>Role</label>
-                <span className={`role-badge ${profile.role?.toLowerCase()}`}>
-                  {profile.role}
-                </span>
-              </div>
-              
-              <div className="info-item">
-                <label>Status</label>
-                <span className={`status-badge ${profile.is_active ? 'active' : 'inactive'}`}>
-                  {profile.is_active ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-              
-              <div className="info-item">
-                <label>Member Since</label>
-                <span>{profile.created_at ? new Date(profile.created_at).toLocaleDateString() : 'Unknown'}</span>
+
+              <div className="profile-actions">
+                <h2>My Profile</h2>
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => setEditMode(true)}
+                >
+                  <i className="fas fa-edit"></i>
+                  Edit Profile
+                </button>
               </div>
             </div>
           )}
@@ -281,218 +267,204 @@ const UserProfile = ({ active = true }) => {
 
       <style jsx>{`
         .user-profile {
-          padding: 2rem;
-          max-width: 1200px;
+          padding: 20px;
+          max-width: 1000px;
           margin: 0 auto;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
-        .header {
-          margin-bottom: 2rem;
+        .profile-actions {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-top: 30px;
+          padding-top: 20px;
+          border-top: 2px solid #f1f3f4;
         }
 
-        .header h1 {
+        .profile-actions h2 {
           margin: 0;
           color: #333;
-          font-size: 2rem;
-          font-weight: 600;
+          font-size: 28px;
         }
 
-        .error-banner {
+        .success-message {
+          background: #d4edda;
+          color: #155724;
+          padding: 12px 16px;
+          border-radius: 6px;
+          margin-bottom: 20px;
+          border: 1px solid #c3e6cb;
           display: flex;
           align-items: center;
-          gap: 0.75rem;
-          padding: 1rem 1.25rem;
-          background-color: #f8d7da;
+          gap: 8px;
+        }
+
+        .error-message {
+          background: #f8d7da;
           color: #721c24;
+          padding: 12px 16px;
+          border-radius: 6px;
+          margin-bottom: 20px;
           border: 1px solid #f5c6cb;
-          border-radius: 8px;
-          margin-bottom: 1.5rem;
-        }
-
-        .close-btn {
-          background: none;
-          border: none;
-          color: #721c24;
-          cursor: pointer;
-          margin-left: auto;
-          padding: 0.25rem;
-          border-radius: 4px;
-          transition: background-color 0.2s;
-        }
-
-        .close-btn:hover {
-          background-color: rgba(0, 0, 0, 0.1);
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
 
         .profile-card {
           background: white;
           border-radius: 12px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-          border: 1px solid #e9ecef;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
           overflow: hidden;
         }
 
         .profile-header {
-          padding: 2rem;
-          background: #f8f9fa;
-          border-bottom: 1px solid #e9ecef;
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-        }
-
-        .profile-info {
+          background: linear-gradient(135deg, #0056b3, #004494);
+          color: white;
+          padding: 30px;
           display: flex;
           align-items: center;
-          gap: 1.5rem;
+          gap: 20px;
         }
 
         .profile-avatar {
           width: 80px;
           height: 80px;
-          background: #dc3545;
+          background: rgba(255,255,255,0.2);
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 2rem;
-          color: white;
-          flex-shrink: 0;
+          font-size: 32px;
         }
 
-        .profile-title h2 {
-          margin: 0 0 0.5rem 0;
-          color: #333;
-          font-size: 1.75rem;
+        .profile-title h3 {
+          margin: 0 0 5px 0;
+          font-size: 24px;
           font-weight: 600;
         }
 
-        .edit-profile-btn {
-          background: #dc3545;
-          color: white;
-          border: none;
-          padding: 0.75rem 1.5rem;
-          border-radius: 8px;
-          cursor: pointer;
-          font-size: 0.875rem;
-          font-weight: 500;
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          transition: all 0.2s;
-        }
-
-        .edit-profile-btn:hover {
-          background: #c82333;
-          transform: translateY(-1px);
+        .profile-role {
+          margin: 0;
+          opacity: 0.9;
+          font-size: 16px;
         }
 
         .profile-details {
-          padding: 2rem;
+          padding: 30px;
+        }
+
+        .profile-content {
+          display: flex;
+          flex-direction: column;
+          gap: 30px;
+        }
+
+        .info-section h4 {
+          margin: 0 0 20px 0;
+          color: #333;
+          font-size: 18px;
+          font-weight: 600;
+          border-bottom: 2px solid #f1f3f4;
+          padding-bottom: 10px;
         }
 
         .info-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-          gap: 1.5rem;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 20px;
         }
 
         .info-item {
-          background: #f8f9fa;
-          padding: 1.25rem;
-          border-radius: 8px;
-          border: 1px solid #e9ecef;
-          transition: all 0.2s;
-        }
-
-        .info-item:hover {
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-          transform: translateY(-1px);
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
         }
 
         .info-item label {
-          display: block;
           font-weight: 600;
-          color: #6c757d;
-          font-size: 0.75rem;
+          color: #495057;
+          font-size: 14px;
           text-transform: uppercase;
           letter-spacing: 0.5px;
-          margin-bottom: 0.5rem;
         }
 
         .info-item span {
-          font-size: 1rem;
+          font-size: 16px;
           color: #333;
-          font-weight: 500;
         }
 
         .edit-form {
+          display: flex;
+          flex-direction: column;
+          gap: 25px;
+        }
+
+        .form-row {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 1.5rem;
-          margin-bottom: 2rem;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
         }
 
         .form-group {
           display: flex;
           flex-direction: column;
-          gap: 0.5rem;
+          gap: 8px;
         }
 
         .form-group label {
           font-weight: 600;
           color: #495057;
-          font-size: 0.875rem;
+          font-size: 14px;
         }
 
         .form-input {
-          padding: 0.75rem;
-          border: 2px solid #e9ecef;
-          border-radius: 8px;
-          font-size: 1rem;
-          transition: all 0.2s;
-          background: white;
+          padding: 12px;
+          border: 1px solid #dee2e6;
+          border-radius: 6px;
+          font-size: 14px;
+          transition: border-color 0.2s, box-shadow 0.2s;
         }
 
         .form-input:focus {
           outline: none;
-          border-color: #dc3545;
-          box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+          border-color: #0056b3;
+          box-shadow: 0 0 0 2px rgba(0, 86, 179, 0.1);
+        }
+
+        .form-input::placeholder {
+          color: #adb5bd;
         }
 
         .form-actions {
           display: flex;
-          gap: 1rem;
+          gap: 12px;
           justify-content: flex-end;
-          grid-column: 1 / -1;
-          padding-top: 1rem;
-          border-top: 1px solid #e9ecef;
+          margin-top: 10px;
         }
 
         .btn {
-          padding: 0.75rem 1.5rem;
+          padding: 12px 24px;
           border: none;
-          border-radius: 8px;
+          border-radius: 6px;
           cursor: pointer;
-          font-size: 0.875rem;
+          font-size: 14px;
           font-weight: 500;
           display: inline-flex;
           align-items: center;
-          gap: 0.5rem;
+          gap: 8px;
           transition: all 0.2s;
           text-decoration: none;
         }
 
         .btn-primary {
-          background: #dc3545;
+          background: #0056b3;
           color: white;
         }
 
         .btn-primary:hover {
-          background: #c82333;
+          background: #004494;
           transform: translateY(-1px);
-          box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
         }
 
         .btn-secondary {
@@ -502,109 +474,88 @@ const UserProfile = ({ active = true }) => {
 
         .btn-secondary:hover {
           background: #5a6268;
-          transform: translateY(-1px);
-          box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
         }
 
         .role-badge,
         .status-badge {
-          padding: 0.5rem 1rem;
-          border-radius: 20px;
-          font-size: 0.75rem;
+          padding: 6px 12px;
+          border-radius: 15px;
+          font-size: 12px;
           font-weight: 600;
           width: fit-content;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
         }
 
         .role-badge.admin {
-          background: #e7f3ff;
+          background: #e3f2fd;
           color: #1976d2;
-          border: 1px solid #bbdefb;
         }
 
-        .role-badge.viewer {
+        .role-badge.user {
           background: #f3e5f5;
           color: #7b1fa2;
-          border: 1px solid #e1bee7;
-        }
-
-        .role-badge.publisher {
-          background: #fff8e1;
-          color: #f57f17;
-          border: 1px solid #ffecb3;
         }
 
         .role-badge.bluevisionadmin {
           background: #e8f5e8;
           color: #2e7d32;
-          border: 1px solid #c8e6c9;
         }
 
-        .status-badge.active {
+        .status-badge.active,
+        .status-badge.verified {
           background: #e8f5e8;
           color: #2e7d32;
-          border: 1px solid #c8e6c9;
         }
 
-        .status-badge.inactive {
-          background: #ffebee;
-          color: #c62828;
-          border: 1px solid #ffcdd2;
+        .status-badge.inactive,
+        .status-badge.unverified {
+          background: #fff3e0;
+          color: #f57c00;
         }
 
         .loading-state,
         .error-state {
           text-align: center;
-          padding: 4rem 2rem;
-          background: white;
-          border-radius: 12px;
-          border: 1px solid #e9ecef;
+          padding: 60px 20px;
         }
 
         .loading-state i {
-          font-size: 3rem;
-          color: #dc3545;
-          margin-bottom: 1rem;
-          display: block;
+          font-size: 32px;
+          color: #0056b3;
+          margin-bottom: 15px;
         }
 
         .error-state i {
-          font-size: 3rem;
+          font-size: 32px;
           color: #dc3545;
-          margin-bottom: 1rem;
-          display: block;
+          margin-bottom: 15px;
         }
 
-        .loading-state p,
         .error-state p {
-          margin: 0 0 1.5rem 0;
-          color: #6c757d;
-          font-size: 1.125rem;
+          margin-bottom: 20px;
+          color: #dc3545;
         }
 
         @media (max-width: 768px) {
           .user-profile {
-            padding: 1rem;
+            padding: 10px;
           }
-          
-          .profile-header {
+
+          .profile-actions {
             flex-direction: column;
-            gap: 1.5rem;
+            gap: 15px;
             align-items: flex-start;
           }
-          
-          .profile-info {
-            flex-direction: column;
-            text-align: center;
-            gap: 1rem;
-          }
-          
-          .info-grid {
+
+          .form-row {
             grid-template-columns: 1fr;
           }
-          
-          .edit-form {
+
+          .profile-header {
+            flex-direction: column;
+            text-align: center;
+          }
+
+          .info-grid {
             grid-template-columns: 1fr;
           }
         }
