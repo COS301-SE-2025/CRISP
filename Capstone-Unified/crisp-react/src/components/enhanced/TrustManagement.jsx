@@ -309,30 +309,39 @@ function TrustManagement({ active, initialTab = null }) {
     if (mode === 'edit' && item) {
       if (type === 'relationship') {
         // Map trust level string back to level code for dropdown 
-        // Backend returns trust level as uppercase string like "HIGH", "MEDIUM", "LOW"
-        // We need to find the matching level object and use its 'level' field
-        const trustLevelObj = trustData.trustLevels.find(
-          level => level.name.toLowerCase().trim() === item.trust_level.toLowerCase().trim() ||
-                   level.name.toUpperCase().trim() === item.trust_level.toUpperCase().trim() ||
-                   level.level.toLowerCase().trim() === item.trust_level.toLowerCase().trim() ||
-                   level.level.toUpperCase().trim() === item.trust_level.toUpperCase().trim() ||
-                   level.name === item.trust_level ||
-                   level.level === item.trust_level
-        );
-        const trustLevelCode = trustLevelObj?.level || item.trust_level.toLowerCase() || '';
+        // Backend returns trust level in format like "Basic Trust (public)" or "Standard Trust (trusted)"
+        // We need to extract the level code from parentheses or find by exact name match
+        let trustLevelCode = '';
+        let trustLevelObj = null;
         
-        console.log('🔍 TRUST LEVEL MAPPING:', {
+        // First, try to extract level from parentheses like "Basic Trust (public)" -> "public"
+        const parenthesesMatch = item.trust_level.match(/\(([^)]+)\)/);
+        if (parenthesesMatch) {
+          const extractedLevel = parenthesesMatch[1].toLowerCase().trim();
+          trustLevelObj = trustData.trustLevels.find(level => level.level === extractedLevel);
+          if (trustLevelObj) {
+            trustLevelCode = extractedLevel;
+          }
+        }
+        
+        // If no match from parentheses, try exact name or level matching
+        if (!trustLevelObj) {
+          trustLevelObj = trustData.trustLevels.find(
+            level => level.name.toLowerCase().trim() === item.trust_level.toLowerCase().trim() ||
+                     level.level.toLowerCase().trim() === item.trust_level.toLowerCase().trim() ||
+                     level.name === item.trust_level ||
+                     level.level === item.trust_level
+          );
+          trustLevelCode = trustLevelObj?.level || item.trust_level.toLowerCase() || '';
+        }
+        
+        console.log('🔍 TRUST LEVEL MAPPING FOR EDIT:', {
           itemTrustLevel: item.trust_level,
-          itemTrustLevelLower: item.trust_level.toLowerCase(),
-          availableLevels: trustData.trustLevels.map(l => ({ id: l.id, name: l.name, level: l.level })),
+          parenthesesMatch: parenthesesMatch,
+          extractedFromParentheses: parenthesesMatch ? parenthesesMatch[1] : 'none',
           mappedCode: trustLevelCode,
           foundTrustLevelObj: trustLevelObj,
-          mapping: {
-            exactNameMatch: trustData.trustLevels.find(l => l.name === item.trust_level),
-            lowerNameMatch: trustData.trustLevels.find(l => l.name.toLowerCase() === item.trust_level.toLowerCase()),
-            upperNameMatch: trustData.trustLevels.find(l => l.name.toUpperCase() === item.trust_level.toUpperCase()),
-            levelMatch: trustData.trustLevels.find(l => l.level === item.trust_level.toLowerCase())
-          }
+          availableLevels: trustData.trustLevels.map(l => ({ id: l.id, name: l.name, level: l.level }))
         });
         
         // Map organization objects to IDs for dropdowns
@@ -420,6 +429,21 @@ function TrustManagement({ active, initialTab = null }) {
     e.preventDefault();
     setError(null);
 
+    // For relationship creation, check if relationship already exists
+    if (modalType === 'relationship' && modalMode === 'add') {
+      const existingRelationship = trustData.relationships.find(rel => 
+        (rel.source_organization?.id === formData.source_organization && rel.target_organization?.id === formData.target_organization) ||
+        (rel.source_organization?.id === formData.target_organization && rel.target_organization?.id === formData.source_organization)
+      );
+      
+      if (existingRelationship) {
+        const sourceOrgName = trustData.organizations.find(org => org.id === formData.source_organization)?.name || 'Source Org';
+        const targetOrgName = trustData.organizations.find(org => org.id === formData.target_organization)?.name || 'Target Org';
+        setError(`A trust relationship already exists between ${sourceOrgName} and ${targetOrgName}. Please edit the existing relationship instead.`);
+        return;
+      }
+    }
+
     // Show confirmation dialog
     const actionText = modalMode === 'add' ? 'create' : 'update';
     const itemName = modalType === 'relationship' ? 
@@ -476,7 +500,8 @@ function TrustManagement({ active, initialTab = null }) {
             });
             
             // Create payload for backend API
-            // For edit mode, only send the fields that can be updated
+            // For edit mode, only send the fields that can be updated (trust_level, notes)
+            // Organizations and relationship_type cannot be changed after relationship creation
             const relationshipData = modalMode === 'edit' ? {
               trust_level: trustLevelCode,  // Send level code (e.g., "high", "medium", "low")
               notes: formData.notes,  // Notes field for updates
@@ -489,12 +514,23 @@ function TrustManagement({ active, initialTab = null }) {
               notes: formData.notes
             };
 
-            console.log('📤 FINAL API PAYLOAD:', relationshipData);
+            console.log('📤 FINAL API PAYLOAD:', {
+              mode: modalMode,
+              payload: relationshipData,
+              editableFields: modalMode === 'edit' ? ['trust_level', 'notes'] : ['all fields'],
+              readOnlyFields: modalMode === 'edit' ? ['source_organization', 'target_organization', 'relationship_type'] : []
+            });
             
             if (modalMode === 'add') {
+              console.log('🚀 CREATING trust relationship with data:', relationshipData);
               await api.createTrustRelationship(relationshipData);
               setSuccess('Trust relationship created successfully');
             } else {
+              console.log('🔄 UPDATING trust relationship:', {
+                id: selectedItem.id,
+                originalItem: selectedItem,
+                updateData: relationshipData
+              });
               await api.updateTrustRelationship(selectedItem.id, relationshipData);
               setSuccess('Trust relationship updated successfully');
             }
@@ -506,9 +542,15 @@ function TrustManagement({ active, initialTab = null }) {
             }
             
             if (modalMode === 'add') {
+              console.log('🚀 CREATING trust group with data:', groupData);
               await api.createTrustGroup(groupData);
               setSuccess('Trust group created successfully');
             } else {
+              console.log('🔄 UPDATING trust group:', {
+                id: selectedItem.id,
+                originalItem: selectedItem,
+                updateData: groupData
+              });
               await api.updateTrustGroup(selectedItem.id, groupData);
               setSuccess('Trust group updated successfully');
             }
@@ -1162,6 +1204,16 @@ function TrustManagement({ active, initialTab = null }) {
           }}>
             <h3 style={{ margin: '0 0 1rem 0' }}>
               {modalMode === 'add' ? 'Create' : 'Edit'} {modalType === 'relationship' ? 'Trust Relationship' : 'Trust Group'}
+              {modalMode === 'edit' && modalType === 'relationship' && (
+                <div style={{ 
+                  fontSize: '0.875em', 
+                  fontWeight: 'normal', 
+                  color: '#6c757d', 
+                  marginTop: '0.25rem' 
+                }}>
+                  Only trust level and notes can be modified
+                </div>
+              )}
             </h3>
             
             <form onSubmit={handleSubmit}>
@@ -1172,22 +1224,38 @@ function TrustManagement({ active, initialTab = null }) {
                       <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
                         Source Organization *
                       </label>
-                      <select
-                        value={formData.source_organization || ''}
-                        onChange={(e) => setFormData({...formData, source_organization: e.target.value})}
-                        required={isAdmin}
-                        style={{
+                      {modalMode === 'edit' ? (
+                        <div style={{
                           width: '100%',
                           padding: '0.5rem',
-                          border: '1px solid #ced4da',
-                          borderRadius: '4px'
-                        }}
-                      >
-                        <option value="">Select Source Organization</option>
-                        {trustData.organizations.map(org => (
-                          <option key={org.id} value={org.id}>{org.name}</option>
-                        ))}
-                      </select>
+                          border: '1px solid #e9ecef',
+                          borderRadius: '4px',
+                          backgroundColor: '#f8f9fa',
+                          color: '#6c757d'
+                        }}>
+                          {trustData.organizations.find(org => org.id === formData.source_organization)?.name || 'Unknown Organization'}
+                          <small style={{ display: 'block', fontSize: '0.875em', marginTop: '0.25rem' }}>
+                            Organizations cannot be changed when editing
+                          </small>
+                        </div>
+                      ) : (
+                        <select
+                          value={formData.source_organization || ''}
+                          onChange={(e) => setFormData({...formData, source_organization: e.target.value})}
+                          required={isAdmin}
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            border: '1px solid #ced4da',
+                            borderRadius: '4px'
+                          }}
+                        >
+                          <option value="">Select Source Organization</option>
+                          {trustData.organizations.map(org => (
+                            <option key={org.id} value={org.id}>{org.name}</option>
+                          ))}
+                        </select>
+                      )}
                     </div>
                   )}
                   
@@ -1195,22 +1263,38 @@ function TrustManagement({ active, initialTab = null }) {
                     <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
                       Target Organization *
                     </label>
-                    <select
-                      value={formData.target_organization}
-                      onChange={(e) => setFormData({...formData, target_organization: e.target.value})}
-                      required
-                      style={{
+                    {modalMode === 'edit' ? (
+                      <div style={{
                         width: '100%',
                         padding: '0.5rem',
-                        border: '1px solid #ced4da',
-                        borderRadius: '4px'
-                      }}
-                    >
-                      <option value="">Select Organization</option>
-                      {trustData.organizations.map(org => (
-                        <option key={org.id} value={org.id}>{org.name}</option>
-                      ))}
-                    </select>
+                        border: '1px solid #e9ecef',
+                        borderRadius: '4px',
+                        backgroundColor: '#f8f9fa',
+                        color: '#6c757d'
+                      }}>
+                        {trustData.organizations.find(org => org.id === formData.target_organization)?.name || 'Unknown Organization'}
+                        <small style={{ display: 'block', fontSize: '0.875em', marginTop: '0.25rem' }}>
+                          Organizations cannot be changed when editing
+                        </small>
+                      </div>
+                    ) : (
+                      <select
+                        value={formData.target_organization}
+                        onChange={(e) => setFormData({...formData, target_organization: e.target.value})}
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '0.5rem',
+                          border: '1px solid #ced4da',
+                          borderRadius: '4px'
+                        }}
+                      >
+                        <option value="">Select Organization</option>
+                        {trustData.organizations.map(org => (
+                          <option key={org.id} value={org.id}>{org.name}</option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                   
                   <div style={{ marginBottom: '1rem' }}>
@@ -1248,19 +1332,35 @@ function TrustManagement({ active, initialTab = null }) {
                     <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
                       Relationship Type
                     </label>
-                    <select
-                      value={formData.relationship_type}
-                      onChange={(e) => setFormData({...formData, relationship_type: e.target.value})}
-                      style={{
+                    {modalMode === 'edit' ? (
+                      <div style={{
                         width: '100%',
                         padding: '0.5rem',
-                        border: '1px solid #ced4da',
-                        borderRadius: '4px'
-                      }}
-                    >
-                      <option value="bilateral">Bilateral</option>
-                      <option value="unilateral">Unilateral</option>
-                    </select>
+                        border: '1px solid #e9ecef',
+                        borderRadius: '4px',
+                        backgroundColor: '#f8f9fa',
+                        color: '#6c757d'
+                      }}>
+                        {formData.relationship_type?.charAt(0).toUpperCase() + formData.relationship_type?.slice(1) || 'Bilateral'}
+                        <small style={{ display: 'block', fontSize: '0.875em', marginTop: '0.25rem' }}>
+                          Relationship type cannot be changed when editing
+                        </small>
+                      </div>
+                    ) : (
+                      <select
+                        value={formData.relationship_type}
+                        onChange={(e) => setFormData({...formData, relationship_type: e.target.value})}
+                        style={{
+                          width: '100%',
+                          padding: '0.5rem',
+                          border: '1px solid #ced4da',
+                          borderRadius: '4px'
+                        }}
+                      >
+                        <option value="bilateral">Bilateral</option>
+                        <option value="unilateral">Unilateral</option>
+                      </select>
+                    )}
                   </div>
                   
                   <div style={{ marginBottom: '1rem' }}>

@@ -28,10 +28,10 @@ class TrustService:
             target_org = Organization.objects.get(id=target_org_id)
             trust_level = TrustLevel.objects.get(id=trust_level_id)
             
-            # Check if relationship already exists
+            # Check if relationship already exists (bidirectional check)
             existing = TrustRelationship.objects.filter(
-                source_organization=source_org,
-                target_organization=target_org
+                Q(source_organization=source_org, target_organization=target_org) |
+                Q(source_organization=target_org, target_organization=source_org)
             ).first()
             
             if existing:

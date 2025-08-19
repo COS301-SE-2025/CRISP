@@ -401,6 +401,11 @@ export const createTrustRelationship = async (relationshipData) => {
     message: relationshipData.notes || ''
   };
   
+  console.log('🚀 Creating trust relationship:', { 
+    original: relationshipData, 
+    mapped: mappedData 
+  });
+  
   const response = await fetch(`${API_BASE_URL}/api/trust/bilateral/request/`, {
     method: 'POST',
     headers: getAuthHeaders(),
@@ -409,25 +414,58 @@ export const createTrustRelationship = async (relationshipData) => {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || 'Failed to create trust relationship');
+    console.error('❌ Trust relationship creation failed:', {
+      status: response.status,
+      statusText: response.statusText,
+      errorData
+    });
+    
+    // Handle specific error messages
+    if (response.status === 400 && errorData.message) {
+      if (errorData.message.includes('already exists')) {
+        throw new Error('A trust relationship already exists between these organizations. Please edit the existing relationship instead.');
+      }
+      if (errorData.message.includes('not found')) {
+        throw new Error('One of the selected organizations was not found. Please refresh the page and try again.');
+      }
+    }
+    
+    throw new Error(errorData.message || `Failed to create trust relationship (${response.status})`);
   }
 
-  return await response.json();
+  const result = await response.json();
+  console.log('✅ Trust relationship created successfully:', result);
+  return result;
 };
 
 export const updateTrustRelationship = async (relationshipId, relationshipData) => {
+  console.log('🔄 API: Updating trust relationship:', {
+    id: relationshipId,
+    data: relationshipData,
+    url: `${API_BASE_URL}/api/trust/bilateral/${relationshipId}/update/`
+  });
+  
   const response = await fetch(`${API_BASE_URL}/api/trust/bilateral/${relationshipId}/update/`, {
     method: 'PUT',
     headers: getAuthHeaders(),
     body: JSON.stringify(relationshipData),
   });
 
+  console.log('📡 API Response:', {
+    status: response.status,
+    statusText: response.statusText,
+    ok: response.ok
+  });
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+    console.error('❌ Update failed:', errorData);
     throw new Error(errorData.message || 'Failed to update trust relationship');
   }
 
-  return await response.json();
+  const result = await response.json();
+  console.log('✅ Update successful:', result);
+  return result;
 };
 
 export const respondToTrustRelationship = async (relationshipId, action, trustLevel = null, message = '') => {
@@ -505,18 +543,33 @@ export const createTrustGroup = async (groupData) => {
 };
 
 export const updateTrustGroup = async (groupId, groupData) => {
+  console.log('🔄 API: Updating trust group:', {
+    id: groupId,
+    data: groupData,
+    url: `${API_BASE_URL}/api/trust-management/groups/${groupId}/`
+  });
+  
   const response = await fetch(`${API_BASE_URL}/api/trust-management/groups/${groupId}/`, {
     method: 'PUT',
     headers: getAuthHeaders(),
     body: JSON.stringify(groupData),
   });
 
+  console.log('📡 API Response:', {
+    status: response.status,
+    statusText: response.statusText,
+    ok: response.ok
+  });
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+    console.error('❌ Group update failed:', errorData);
     throw new Error(errorData.message || 'Failed to update trust group');
   }
 
-  return await response.json();
+  const result = await response.json();
+  console.log('✅ Group update successful:', result);
+  return result;
 };
 
 export const deleteTrustGroup = async (groupId) => {
