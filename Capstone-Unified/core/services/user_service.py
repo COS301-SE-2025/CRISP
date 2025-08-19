@@ -609,12 +609,12 @@ class UserService:
         # Define updatable fields based on user role
         if updated_by.role == 'BlueVisionAdmin':
             updatable_fields = {
-                'first_name', 'last_name', 'email', 'role', 
+                'username', 'first_name', 'last_name', 'email', 'role', 
                 'is_active', 'is_verified', 'is_publisher'
             }
         else:
             updatable_fields = {
-                'first_name', 'last_name', 'email'
+                'username', 'first_name', 'last_name', 'email'
             }
         
         # Apply updates
@@ -622,6 +622,13 @@ class UserService:
         for field, value in update_data.items():
             if field in updatable_fields and hasattr(user, field):
                 if getattr(user, field) != value:
+                    # Special validation for username uniqueness
+                    if field == 'username':
+                        if CustomUser.objects.filter(username=value).exclude(id=user.id).exists():
+                            return {
+                                'success': False,
+                                'message': f'Username "{value}" is already taken. Please choose a different username.'
+                            }
                     setattr(user, field, value)
                     updated_fields.append(field)
         
