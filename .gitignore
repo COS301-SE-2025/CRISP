@@ -30,6 +30,7 @@ media
 
 # Node
 node_modules/
+.aider.chat.history.md
 
 # Environment variables
 .env
@@ -47,3 +48,4 @@ ENV/
 .DS_Store
 
 staticfiles/
+.aider*

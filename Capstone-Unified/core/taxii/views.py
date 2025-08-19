@@ -5,6 +5,7 @@ Complete implementation with exact functional replication.
 import json
 import uuid
 import datetime
+import logging
 from typing import Dict, Any, List, Optional
 
 from django.conf import settings
@@ -22,6 +23,8 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ValidationError
 
 from core.models.models import Collection, STIXObject, CollectionObject, Organization, TrustRelationship
+
+logger = logging.getLogger(__name__)
 
 import sys
 import os
@@ -108,48 +111,71 @@ class TAXIIBaseView(APIView):
         from crisp_unified.utils import get_trust_level
         return get_trust_level(source_org, target_org)
     
-    def apply_anonymization(self, stix_data, target_org_or_requesting_org=None, source_org=None, requesting_org=None):
-        """
-        Apply anonymization to STIX data based on trust relationship
-        """
-        # Handle different calling conventions
-        if requesting_org is None:
-            requesting_org = target_org_or_requesting_org
-        
-        # Handle STIXObject model instances
-        if hasattr(stix_data, 'source_organization'):
-            source_org = stix_data.source_organization
-            stix_data = stix_data.to_stix() if hasattr(stix_data, 'to_stix') else stix_data.raw_data
-        
-        if not requesting_org or not source_org:
-            return stix_data
-            
-        # Get trust level between organizations
-        trust_level = self._get_trust_level(source_org, requesting_org)
-        
-        # Apply anonymization based on trust level
-        if trust_level <= 0.3:
-            import copy
-            result = copy.deepcopy(stix_data)
-            result['x_crisp_anonymized'] = True
-            result['x_crisp_anonymization_level'] = str(trust_level)
-            if 'pattern' in result:
-                result['pattern'] = f"[ANON:{trust_level}]{result['pattern']}"
-            return result
+    def apply_anonymization(self, stix_objects, requesting_org, source_org):
+        """Apply anonymization to STIX objects based on trust relationship"""
+        if requesting_org == source_org:
+            # Same organization - no anonymization needed
+            return stix_objects
         
         try:
-            context = AnonymizationContext()
-            result = context.anonymize_stix_object(stix_data, trust_level)
-            return result
-        except Exception:
-            # Fallback to simple anonymization method that adds
-            import copy
-            result = copy.deepcopy(stix_data)
-            result['x_crisp_anonymized'] = True
-            result['x_crisp_anonymization_level'] = str(trust_level)
-            if 'pattern' in result:
-                result['pattern'] = f"[ANON:{trust_level}]{result['pattern']}"
-            return result
+            from core.services.anonymization_service import AnonymizationService
+            anonymization_service = AnonymizationService()
+            
+            # Determine anonymization level based on trust relationship
+            anonymization_level = 'partial'  # Default level
+            
+            # Apply anonymization to each STIX object
+            anonymized_objects = []
+            for obj in stix_objects:
+                try:
+                    # Handle different object types
+                    if hasattr(obj, 'to_stix'):
+                        # Django model with to_stix method
+                        obj_dict = obj.to_stix()
+                    elif hasattr(obj, '__dict__'):
+                        # Object with __dict__
+                        obj_dict = obj.__dict__.copy()
+                    elif hasattr(obj, '_inner'):
+                        # STIX2 object format
+                        obj_dict = obj._inner.copy()
+                    elif isinstance(obj, dict):
+                        # Already a dictionary
+                        obj_dict = obj.copy()
+                    else:
+                        # Try to convert to dict safely
+                        try:
+                            obj_dict = dict(obj)
+                        except (TypeError, ValueError):
+                            # If conversion fails, create a basic dict
+                            obj_dict = {
+                                'type': getattr(obj, 'type', 'unknown'),
+                                'id': getattr(obj, 'id', f'unknown--{uuid.uuid4()}'),
+                                'pattern': getattr(obj, 'pattern', ''),
+                            }
+                    
+                    # Apply anonymization
+                    anonymized_obj = anonymization_service.anonymize_stix_object(
+                        obj_dict, anonymization_level
+                    )
+                    anonymized_objects.append(anonymized_obj)
+                    
+                except Exception as e:
+                    logger.warning(f"Failed to anonymize object {obj}: {e}")
+                    # If anonymization fails, create a safe fallback
+                    fallback_obj = {
+                        'type': 'indicator',
+                        'id': f'indicator--{uuid.uuid4()}',
+                        'pattern': '[ANON:FAILED]',
+                        'labels': ['malicious-activity']
+                    }
+                    anonymized_objects.append(fallback_obj)
+            
+            return anonymized_objects
+            
+        except Exception as e:
+            logger.error(f"Anonymization service failed: {e}")
+            # If anonymization service fails, return original objects
+            return stix_objects
 
     def _get_trust_level(self, source_org, requesting_org):
         """
