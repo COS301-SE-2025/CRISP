@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import UserProfile from './components/user/UserProfile.jsx';
+import AccountSettings from './components/user/AccountSettings.jsx';
 import UserManagement from './components/enhanced/UserManagement.jsx';
 import OrganisationManagement from './components/enhanced/OrganisationManagement.jsx';
 import TrustManagement from './components/enhanced/TrustManagement.jsx';
@@ -390,6 +391,9 @@ function App({ user, onLogout, isAdmin }) {
           
           {/* User Profile */}
           <UserProfile active={activePage === 'profile'} />
+          
+          {/* Account Settings */}
+          <AccountSettings active={activePage === 'account-settings'} />
           
           {/* Management Components */}
           <UserManagement active={activePage === 'user-management'} />
