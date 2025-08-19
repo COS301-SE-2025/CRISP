@@ -47,7 +47,6 @@ user_urlpatterns = [
     path('<uuid:user_id>/delete-permanently/', user_api.delete_user_permanently, name='user_delete_permanent'),
     path('<uuid:user_id>/deactivate/', user_api.deactivate_user, name='user_deactivate'),
     path('<uuid:user_id>/reactivate/', user_api.reactivate_user, name='user_reactivate'),
-    path('<uuid:user_id>/change_username/', user_api.change_username, name='user_change_username'),
     path('invite/', user_api.invite_user, name='user_invite'),
     path('invitations/', user_api.list_invitations, name='invitation_list'),
     path('invitations/<uuid:invitation_id>/cancel/', user_api.cancel_invitation, name='invitation_cancel'),
