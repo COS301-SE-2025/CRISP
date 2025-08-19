@@ -515,13 +515,6 @@ function Header({ showPage, user, onLogout, isAdmin, navigateToRegisterUser }) {
                       </div>
                     )}
                   </div>
-                  {/* Admin Settings - BlueVision Admins only */}
-                  {userRole === 'BlueVisionAdmin' && (
-                    <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('admin-settings');}} type="button">
-                      <i className="fas fa-shield-alt"></i>
-                      <span>Admin Settings</span>
-                    </button>
-                  )}
                   {/* Register User - BlueVision Admins only */}
                   {userRole === 'BlueVisionAdmin' && navigateToRegisterUser && (
                     <button className="menu-item" onClick={() => {setShowUserMenu(false); navigateToRegisterUser();}} type="button">
