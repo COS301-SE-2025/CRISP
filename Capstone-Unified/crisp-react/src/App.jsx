@@ -6,6 +6,8 @@ import UserManagement from './components/enhanced/UserManagement.jsx';
 import OrganisationManagement from './components/enhanced/OrganisationManagement.jsx';
 import TrustManagement from './components/enhanced/TrustManagement.jsx';
 import Institutions from './components/institutions/Institutions.jsx';
+import BlueVLogo from './assets/enhanced/BlueV2.png';
+import { getOrganizations } from './api.js';
 
 // Error Boundary for Chart Component
 class ChartErrorBoundary extends React.Component {
@@ -447,9 +449,10 @@ function Header({ showPage, user, onLogout, isAdmin, navigateToRegisterUser }) {
   return (
     <header>
       <div className="container header-container">
-        <a href="#" className="logo">
-          <div className="logo-icon"><i className="fas fa-shield-alt"></i></div>
-          <div className="logo-text">CRISP</div>
+       <a href="#" className="logo">
+          
+            <img src={BlueVLogo} alt="CRISP Logo" />
+
         </a>
         <div className="nav-actions">
           <div className="search-bar">
@@ -648,6 +651,11 @@ function Dashboard({ active, showPage, user }) {
     status: 'loading'
   });
   
+  // State for connected organizations
+  const [connectedOrganizations, setConnectedOrganizations] = useState([]);
+  const [organizationsLoading, setOrganizationsLoading] = useState(false);
+  const [organizationsError, setOrganizationsError] = useState(null);
+  
   // State for recent IoC data
   const [recentIoCs, setRecentIoCs] = useState([]);
   const [iocLoading, setIocLoading] = useState(false);
@@ -763,6 +771,57 @@ function Dashboard({ active, showPage, user }) {
         ttps: totalTTPs,
         status: 'active'
       });
+    }
+  };
+
+  // Fetch connected organizations for dashboard
+  const fetchConnectedOrganizations = async () => {
+    try {
+      setOrganizationsLoading(true);
+      setOrganizationsError(null);
+      
+      const organizationsData = await getOrganizations();
+      if (organizationsData && organizationsData.results) {
+        // Transform the data to match the expected format
+        const transformedOrgs = organizationsData.results.map(org => ({
+          id: org.id,
+          name: org.name,
+          logo: org.name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2),
+          ioc_count: org.indicator_count || 0,
+          last_activity: org.last_activity || new Date().toISOString(),
+          trust_level: org.trust_level || 75
+        }));
+        
+        setConnectedOrganizations(transformedOrgs);
+      } else {
+        setConnectedOrganizations([]);
+      }
+    } catch (error) {
+      console.error('Error fetching connected organizations:', error);
+      setOrganizationsError(error.message);
+      setConnectedOrganizations([]);
+    } finally {
+      setOrganizationsLoading(false);
+    }
+  };
+
+  // Helper function to format time ago
+  const getTimeAgo = (dateString) => {
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) {
+      return `${diffInSeconds}s ago`;
+    } else if (diffInSeconds < 3600) {
+      const minutes = Math.floor(diffInSeconds / 60);
+      return `${minutes}m ago`;
+    } else if (diffInSeconds < 86400) {
+      const hours = Math.floor(diffInSeconds / 3600);
+      return `${hours}h ago`;
+    } else {
+      const days = Math.floor(diffInSeconds / 86400);
+      return `${days}d ago`;
     }
   };
 
