@@ -721,3 +721,88 @@ def delete_organization_permanently(request, organization_id):
             'success': False,
             'message': 'Failed to permanently delete organization'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_connected_organizations(request):
+    """
+    Get connected organizations with their IoC counts and recent activity
+    
+    GET /api/organizations/connected/
+    """
+    try:
+        from django.utils import timezone
+        from datetime import timedelta
+        from core.models.models import Indicator, SystemActivity
+        
+        access_control = AccessControlService()
+        
+        # Get organizations that the current user can see
+        if request.user.role == 'BlueVisionAdmin':
+            # BlueVision admins can see all organizations
+            queryset = Organization.objects.filter(is_active=True)
+        else:
+            # Other users can see their own organization and trusted organizations
+            accessible_orgs = access_control.get_accessible_organizations(request.user)
+            queryset = Organization.objects.filter(
+                id__in=[org.id for org in accessible_orgs],
+                is_active=True
+            )
+        
+        # Limit to top 10 for dashboard display
+        queryset = queryset[:10]
+        
+        connected_orgs = []
+        for org in queryset:
+            # Count IoCs from threat feeds owned by this organization
+            ioc_count = Indicator.objects.filter(threat_feed__owner=org).count()
+            
+            # Get most recent activity for this organization
+            recent_activity = SystemActivity.objects.filter(
+                threat_feed__owner=org
+            ).order_by('-created_at').first()
+            
+            # Calculate time since last activity
+            if recent_activity:
+                time_diff = timezone.now() - recent_activity.created_at
+                if time_diff.total_seconds() < 60:
+                    last_activity = f"{int(time_diff.total_seconds())}s ago"
+                elif time_diff.total_seconds() < 3600:
+                    last_activity = f"{int(time_diff.total_seconds() / 60)}m ago"
+                elif time_diff.total_seconds() < 86400:
+                    last_activity = f"{int(time_diff.total_seconds() / 3600)}h ago"
+                else:
+                    last_activity = f"{int(time_diff.total_seconds() / 86400)}d ago"
+            else:
+                last_activity = "No activity"
+            
+            # Generate organization logo (first letters of name)
+            org_logo = ''.join([word[0].upper() for word in org.name.split()[:2]])
+            
+            # Calculate trust level (placeholder - you can implement real trust calculation)
+            trust_level = 85  # Default trust level
+            
+            connected_orgs.append({
+                'id': str(org.id),
+                'name': org.name,
+                'logo': org_logo,
+                'ioc_count': ioc_count,
+                'last_activity': last_activity,
+                'trust_level': trust_level,
+                'organization_type': org.organization_type
+            })
+        
+        # Sort by IoC count (descending)
+        connected_orgs.sort(key=lambda x: x['ioc_count'], reverse=True)
+        
+        return Response({
+            'success': True,
+            'organizations': connected_orgs
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error getting connected organizations: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to get connected organizations'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -612,6 +612,7 @@ function Dashboard({ active, showPage, user }) {
         fetchChartData().catch(error => console.error('Chart data error:', error));
         fetchSystemHealth().catch(error => console.error('System health error:', error));
         fetchRecentActivities().catch(error => console.error('Recent activities error:', error));
+        fetchConnectedOrganizations().catch(error => console.error('Connected organizations error:', error));
       }
     }
   }, [active]);
@@ -676,19 +677,11 @@ function Dashboard({ active, showPage, user }) {
       setOrganizationsLoading(true);
       setOrganizationsError(null);
       
-      const organizationsData = await getOrganizations();
-      if (organizationsData && organizationsData.results) {
-        // Transform the data to match the expected format
-        const transformedOrgs = organizationsData.results.map(org => ({
-          id: org.id,
-          name: org.name,
-          logo: org.name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2),
-          ioc_count: org.indicator_count || 0,
-          last_activity: org.last_activity || new Date().toISOString(),
-          trust_level: org.trust_level || 75
-        }));
-        
-        setConnectedOrganizations(transformedOrgs);
+      const { getConnectedOrganizations } = await import('./api.js');
+      const organizationsData = await getConnectedOrganizations();
+      
+      if (organizationsData && organizationsData.success && organizationsData.organizations) {
+        setConnectedOrganizations(organizationsData.organizations);
       } else {
         setConnectedOrganizations([]);
       }
@@ -1832,60 +1825,48 @@ function Dashboard({ active, showPage, user }) {
               <h2 className="card-title"><i className="fas fa-building card-icon"></i> Connected Organisations</h2>
             </div>
             <div className="card-content">
-              <ul className="organisation-list">
-                <li className="organisation-item">
-                  <div className="organisation-logo">UP</div>
-                  <div className="organisation-details">
-                    <div className="organisation-name">University of Pretoria</div>
-                    <div className="organisation-stats">
-                      <div className="stat-item"><i className="fas fa-exchange-alt"></i> 125 IoCs</div>
-                      <div className="stat-item"><i className="fas fa-clock"></i> 5m ago</div>
-                    </div>
-                  </div>
-                  <div className="trust-level">
-                    <div className="trust-fill" style={{ width: '90%' }}></div>
-                  </div>
-                </li>
-                <li className="organisation-item">
-                  <div className="organisation-logo">CS</div>
-                  <div className="organisation-details">
-                    <div className="organisation-name">Cyber Security Hub</div>
-                    <div className="organisation-stats">
-                      <div className="stat-item"><i className="fas fa-exchange-alt"></i> 342 IoCs</div>
-                      <div className="stat-item"><i className="fas fa-clock"></i> 17m ago</div>
-                    </div>
-                  </div>
-                  <div className="trust-level">
-                    <div className="trust-fill" style={{ width: '85%' }}></div>
-                  </div>
-                </li>
-                <li className="organisation-item">
-                  <div className="organisation-logo">SR</div>
-                  <div className="organisation-details">
-                    <div className="organisation-name">SANReN CSIRT</div>
-                    <div className="organisation-stats">
-                      <div className="stat-item"><i className="fas fa-exchange-alt"></i> 208 IoCs</div>
-                      <div className="stat-item"><i className="fas fa-clock"></i> 32m ago</div>
-                    </div>
-                  </div>
-                  <div className="trust-level">
-                    <div className="trust-fill" style={{ width: '75%' }}></div>
-                  </div>
-                </li>
-                <li className="organisation-item">
-                  <div className="organisation-logo">SB</div>
-                  <div className="organisation-details">
-                    <div className="organisation-name">SABRIC</div>
-                    <div className="organisation-stats">
-                      <div className="stat-item"><i className="fas fa-exchange-alt"></i> 156 IoCs</div>
-                      <div className="stat-item"><i className="fas fa-clock"></i> 1h ago</div>
-                    </div>
-                  </div>
-                  <div className="trust-level">
-                    <div className="trust-fill" style={{ width: '70%' }}></div>
-                  </div>
-                </li>
-              </ul>
+              {organizationsLoading ? (
+                <div className="loading-state">
+                  <div className="loading-spinner"></div>
+                  <p>Loading connected organizations...</p>
+                </div>
+              ) : organizationsError ? (
+                <div className="error-state">
+                  <i className="fas fa-exclamation-triangle"></i>
+                  <p>Error loading organizations: {organizationsError}</p>
+                  <button className="btn btn-primary btn-sm" onClick={fetchConnectedOrganizations}>
+                    <i className="fas fa-retry"></i> Retry
+                  </button>
+                </div>
+              ) : connectedOrganizations.length === 0 ? (
+                <div className="empty-state">
+                  <i className="fas fa-building"></i>
+                  <p>No connected organizations</p>
+                  <p className="text-muted">Connected organizations will appear here</p>
+                </div>
+              ) : (
+                <ul className="organisation-list">
+                  {connectedOrganizations.map((org, index) => (
+                    <li key={org.id || index} className="organisation-item">
+                      <div className="organisation-logo">{org.logo}</div>
+                      <div className="organisation-details">
+                        <div className="organisation-name">{org.name}</div>
+                        <div className="organisation-stats">
+                          <div className="stat-item">
+                            <i className="fas fa-exchange-alt"></i> {org.ioc_count} IoCs
+                          </div>
+                          <div className="stat-item">
+                            <i className="fas fa-clock"></i> {org.last_activity}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="trust-level">
+                        <div className="trust-fill" style={{ width: `${org.trust_level}%` }}></div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
 

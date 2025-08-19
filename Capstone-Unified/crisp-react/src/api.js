@@ -332,6 +332,20 @@ export const getOrganizationTrustGroups = async (orgId) => {
   return await response.json();
 };
 
+export const getConnectedOrganizations = async () => {
+  const response = await fetch(`${API_BASE_URL}/api/organizations/connected/`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch connected organizations');
+  }
+
+  return await response.json();
+};
+
 // Trust Management Functions
 export const getTrustRelationships = async (queryParams = {}) => {
   // By default, exclude revoked relationships unless specifically requested
