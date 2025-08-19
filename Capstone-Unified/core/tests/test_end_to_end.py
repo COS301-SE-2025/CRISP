@@ -635,7 +635,7 @@ class MITREMatrixAPITestCase(TransactionTestCase):
 
     def test_mitre_matrix_list_format(self):
         """Test MITRE matrix endpoint with list format"""
-        url = '/api/ttps/mitre-matrix/?format=list'
+        url = '/api/ttps/mitre-matrix/?response_format=list'
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -1078,7 +1078,7 @@ class TTPExportAPITestCase(TransactionTestCase):
 
     def test_ttp_export_csv_basic(self):
         """Test basic CSV export functionality"""
-        url = '/api/ttps/export/?format=csv'
+        url = '/api/ttps/export/?export_format=csv'
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -1104,7 +1104,7 @@ class TTPExportAPITestCase(TransactionTestCase):
 
     def test_ttp_export_stix_basic(self):
         """Test basic STIX export functionality"""
-        url = '/api/ttps/export/?format=stix'
+        url = '/api/ttps/export/?export_format=stix'
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -1264,12 +1264,12 @@ class TTPExportAPITestCase(TransactionTestCase):
     def test_ttp_export_error_handling(self):
         """Test export error handling"""
         # Test invalid format
-        url = '/api/ttps/export/?format=invalid'
+        url = '/api/ttps/export/?export_format=invalid'
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         
         # Test invalid feed_id
-        url = '/api/ttps/export/?format=json&feed_id=invalid'
+        url = '/api/ttps/export/?export_format=json&feed_id=invalid'
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         
@@ -1280,7 +1280,7 @@ class TTPExportAPITestCase(TransactionTestCase):
 
     def test_ttp_export_stix_external_references(self):
         """Test STIX export includes proper external references"""
-        url = '/api/ttps/export/?format=stix'
+        url = '/api/ttps/export/?export_format=stix'
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -1303,7 +1303,7 @@ class TTPExportAPITestCase(TransactionTestCase):
 
     def test_ttp_export_stix_kill_chain_phases(self):
         """Test STIX export includes proper kill chain phases"""
-        url = '/api/ttps/export/?format=stix'
+        url = '/api/ttps/export/?export_format=stix'
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)

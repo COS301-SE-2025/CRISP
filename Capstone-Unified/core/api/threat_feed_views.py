@@ -2249,10 +2249,11 @@ def mitre_matrix(request):
     technique details, and overall statistics.
     """
     try:
+        logger.info(f"MITRE Matrix called with parameters: {request.GET}")
         # Get query parameters
         feed_id = request.GET.get('feed_id', '').strip()
         include_zero = request.GET.get('include_zero', 'false').lower() == 'true'
-        response_format = request.GET.get('format', 'matrix').lower()
+        response_format = request.GET.get('response_format', request.GET.get('format', 'matrix')).lower()
         
         # Start with all TTPs
         queryset = TTPData.objects.select_related('threat_feed').all()
@@ -2714,7 +2715,7 @@ def ttp_export(request):
     """
     try:
         # Get and validate query parameters
-        export_format = request.GET.get('format', 'json').lower()
+        export_format = request.GET.get('export_format', request.GET.get('format', 'json')).lower()
         tactic = request.GET.get('tactic', '').strip()
         technique_id = request.GET.get('technique_id', '').strip()
         feed_id = request.GET.get('feed_id', '').strip()
