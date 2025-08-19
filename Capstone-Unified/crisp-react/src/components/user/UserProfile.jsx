@@ -108,19 +108,6 @@ const UserProfile = ({ active }) => {
 
   return (
     <div className="user-profile">
-      <div className="header">
-        <h2>My Profile</h2>
-        {!editMode && (
-          <button 
-            className="btn btn-primary"
-            onClick={() => setEditMode(true)}
-          >
-            <i className="fas fa-edit"></i>
-            Edit Profile
-          </button>
-        )}
-      </div>
-
       {successMessage && (
         <div className="success-message">
           <i className="fas fa-check-circle"></i>
@@ -262,6 +249,17 @@ const UserProfile = ({ active }) => {
                   </div>
                 </div>
               </div>
+
+              <div className="profile-actions">
+                <h2>My Profile</h2>
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => setEditMode(true)}
+                >
+                  <i className="fas fa-edit"></i>
+                  Edit Profile
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -274,14 +272,16 @@ const UserProfile = ({ active }) => {
           margin: 0 auto;
         }
 
-        .header {
+        .profile-actions {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 20px;
+          margin-top: 30px;
+          padding-top: 20px;
+          border-top: 2px solid #f1f3f4;
         }
 
-        .header h2 {
+        .profile-actions h2 {
           margin: 0;
           color: #333;
           font-size: 28px;
@@ -540,7 +540,7 @@ const UserProfile = ({ active }) => {
             padding: 10px;
           }
 
-          .header {
+          .profile-actions {
             flex-direction: column;
             gap: 15px;
             align-items: flex-start;
