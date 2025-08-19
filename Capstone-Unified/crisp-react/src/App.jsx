@@ -4573,12 +4573,25 @@ function IoCManagement({ active }) {
             </div>
             <div className="modal-body">
               <form onSubmit={handleShareIndicatorSubmit}>
-                <div className="form-group">
-                  <label className="form-label">IoC Details</label>
-                  <div className="info-box">
-                    <p><strong>Type:</strong> {sharingIndicator?.type}</p>
-                    <p><strong>Value:</strong> {sharingIndicator?.value}</p>
-                    <p><strong>Source:</strong> {sharingIndicator?.source}</p>
+                {/* Compact IoC Details */}
+                <div className="compact-ioc-details">
+                  <div className="ioc-header">
+                    <i className="fas fa-shield-alt"></i>
+                    <span>IoC Details</span>
+                  </div>
+                  <div className="ioc-info-grid">
+                    <div className="ioc-item">
+                      <span className="ioc-label">Type</span>
+                      <span className="ioc-value">{sharingIndicator?.type}</span>
+                    </div>
+                    <div className="ioc-item">
+                      <span className="ioc-label">Value</span>
+                      <span className="ioc-value">{sharingIndicator?.value}</span>
+                    </div>
+                    <div className="ioc-item full-width">
+                      <span className="ioc-label">Source</span>
+                      <span className="ioc-value">{sharingIndicator?.source}</span>
+                    </div>
                   </div>
                 </div>
                 
@@ -4591,62 +4604,85 @@ function IoCManagement({ active }) {
                     Select trusted organisations to share this threat intelligence with
                   </p>
                   
-                  {/* Sleek Organization Selector */}
-                  <div className="sleek-org-selector">
-                    {/* Search Input */}
-                    <div className="search-field">
-                      <input
-                        type="text"
-                        className="sleek-search-input"
-                        value={organisationDropdownSearch}
-                        onChange={(e) => {
-                          setOrganisationDropdownSearch(e.target.value);
+                  {/* Improved Organization Selector */}
+                  <div className="improved-org-selector">
+                    {/* Search Input with Show All button */}
+                    <div className="search-field-wrapper">
+                      <div className="search-field">
+                        <input
+                          type="text"
+                          className="sleek-search-input"
+                          value={organisationDropdownSearch}
+                          onChange={(e) => {
+                            setOrganisationDropdownSearch(e.target.value);
+                            setShowOrganisationSelectDropdown(true);
+                          }}
+                          onFocus={() => setShowOrganisationSelectDropdown(true)}
+                          onBlur={(e) => {
+                            setTimeout(() => {
+                              if (!e.relatedTarget || !e.relatedTarget.closest('.results-list')) {
+                                setShowOrganisationSelectDropdown(false);
+                              }
+                            }, 200);
+                          }}
+                          placeholder="Search organizations or click 'Show All'..."
+                        />
+                        <i className="fas fa-search search-icon"></i>
+                      </div>
+                      <button
+                        type="button"
+                        className="show-all-btn"
+                        onClick={() => {
+                          setOrganisationDropdownSearch('');
                           setShowOrganisationSelectDropdown(true);
                         }}
-                        onFocus={() => setShowOrganisationSelectDropdown(true)}
-                        onBlur={(e) => {
-                          setTimeout(() => {
-                            if (!e.relatedTarget || !e.relatedTarget.closest('.results-list')) {
-                              setShowOrganisationSelectDropdown(false);
-                            }
-                          }, 200);
-                        }}
-                        placeholder="Type to search organizations..."
-                      />
-                      <i className="fas fa-search search-icon"></i>
+                      >
+                        <i className="fas fa-list"></i> Show All
+                      </button>
                     </div>
                     
-                    {/* Results List */}
-                    {showOrganisationSelectDropdown && organisationDropdownSearch && (
-                      <div className="results-list">
+                    {/* Results List - Show all when no search term, filtered when searching */}
+                    {showOrganisationSelectDropdown && (
+                      <div className="results-list enhanced-dropdown">
                         {availableOrganisations
-                          .filter(organisation => 
-                            !shareFormData.organisations.includes(organisation) &&
-                            organisation.toLowerCase().includes(organisationDropdownSearch.toLowerCase())
-                          )
-                          .slice(0, 5)
+                          .filter(organisation => {
+                            // If no search term, show all available orgs
+                            if (!organisationDropdownSearch.trim()) {
+                              return !shareFormData.organisations.includes(organisation);
+                            }
+                            // Otherwise filter by search term
+                            return !shareFormData.organisations.includes(organisation) &&
+                                   organisation.toLowerCase().includes(organisationDropdownSearch.toLowerCase());
+                          })
+                          .slice(0, 8) // Show more results
                           .map(organisation => (
                             <div
                               key={organisation}
-                              className="result-item"
+                              className="result-item enhanced-result-item"
                               onClick={() => {
                                 addOrganisation(organisation);
                                 setOrganisationDropdownSearch('');
                                 setShowOrganisationSelectDropdown(false);
                               }}
                             >
-                              <span className="result-name">{organisation}</span>
+                              <div className="result-content">
+                                <span className="result-name">{organisation}</span>
+                                <span className="result-subtitle">Trusted Organization</span>
+                              </div>
                               <i className="fas fa-plus add-icon"></i>
                             </div>
                           ))
                         }
                         {availableOrganisations
-                          .filter(organisation => 
-                            !shareFormData.organisations.includes(organisation) &&
-                            organisation.toLowerCase().includes(organisationDropdownSearch.toLowerCase())
-                          ).length === 0 && (
+                          .filter(organisation => {
+                            if (!organisationDropdownSearch.trim()) {
+                              return !shareFormData.organisations.includes(organisation);
+                            }
+                            return !shareFormData.organisations.includes(organisation) &&
+                                   organisation.toLowerCase().includes(organisationDropdownSearch.toLowerCase());
+                          }).length === 0 && (
                             <div className="no-results">
-                              No organizations found
+                              {organisationDropdownSearch ? 'No organizations found matching your search' : 'All organizations have been selected'}
                             </div>
                           )
                         }
@@ -4678,41 +4714,44 @@ function IoCManagement({ active }) {
                   </div>
                 </div>
                 
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label className="form-label">
+                {/* Compact Settings Row */}
+                <div className="compact-form-row">
+                  <div className="form-group flex-grow">
+                    <label className="form-label compact">
                       <i className="fas fa-user-secret form-icon"></i>
                       Anonymization Level
                     </label>
-                    <p className="form-description">
-                      Choose how much detail to share with receiving organizations
-                    </p>
                     <select 
                       value={shareFormData.anonymizationLevel} 
                       onChange={(e) => setShareFormData({...shareFormData, anonymizationLevel: e.target.value})}
-                      className="form-control enhanced-select multiline-select"
+                      className="form-control compact-select"
                     >
-                      <option value="none">None - Full Details
-Complete IoC values and metadata shared</option>
-                      <option value="low">Low - Minor Obfuscation
-Remove source identifiers and timestamps</option>
-                      <option value="medium">Medium - Partial Anonymization
-Generalize IPs/domains (evil.com → *.com)</option>
-                      <option value="high">High - Strong Anonymization
-Only patterns and techniques, no indicators</option>
+                      <option value="none">None - Full Details</option>
+                      <option value="low">Low - Minor Obfuscation</option>
+                      <option value="medium">Medium - Partial Anonymization</option>
+                      <option value="high">High - Strong Anonymization</option>
                     </select>
+                    <div className="help-text">
+                      {shareFormData.anonymizationLevel === 'none' && 'Complete IoC values and metadata shared'}
+                      {shareFormData.anonymizationLevel === 'low' && 'Remove source identifiers and timestamps'}
+                      {shareFormData.anonymizationLevel === 'medium' && 'Generalize IPs/domains (evil.com → *.com)'}
+                      {shareFormData.anonymizationLevel === 'high' && 'Only patterns and techniques, no indicators'}
+                    </div>
                   </div>
                   
                   <div className="form-group">
-                    <label className="form-label">Share Method</label>
+                    <label className="form-label compact">
+                      <i className="fas fa-share-nodes form-icon"></i>
+                      Share Method
+                    </label>
                     <select 
                       value={shareFormData.shareMethod} 
                       onChange={(e) => setShareFormData({...shareFormData, shareMethod: e.target.value})}
-                      className="form-control"
+                      className="form-control compact-select"
                     >
-                      <option value="taxii">TAXII 2.1 Protocol</option>
-                      <option value="email">Email Export</option>
-                      <option value="api">Direct API Push</option>
+                      <option value="taxii">TAXII 2.1</option>
+                      <option value="email">Email</option>
+                      <option value="api">API Push</option>
                     </select>
                   </div>
                 </div>

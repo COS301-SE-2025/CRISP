@@ -374,31 +374,65 @@ class TrustGroupViewSet(viewsets.ViewSet):
     def list(self, request):
         """Get list of trust groups."""
         try:
-            # BlueVision admins can see all groups
+            # Use core models if trust_management models are empty
+            from core.models.models import TrustGroup as CoreTrustGroup, TrustGroupMembership as CoreTrustGroupMembership
+            
+            # Always try core models first since that's where your data is
+            groups = CoreTrustGroup.objects.filter(is_active=True)
+            
+            # For BlueVision admins, return full data
             if hasattr(request.user, 'role') and request.user.role == 'BlueVisionAdmin':
-                result = self.trust_service.get_all_trust_groups()
-                if not result.get('success', False):
-                    return Response(result, status=status.HTTP_400_BAD_REQUEST)
-                groups = result.get('groups', [])
+                result = []
+                for group in groups:
+                    member_count = CoreTrustGroupMembership.objects.filter(
+                        trust_group=group,
+                        is_active=True
+                    ).count()
+                    
+                    result.append({
+                        'id': str(group.id),
+                        'name': group.name,
+                        'description': group.description,
+                        'group_type': group.group_type,
+                        'is_public': group.is_public,
+                        'requires_approval': group.requires_approval,
+                        'default_trust_level': group.default_trust_level.name if group.default_trust_level else None,
+                        'member_count': member_count,
+                        'status': 'active' if group.is_active else 'inactive',
+                        'created_at': group.created_at.isoformat()
+                    })
+                
                 return Response({
                     'success': True,
-                    'data': groups
+                    'data': result
                 }, status=status.HTTP_200_OK)
             
-            # For regular users, use the service method which handles no-org users gracefully
-            result = self.trust_service.get_trust_groups(request.user)
-            if result.get('success', False):
-                groups = result.get('groups', [])
-                return Response({
-                    'success': True,
-                    'data': groups
-                }, status=status.HTTP_200_OK)
-            else:
-                # Return empty list for users with no organization or access issues
-                return Response({
-                    'success': True,
-                    'data': []
-                }, status=status.HTTP_200_OK)
+            # For regular users, also return the groups
+            result = []
+            for group in groups:
+                member_count = CoreTrustGroupMembership.objects.filter(
+                    trust_group=group,
+                    is_active=True
+                ).count()
+                
+                result.append({
+                    'id': str(group.id),
+                    'name': group.name,
+                    'description': group.description,
+                    'group_type': group.group_type,
+                    'is_public': group.is_public,
+                    'requires_approval': group.requires_approval,
+                    'default_trust_level': group.default_trust_level.name if group.default_trust_level else None,
+                    'member_count': member_count,
+                    'status': 'active' if group.is_active else 'inactive',
+                    'created_at': group.created_at.isoformat()
+                })
+            
+            return Response({
+                'success': True,
+                'data': result
+            }, status=status.HTTP_200_OK)
+            
         except Exception as e:
             logger.error(f"Failed to get trust groups: {str(e)}")
             return Response({

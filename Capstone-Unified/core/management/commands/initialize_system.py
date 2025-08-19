@@ -120,13 +120,19 @@ class Command(BaseCommand):
         # Check if admin user already exists
         existing_user = CustomUser.objects.filter(username=username).first()
         if existing_user:
-            if skip_if_exists:
-                self.stdout.write(
-                    self.style.WARNING(f'Admin user {username} already exists, skipping')
-                )
-                return existing_user
-            else:
-                raise Exception(f'Admin user {username} already exists')
+            self.stdout.write(
+                self.style.WARNING(f'Admin user {username} already exists, updating...')
+            )
+            # Update existing user
+            existing_user.first_name = 'System'
+            existing_user.last_name = 'Administrator'
+            existing_user.role = 'BlueVisionAdmin'
+            existing_user.organization = organization
+            existing_user.is_staff = True
+            existing_user.is_superuser = True
+            existing_user.is_verified = True
+            existing_user.save()
+            return existing_user
         
         # Get password if not provided
         if not password:

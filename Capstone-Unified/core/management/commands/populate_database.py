@@ -28,10 +28,8 @@ except ImportError:
 
 from core.models.models import (
     CustomUser, Organization, UserSession, UserProfile,
-    ThreatFeed, Collection, Feed, UserInvitation, SystemActivity
-)
-from core.trust_management.models.trust_models import (
-    TrustRelationship, TrustGroup, TrustLevel, TrustGroupMembership
+    ThreatFeed, Collection, Feed, UserInvitation, SystemActivity,
+    TrustLevel, TrustRelationship, TrustGroup, TrustGroupMembership
 )
 
 fake = Faker()
@@ -148,25 +146,39 @@ class Command(BaseCommand):
         self.stdout.write("Clearing existing data...")
         
         operations = [
-            ("Trust Group Memberships", lambda: TrustGroupMembership.objects.all().delete()),
-            ("Trust Relationships", lambda: TrustRelationship.objects.all().delete()),
-            ("Trust Groups", lambda: TrustGroup.objects.all().delete()),
-            ("User Sessions", lambda: UserSession.objects.all().delete()),
-            ("User Profiles", lambda: UserProfile.objects.all().delete()),
-            ("User Invitations", lambda: UserInvitation.objects.all().delete()),
-            ("Threat Feeds", lambda: ThreatFeed.objects.all().delete()),
-            ("Collections", lambda: Collection.objects.all().delete()),
-            ("Feeds", lambda: Feed.objects.all().delete()),
-            ("System Activities", lambda: SystemActivity.objects.all().delete()),
+            ("Trust Group Memberships", lambda: self._safe_delete(TrustGroupMembership) if TrustGroupMembership else None),
+            ("Trust Relationships", lambda: self._safe_delete(TrustRelationship) if TrustRelationship else None),
+            ("Trust Groups", lambda: self._safe_delete(TrustGroup) if TrustGroup else None),
+            ("User Sessions", lambda: self._safe_delete(UserSession)),
+            ("User Profiles", lambda: self._safe_delete(UserProfile)),
+            ("User Invitations", lambda: self._safe_delete(UserInvitation)),
+            ("Threat Feeds", lambda: self._safe_delete(ThreatFeed)),
+            ("Collections", lambda: self._safe_delete(Collection)),
+            ("Feeds", lambda: self._safe_delete(Feed)),
+            ("System Activities", lambda: self._safe_delete(SystemActivity)),
             ("Non-superusers", lambda: CustomUser.objects.filter(is_superuser=False).delete()),
             ("Organizations", lambda: Organization.objects.exclude(domain='bluevision.tech').delete()),
         ]
         
         for name, operation in operations:
             self.stdout.write(f"   Clearing {name}...")
-            operation()
+            try:
+                result = operation()
+                if result is None:
+                    self.stdout.write(f"   Skipping {name} (model not available)")
+            except Exception as e:
+                self.stdout.write(f"   Warning: Could not clear {name}: {e}")
                 
         self.stdout.write("Existing data cleared")
+
+    def _safe_delete(self, model_class):
+        """Safely delete all objects from a model, handling missing tables"""
+        try:
+            return model_class.objects.all().delete()
+        except Exception as e:
+            # Table might not exist yet, skip
+            self.stdout.write(f"   Skipping {model_class.__name__} (table may not exist)")
+            return (0, {})
 
     def create_trust_levels(self):
         """Create or get trust levels"""
@@ -408,7 +420,8 @@ class Command(BaseCommand):
                         created_by=admin_user,
                         created_at=fake.date_time_between(start_date='-1y', end_date='now', tzinfo=timezone.get_current_timezone()),
                         notes=fake.sentence(),
-                        metadata={'created_via': 'turbo_population_script'}
+                        metadata={'created_via': 'turbo_population_script'},
+                        sharing_preferences={}  # Add this line - empty dict for sharing preferences
                     )
                     created_count += 1
                     
@@ -420,6 +433,18 @@ class Command(BaseCommand):
     def create_trust_groups(self):
         """Create trust groups"""
         self.stdout.write(f"Creating {self.NUM_TRUST_GROUPS} trust groups...")
+        
+        # Check if TrustGroup models are available
+        if TrustGroup is None or TrustGroupMembership is None:
+            self.stdout.write("Skipping trust groups - models not available")
+            return
+            
+        try:
+            TrustGroup.objects.model._meta.get_field('id')
+            TrustGroupMembership.objects.model._meta.get_field('id')
+        except Exception as e:
+            self.stdout.write(f"Skipping trust groups - model not available: {e}")
+            return
         
         if not self.organizations or not self.users or not self.trust_levels:
             self.stdout.write("Skipping trust groups - missing prerequisites")
@@ -605,10 +630,27 @@ class Command(BaseCommand):
         self.stdout.write("Summary of created data:")
         self.stdout.write(f"  Organizations: {len(self.organizations)}")
         self.stdout.write(f"  Users: {len(self.users)}")
-        self.stdout.write(f"  Trust Relationships: {TrustRelationship.objects.count()}")
+        
+        # Safely get counts for models that might not exist
+        try:
+            trust_rel_count = TrustRelationship.objects.count() if TrustRelationship else 0
+        except:
+            trust_rel_count = 0
+        self.stdout.write(f"  Trust Relationships: {trust_rel_count}")
+        
         self.stdout.write(f"  Trust Groups: {len(self.trust_groups)}")
-        self.stdout.write(f"  User Sessions: {UserSession.objects.count()}")
-        self.stdout.write(f"  Threat Feeds: {ThreatFeed.objects.count()}")
+        
+        try:
+            session_count = UserSession.objects.count()
+        except:
+            session_count = 0
+        self.stdout.write(f"  User Sessions: {session_count}")
+        
+        try:
+            feed_count = ThreatFeed.objects.count()
+        except:
+            feed_count = 0
+        self.stdout.write(f"  Threat Feeds: {feed_count}")
         self.stdout.write("")
         self.stdout.write("Login credentials:")
         self.stdout.write("  Super Admins:")

@@ -108,6 +108,12 @@ function TrustManagement({ active, initialTab = null }) {
         api.getTrustGroups().catch(err => {
           console.error('Failed to fetch trust groups:', err);
           return { data: [] };
+        }).then(response => {
+          console.log('🔍 TRUST GROUPS RESPONSE:', response);
+          console.log('🔍 Response keys:', Object.keys(response || {}));
+          console.log('🔍 community_trusts:', response.community_trusts);
+          console.log('🔍 data:', response.data);
+          return response;
         }),
         api.getTrustMetrics().catch(err => {
           console.error('Failed to fetch trust metrics:', err);
@@ -196,7 +202,13 @@ function TrustManagement({ active, initialTab = null }) {
 
       setTrustData({
         relationships: extractedRelationships,
-        groups: Array.isArray(groupsResponse.data) ? groupsResponse.data : 
+        groups: Array.isArray(groupsResponse.results?.data) ? groupsResponse.results.data :
+                Array.isArray(groupsResponse.results?.community_trusts) ? groupsResponse.results.community_trusts :
+                (groupsResponse.results?.success && Array.isArray(groupsResponse.results?.data)) ? groupsResponse.results.data :
+                Array.isArray(groupsResponse.community_trusts) ? groupsResponse.community_trusts :
+                Array.isArray(groupsResponse.data?.community_trusts) ? groupsResponse.data.community_trusts :
+                (groupsResponse.success && groupsResponse.community_trusts) ? groupsResponse.community_trusts :
+                Array.isArray(groupsResponse.data) ? groupsResponse.data : 
                 Array.isArray(groupsResponse) ? groupsResponse : [],
         metrics: (metricsResponse.data && typeof metricsResponse.data === 'object') ? metricsResponse.data : 
                 (metricsResponse && typeof metricsResponse === 'object') ? metricsResponse : {},

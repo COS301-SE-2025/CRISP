@@ -1984,9 +1984,184 @@ section#ioc-management .card-actions .btn-sm {
   font-size: 0.9rem;
 }
 
-/* Sleek Organization Selector */
-.sleek-org-selector {
+/* Improved Organization Selector */
+.improved-org-selector {
   margin-top: 1rem;
+}
+
+.search-field-wrapper {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.search-field {
+  flex: 1;
+  position: relative;
+}
+
+.show-all-btn {
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  color: #495057;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  min-width: 100px;
+}
+
+.show-all-btn:hover {
+  background: #e9ecef;
+  border-color: #dee2e6;
+  color: #212529;
+}
+
+.show-all-btn:focus {
+  outline: none;
+  border-color: #0056b3;
+  box-shadow: 0 0 0 2px rgba(0, 86, 179, 0.1);
+}
+
+.enhanced-dropdown {
+  max-height: 280px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.enhanced-result-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid #f8f9fa;
+}
+
+.enhanced-result-item:hover {
+  background: #f8f9fa;
+  border-left: 3px solid #0056b3;
+  padding-left: calc(1rem - 3px);
+}
+
+.result-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.result-name {
+  font-weight: 600;
+  color: #212529;
+  margin-bottom: 2px;
+}
+
+.result-subtitle {
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
+.add-icon {
+  color: #28a745;
+  font-size: 1.1rem;
+  transition: transform 0.2s ease;
+}
+
+.enhanced-result-item:hover .add-icon {
+  transform: scale(1.2);
+}
+
+/* Compact Form Layout */
+.compact-form-row {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  align-items: flex-start;
+}
+
+.flex-grow {
+  flex: 2;
+}
+
+.form-label.compact {
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.compact-select {
+  font-size: 0.9rem;
+  padding: 0.6rem 0.75rem;
+}
+
+.help-text {
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-top: 0.4rem;
+  font-style: italic;
+  line-height: 1.3;
+}
+
+/* Compact IoC Details */
+.compact-ioc-details {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.ioc-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.ioc-header i {
+  color: #0056b3;
+}
+
+.ioc-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.ioc-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.ioc-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.ioc-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ioc-value {
+  font-size: 0.9rem;
+  color: #212529;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  background: white;
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+  word-break: break-all;
 }
 
 .search-field {
