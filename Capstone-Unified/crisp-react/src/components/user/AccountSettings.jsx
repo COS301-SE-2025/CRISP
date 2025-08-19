@@ -297,7 +297,7 @@ const AccountSettings = ({ active }) => {
   const handleSave = async () => {
     try {
       const token = localStorage.getItem('crisp_auth_token');
-      const response = await fetch('http://localhost:8000/api/auth/profile/', {
+      const response = await fetch('http://localhost:8000/api/auth/profile/update/', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -467,7 +467,7 @@ const AccountSettings = ({ active }) => {
                 
                 <div className="info-item">
                   <label>Member Since</label>
-                  <span>{new Date(profile.created_at).toLocaleDateString()}</span>
+                  <span>{new Date(profile.created_at || profile.date_joined).toLocaleDateString()}</span>
                 </div>
               </div>
             )}
@@ -524,7 +524,7 @@ const AccountSettings = ({ active }) => {
               
               <div className="info-item">
                 <label>Account Created</label>
-                <span>{new Date(profile.created_at).toLocaleString()}</span>
+                <span>{new Date(profile.created_at || profile.date_joined).toLocaleString()}</span>
               </div>
             </div>
           </div>
