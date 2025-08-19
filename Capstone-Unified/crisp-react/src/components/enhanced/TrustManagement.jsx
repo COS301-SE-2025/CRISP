@@ -87,12 +87,38 @@ function TrustManagement({ active, initialTab = null }) {
     }
   }, [initialTab]);
 
-  const fetchTrustData = async () => {
+  // Refetch data when status filter changes
+  useEffect(() => {
+    if (active) {
+      fetchTrustData();
+    }
+  }, [statusFilter]);
+
+  const fetchTrustData = async (forceRefresh = false) => {
     try {
       setLoading(true);
       setError(null);
       
-      console.log('TrustManagement: Fetching trust data...');
+      // Clear API cache if forcing refresh
+      if (forceRefresh) {
+        console.log('🧹 Force refresh: Clearing API cache before fetch...');
+        api.clearApiCache();
+      }
+      
+      console.log('TrustManagement: Fetching trust data...', { 
+        statusFilter, 
+        forceRefresh,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Build query parameters for trust relationships
+      const trustQueryParams = {};
+      if (statusFilter) {
+        trustQueryParams.status = statusFilter;
+        console.log('TrustManagement: Applying status filter:', statusFilter);
+      } else {
+        console.log('TrustManagement: No status filter applied - will show all except revoked/expired');
+      }
       
       const [
         relationshipsResponse,
@@ -101,7 +127,7 @@ function TrustManagement({ active, initialTab = null }) {
         orgsResponse,
         trustLevelsResponse
       ] = await Promise.all([
-        api.getTrustRelationships().catch(err => {
+        api.getTrustRelationships(trustQueryParams).catch(err => {
           console.error('Failed to fetch trust relationships:', err);
           return { data: [] };
         }),
@@ -205,6 +231,21 @@ function TrustManagement({ active, initialTab = null }) {
         console.log('❌ Could not extract relationships array from response');
         console.log('📋 Available properties:', Object.keys(relationshipsResponse || {}));
         console.log('📋 Type of response:', typeof relationshipsResponse);
+      }
+
+      // Debug the relationship statuses
+      console.log('🔍 RELATIONSHIP STATUS ANALYSIS:');
+      console.log('📊 Total relationships found:', extractedRelationships.length);
+      if (extractedRelationships.length > 0) {
+        const statusCounts = {};
+        extractedRelationships.forEach((rel, index) => {
+          const status = rel.status || 'no-status';
+          statusCounts[status] = (statusCounts[status] || 0) + 1;
+          if (index < 3) { // Show first 3 for debugging
+            console.log(`  ${index + 1}. ID: ${rel.id}, Status: ${status}, Target: ${rel.target_organization?.name || 'N/A'}`);
+          }
+        });
+        console.log('📊 Status distribution:', statusCounts);
       }
 
       setTrustData({
@@ -477,7 +518,9 @@ function TrustManagement({ active, initialTab = null }) {
           setTimeout(() => setSuccess(null), 5000);
           
           closeModal();
-          fetchTrustData();
+          console.log('🔄 UPDATE SUCCESS: Clearing trust cache and refreshing data...');
+          api.clearCacheForEndpoint('/api/trust/');
+          await fetchTrustData(true);
           
         } catch (error) {
           console.error(`Error ${actionText}ing ${modalType}:`, error);
@@ -594,15 +637,21 @@ function TrustManagement({ active, initialTab = null }) {
           action: async () => {
             try {
               if (activeTab === 'relationships') {
+                console.log('🗑️ DELETING TRUST RELATIONSHIP:', item.id);
                 await api.deleteTrustRelationship(item.id, 'Relationship deleted by user');
                 setSuccess('Trust relationship deleted successfully');
+                console.log('✅ DELETE SUCCESS: Trust relationship deleted');
               } else {
+                console.log('🗑️ DELETING TRUST GROUP:', item.id);
                 await api.deleteTrustGroup(item.id);
                 setSuccess('Trust group deleted successfully');
+                console.log('✅ DELETE SUCCESS: Trust group deleted');
               }
               setTimeout(() => setSuccess(null), 5000);
               closeActionsPopup();
-              fetchTrustData();
+              console.log('🔄 DELETE SUCCESS: Clearing trust cache and refreshing data...');
+              api.clearCacheForEndpoint('/api/trust/');
+              await fetchTrustData(true);
             } catch (error) {
               setError(`Failed to delete ${activeTab === 'relationships' ? 'relationship' : 'group'}: ${error.message}`);
             }
@@ -827,6 +876,8 @@ function TrustManagement({ active, initialTab = null }) {
                     <option value="active">Active</option>
                     <option value="pending">Pending</option>
                     <option value="suspended">Suspended</option>
+                    {isAdmin && <option value="revoked">Revoked</option>}
+                    {isAdmin && <option value="expired">Expired</option>}
                   </>
                 ) : (
                   <>
