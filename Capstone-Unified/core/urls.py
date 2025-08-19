@@ -22,6 +22,7 @@ from core.api.threat_feed_views import (
     ttp_search_suggestions, ttp_matrix_cell_details, ttp_technique_details
 )
 from core.api.ttp_views import TTPExportView, MITREMatrixView
+from core.api import reports_api
 
 # Set up REST API router
 router = routers.DefaultRouter()
@@ -134,6 +135,13 @@ threat_feed_urlpatterns = [
     path('recent-activities/', recent_activities, name='recent-activities'),
 ]
 
+# Reports URLs
+reports_urlpatterns = [
+    path('education-sector-analysis/', reports_api.education_sector_analysis, name='reports_education_sector'),
+    path('financial-sector-analysis/', reports_api.financial_sector_analysis, name='reports_financial_sector'),
+    path('government-sector-analysis/', reports_api.government_sector_analysis, name='reports_government_sector'),
+    path('status/', reports_api.report_status, name='reports_status'),
+]
 
 # Main URL patterns
 urlpatterns = [
@@ -143,8 +151,6 @@ urlpatterns = [
     path('trust/', include(trust_urlpatterns)),
     path('organizations/', include(organization_urlpatterns)),
     path('ttps/', include(ttp_urlpatterns)), # TTP URLs
+    path('reports/', include(reports_urlpatterns)), # Reports URLs
     path('', include(threat_feed_urlpatterns)), # Threat Feed URLs (no prefix, as they are already under 'api/' in crisp_unified/urls.py)
-    # TTP API endpoints
-    path('api/ttps/export/', TTPExportView.as_view(), name='ttp-export'),
-    path('api/ttps/mitre-matrix/', MITREMatrixView.as_view(), name='mitre-matrix'),
 ]

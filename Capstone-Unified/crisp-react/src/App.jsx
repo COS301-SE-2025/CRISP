@@ -6,6 +6,7 @@ import UserManagement from './components/enhanced/UserManagement.jsx';
 import OrganisationManagement from './components/enhanced/OrganisationManagement.jsx';
 import TrustManagement from './components/enhanced/TrustManagement.jsx';
 import Institutions from './components/institutions/Institutions.jsx';
+import ReportDetailModal from './components/reports/ReportDetailModal.jsx';
 import BlueVLogo from './assets/enhanced/BlueV2.png';
 import * as api from './api.js';
 import { getOrganizations, getThreatFeedTtps, getMitreMatrix, getTtpFeedComparison, getTtpSeasonalPatterns, getTtpTechniqueFrequencies, getTtps, getTtpFilterOptions, getTtpTrends, getTtpDetails, updateTtp, getMatrixCellDetails, getTechniqueDetails, exportTtps } from './api.js';
@@ -9622,11 +9623,378 @@ function Organisations({ active }) {
   );
 }
 
+// Create Report Modal Component
+function CreateReportModal({ isOpen, onClose, onGenerate, isGenerating }) {
+  const [reportConfig, setReportConfig] = useState({
+    title: '',
+    description: '',
+    sector: 'education',
+    dateRange: {
+      start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days ago
+      end: new Date().toISOString().split('T')[0] // today
+    },
+    organizations: []
+  });
+
+  const [availableOrganizations, setAvailableOrganizations] = useState([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      // Fetch available organizations for selection
+      fetchOrganizations();
+    }
+  }, [isOpen]);
+
+  const fetchOrganizations = async () => {
+    try {
+      const token = localStorage.getItem('crisp_auth_token');
+      if (!token) return;
+
+      const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+      const response = await fetch(`${baseURL}/api/organizations/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.organizations) {
+          setAvailableOrganizations(data.organizations);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to fetch organizations:', error);
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onGenerate(reportConfig);
+  };
+
+  const handleOrganizationToggle = (orgId) => {
+    setReportConfig(prev => ({
+      ...prev,
+      organizations: prev.organizations.includes(orgId)
+        ? prev.organizations.filter(id => id !== orgId)
+        : [...prev.organizations, orgId]
+    }));
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="create-report-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>Create New Report</h2>
+          <button className="close-btn" onClick={onClose}>
+            <i className="fas fa-times"></i>
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="modal-body">
+          <div className="form-group">
+            <label htmlFor="report-title">Report Title</label>
+            <input
+              id="report-title"
+              type="text"
+              value={reportConfig.title}
+              onChange={(e) => setReportConfig(prev => ({ ...prev, title: e.target.value }))}
+              placeholder="e.g., Q1 Education Sector Analysis"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="report-description">Description</label>
+            <textarea
+              id="report-description"
+              value={reportConfig.description}
+              onChange={(e) => setReportConfig(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Brief description of the report purpose and scope"
+              rows="3"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="report-sector">Sector Focus</label>
+            <select
+              id="report-sector"
+              value={reportConfig.sector}
+              onChange={(e) => setReportConfig(prev => ({ ...prev, sector: e.target.value }))}
+              required
+            >
+              <option value="education">Education Sector</option>
+              <option value="financial">Financial Sector</option>
+              <option value="government">Government Sector</option>
+            </select>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="start-date">Start Date</label>
+              <input
+                id="start-date"
+                type="date"
+                value={reportConfig.dateRange.start}
+                onChange={(e) => setReportConfig(prev => ({
+                  ...prev,
+                  dateRange: { ...prev.dateRange, start: e.target.value }
+                }))}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="end-date">End Date</label>
+              <input
+                id="end-date"
+                type="date"
+                value={reportConfig.dateRange.end}
+                onChange={(e) => setReportConfig(prev => ({
+                  ...prev,
+                  dateRange: { ...prev.dateRange, end: e.target.value }
+                }))}
+                required
+              />
+            </div>
+          </div>
+
+          {availableOrganizations.length > 0 && (
+            <div className="form-group">
+              <label>Organizations (Optional)</label>
+              <div className="organizations-list">
+                {availableOrganizations.slice(0, 10).map(org => (
+                  <label key={org.id} className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={reportConfig.organizations.includes(org.id)}
+                      onChange={() => handleOrganizationToggle(org.id)}
+                    />
+                    <span>{org.name}</span>
+                  </label>
+                ))}
+              </div>
+              {availableOrganizations.length > 10 && (
+                <small className="form-help">Showing first 10 organizations. Leave empty to include all.</small>
+              )}
+            </div>
+          )}
+
+          <div className="modal-footer">
+            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isGenerating}>
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-primary" disabled={isGenerating}>
+              {isGenerating ? (
+                <>
+                  <i className="fas fa-spinner fa-spin"></i> Generating...
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-chart-line"></i> Generate Report
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+
+        <style jsx>{`
+          .create-report-modal {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+          }
+
+          .modal-header {
+            padding: 24px 32px;
+            border-bottom: 1px solid #f1f3f4;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+          }
+
+          .modal-header h2 {
+            margin: 0;
+            color: #1e3d59;
+            font-size: 24px;
+            font-weight: 600;
+          }
+
+          .close-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: #666;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+          }
+
+          .close-btn:hover {
+            background: #f8f9fa;
+            color: #333;
+          }
+
+          .modal-body {
+            padding: 32px;
+          }
+
+          .form-group {
+            margin-bottom: 24px;
+          }
+
+          .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+          }
+
+          .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+            font-size: 14px;
+          }
+
+          .form-group input,
+          .form-group select,
+          .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+          }
+
+          .form-group input:focus,
+          .form-group select:focus,
+          .form-group textarea:focus {
+            outline: none;
+            border-color: #5a9fd4;
+            box-shadow: 0 0 0 3px rgba(90, 159, 212, 0.1);
+          }
+
+          .organizations-list {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 12px;
+            background: #f8f9fa;
+          }
+
+          .checkbox-label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            cursor: pointer;
+            font-weight: normal;
+          }
+
+          .checkbox-label input {
+            margin-right: 8px;
+            width: auto;
+          }
+
+          .form-help {
+            color: #666;
+            font-size: 12px;
+            margin-top: 4px;
+          }
+
+          .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 32px;
+          }
+
+          .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+          }
+
+          .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+          }
+
+          .btn-secondary {
+            background: #6c757d;
+            color: white;
+          }
+
+          .btn-secondary:hover:not(:disabled) {
+            background: #5a6268;
+          }
+
+          .btn-primary {
+            background: linear-gradient(135deg, #1e3d59 0%, #5a9fd4 100%);
+            color: white;
+          }
+
+          .btn-primary:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(30, 61, 89, 0.3);
+          }
+
+          @media (max-width: 768px) {
+            .create-report-modal {
+              width: 95%;
+              margin: 10px;
+            }
+
+            .modal-header {
+              padding: 20px;
+            }
+
+            .modal-body {
+              padding: 20px;
+            }
+
+            .form-row {
+              grid-template-columns: 1fr;
+            }
+
+            .modal-footer {
+              flex-direction: column;
+            }
+          }
+        `}</style>
+      </div>
+    </div>
+  );
+}
+
 // Reports Component  
 function Reports({ active }) {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('all');
+  const [selectedReport, setSelectedReport] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const mockReports = [
     {
@@ -9732,6 +10100,134 @@ function Reports({ active }) {
     }
   }, [active, filter]);
 
+  const viewReport = (report) => {
+    setSelectedReport(report);
+    setShowDetailModal(true);
+  };
+
+  const closeDetailModal = () => {
+    setShowDetailModal(false);
+    setSelectedReport(null);
+  };
+
+  const openCreateModal = () => {
+    setShowCreateModal(true);
+  };
+
+  const closeCreateModal = () => {
+    setShowCreateModal(false);
+    setIsGenerating(false);
+  };
+
+  const generateReport = async (reportConfig) => {
+    try {
+      setIsGenerating(true);
+      
+      const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+      const token = localStorage.getItem('crisp_auth_token');
+      
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      // Map report type to API endpoint
+      const endpointMap = {
+        'education': '/api/reports/education-sector-analysis/',
+        'financial': '/api/reports/financial-sector-analysis/',
+        'government': '/api/reports/government-sector-analysis/'
+      };
+
+      const endpoint = endpointMap[reportConfig.sector] || endpointMap['education'];
+      
+      // Build query parameters
+      const params = new URLSearchParams({
+        format: 'json',
+        ...reportConfig.dateRange && {
+          start_date: reportConfig.dateRange.start,
+          end_date: reportConfig.dateRange.end
+        },
+        ...reportConfig.organizations && reportConfig.organizations.length > 0 && {
+          organization_ids: reportConfig.organizations.join(',')
+        }
+      });
+
+      const response = await fetch(`${baseURL}${endpoint}?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate report: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.success && result.report) {
+        // Create a new report entry for the list
+        const newReport = {
+          id: Date.now().toString(),
+          title: reportConfig.title || `${reportConfig.sector.charAt(0).toUpperCase() + reportConfig.sector.slice(1)} Sector Analysis`,
+          type: 'Sector Analysis',
+          date: new Date().toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          }),
+          views: 0,
+          description: reportConfig.description || `Generated analysis for ${reportConfig.sector} sector`,
+          stats: result.report.statistics || [],
+          sector_focus: reportConfig.sector
+        };
+
+        // Add to reports list
+        setReports(prevReports => [newReport, ...prevReports]);
+        
+        // Close modal and show success
+        closeCreateModal();
+        
+        // Optionally open the new report immediately
+        setTimeout(() => {
+          viewReport(newReport);
+        }, 500);
+        
+      } else {
+        throw new Error('Invalid response from server');
+      }
+      
+    } catch (error) {
+      console.error('Error generating report:', error);
+      alert(`Failed to generate report: ${error.message}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Create API helper for the modal
+  const apiHelper = {
+    get: async (endpoint) => {
+      const token = localStorage.getItem('crisp_auth_token');
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+      const response = await fetch(`${baseURL}${endpoint}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    }
+  };
+
   if (!active) return null;
 
   return (
@@ -9745,7 +10241,7 @@ function Reports({ active }) {
           <button className="btn btn-outline">
             <i className="fas fa-filter"></i> Filter
           </button>
-          <button className="btn btn-primary">
+          <button className="btn btn-primary" onClick={openCreateModal}>
             <i className="fas fa-plus"></i> Create New Report
           </button>
         </div>
@@ -9810,7 +10306,7 @@ function Reports({ active }) {
               <i className="fas fa-file-alt"></i>
               <h3>No reports found</h3>
               <p>Generate your first report to see analytics and insights.</p>
-              <button className="btn btn-primary">
+              <button className="btn btn-primary" onClick={openCreateModal}>
                 <i className="fas fa-plus"></i> Generate Report
               </button>
             </div>
@@ -9839,7 +10335,10 @@ function Reports({ active }) {
                     <button className="btn btn-outline btn-sm">
                       <i className="fas fa-share-alt"></i> Share
                     </button>
-                    <button className="btn btn-primary btn-sm">
+                    <button 
+                      className="btn btn-primary btn-sm"
+                      onClick={() => viewReport(report)}
+                    >
                       <i className="fas fa-eye"></i> View Report
                     </button>
                   </div>
@@ -9848,6 +10347,26 @@ function Reports({ active }) {
             ))
           )}
         </div>
+      )}
+
+      {/* Report Detail Modal */}
+      {selectedReport && (
+        <ReportDetailModal
+          report={selectedReport}
+          isOpen={showDetailModal}
+          onClose={closeDetailModal}
+          api={apiHelper}
+        />
+      )}
+
+      {/* Create Report Modal */}
+      {showCreateModal && (
+        <CreateReportModal
+          isOpen={showCreateModal}
+          onClose={closeCreateModal}
+          onGenerate={generateReport}
+          isGenerating={isGenerating}
+        />
       )}
     </section>
   );

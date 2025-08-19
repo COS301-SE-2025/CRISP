@@ -55,9 +55,12 @@ class AnonymizationService:
             
             anonymized['pattern'] = pattern
             
-            # Generate new anonymized ID
-            import uuid
-            anonymized['id'] = f"indicator--{uuid.uuid4()}"
+            # Keep original ID for object-specific requests but mark as anonymized
+            # anonymized['id'] = f"indicator--{uuid.uuid4()}" # Disabled to maintain ID consistency
+        
+        # Add anonymization metadata
+        anonymized['x_crisp_anonymized'] = True
+        anonymized['x_anonymized_by'] = 'CRISP Anonymization Service'
         
         return anonymized
 

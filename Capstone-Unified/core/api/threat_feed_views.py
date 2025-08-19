@@ -1,12 +1,18 @@
 import logging
-from datetime import timedelta
+import csv
+import json
+import uuid
+from datetime import timedelta, datetime
+from collections import defaultdict, OrderedDict
+from io import StringIO
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.db.models import Count, Q
+from django.http import Http404, HttpResponse
 from rest_framework.permissions import AllowAny
-from django.http import Http404
 from rest_framework.views import exception_handler
 from django.core.cache import cache
 
@@ -2243,13 +2249,11 @@ def mitre_matrix(request):
     technique details, and overall statistics.
     """
     try:
-        from django.db.models import Count, Q
-        from collections import defaultdict, OrderedDict
-        
+        logger.info(f"MITRE Matrix called with parameters: {request.GET}")
         # Get query parameters
         feed_id = request.GET.get('feed_id', '').strip()
         include_zero = request.GET.get('include_zero', 'false').lower() == 'true'
-        response_format = request.GET.get('format', 'matrix').lower()
+        response_format = request.GET.get('response_format', request.GET.get('format', 'matrix')).lower()
         
         # Start with all TTPs
         queryset = TTPData.objects.select_related('threat_feed').all()
@@ -2415,10 +2419,7 @@ def ttp_trends(request):
     organized by the specified grouping with comprehensive statistics.
     """
     try:
-        from django.db.models import Count, Q
         from django.db.models.functions import TruncDate, TruncWeek, TruncMonth
-        from collections import defaultdict, OrderedDict
-        from datetime import timedelta, datetime
         
         # Get and validate query parameters
         days = int(request.GET.get('days', 30))
@@ -2713,16 +2714,8 @@ def ttp_export(request):
     Returns TTP data in the specified format with proper content headers for download.
     """
     try:
-        import csv
-        import json
-        import uuid
-        from io import StringIO
-        from datetime import datetime
-        from django.http import HttpResponse
-        from django.db.models import Q
-        
         # Get and validate query parameters
-        export_format = request.GET.get('format', 'json').lower()
+        export_format = request.GET.get('export_format', request.GET.get('format', 'json')).lower()
         tactic = request.GET.get('tactic', '').strip()
         technique_id = request.GET.get('technique_id', '').strip()
         feed_id = request.GET.get('feed_id', '').strip()

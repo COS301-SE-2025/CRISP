@@ -27,6 +27,7 @@ db.sqlite3
 db.sqlite3-journal
 media
 .claude/
+.aiderignore
 
 # Node
 node_modules/

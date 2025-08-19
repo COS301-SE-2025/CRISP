@@ -2,6 +2,12 @@ from .settings import *
 import tempfile
 import os
 
+# Allow testserver for testing
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver']
+
+# Disable APPEND_SLASH for tests to prevent URL routing issues
+APPEND_SLASH = False
+
 # Use in-memory database for complete isolation
 DATABASES = {
     'default': {
