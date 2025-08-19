@@ -831,11 +831,13 @@ class TTPTrendsAPITestCase(TransactionTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         data = response.json()
-        series = data['series']
+        self.assertTrue(data['success'])
         
-        # Should have 1 series (our test feed)
+        series = data['series']
         self.assertEqual(len(series), 1)
-        self.assertEqual(series[0]['total_count'], 9)
+        self.assertEqual(series[0]['group_name'], self.threat_feed.name)
+        # The total count should be the number of TTPs associated with the feed.
+        self.assertEqual(series[0]['total_count'], len(self.test_ttps))
 
     def test_ttp_trends_granularity_week(self):
         """Test TTP trends with weekly granularity"""

@@ -141,6 +141,15 @@ class TAXIIBaseViewTests(TAXIIAnonymizationTestCase):
         super().setUp()
         self.view = TAXIIBaseView()
     
+    def test_apply_anonymization(self):
+        """Test anonymization logic in TAXIIBaseView"""
+        anonymized_data = self.view.apply_anonymization(
+            [self.stix_object_data], 
+            source_org=self.source_org, 
+            requesting_org=self.target_org
+        )
+        self.assertNotEqual(anonymized_data[0]['pattern'], self.stix_object_data['pattern'])
+
     def test_get_requesting_organization(self):
         """Test getting the requesting organization from the user."""
         # Test with authenticated user
@@ -176,10 +185,12 @@ class TAXIIBaseViewTests(TAXIIAnonymizationTestCase):
         )
         
         # Apply anonymization for external organization
-        anonymized_data = self.view.apply_anonymization(
-            stix_object, 
-            requesting_org=self.org2
+        anonymized_result = self.view.apply_anonymization(
+            [stix_object], 
+            requesting_org=self.org2,
+            source_org=self.org1
         )
+        anonymized_data = anonymized_result[0] if anonymized_result else None
         
         # Check that anonymization was applied
         self.assertIn('[ANON:', str(anonymized_data))
@@ -272,7 +283,8 @@ class TAXIICollectionObjectsTests(TAXIIAnonymizationTestCase):
             indicator = objects[0]
             # Pattern should be anonymized for different org
             self.assertNotEqual(indicator['pattern'], self.indicator_data['pattern'])
-    
+            self.assertIn('x_anonymized_by', indicator)
+
     def test_get_objects_with_filters(self):
         """Test getting objects with TAXII filters."""
         # Test with type filter
@@ -361,7 +373,8 @@ class TAXIIObjectTests(TAXIIAnonymizationTestCase):
         
         self.assertEqual(obj['id'], self.stix_object.stix_id)
         self.assertNotEqual(obj['pattern'], self.indicator_data['pattern'])
-    
+        self.assertIn('x_anonymized_by', obj)
+
     def test_get_nonexistent_object(self):
         """Test getting non-existent object."""
         fake_id = f'indicator--{uuid.uuid4()}'
@@ -473,7 +486,7 @@ class TAXIIIntegrationValidationTests(TAXIIAnonymizationTestCase):
     """Test TAXII integration validation."""
     
     def test_stix_compliance_in_responses(self):
-        """Test that TAXII responses contain valid STIX objects."""
+        """Test that responses are STIX 2.1 compliant"""
         response = self.client1.get(f'/taxii2/collections/{self.collection.id}/objects/')
         
         self.assertEqual(response.status_code, 200)

@@ -427,14 +427,15 @@ class CollectionObjectsView(TAXIIBaseView):
                 
                 # Anonymize if needed
                 if is_cross_org_access:
-                    stix_data = self.apply_anonymization(
-                        stix_data, 
+                    anonymized_result = self.apply_anonymization(
+                        [stix_data], 
                         org,  # target_org
                         collection.owner  # source_org
                     )
+                    stix_data = anonymized_result[0] if anonymized_result and len(anonymized_result) > 0 else None
                 
                 # Only include objects that were successfully anonymized or owned by requesting org
-                if stix_data is not None:
+                if stix_data is not None and isinstance(stix_data, dict):
                     objects_data['objects'].append(stix_data)
             
             # Add pagination information
@@ -597,11 +598,12 @@ class ObjectView(TAXIIBaseView):
             
             # Anonymize if needed
             if is_cross_org_access:
-                stix_data = self.apply_anonymization(
-                    stix_data, 
+                anonymized_result = self.apply_anonymization(
+                    [stix_data], 
                     org,  # target_org
                     collection.owner  # source_org
                 )
+                stix_data = anonymized_result[0] if anonymized_result and len(anonymized_result) > 0 else None
                 
                 # If anonymization failed, deny access to object
                 if stix_data is None:
@@ -609,7 +611,7 @@ class ObjectView(TAXIIBaseView):
             
             # Build response
             objects_data = {
-                'objects': [stix_data]
+                'objects': [stix_data] if isinstance(stix_data, dict) else []
             }
             
             return JsonResponse(objects_data, content_type=settings.TAXII_SETTINGS.get('MEDIA_TYPE_STIX', 'application/stix+json;version=2.1'))

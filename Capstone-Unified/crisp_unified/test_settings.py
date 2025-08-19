@@ -2,6 +2,9 @@ from .settings import *
 import tempfile
 import os
 
+# Allow testserver for testing
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver']
+
 # Use in-memory database for complete isolation
 DATABASES = {
     'default': {
