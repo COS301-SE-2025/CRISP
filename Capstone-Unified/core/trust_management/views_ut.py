@@ -491,7 +491,10 @@ class TrustGroupViewSet(viewsets.ViewSet):
     def retrieve(self, request, pk=None):
         """Get a specific trust group."""
         try:
-            group = TrustGroup.objects.select_related('default_trust_level').get(id=pk, is_active=True)
+            # Use core models if trust_management models are empty
+            from core.models.models import TrustGroup as CoreTrustGroup, TrustGroupMembership as CoreTrustGroupMembership
+            
+            group = CoreTrustGroup.objects.select_related('default_trust_level').get(id=pk, is_active=True)
             
             # Check permissions
             user_org = request.user.organization
@@ -500,7 +503,7 @@ class TrustGroupViewSet(viewsets.ViewSet):
                 pass
             elif user_org:
                 # Check if user's organization is a member
-                if not TrustGroupMembership.objects.filter(
+                if not CoreTrustGroupMembership.objects.filter(
                     trust_group=group, 
                     organization=user_org, 
                     is_active=True
@@ -516,7 +519,7 @@ class TrustGroupViewSet(viewsets.ViewSet):
                 }, status=status.HTTP_403_FORBIDDEN)
             
             # Get member count
-            member_count = TrustGroupMembership.objects.filter(
+            member_count = CoreTrustGroupMembership.objects.filter(
                 trust_group=group,
                 is_active=True
             ).count()
@@ -539,7 +542,7 @@ class TrustGroupViewSet(viewsets.ViewSet):
                 'data': data
             }, status=status.HTTP_200_OK)
                 
-        except TrustGroup.DoesNotExist:
+        except CoreTrustGroup.DoesNotExist:
             return Response({
                 'success': False,
                 'message': 'Trust group not found'
@@ -554,7 +557,10 @@ class TrustGroupViewSet(viewsets.ViewSet):
     def update(self, request, pk=None):
         """Update a trust group."""
         try:
-            group = TrustGroup.objects.get(id=pk, is_active=True)
+            # Use core models if trust_management models are empty
+            from core.models.models import TrustGroup as CoreTrustGroup, TrustLevel as CoreTrustLevel
+            
+            group = CoreTrustGroup.objects.get(id=pk, is_active=True)
             
             # Check permissions - only admins or group administrators
             if not (hasattr(request.user, 'role') and request.user.role == 'BlueVisionAdmin'):
@@ -575,9 +581,9 @@ class TrustGroupViewSet(viewsets.ViewSet):
                 group.requires_approval = update_data['requires_approval']
             if 'default_trust_level' in update_data:
                 try:
-                    trust_level = TrustLevel.objects.get(id=update_data['default_trust_level'])
+                    trust_level = CoreTrustLevel.objects.get(id=update_data['default_trust_level'])
                     group.default_trust_level = trust_level
-                except TrustLevel.DoesNotExist:
+                except CoreTrustLevel.DoesNotExist:
                     return Response({
                         'success': False,
                         'message': 'Invalid trust level'
@@ -590,7 +596,7 @@ class TrustGroupViewSet(viewsets.ViewSet):
                 'message': 'Trust group updated successfully'
             }, status=status.HTTP_200_OK)
             
-        except TrustGroup.DoesNotExist:
+        except CoreTrustGroup.DoesNotExist:
             return Response({
                 'success': False,
                 'message': 'Trust group not found'
@@ -605,7 +611,10 @@ class TrustGroupViewSet(viewsets.ViewSet):
     def destroy(self, request, pk=None):
         """Delete a trust group."""
         try:
-            group = TrustGroup.objects.get(id=pk, is_active=True)
+            # Use core models if trust_management models are empty
+            from core.models.models import TrustGroup as CoreTrustGroup
+            
+            group = CoreTrustGroup.objects.get(id=pk, is_active=True)
             
             # Check permissions - only admins
             if not (hasattr(request.user, 'role') and request.user.role == 'BlueVisionAdmin'):
@@ -623,7 +632,7 @@ class TrustGroupViewSet(viewsets.ViewSet):
                 'message': 'Trust group deleted successfully'
             }, status=status.HTTP_200_OK)
             
-        except TrustGroup.DoesNotExist:
+        except CoreTrustGroup.DoesNotExist:
             return Response({
                 'success': False,
                 'message': 'Trust group not found'
@@ -639,7 +648,10 @@ class TrustGroupViewSet(viewsets.ViewSet):
     def join(self, request, pk=None):
         """Join a trust group."""
         try:
-            group = TrustGroup.objects.get(id=pk, is_active=True)
+            # Use core models if trust_management models are empty
+            from core.models.models import TrustGroup as CoreTrustGroup, TrustGroupMembership as CoreTrustGroupMembership
+            
+            group = CoreTrustGroup.objects.get(id=pk, is_active=True)
             
             # Check if user has an organization
             user_org = request.user.organization
@@ -650,7 +662,7 @@ class TrustGroupViewSet(viewsets.ViewSet):
                 }, status=status.HTTP_400_BAD_REQUEST)
             
             # Check if already a member
-            existing_membership = TrustGroupMembership.objects.filter(
+            existing_membership = CoreTrustGroupMembership.objects.filter(
                 trust_group=group,
                 organization=user_org,
                 is_active=True
@@ -663,12 +675,11 @@ class TrustGroupViewSet(viewsets.ViewSet):
                 }, status=status.HTTP_400_BAD_REQUEST)
             
             # Create membership
-            membership = TrustGroupMembership.objects.create(
+            membership = CoreTrustGroupMembership.objects.create(
                 trust_group=group,
                 organization=user_org,
-                role='member',
-                join_date=timezone.now(),
-                joined_by=request.user
+                membership_type='member',
+                approved_by=str(request.user)
             )
             
             return Response({
@@ -676,13 +687,85 @@ class TrustGroupViewSet(viewsets.ViewSet):
                 'message': f'Successfully joined trust group: {group.name}'
             }, status=status.HTTP_201_CREATED)
             
-        except TrustGroup.DoesNotExist:
+        except CoreTrustGroup.DoesNotExist:
             return Response({
                 'success': False,
                 'message': 'Trust group not found'
             }, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             logger.error(f"Failed to join trust group: {str(e)}")
+            return Response({
+                'success': False,
+                'message': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def add_organization(self, request, pk=None):
+        """Add a specific organization to a trust group (Admin only)."""
+        try:
+            # Check permissions - only BlueVisionAdmin can add organizations to groups
+            if not (hasattr(request.user, 'role') and request.user.role == 'BlueVisionAdmin'):
+                return Response({
+                    'success': False,
+                    'message': 'Only administrators can add organizations to trust groups'
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            # Use core models if trust_management models are empty
+            from core.models.models import TrustGroup as CoreTrustGroup, TrustGroupMembership as CoreTrustGroupMembership
+            from core.user_management.models.user_models import Organization
+            
+            group = CoreTrustGroup.objects.get(id=pk, is_active=True)
+            
+            # Get organization ID from request data
+            organization_id = request.data.get('organization_id')
+            if not organization_id:
+                return Response({
+                    'success': False,
+                    'message': 'Organization ID is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Get the organization
+            try:
+                organization = Organization.objects.get(id=organization_id)
+            except Organization.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': 'Organization not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Check if already a member
+            existing_membership = CoreTrustGroupMembership.objects.filter(
+                trust_group=group,
+                organization=organization,
+                is_active=True
+            ).exists()
+            
+            if existing_membership:
+                return Response({
+                    'success': False,
+                    'message': f'Organization "{organization.name}" is already a member of this group'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Create membership
+            membership = CoreTrustGroupMembership.objects.create(
+                trust_group=group,
+                organization=organization,
+                membership_type='member',
+                approved_by=str(request.user)
+            )
+            
+            return Response({
+                'success': True,
+                'message': f'Successfully added "{organization.name}" to trust group: {group.name}'
+            }, status=status.HTTP_201_CREATED)
+            
+        except CoreTrustGroup.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Trust group not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Failed to add organization to trust group: {str(e)}")
             return Response({
                 'success': False,
                 'message': str(e)

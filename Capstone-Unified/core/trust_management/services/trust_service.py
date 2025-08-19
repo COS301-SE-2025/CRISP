@@ -734,18 +734,29 @@ class TrustService:
             if requesting_user.role not in ["BlueVisionAdmin"]:
                 return {"success": False, "message": "Insufficient permissions to create trust groups"}
             
-            group = TrustGroup.objects.create(
+            # Use core models if trust_management models are empty
+            from core.models.models import TrustGroup as CoreTrustGroup, TrustLevel as CoreTrustLevel
+            
+            # Handle default_trust_level
+            default_trust_level = None
+            if group_data.get("default_trust_level_id"):
+                try:
+                    default_trust_level = CoreTrustLevel.objects.get(id=group_data["default_trust_level_id"])
+                except CoreTrustLevel.DoesNotExist:
+                    return {"success": False, "message": "Invalid trust level"}
+            
+            group = CoreTrustGroup.objects.create(
                 name=group_data["name"],
                 description=group_data.get("description", ""),
                 group_type=group_data.get("group_type", "community"),
                 is_public=group_data.get("is_public", False),
                 requires_approval=group_data.get("requires_approval", True),
-                default_trust_level_id=group_data.get("default_trust_level_id"),
+                default_trust_level=default_trust_level,
                 created_by=str(requesting_user)
             )
             return {"success": True, "group": group}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return {"success": False, "message": str(e)}
     
     def get_trust_relationships(self, requesting_user, organization_id: str = None) -> Dict[str, Any]:
         """Get trust relationships for a user's organization"""

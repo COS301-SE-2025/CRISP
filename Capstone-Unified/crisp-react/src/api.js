@@ -512,7 +512,7 @@ export const deleteTrustRelationship = async (relationshipId, reason = '') => {
 export const getTrustGroups = async (queryParams = {}) => {
   // Cache-busting temporarily disabled to avoid CORS issues  
   const params = new URLSearchParams(queryParams).toString();
-  const url = `${API_BASE_URL}/api/trust/community/${params ? `?${params}` : ''}`;
+  const url = `${API_BASE_URL}/api/trust-management/groups/${params ? `?${params}` : ''}`;
   
   const response = await fetch(url, {
     method: 'GET',
@@ -528,7 +528,7 @@ export const getTrustGroups = async (queryParams = {}) => {
 };
 
 export const createTrustGroup = async (groupData) => {
-  const response = await fetch(`${API_BASE_URL}/api/trust/community/`, {
+  const response = await fetch(`${API_BASE_URL}/api/trust-management/groups/`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(groupData),
@@ -602,6 +602,23 @@ export const joinTrustGroup = async (groupId) => {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || 'Failed to join trust group');
+  }
+
+  return await response.json();
+};
+
+export const addOrganizationToTrustGroup = async (groupId, organizationId) => {
+  const response = await fetch(`${API_BASE_URL}/api/trust-management/groups/${groupId}/add_organization/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      organization_id: organizationId
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to add organization to trust group');
   }
 
   return await response.json();

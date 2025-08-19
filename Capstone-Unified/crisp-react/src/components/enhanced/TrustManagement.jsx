@@ -66,7 +66,10 @@ function TrustManagement({ active, initialTab = null }) {
     description: '',
     group_type: 'industry',
     is_public: false,
-    requires_approval: true
+    requires_approval: true,
+    // Organization-to-group fields
+    selected_organization: '',
+    selected_group: ''
   });
 
   // Get current user data
@@ -410,7 +413,9 @@ function TrustManagement({ active, initialTab = null }) {
         description: '',
         group_type: 'industry',
         is_public: false,
-        requires_approval: true
+        requires_approval: true,
+        selected_organization: '',
+        selected_group: ''
       });
     }
     
@@ -451,9 +456,13 @@ function TrustManagement({ active, initialTab = null }) {
       formData.name;
     
     setConfirmationData({
-      title: `${modalMode === 'add' ? 'Create' : 'Update'} ${modalType === 'relationship' ? 'Trust Relationship' : 'Trust Group'}`,
-      message: `Are you sure you want to ${actionText} ${modalType} "${itemName}"?`,
-      confirmText: modalMode === 'add' ? `Create ${modalType === 'relationship' ? 'Relationship' : 'Group'}` : `Update ${modalType === 'relationship' ? 'Relationship' : 'Group'}`,
+      title: modalType === 'org-to-group' ? 'Add Organization to Group' :
+             `${modalMode === 'add' ? 'Create' : 'Update'} ${modalType === 'relationship' ? 'Trust Relationship' : 'Trust Group'}`,
+      message: modalType === 'org-to-group' ? 
+               `Are you sure you want to add the selected organization to the selected trust group?` :
+               `Are you sure you want to ${actionText} ${modalType} "${itemName}"?`,
+      confirmText: modalType === 'org-to-group' ? 'Add to Group' :
+                   modalMode === 'add' ? `Create ${modalType === 'relationship' ? 'Relationship' : 'Group'}` : `Update ${modalType === 'relationship' ? 'Relationship' : 'Group'}`,
       isDestructive: false,
       actionType: 'default',
       action: async () => {
@@ -537,7 +546,14 @@ function TrustManagement({ active, initialTab = null }) {
           } else if (modalType === 'group') {
             const groupData = { ...formData };
             if (formData.trust_level) {
-              groupData.default_trust_level_id = formData.trust_level;
+              // Find the trust level ID by the level value
+              const trustLevelObj = trustData.trustLevels.find(level => level.level === formData.trust_level);
+              if (trustLevelObj) {
+                groupData.default_trust_level_id = trustLevelObj.id;
+              } else {
+                console.error('❌ TRUST LEVEL ERROR: Could not find trust level for:', formData.trust_level);
+                throw new Error(`Trust level not found: ${formData.trust_level}`);
+              }
               delete groupData.trust_level;
             }
             
@@ -554,6 +570,20 @@ function TrustManagement({ active, initialTab = null }) {
               await api.updateTrustGroup(selectedItem.id, groupData);
               setSuccess('Trust group updated successfully');
             }
+          } else if (modalType === 'org-to-group') {
+            // Add organization to trust group
+            console.log('🚀 ADDING organization to trust group:', {
+              organization: formData.selected_organization,
+              group: formData.selected_group
+            });
+            
+            if (!formData.selected_organization || !formData.selected_group) {
+              throw new Error('Please select both an organization and a trust group');
+            }
+            
+            // Use the new addOrganizationToTrustGroup API
+            await api.addOrganizationToTrustGroup(formData.selected_group, formData.selected_organization);
+            setSuccess('Organization added to trust group successfully');
           }
           
           // Auto-dismiss success message after 5 seconds
@@ -930,22 +960,42 @@ function TrustManagement({ active, initialTab = null }) {
               </select>
             </div>
             
-            <button
-              onClick={() => openModal('add', activeTab === 'relationships' ? 'relationship' : 'group')}
-              disabled={!isAdmin && activeTab === 'groups'}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: (!isAdmin && activeTab === 'groups') ? '#6c757d' : '#007bff',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: (!isAdmin && activeTab === 'groups') ? 'not-allowed' : 'pointer',
-                fontWeight: '500'
-              }}
-              title={(!isAdmin && activeTab === 'groups') ? 'Only administrators can create trust groups' : ''}
-            >
-              Add {activeTab === 'relationships' ? 'Relationship' : 'Group'}
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={() => openModal('add', activeTab === 'relationships' ? 'relationship' : 'group')}
+                disabled={!isAdmin && activeTab === 'groups'}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: (!isAdmin && activeTab === 'groups') ? '#6c757d' : '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: (!isAdmin && activeTab === 'groups') ? 'not-allowed' : 'pointer',
+                  fontWeight: '500'
+                }}
+                title={(!isAdmin && activeTab === 'groups') ? 'Only administrators can create trust groups' : ''}
+              >
+                Add {activeTab === 'relationships' ? 'Relationship' : 'Group'}
+              </button>
+              
+              {activeTab === 'groups' && isAdmin && (
+                <button
+                  onClick={() => openModal('add', 'org-to-group')}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    backgroundColor: '#28a745',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontWeight: '500'
+                  }}
+                  title="Add organization to trust group"
+                >
+                  Add Organization
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Data List */}
@@ -1203,7 +1253,8 @@ function TrustManagement({ active, initialTab = null }) {
             overflowY: 'auto'
           }}>
             <h3 style={{ margin: '0 0 1rem 0' }}>
-              {modalMode === 'add' ? 'Create' : 'Edit'} {modalType === 'relationship' ? 'Trust Relationship' : 'Trust Group'}
+              {modalType === 'org-to-group' ? 'Add Organization to Trust Group' : 
+               `${modalMode === 'add' ? 'Create' : 'Edit'} ${modalType === 'relationship' ? 'Trust Relationship' : 'Trust Group'}`}
               {modalMode === 'edit' && modalType === 'relationship' && (
                 <div style={{ 
                   fontSize: '0.875em', 
@@ -1217,7 +1268,7 @@ function TrustManagement({ active, initialTab = null }) {
             </h3>
             
             <form onSubmit={handleSubmit}>
-              {modalType === 'relationship' ? (
+              {modalType === 'relationship' && (
                 <>
                   {isAdmin && (
                     <div style={{ marginBottom: '1rem' }}>
@@ -1382,7 +1433,9 @@ function TrustManagement({ active, initialTab = null }) {
                     />
                   </div>
                 </>
-              ) : (
+              )}
+              
+              {modalType === 'group' && (
                 <>
                   <div style={{ marginBottom: '1rem' }}>
                     <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
@@ -1482,6 +1535,54 @@ function TrustManagement({ active, initialTab = null }) {
                       />
                       Requires Approval
                     </label>
+                  </div>
+                </>
+              )}
+              
+              {modalType === 'org-to-group' && (
+                <>
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                      Select Organization *
+                    </label>
+                    <select
+                      value={formData.selected_organization}
+                      onChange={(e) => setFormData({...formData, selected_organization: e.target.value})}
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        border: '1px solid #ced4da',
+                        borderRadius: '4px'
+                      }}
+                    >
+                      <option value="">Select Organization</option>
+                      {trustData.organizations.map(org => (
+                        <option key={org.id} value={org.id}>{org.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                      Select Trust Group *
+                    </label>
+                    <select
+                      value={formData.selected_group}
+                      onChange={(e) => setFormData({...formData, selected_group: e.target.value})}
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        border: '1px solid #ced4da',
+                        borderRadius: '4px'
+                      }}
+                    >
+                      <option value="">Select Trust Group</option>
+                      {trustData.groups.map(group => (
+                        <option key={group.id} value={group.id}>{group.name}</option>
+                      ))}
+                    </select>
                   </div>
                 </>
               )}
