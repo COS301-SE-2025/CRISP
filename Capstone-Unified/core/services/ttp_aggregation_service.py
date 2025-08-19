@@ -491,8 +491,8 @@ class TTPAggregationService:
                     threat_feed_id=feed_id,
                     created_at__gte=start_date,
                     created_at__lte=end_date
-                ).extra(
-                    select={'day': 'DATE(created_at)'}
+                ).annotate(
+                    day=TruncDate('created_at')
                 ).values('day').annotate(
                     count=Count('id')
                 ).values_list('count', flat=True)

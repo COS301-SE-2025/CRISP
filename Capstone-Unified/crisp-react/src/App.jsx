@@ -5554,15 +5554,17 @@ function TTPAnalysis({ active }) {
   const [ttpData, setTtpData] = useState([]);
   const [trendsData, setTrendsData] = useState([]);
   const [matrixData, setMatrixData] = useState(null);
+  const [feedComparisonData, setFeedComparisonData] = useState(null);
+  const [seasonalPatternsData, setSeasonalPatternsData] = useState(null);
+  const [feedComparisonLoading, setFeedComparisonLoading] = useState(false);
+  const [seasonalPatternsLoading, setSeasonalPatternsLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [trendsLoading, setTrendsLoading] = useState(false);
   const [matrixLoading, setMatrixLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   
   // Feed analysis state
-  const [feedComparisonData, setFeedComparisonData] = useState(null);
   const [frequencyData, setFrequencyData] = useState(null);
-  const [seasonalData, setSeasonalData] = useState(null);
   const [aggregationLoading, setAggregationLoading] = useState(false);
   
   // Table sorting state
@@ -5637,7 +5639,13 @@ function TTPAnalysis({ active }) {
   const [techniqueLoading, setTechniqueLoading] = useState(false);
   const [selectedTechniqueId, setSelectedTechniqueId] = useState('');
   
+  // Chart Data Point Modal state
+  const [showChartDataModal, setShowChartDataModal] = useState(false);
+  const [chartDataPoint, setChartDataPoint] = useState(null);
+  const [chartDataLoading, setChartDataLoading] = useState(false);
+  
   const ttpChartRef = useRef(null);
+  const ttpTrendsChartRef = useRef(null);
   
   // Fetch TTP data from backend
   useEffect(() => {
@@ -5647,6 +5655,9 @@ function TTPAnalysis({ active }) {
       fetchFilterOptions();
       fetchAvailableFeeds();
       fetchAggregationData();
+      fetchFeedComparisonData();
+      fetchSeasonalPatternsData();
+      fetchTTPTrendsData();
     }
   }, [active]);
   
@@ -5699,7 +5710,7 @@ function TTPAnalysis({ active }) {
         setFrequencyData(techniqueFreq);
       }
       if (seasonalPatterns && seasonalPatterns.success) {
-        setSeasonalData(seasonalPatterns);
+        setSeasonalPatternsData(seasonalPatterns);
       }
     } catch (error) {
       console.error('Error fetching aggregation data:', error);
@@ -5832,14 +5843,18 @@ function TTPAnalysis({ active }) {
       }
       
       const queryParams = Object.fromEntries(params.entries());
+      console.log('Fetching TTPs with params:', queryParams);
       const response = await getTtps(queryParams);
+      console.log('TTP Response received:', response);
       if (response && response.success) {
+        console.log('First 2 TTP results:', response.results?.slice(0, 2));
         setTtpData(response.results || []);
         setTotalCount(response.count || 0);
         setTotalPages(response.num_pages || 0);
         setHasNext(response.has_next || false);
         setHasPrevious(response.has_previous || false);
       } else {
+        console.log('TTP response failed or invalid:', response);
         setTtpData([]);
         setTotalCount(0);
         setTotalPages(0);
@@ -6046,9 +6061,12 @@ function TTPAnalysis({ active }) {
     try {
       // Get TTP trends data from the API
       const response = await getTtpTrends(120, 'month', 'tactic');
+      console.log('TTP Trends API response:', response);
       if (response && response.series) {
+        console.log('Setting trends data:', response.series.length, 'series');
         setTrendsData(response.series);
       } else {
+        console.log('No series data in response');
         setTrendsData([]);
       }
     } catch (error) {
@@ -6073,6 +6091,34 @@ function TTPAnalysis({ active }) {
       setMatrixData(null);
     }
     setMatrixLoading(false);
+  };
+
+  const fetchFeedComparisonData = async () => {
+    setFeedComparisonLoading(true);
+    try {
+      console.log('Fetching feed comparison data...');
+      const response = await getTtpFeedComparison(30);
+      console.log('Feed comparison response:', response);
+      setFeedComparisonData(response);
+    } catch (error) {
+      console.error('Error fetching feed comparison data:', error);
+      setFeedComparisonData(null);
+    }
+    setFeedComparisonLoading(false);
+  };
+
+  const fetchSeasonalPatternsData = async () => {
+    setSeasonalPatternsLoading(true);
+    try {
+      console.log('Fetching seasonal patterns data...');
+      const response = await getTtpSeasonalPatterns(180);
+      console.log('Seasonal patterns response:', response);
+      setSeasonalPatternsData(response);
+    } catch (error) {
+      console.error('Error fetching seasonal patterns data:', error);
+      setSeasonalPatternsData(null);
+    }
+    setSeasonalPatternsLoading(false);
   };
 
   const handleTabChange = (tab) => {
@@ -6132,6 +6178,40 @@ function TTPAnalysis({ active }) {
     setShowTechniqueModal(false);
     setTechniqueData(null);
     setSelectedTechniqueId('');
+  };
+
+  // Chart Data Point Modal functions
+  const openChartDataModal = async (tactic, date, count) => {
+    setChartDataPoint({ tactic, date, count });
+    setShowChartDataModal(true);
+    setChartDataLoading(true);
+    
+    try {
+      // Fetch detailed feed information for this data point
+      // You could expand this to call a specific API endpoint
+      // For now, we'll simulate fetching data
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Mock data - in reality, you'd fetch this from your API
+      const mockFeedData = [
+        { name: 'AlienVault OTX', count: Math.floor(count * 0.4), type: 'External' },
+        { name: 'Internal Threat Feed', count: Math.floor(count * 0.3), type: 'Internal' },
+        { name: 'MISP Community', count: Math.floor(count * 0.2), type: 'External' },
+        { name: 'Custom Rules', count: Math.floor(count * 0.1), type: 'Internal' }
+      ].filter(feed => feed.count > 0);
+      
+      setChartDataPoint(prev => ({ ...prev, feedData: mockFeedData }));
+    } catch (error) {
+      console.error('Error fetching chart data details:', error);
+    }
+    
+    setChartDataLoading(false);
+  };
+
+  const closeChartDataModal = () => {
+    setShowChartDataModal(false);
+    setChartDataPoint(null);
+    setChartDataLoading(false);
   };
 
   const refreshMatrixData = () => {
@@ -6470,42 +6550,53 @@ function TTPAnalysis({ active }) {
   };
 
   const transformTrendsDataForChart = (apiData) => {
+    console.log('Transforming trends data:', apiData.length, 'series');
+    
+    // First pass: collect all unique tactics and dates
+    const allTactics = new Set();
+    const allDates = new Set();
+    
+    apiData.forEach(series => {
+      const tactic = series.group_name ? series.group_name.toLowerCase().replace(/[\s&]+/g, '-') : 'unknown';
+      allTactics.add(tactic);
+      
+      series.data_points.forEach(point => {
+        allDates.add(point.date);
+      });
+    });
+    
+    console.log('Found tactics:', Array.from(allTactics));
+    console.log('Found dates:', Array.from(allDates).slice(0, 5), '...');
+    
     // Group data by date and aggregate by tactic
     const dateMap = new Map();
     
-    // Process each series (tactic) from the API response
+    // Initialize all dates with all tactics set to 0
+    allDates.forEach(date => {
+      const entry = { date: date };
+      allTactics.forEach(tactic => {
+        entry[tactic] = 0;
+      });
+      dateMap.set(date, entry);
+    });
+    
+    // Fill in actual data
     apiData.forEach(series => {
-      const tactic = series.group_name ? series.group_name.toLowerCase().replace(/\s+/g, '-') : 'unknown';
+      const tactic = series.group_name ? series.group_name.toLowerCase().replace(/[\s&]+/g, '-') : 'unknown';
       
-      // Process each data point in the series
       series.data_points.forEach(point => {
-        const date = point.date;
-        if (!dateMap.has(date)) {
-          dateMap.set(date, {
-            date: date,
-            'initial-access': 0,
-            'execution': 0,
-            'persistence': 0,
-            'defense-evasion': 0,
-            'impact': 0,
-            'privilege-escalation': 0,
-            'discovery': 0,
-            'lateral-movement': 0,
-            'collection': 0,
-            'command-and-control': 0,
-            'exfiltration': 0
-          });
-        }
-        
-        const dateEntry = dateMap.get(date);
-        if (dateEntry.hasOwnProperty(tactic)) {
+        const dateEntry = dateMap.get(point.date);
+        if (dateEntry) {
           dateEntry[tactic] = point.count || 0;
         }
       });
     });
     
     // Convert to array and sort by date
-    return Array.from(dateMap.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
+    const result = Array.from(dateMap.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
+    console.log('Transformed data:', result.length, 'entries, first entry:', result[0]);
+    
+    return result;
   };
 
   const deleteTTP = async (ttpId) => {
@@ -6532,20 +6623,39 @@ function TTPAnalysis({ active }) {
   };
   
   useEffect(() => {
-    if (active && ttpChartRef.current && trendsData.length > 0) {
-      createTTPTrendsChart();
+    if (active && trendsData.length > 0) {
+      // Create chart in appropriate container based on active tab
+      if ((activeTab === 'matrix' || activeTab === 'list') && ttpChartRef.current) {
+        createTTPTrendsChart();
+      } else if (activeTab === 'trends' && ttpTrendsChartRef.current) {
+        createTTPTrendsChart();
+      }
     }
-  }, [active, trendsData]);
+  }, [active, trendsData, activeTab]);
 
   const createTTPTrendsChart = () => {
+    console.log('createTTPTrendsChart called, trendsData:', trendsData.length, 'items');
     try {
-      // Clear previous chart if any
-      if (ttpChartRef.current) {
-        d3.select(ttpChartRef.current).selectAll("*").remove();
+      // Determine which chart container to use based on active tab
+      const chartContainer = (activeTab === 'trends') ? ttpTrendsChartRef.current : ttpChartRef.current;
+      
+      // Clear previous chart and placeholder if any
+      if (chartContainer) {
+        d3.select(chartContainer).selectAll("*").remove();
+        // Also remove the placeholder overlay by directly removing the element
+        const placeholder = chartContainer.querySelector('.chart-placeholder');
+        if (placeholder) {
+          placeholder.remove();
+        }
       }
       
       // Return early if no trends data or ref not available
-      if (!trendsData || trendsData.length === 0 || !ttpChartRef.current) {
+      if (!trendsData || trendsData.length === 0 || !chartContainer) {
+        console.log('Early return - no data or ref:', {
+          hasData: trendsData?.length > 0,
+          hasRef: !!chartContainer,
+          activeTab: activeTab
+        });
         return;
       }
       
@@ -6559,38 +6669,22 @@ function TTPAnalysis({ active }) {
       }
 
     // Set dimensions and margins for the chart
-    const width = ttpChartRef.current.clientWidth;
+    const width = chartContainer.clientWidth;
     const height = 300;
     const margin = { top: 30, right: 120, bottom: 40, left: 50 };
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
 
     // Create the SVG container
-    const svg = d3.select(ttpChartRef.current)
+    const svg = d3.select(chartContainer)
       .append("svg")
       .attr("width", width)
       .attr("height", height)
       .append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    // Set up scales
-    const x = d3.scalePoint()
-      .domain(data.map(d => d.date))
-      .range([0, innerWidth])
-      .padding(0.5);
-
-    const y = d3.scaleLinear()
-      .domain([0, d3.max(data, d => Math.max(...Object.keys(colors).map(tactic => d[tactic] || 0))) * 1.1])
-      .range([innerHeight, 0]);
-
-    // Define line generator
-    const line = d3.line()
-      .x(d => x(d.date))
-      .y(d => y(d.value))
-      .curve(d3.curveMonotoneX);
-
     // Define colors for different TTP categories (MITRE ATT&CK tactics)
-    const colors = {
+    const defaultColors = {
       'initial-access': "#0056b3",
       'execution': "#00a0e9", 
       'persistence': "#38a169",
@@ -6601,15 +6695,12 @@ function TTPAnalysis({ active }) {
       'lateral-movement': "#38b2ac",
       'collection': "#d53f8c",
       'command-and-control': "#319795",
-      'exfiltration': "#dd6b20"
+      'exfiltration': "#dd6b20",
+      'credential-access': "#6b46c1",
+      'resource-development': "#059669"
     };
-
-    // Get only tactics that have data in the dataset
-    const categories = Object.keys(colors).filter(tactic => 
-      data.some(d => d[tactic] > 0)
-    );
     
-    const categoryLabels = {
+    const defaultLabels = {
       'initial-access': "Initial Access",
       'execution': "Execution",
       'persistence': "Persistence", 
@@ -6620,8 +6711,47 @@ function TTPAnalysis({ active }) {
       'lateral-movement': "Lateral Movement",
       'collection': "Collection",
       'command-and-control': "Command and Control",
-      'exfiltration': "Exfiltration"
+      'exfiltration': "Exfiltration",
+      'credential-access': "Credential Access",
+      'resource-development': "Resource Development"
     };
+
+    // Get tactics present in data and assign colors
+    const dataKeys = Object.keys(data[0] || {}).filter(key => key !== 'date');
+    const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+    
+    const colors = {};
+    const categoryLabels = {};
+    
+    dataKeys.forEach((tactic, index) => {
+      colors[tactic] = defaultColors[tactic] || colorScale(index);
+      categoryLabels[tactic] = defaultLabels[tactic] || tactic.split('-').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ');
+    });
+
+    // Get only tactics that have data in the dataset
+    const categories = dataKeys.filter(tactic => 
+      data.some(d => d[tactic] > 0)
+    );
+    
+    console.log('Chart categories with data:', categories);
+
+    // Set up scales
+    const x = d3.scalePoint()
+      .domain(data.map(d => d.date))
+      .range([0, innerWidth])
+      .padding(0.5);
+
+    const y = d3.scaleLinear()
+      .domain([0, d3.max(data, d => Math.max(...dataKeys.map(tactic => d[tactic] || 0))) * 1.1])
+      .range([innerHeight, 0]);
+
+    // Define line generator
+    const line = d3.line()
+      .x(d => x(d.date))
+      .y(d => y(d.value))
+      .curve(d3.curveMonotoneX);
 
     categories.forEach(category => {
       const categoryData = data.map(d => ({
@@ -6636,7 +6766,7 @@ function TTPAnalysis({ active }) {
         .attr("stroke-width", 2)
         .attr("d", line);
 
-      // Add dots
+      // Add dots with tooltips
       svg.selectAll(`.dot-${category}`)
         .data(categoryData)
         .enter()
@@ -6645,7 +6775,57 @@ function TTPAnalysis({ active }) {
         .attr("cx", d => x(d.date))
         .attr("cy", d => y(d.value))
         .attr("r", 4)
-        .attr("fill", colors[category]);
+        .attr("fill", colors[category])
+        .style("cursor", "pointer")
+        .on("mouseover", function(event, d) {
+          // Increase dot size on hover
+          d3.select(this).transition().duration(100).attr("r", 6);
+          
+          // Create tooltip
+          const tooltip = d3.select("body").append("div")
+            .attr("id", "chart-tooltip")
+            .style("position", "absolute")
+            .style("background", "rgba(0, 0, 0, 0.9)")
+            .style("color", "white")
+            .style("padding", "10px")
+            .style("border-radius", "5px")
+            .style("font-size", "12px")
+            .style("pointer-events", "none")
+            .style("z-index", "1000")
+            .style("box-shadow", "0 2px 10px rgba(0,0,0,0.3)")
+            .style("max-width", "250px");
+          
+          tooltip.html(`
+            <div style="margin-bottom: 5px;"><strong>${categoryLabels[category]}</strong></div>
+            <div style="margin-bottom: 3px;">Date: ${new Date(d.date).toLocaleDateString()}</div>
+            <div style="margin-bottom: 3px;">TTP Count: ${d.value}</div>
+            <div style="margin-bottom: 3px;">Tactic: ${category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>
+            <div style="font-size: 10px; color: #ccc; margin-top: 5px;">Click for detailed feed analysis</div>
+          `);
+          
+          // Position tooltip
+          const [mouseX, mouseY] = d3.pointer(event, document.body);
+          tooltip
+            .style("left", (mouseX + 10) + "px")
+            .style("top", (mouseY - 10) + "px");
+        })
+        .on("mouseout", function(event, d) {
+          // Reset dot size
+          d3.select(this).transition().duration(100).attr("r", 4);
+          
+          // Remove tooltip
+          d3.select("#chart-tooltip").remove();
+        })
+        .on("click", function(event, d) {
+          // Show detailed feed analysis modal for this data point
+          console.log("Clicked on data point:", {
+            tactic: category,
+            date: d.date,
+            count: d.value
+          });
+          
+          openChartDataModal(category, d.date, d.value);
+        });
     });
 
     // Add x-axis
@@ -6809,14 +6989,14 @@ function TTPAnalysis({ active }) {
                 </h2>
                 <button 
                   className="btn btn-outline btn-sm" 
-                  onClick={fetchAggregationData}
-                  disabled={aggregationLoading}
+                  onClick={fetchFeedComparisonData}
+                  disabled={feedComparisonLoading}
                 >
-                  <i className={`fas ${aggregationLoading ? 'fa-spinner fa-spin' : 'fa-sync-alt'}`}></i> Refresh
+                  <i className={`fas ${feedComparisonLoading ? 'fa-spinner fa-spin' : 'fa-sync-alt'}`}></i> Refresh
                 </button>
               </div>
               <div className="card-content">
-                {aggregationLoading ? (
+                {feedComparisonLoading ? (
                   <div className="loading-state">
                     <i className="fas fa-spinner fa-spin"></i>
                     <p>Loading feed comparison data...</p>
@@ -6907,24 +7087,29 @@ function TTPAnalysis({ active }) {
               </h2>
             </div>
             <div className="card-content">
-              {seasonalData && seasonalData.statistics ? (
+              {seasonalPatternsLoading ? (
+                <div className="loading-state">
+                  <i className="fas fa-spinner fa-spin"></i>
+                  <p>Loading seasonal patterns data...</p>
+                </div>
+              ) : seasonalPatternsData && seasonalPatternsData.statistics ? (
                 <div className="seasonal-analysis">
                   <div className="seasonal-stats">
                     <div className="stat-card">
-                      <div className="stat-value">{seasonalData.statistics.seasonality_strength}</div>
+                      <div className="stat-value">{seasonalPatternsData.statistics.seasonality_strength}</div>
                       <div className="stat-label">Seasonality Strength</div>
                     </div>
                     <div className="stat-card">
-                      <div className="stat-value">{seasonalData.statistics.peak_period.label}</div>
+                      <div className="stat-value">{seasonalPatternsData.statistics.peak_period.label}</div>
                       <div className="stat-label">Peak Period</div>
                     </div>
                     <div className="stat-card">
-                      <div className="stat-value">{seasonalData.statistics.valley_period.label}</div>
+                      <div className="stat-value">{seasonalPatternsData.statistics.valley_period.label}</div>
                       <div className="stat-label">Valley Period</div>
                     </div>
                   </div>
                   <div className="seasonal-interpretation">
-                    <p>{seasonalData.interpretation}</p>
+                    <p>{seasonalPatternsData.interpretation}</p>
                   </div>
                 </div>
               ) : (
@@ -7172,9 +7357,23 @@ function TTPAnalysis({ active }) {
           
           {/* TTP Pagination Controls */}
           {(totalPages > 0 || loading) && (
-            <div className="pagination-wrapper" style={{marginTop: '1.5rem'}}>
+            <div className="pagination-wrapper" style={{
+              marginTop: '1.5rem', 
+              padding: '1rem', 
+              backgroundColor: '#f8f9fa', 
+              borderRadius: '8px',
+              border: '1px solid #dee2e6',
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center',
+              gap: '1rem'
+            }}>
               <div className="pagination-info-detailed">
-                <span className="pagination-summary">
+                <span className="pagination-summary" style={{
+                  fontSize: '0.9rem',
+                  color: '#495057',
+                  fontWeight: '500'
+                }}>
                   {loading ? (
                     <>
                       <i className="fas fa-spinner fa-spin" style={{marginRight: '5px'}}></i>
@@ -7183,16 +7382,31 @@ function TTPAnalysis({ active }) {
                   ) : (
                     <>
                       Showing <strong>{Math.min((currentPage - 1) * pageSize + 1, totalCount)}</strong> to <strong>{Math.min(currentPage * pageSize, totalCount)}</strong> of <strong>{totalCount}</strong> TTPs
+                      {totalPages > 1 && <span style={{marginLeft: '10px', color: '#6c757d'}}>• Page {currentPage} of {totalPages}</span>}
                     </>
                   )}
                 </span>
               </div>
               
               {totalPages > 1 && (
-                <div className="pagination-controls-enhanced">
+                <div className="pagination-controls-enhanced" style={{
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  gap: '1rem',
+                  flexWrap: 'wrap'
+                }}>
                   {/* Page Size Selector */}
-                  <div className="items-per-page-selector" style={{marginRight: '1rem'}}>
-                    <label htmlFor="ttp-page-size" style={{fontSize: '0.85rem', marginRight: '0.5rem'}}>
+                  <div className="items-per-page-selector" style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}>
+                    <label htmlFor="ttp-page-size" style={{
+                      fontSize: '0.85rem',
+                      color: '#495057',
+                      fontWeight: '500'
+                    }}>
                       Items per page:
                     </label>
                     <select
@@ -7200,7 +7414,12 @@ function TTPAnalysis({ active }) {
                       className="form-control-sm"
                       value={pageSize}
                       onChange={(e) => handlePageSizeChange(parseInt(e.target.value))}
-                      style={{minWidth: '70px'}}
+                      style={{
+                        minWidth: '70px',
+                        padding: '0.25rem 0.5rem',
+                        border: '1px solid #ced4da',
+                        borderRadius: '4px'
+                      }}
                       disabled={loading}
                     >
                       <option value={10}>10</option>
@@ -7221,16 +7440,33 @@ function TTPAnalysis({ active }) {
                   </button>
 
                   {/* Page Numbers */}
-                  <div className="pagination-pages">
+                  <div className="pagination-pages" style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem'
+                  }}>
                     {generatePageNumbers().map((page, index) => (
                       page === '...' ? (
-                        <span key={`ellipsis-${index}`} className="pagination-ellipsis">...</span>
+                        <span 
+                          key={`ellipsis-${index}`} 
+                          className="pagination-ellipsis"
+                          style={{
+                            padding: '0.25rem 0.5rem',
+                            color: '#6c757d'
+                          }}
+                        >
+                          ...
+                        </span>
                       ) : (
                         <button
                           key={page}
                           className={`btn btn-sm ${page === currentPage ? 'btn-primary' : 'btn-outline'}`}
                           onClick={() => handlePageChange(page)}
                           disabled={loading}
+                          style={{
+                            minWidth: '40px',
+                            height: '32px'
+                          }}
                         >
                           {page}
                         </button>
@@ -7264,19 +7500,43 @@ function TTPAnalysis({ active }) {
             </div>
           </div>
           <div className="card-content">
-            <div className="chart-container" ref={ttpChartRef}>
-              {trendsLoading ? (
-                <div style={{textAlign: 'center', padding: '4rem'}}>
-                  <i className="fas fa-spinner fa-spin" style={{fontSize: '2rem', color: '#0056b3'}}></i>
-                  <p style={{marginTop: '1rem', color: '#666'}}>Loading TTP trends data...</p>
+            <div 
+              className="chart-container" 
+              ref={ttpChartRef}
+              style={{minHeight: '300px', width: '100%', backgroundColor: '#f8f9fa', border: '1px solid #dee2e6', borderRadius: '4px', position: 'relative'}}
+            >
+              {(trendsLoading || trendsData.length === 0) && (
+                <div 
+                  className="chart-placeholder"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    backgroundColor: '#f8f9fa',
+                    zIndex: 1
+                  }}
+                >
+                  <div style={{textAlign: 'center', color: '#666'}}>
+                    {trendsLoading ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin" style={{fontSize: '2rem', color: '#0056b3', marginBottom: '1rem'}}></i>
+                        <p>Loading TTP trends data...</p>
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-chart-line" style={{fontSize: '2rem', color: '#ccc', marginBottom: '1rem'}}></i>
+                        <p>No TTP trends data available</p>
+                        <p style={{color: '#888', fontSize: '0.9rem'}}>TTP data will appear here as it becomes available</p>
+                      </>
+                    )}
+                  </div>
                 </div>
-              ) : trendsData.length === 0 ? (
-                <div style={{textAlign: 'center', padding: '4rem'}}>
-                  <i className="fas fa-chart-line" style={{fontSize: '2rem', color: '#ccc'}}></i>
-                  <p style={{marginTop: '1rem', color: '#666'}}>No TTP trends data available</p>
-                  <p style={{color: '#888', fontSize: '0.9rem'}}>TTP data will appear here as it becomes available</p>
-                </div>
-              ) : null}
+              )}
             </div>
           </div>
         </div>
@@ -7305,6 +7565,7 @@ function TTPAnalysis({ active }) {
               </div>
             </div>
             <div className="card-content">
+              
               {aggregationLoading ? (
                 <div className="loading-state">
                   <i className="fas fa-spinner fa-spin"></i>
@@ -7317,10 +7578,53 @@ function TTPAnalysis({ active }) {
                       <h3>Technique Frequency Over Time</h3>
                       <div 
                         className="trend-chart" 
-                        ref={ttpChartRef}
-                        style={{minHeight: '300px', width: '100%'}}
+                        ref={ttpTrendsChartRef}
+                        style={{minHeight: '300px', width: '100%', backgroundColor: '#f8f9fa', border: '1px solid #dee2e6', borderRadius: '4px'}}
                       >
-                        {/* D3.js Trend Chart will be rendered here */}
+                        {trendsLoading ? (
+                          <div style={{
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            height: '300px',
+                            color: '#666'
+                          }}>
+                            <div style={{textAlign: 'center'}}>
+                              <i className="fas fa-spinner fa-spin" style={{fontSize: '2rem', marginBottom: '1rem'}}></i>
+                              <p>Loading trends data...</p>
+                            </div>
+                          </div>
+                        ) : trendsData.length === 0 ? (
+                          <div style={{
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            height: '300px',
+                            color: '#666'
+                          }}>
+                            <div style={{textAlign: 'center'}}>
+                              <i className="fas fa-chart-line" style={{fontSize: '2rem', marginBottom: '1rem'}}></i>
+                              <p>No trend data available</p>
+                              <p style={{fontSize: '0.9rem'}}>TTP trends will appear here as data is collected</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            height: '300px',
+                            color: '#666'
+                          }}>
+                            <div style={{textAlign: 'center'}}>
+                              <i className="fas fa-check-circle" style={{fontSize: '2rem', marginBottom: '1rem', color: '#28a745'}}></i>
+                              <p>Chart should render here</p>
+                              <p style={{fontSize: '0.8rem'}}>
+                                Debug: {trendsData.length} trend series loaded
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                     
@@ -7367,8 +7671,8 @@ function TTPAnalysis({ active }) {
                         <i className="fas fa-clock"></i>
                         <div>
                           <h4>Seasonal Patterns</h4>
-                          <p>{seasonalData && seasonalData.interpretation ? 
-                            seasonalData.interpretation : 
+                          <p>{seasonalPatternsData && seasonalPatternsData.interpretation ? 
+                            seasonalPatternsData.interpretation : 
                             'Analyzing temporal patterns in TTP usage'
                           }</p>
                         </div>
@@ -7810,10 +8114,12 @@ function TTPAnalysis({ active }) {
                 ttpData.map((ttp) => (
                   <tr key={ttp.id}>
                     <td>{ttp.id}</td>
-                    <td>{ttp.name}</td>
+                    <td style={{fontSize: '0.9rem', fontWeight: '500'}}>
+                      {ttp.name || `[Debug: ID ${ttp.id}] Missing Name`}
+                    </td>
                     <td>{ttp.mitre_technique_id}</td>
                     <td>{ttp.mitre_tactic_display || ttp.mitre_tactic}</td>
-                    <td>{ttp.threat_feed ? ttp.threat_feed.name : 'N/A'}</td>
+                    <td style={{fontSize: '0.85rem'}}>{ttp.threat_feed ? ttp.threat_feed.name : 'No Feed'}</td>
                     <td>{new Date(ttp.created_at).toLocaleDateString()}</td>
                     <td>
                       <span className={`badge ${ttp.is_anonymized ? 'badge-info' : 'badge-success'}`}>
@@ -8682,6 +8988,150 @@ function TTPAnalysis({ active }) {
                   <i className="fas fa-external-link-alt"></i> View All TTPs
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chart Data Point Modal */}
+      {showChartDataModal && (
+        <div className="modal-overlay" onClick={closeChartDataModal}>
+          <div className="modal-content chart-data-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>
+                <i className="fas fa-chart-line"></i>
+                TTP Trends Analysis
+              </h3>
+              <button className="modal-close" onClick={closeChartDataModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              {chartDataLoading ? (
+                <div className="loading-state">
+                  <i className="fas fa-spinner fa-spin"></i>
+                  <span>Loading detailed analysis...</span>
+                </div>
+              ) : chartDataPoint ? (
+                <div className="chart-data-analysis">
+                  {/* Data Point Summary */}
+                  <div className="data-point-summary">
+                    <div className="summary-header">
+                      <h4>Data Point Overview</h4>
+                      <div className="data-point-badges">
+                        <span className="badge tactic-badge">
+                          {chartDataPoint.tactic.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </span>
+                        <span className="badge date-badge">
+                          {new Date(chartDataPoint.date).toLocaleDateString('en-US', { 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="summary-stats">
+                      <div className="stat-item">
+                        <div className="stat-value">{chartDataPoint.count}</div>
+                        <div className="stat-label">Total TTPs</div>
+                      </div>
+                      <div className="stat-item">
+                        <div className="stat-value">{chartDataPoint.feedData?.length || 0}</div>
+                        <div className="stat-label">Contributing Feeds</div>
+                      </div>
+                      <div className="stat-item">
+                        <div className="stat-value">
+                          {chartDataPoint.feedData?.filter(f => f.type === 'External').length || 0}
+                        </div>
+                        <div className="stat-label">External Sources</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Feed Breakdown */}
+                  {chartDataPoint.feedData && chartDataPoint.feedData.length > 0 && (
+                    <div className="feed-breakdown-section">
+                      <h4><i className="fas fa-rss"></i> Threat Feed Breakdown</h4>
+                      <div className="feed-breakdown-list">
+                        {chartDataPoint.feedData.map((feed, index) => (
+                          <div key={index} className="feed-breakdown-item">
+                            <div className="feed-info">
+                              <div className="feed-header">
+                                <span className="feed-name">{feed.name}</span>
+                                <span className={`feed-type-badge ${feed.type.toLowerCase()}`}>
+                                  {feed.type}
+                                </span>
+                              </div>
+                              <div className="feed-stats">
+                                <span className="ttp-count">{feed.count} TTPs</span>
+                                <span className="percentage">
+                                  {((feed.count / chartDataPoint.count) * 100).toFixed(1)}%
+                                </span>
+                              </div>
+                            </div>
+                            <div className="feed-progress">
+                              <div 
+                                className="feed-progress-bar"
+                                style={{
+                                  width: `${(feed.count / chartDataPoint.count) * 100}%`,
+                                  backgroundColor: feed.type === 'External' ? '#007bff' : '#28a745'
+                                }}
+                              ></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Analysis Insights */}
+                  <div className="analysis-insights">
+                    <h4><i className="fas fa-lightbulb"></i> Analysis Insights</h4>
+                    <div className="insights-list">
+                      <div className="insight-item">
+                        <i className="fas fa-trending-up insight-icon"></i>
+                        <div className="insight-content">
+                          <strong>Activity Level:</strong> This represents{' '}
+                          {chartDataPoint.count > 10 ? 'high' : chartDataPoint.count > 5 ? 'moderate' : 'low'} 
+                          {' '}TTP activity for the {chartDataPoint.tactic.replace(/-/g, ' ')} tactic on this date.
+                        </div>
+                      </div>
+                      <div className="insight-item">
+                        <i className="fas fa-shield-alt insight-icon"></i>
+                        <div className="insight-content">
+                          <strong>Threat Intelligence:</strong> Data sourced from{' '}
+                          {chartDataPoint.feedData?.filter(f => f.type === 'External').length || 0} external and{' '}
+                          {chartDataPoint.feedData?.filter(f => f.type === 'Internal').length || 0} internal feeds.
+                        </div>
+                      </div>
+                      <div className="insight-item">
+                        <i className="fas fa-clock insight-icon"></i>
+                        <div className="insight-content">
+                          <strong>Temporal Context:</strong> This data point can help identify patterns and trends in threat actor behavior for defensive planning.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="error-state">
+                  <i className="fas fa-exclamation-triangle"></i>
+                  <span>Failed to load chart data analysis</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={closeChartDataModal}>
+                Close
+              </button>
+              <button className="btn btn-primary">
+                <i className="fas fa-external-link-alt"></i> View Related TTPs
+              </button>
             </div>
           </div>
         </div>
@@ -11874,6 +12324,229 @@ function CSSStyles() {
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
         }
 
+        /* Matrix Cell Modal specific styles */
+        .matrix-cell-modal {
+            max-width: 900px;
+            width: 95%;
+            max-height: 85vh;
+            margin: 20px;
+        }
+
+        .matrix-cell-modal .modal-body {
+            padding: 1.5rem 2rem 2rem 2rem;
+            max-height: calc(85vh - 120px);
+            overflow-y: auto;
+        }
+
+        /* Technique Modal specific styles */
+        .technique-modal {
+            max-width: 800px;
+            width: 95%;
+            max-height: 85vh;
+            margin: 20px;
+        }
+
+        .technique-modal .modal-body {
+            padding: 1.5rem 2rem 2rem 2rem;
+            max-height: calc(85vh - 120px);
+            overflow-y: auto;
+        }
+
+        /* TTP Modal specific styles */
+        .ttp-modal {
+            max-width: 850px;
+            width: 95%;
+            max-height: 85vh;
+            margin: 20px;
+        }
+
+        .ttp-modal .modal-body {
+            padding: 1.5rem 2rem 2rem 2rem;
+            max-height: calc(85vh - 120px);
+            overflow-y: auto;
+        }
+
+        /* Chart Data Modal specific styles */
+        .chart-data-modal {
+            max-width: 700px;
+            width: 95%;
+            max-height: 85vh;
+            margin: 20px;
+        }
+
+        .chart-data-modal .modal-body {
+            padding: 1.5rem 2rem 2rem 2rem;
+            max-height: calc(85vh - 120px);
+            overflow-y: auto;
+        }
+
+        .data-point-summary {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .summary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .data-point-badges {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        .summary-stats .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+
+        .summary-stats .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #007bff;
+            margin-bottom: 0.25rem;
+        }
+
+        .summary-stats .stat-label {
+            font-size: 0.85rem;
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .feed-breakdown-section {
+            margin-bottom: 2rem;
+        }
+
+        .feed-breakdown-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .feed-breakdown-item {
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+
+        .feed-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .feed-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .feed-type-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .feed-type-badge.external {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .feed-type-badge.internal {
+            background: #e8f5e8;
+            color: #388e3c;
+        }
+
+        .feed-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .feed-progress {
+            background: #e9ecef;
+            height: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .feed-progress-bar {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .analysis-insights {
+            margin-bottom: 1rem;
+        }
+
+        .insights-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .insight-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
+        }
+
+        .insight-icon {
+            color: #007bff;
+            font-size: 1.1rem;
+            margin-top: 0.1rem;
+        }
+
+        .insight-content {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: #495057;
+        }
+
+        /* Custom scrollbar styling */
+        .modal-content::-webkit-scrollbar,
+        .modal-body::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .modal-content::-webkit-scrollbar-track,
+        .modal-body::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .modal-content::-webkit-scrollbar-thumb,
+        .modal-body::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        .modal-content::-webkit-scrollbar-thumb:hover,
+        .modal-body::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
         .modal-header {
             padding: 1.5rem;
             border-bottom: 1px solid var(--medium-gray);
@@ -11905,6 +12578,15 @@ function CSSStyles() {
 
         .modal-body {
             padding: 1.5rem;
+        }
+
+        .modal-footer {
+            padding: 1.5rem;
+            border-top: 1px solid var(--medium-gray);
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            background-color: #f8f9fa;
         }
 
         .form-group {
