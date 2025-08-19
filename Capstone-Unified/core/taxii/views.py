@@ -171,7 +171,7 @@ class TAXIIBaseView(APIView):
                 source_organization=source_org,
                 target_organization=requesting_org
             )
-            return relationship.trust_level.level
+            return relationship.trust_level.numerical_value / 100.0
         except TrustRelationship.DoesNotExist:
             return default_trust
 

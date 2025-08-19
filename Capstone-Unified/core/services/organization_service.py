@@ -26,9 +26,9 @@ class OrganizationService:
     def __init__(self):
         self.trust_service = TrustService()
     
-    def create_organization(self, name, organization_type, contact_email, domain=None,
-                          description='', website='', is_publisher=True, is_verified=True,
-                          primary_user_data=None, created_by=None, **kwargs):
+    def create_organization(self, creating_user: CustomUser = None, org_data: Dict = None, 
+                          primary_user_data: Dict = None, name: str = None, 
+                          organization_type: str = None, **kwargs) -> Tuple[Organization, CustomUser]:
         """Create a new organization with primary user"""
         
         # Validate required fields
@@ -76,16 +76,16 @@ class OrganizationService:
             with transaction.atomic():
                 # Create organization
                 organization = Organization.objects.create(
-                    name=name,
-                    description=description,
+                    name=org_data['name'],
+                    description=org_data.get('description', ''),
                     domain=domain,
-                    contact_email=contact_email,
-                    website=website,
-                    organization_type=organization_type,
-                    is_publisher=is_publisher,
-                    is_verified=is_verified,
+                    contact_email=org_data.get('contact_email', primary_user_data.get('email', '')),
+                    website=org_data.get('website', ''),
+                    organization_type=org_data.get('organization_type', 'educational'),
+                    is_publisher=org_data.get('is_publisher', True),
+                    is_verified=org_data.get('is_verified', True),
                     is_active=True,
-                    created_by=created_by
+                    created_by=creating_user  # Pass the user object, not username string
                 )
                 
                 # Create primary user

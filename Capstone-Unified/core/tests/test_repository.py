@@ -5,7 +5,9 @@ import unittest
 import uuid
 from django.test import TransactionTestCase
 from django.utils import timezone
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 from core.repositories.threat_feed_repository import ThreatFeedRepository
 from core.repositories.indicator_repository import IndicatorRepository

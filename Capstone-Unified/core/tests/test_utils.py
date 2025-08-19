@@ -2,7 +2,9 @@
 Test utilities for proper test isolation
 """
 import uuid
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 from core.models.models import Organization, Collection, STIXObject
 
 class TestDataManager:

@@ -143,9 +143,9 @@ if [ "$SKIP_BACKEND" = false ]; then
     print_status "Running Django backend test orchestrator..."
     
     if [ "$VERBOSE" = true ]; then
-        python manage.py run_orchestrated_tests --verbosity=2
+        python3 manage.py run_orchestrated_tests --verbosity=2
     else
-        python manage.py run_orchestrated_tests
+        python3 manage.py run_orchestrated_tests
     fi
     
     BACKEND_RESULT=$?

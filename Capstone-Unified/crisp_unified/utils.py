@@ -417,17 +417,7 @@ def get_trust_level(source_org: Organization, target_org: Organization) -> float
             target_organization=target_org 
         )
         # Extract float value from TrustLevel object
-        if hasattr(relationship.trust_level, 'level'):
-            return float(relationship.trust_level.level)
-        elif hasattr(relationship.trust_level, 'value'):
-            return float(relationship.trust_level.value)
-        else:
-            # Fallback to string conversion and then to float
-            try:
-                return float(str(relationship.trust_level))
-            except ValueError:
-                # If conversion fails, use default medium trust
-                return 0.5
+        return relationship.trust_level.numerical_value / 100.0
     except (ImportError, TrustRelationship.DoesNotExist):
         pass
     

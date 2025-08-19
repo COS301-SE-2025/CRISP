@@ -1,0 +1,41 @@
+---
+env:
+  contexts:
+    - name: "CRISP_vite"
+      urls:
+        - "http://127.0.0.1:5173"
+      includePaths:
+        - "http://127.0.0.1:5173/.*"
+      excludePaths: []
+  parameters:
+    failOnError: true
+    failOnWarning: false
+    progressToStdout: true
+
+jobs:
+  - type: spider
+    parameters:
+      context: "CRISP_vite"
+      url: "http://127.0.0.1:5173"
+      maxDuration: 2
+      maxDepth: 5
+      numberOfThreads: 5
+      
+  - type: activeScan
+    parameters:
+      context: "CRISP_vite"
+      policy: "Default Policy"
+      maxRuleDurationInMins: 1
+      maxScanDurationInMins: 10
+      
+  - type: report
+    parameters:
+      template: "traditional-html"
+      reportDir: "security-testing/reports/20250819_191252"
+      reportFile: "zap_vite_report.html"
+      
+  - type: report
+    parameters:
+      template: "traditional-json"
+      reportDir: "security-testing/reports/20250819_191252"
+      reportFile: "zap_vite_report.json"

@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.core.exceptions import ValidationError
 from ..models import TrustLevel, TrustRelationship, TrustGroup, TrustGroupMembership, TrustLog
-from core.user_management.factories.user_factory import UserFactory, OrganizationFactory
+from core.tests.test_data_fixtures import create_test_user, create_test_organization
 
 
 class TrustLevelModelTest(TestCase):
@@ -36,15 +36,19 @@ class TrustRelationshipModelTest(TestCase):
     """Test cases for TrustRelationship model"""
     
     def setUp(self):
-        self.org1 = OrganizationFactory(name='Organization 1')
-        self.org2 = OrganizationFactory(name='Organization 2')
-        self.trust_level = TrustLevel.objects.create(
+        self.org1 = create_test_organization(name_suffix='Organization_1')
+        self.org2 = create_test_organization(name_suffix='Organization_2')
+        self.trust_level, _ = TrustLevel.objects.get_or_create(
             name='Basic Trust',
-            description='A basic trust level',
-            level='trusted',
-            numerical_value=50
+            defaults={
+                'description': 'A basic trust level',
+                'level': 'trusted',
+                'numerical_value': 50
+            }
         )
-        self.user = UserFactory(organization=self.org1)
+        self.user = create_test_user()
+        self.user.organization = self.org1
+        self.user.save()
     
     def test_create_trust_relationship(self):
         """Test creating a trust relationship"""
@@ -113,13 +117,18 @@ class TrustGroupModelTest(TestCase):
     """Test cases for TrustGroup model"""
     
     def setUp(self):
-        self.trust_level = TrustLevel.objects.create(
+        self.trust_level, _ = TrustLevel.objects.get_or_create(
             name='Group Trust',
-            description='A group trust level',
-            level='trusted',
-            numerical_value=60
+            defaults={
+                'description': 'A group trust level',
+                'level': 'trusted',
+                'numerical_value': 60
+            }
         )
-        self.user = UserFactory()
+        self.organization = create_test_organization(name_suffix='trust_group')
+        self.user = create_test_user()
+        self.user.organization = self.organization
+        self.user.save()
     
     def test_create_trust_group(self):
         """Test creating a trust group"""
@@ -144,7 +153,7 @@ class TrustGroupModelTest(TestCase):
             created_by=str(self.user.organization.id)
         )
         
-        org = OrganizationFactory()
+        org = create_test_organization(name_suffix='membership')
         
         membership = TrustGroupMembership.objects.create(
             trust_group=group,
@@ -161,14 +170,16 @@ class TrustLogModelTest(TestCase):
     """Test cases for TrustLog model"""
     
     def setUp(self):
-        self.user = UserFactory()
-        self.org1 = OrganizationFactory()
-        self.org2 = OrganizationFactory()
-        self.trust_level = TrustLevel.objects.create(
+        self.user = create_test_user()
+        self.org1 = create_test_organization(name_suffix='org1')
+        self.org2 = create_test_organization(name_suffix='org2')
+        self.trust_level, _ = TrustLevel.objects.get_or_create(
             name='Test Trust',
-            description='A test trust level',
-            level='trusted',
-            numerical_value=70
+            defaults={
+                'description': 'A test trust level',
+                'level': 'trusted',
+                'numerical_value': 70
+            }
         )
         self.relationship = TrustRelationship.objects.create(
             source_organization=self.org1,

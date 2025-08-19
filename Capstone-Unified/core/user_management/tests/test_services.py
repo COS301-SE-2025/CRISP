@@ -1,12 +1,11 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError, PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
+from unittest.mock import patch
 from ..services.user_service import UserService
 from ..services.organization_service import OrganizationService
 from ..services.access_control_service import AccessControlService
-from ..factories.user_factory import UserFactory, OrganizationFactory
-from unittest.mock import patch
-
+from core.tests.test_data_fixtures import create_test_user, create_test_organization
 
 User = get_user_model()
 
@@ -16,11 +15,11 @@ class UserServiceTest(TestCase):
     
     def setUp(self):
         self.user_service = UserService()
-        self.organization = OrganizationFactory()
-        self.admin_user = UserFactory(
-            role='BlueVisionAdmin',
-            organization=self.organization
-        )
+        self.organization = create_test_organization(name_suffix='user_service')
+        self.admin_user = create_test_user(base_name='admin_user')
+        self.admin_user.role = 'BlueVisionAdmin'
+        self.admin_user.organization = self.organization
+        self.admin_user.save()
     
     def test_create_user(self):
         """Test creating a user through service"""
@@ -48,7 +47,9 @@ class UserServiceTest(TestCase):
     
     def test_get_user_details(self):
         """Test getting user details"""
-        user = UserFactory(organization=self.organization)
+        user = create_test_user(base_name='test_user_details')
+        user.organization = self.organization
+        user.save()
         
         details = self.user_service.get_user_details(
             requesting_user=self.admin_user,
@@ -62,11 +63,16 @@ class UserServiceTest(TestCase):
 
 class OrganizationServiceTest(TestCase):
     """Test cases for OrganizationService"""
-    
+
     def setUp(self):
         self.org_service = OrganizationService()
-        self.admin_user = UserFactory(role='BlueVisionAdmin')
-    
+        self.admin_user = create_test_user(base_name='org_admin')
+        self.admin_user.role = 'BlueVisionAdmin'
+        self.admin_user.save()
+        
+        self.publisher_user = create_test_user(base_name='org_publisher')
+        self.viewer_user = create_test_user(base_name='org_viewer')
+
     def test_create_organization(self):
         """Test creating organization through service"""
         org_data = {
@@ -95,44 +101,6 @@ class OrganizationServiceTest(TestCase):
         self.assertEqual(primary_user.role, 'publisher')
         self.assertEqual(primary_user.organization, organization)
     
-    def test_create_organization_success(self):
-        """Test successful organization creation."""
-        with patch.object(self.org_service, 'access_control') as mock_access_control:
-            mock_access_control.has_permission.return_value = True
-            
-            org_data = {
-                'name': 'New University',
-                'domain': 'new.edu',
-                'organization_type': 'university',
-                'is_publisher': False
-            }
-            
-            primary_user_data = {
-                'username': 'admin@new.edu',
-                'email': 'admin@new.edu',
-                'password': 'AdminPass123!',
-                'first_name': 'Admin',
-                'last_name': 'User'
-            }
-            
-            result = self.org_service.create_organization(
-                creating_user=self.admin_user,
-                org_data=org_data,
-                primary_user_data=primary_user_data
-            )
-            
-            # Expect tuple return (organization, primary_user)
-            if isinstance(result, tuple):
-                organization, primary_user = result
-                self.assertEqual(organization.name, 'New University')
-                self.assertEqual(organization.domain, 'new.edu')
-                self.assertEqual(organization.organization_type, 'university')
-            else:
-                # If single object returned
-                self.assertEqual(result.name, 'New University')
-                self.assertEqual(result.domain, 'new.edu')
-                self.assertEqual(result.organization_type, 'university')
-
     def test_create_organization_permission_denied(self):
         """Test organization creation without permission."""
         with patch.object(self.org_service, 'access_control') as mock_access_control:
@@ -159,25 +127,75 @@ class OrganizationServiceTest(TestCase):
                     primary_user_data=primary_user_data
                 )
 
+    def test_create_organization_success(self):
+        """Test successful organization creation by an admin"""
+        org_data = {
+            'name': "New Test Corp",
+            'organization_type': "commercial",
+            'contact_email': "contact@newcorp.com"
+        }
+        user_data = {
+            'username': 'primary_user',
+            'email': 'primary@newcorp.com',
+            'password': 'aSecurePassword123!',
+            'first_name': 'Primary',
+            'last_name': 'User'
+        }
+        
+        organization, primary_user = self.org_service.create_organization(
+            creating_user=self.admin_user,
+            **org_data,
+            primary_user_data=user_data
+        )
+        
+        self.assertIsNotNone(organization)
+        self.assertEqual(organization.name, "New Test Corp")
+        self.assertIsNotNone(primary_user)
+        self.assertEqual(primary_user.username, 'primary_user')
+        self.assertEqual(primary_user.organization, organization)
+
 
 class AccessControlServiceTest(TestCase):
     """Test cases for AccessControlService"""
-    
+
     def setUp(self):
-        self.access_control = AccessControlService()
-        self.organization = OrganizationFactory()
+        self.access_service = AccessControlService()
+        self.organization = create_test_organization()
         
-        self.viewer_user = UserFactory(
-            role='viewer',
-            organization=self.organization
+        self.admin_user = create_test_user(base_name='access_admin')
+        self.admin_user.role = 'BlueVisionAdmin'
+        self.admin_user.organization = self.organization
+        self.admin_user.save()
+
+        self.publisher_user = create_test_user(base_name='access_publisher')
+        self.publisher_user.role = 'publisher'
+        self.publisher_user.organization = self.organization
+        self.publisher_user.save()
+
+        self.viewer_user = create_test_user(base_name='access_viewer')
+        self.viewer_user.role = 'viewer'
+        self.viewer_user.organization = self.organization
+        self.viewer_user.save()
+
+    def test_admin_permissions(self):
+        """Test admin role permissions"""
+        # Admins can do everything
+        self.assertTrue(
+            self.access_service.has_permission(
+                self.admin_user, 'can_view_system_analytics'
+            )
         )
-        self.publisher_user = UserFactory(
-            role='publisher',
-            organization=self.organization
+        
+        self.assertTrue(
+            self.access_service.has_permission(
+                self.admin_user, 'can_manage_all_users'
+            )
         )
-        self.admin_user = UserFactory(
-            role='BlueVisionAdmin',
-            organization=self.organization
+        
+        self.assertTrue(
+            self.access_service.has_permission(
+                self.admin_user, 'can_create_organizations'
+            )
         )
     
     def test_viewer_permissions(self):
@@ -187,14 +205,14 @@ class AccessControlServiceTest(TestCase):
         
         # Test permissions using the existing has_permission method
         self.assertFalse(
-            self.access_control.has_permission(
+            self.access_service.has_permission(
                 self.viewer_user, 'can_create_organization_users'
             )
         )
         
         # Test that viewers cannot manage trust relationships
         self.assertFalse(
-            self.access_control.has_permission(
+            self.access_service.has_permission(
                 self.viewer_user, 'can_manage_trust_relationships'
             )
         )
@@ -203,57 +221,36 @@ class AccessControlServiceTest(TestCase):
         """Test publisher role permissions"""
         # Publishers can create users in their organization
         self.assertTrue(
-            self.access_control.has_permission(
+            self.access_service.has_permission(
                 self.publisher_user, 'can_create_organization_users'
             )
         )
         
         # Publishers can manage trust relationships
         self.assertTrue(
-            self.access_control.has_permission(
+            self.access_service.has_permission(
                 self.publisher_user, 'can_manage_trust_relationships'
             )
         )
         
         # Publishers cannot view system analytics
         self.assertFalse(
-            self.access_control.has_permission(
+            self.access_service.has_permission(
                 self.publisher_user, 'can_view_system_analytics'
-            )
-        )
-    
-    def test_admin_permissions(self):
-        """Test admin role permissions"""
-        # Admins can do everything
-        self.assertTrue(
-            self.access_control.has_permission(
-                self.admin_user, 'can_view_system_analytics'
-            )
-        )
-        
-        self.assertTrue(
-            self.access_control.has_permission(
-                self.admin_user, 'can_manage_all_users'
-            )
-        )
-        
-        self.assertTrue(
-            self.access_control.has_permission(
-                self.admin_user, 'can_create_organizations'
             )
         )
     
     def test_role_hierarchy(self):
         """Test that higher roles inherit lower role permissions"""
         # Publisher should have all viewer permissions
-        viewer_permissions = self.access_control.get_user_permissions(self.viewer_user)
-        publisher_permissions = self.access_control.get_user_permissions(self.publisher_user)
+        viewer_permissions = self.access_service.get_user_permissions(self.viewer_user)
+        publisher_permissions = self.access_service.get_user_permissions(self.publisher_user)
         
         for permission in viewer_permissions:
             self.assertIn(permission, publisher_permissions)
         
         # Admin should have all publisher permissions
-        admin_permissions = self.access_control.get_user_permissions(self.admin_user)
+        admin_permissions = self.access_service.get_user_permissions(self.admin_user)
         
         for permission in publisher_permissions:
             self.assertIn(permission, admin_permissions)

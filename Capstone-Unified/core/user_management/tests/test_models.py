@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from ..models import Organization, AuthenticationLog, UserSession
-from core.tests.factories import CustomUserFactory as UserFactory, OrganizationFactory
+from core.tests.test_data_fixtures import create_test_user, create_test_organization
 
 
 User = get_user_model()
@@ -12,10 +12,12 @@ class CustomUserModelTest(TestCase):
     """Test cases for CustomUser model"""
     
     def setUp(self):
-        self.organization = Organization.objects.create(
-            name="Test Organization",
-            organization_type="educational",
-            trust_metadata={}
+        self.organization, _ = Organization.objects.get_or_create(
+            name="Test Organization for User Tests",
+            defaults={
+                "organization_type": "educational",
+                "trust_metadata": {}
+            }
         )
 
     def test_create_user(self):
@@ -45,13 +47,24 @@ class CustomUserModelTest(TestCase):
         )
         self.assertTrue(admin.is_superuser)
         self.assertTrue(admin.is_staff)
-        self.assertEqual(admin.role, 'admin')
+        self.assertEqual(admin.role, 'BlueVisionAdmin')
     
     def test_user_roles(self):
         """Test different user roles"""
-        viewer = UserFactory(role='viewer', organization=self.organization)
-        publisher = UserFactory(role='publisher', organization=self.organization)
-        admin = UserFactory(role='BlueVisionAdmin', organization=self.organization)
+        viewer = create_test_user(base_name='viewer')
+        viewer.role = 'viewer'
+        viewer.organization = self.organization
+        viewer.save()
+        
+        publisher = create_test_user(base_name='publisher')
+        publisher.role = 'publisher'
+        publisher.organization = self.organization
+        publisher.save()
+        
+        admin = create_test_user(base_name='admin')
+        admin.role = 'BlueVisionAdmin'
+        admin.organization = self.organization
+        admin.save()
         
         self.assertEqual(viewer.role, 'viewer')
         self.assertEqual(publisher.role, 'publisher')
@@ -59,11 +72,10 @@ class CustomUserModelTest(TestCase):
     
     def test_user_str_representation(self):
         """Test string representation of user"""
-        user = UserFactory(
-            username='testuser@example.com',
-            organization=self.organization
-        )
-        self.assertEqual(str(user), 'testuser@example.com (Viewer)')
+        user = create_test_user(base_name='testuser@example.com')
+        user.organization = self.organization
+        user.save()
+        self.assertEqual(str(user), f'{user.username} (Viewer)')
 
 
 class OrganizationModelTest(TestCase):
@@ -72,27 +84,27 @@ class OrganizationModelTest(TestCase):
     def test_create_organization(self):
         """Test creating an organization"""
         org = Organization.objects.create(
-            name='Test Organization',
+            name='Test Organization Model Test',
             domain='test.org',
             contact_email='contact@test.org',
             organization_type='educational'
         )
-        self.assertEqual(org.name, 'Test Organization')
+        self.assertEqual(org.name, 'Test Organization Model Test')
         self.assertEqual(org.domain, 'test.org')
         self.assertFalse(org.is_publisher)  # Default value
         self.assertTrue(org.is_active)  # Default value
     
     def test_organization_str_representation(self):
         """Test string representation of organization"""
-        org = OrganizationFactory(name='Test Org')
-        self.assertEqual(str(org), 'Test Org')
+        org = create_test_organization(name_suffix='Org')
+        self.assertEqual(str(org), org.name)
 
 
 class AuthenticationLogModelTest(TestCase):
     """Test cases for AuthenticationLog model"""
     
     def setUp(self):
-        self.user = UserFactory()
+        self.user = create_test_user()
     
     def test_log_authentication_event(self):
         """Test logging authentication events"""
@@ -129,7 +141,7 @@ class UserSessionModelTest(TestCase):
     """Test cases for UserSession model"""
     
     def setUp(self):
-        self.user = UserFactory()
+        self.user = create_test_user()
     
     def test_create_user_session(self):
         """Test creating a user session"""

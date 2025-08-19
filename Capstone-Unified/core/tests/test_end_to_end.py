@@ -10,7 +10,9 @@ from django.test import TransactionTestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 from core.models.models import ThreatFeed, Indicator, TTPData, Institution, Organization
 from core.tests.test_data_fixtures import create_test_threat_feed, create_test_organization
@@ -850,7 +852,7 @@ class TTPTrendsAPITestCase(TransactionTestCase):
         if series:
             data_points = series[0]['data_points']
             # Should have fewer data points than daily
-            self.assertLessEqual(len(data_points), 5)  # Max 5 weeks in 30 days
+            self.assertLessEqual(len(data_points), 6)  # Max 6 weeks in 30 days (accounting for partial weeks)
 
     def test_ttp_trends_granularity_month(self):
         """Test TTP trends with monthly granularity"""

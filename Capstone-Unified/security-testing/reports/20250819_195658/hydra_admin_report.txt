@@ -1,0 +1,1 @@
+# Hydra v9.2 run at 2025-08-19 20:38:14 on 127.0.0.1 http-post-form (hydra -L security-testing/wordlists/common_usernames.txt -P security-testing/wordlists/common_passwords.txt -s 8000 -f -t 2 -w 5 -o security-testing/reports/20250819_195658/hydra_admin_report.txt 127.0.0.1 http-post-form /admin/login/:username=^USER^&password=^PASS^:Please enter the correct)

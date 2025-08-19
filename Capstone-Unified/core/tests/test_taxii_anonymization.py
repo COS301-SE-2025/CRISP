@@ -7,7 +7,9 @@ import json
 import uuid
 from datetime import datetime, timedelta
 from django.test import TransactionTestCase
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 from django.utils import timezone
 from rest_framework.test import APIClient
 from unittest.mock import patch, MagicMock
@@ -55,6 +57,36 @@ class TAXIIAnonymizationTestCase(TransactionTestCase):
             organization_type='commercial', 
             contact_email=f'security2_{unique_suffix}@test.com',
             created_by=self.user2
+        )
+
+        # Explicitly set organization for users
+        self.user1.organization = self.org1
+        self.user1.save()
+        self.user2.organization = self.org2
+        self.user2.save()
+        
+        # Create a TrustLevel for the relationship
+        self.medium_trust_level = TrustLevel.objects.create(
+            name=f'Medium Trust {unique_suffix}',
+            level='trusted',
+            description='Medium trust level for testing anonymization',
+            numerical_value=50, # Corresponds to MEDIUM anonymization
+            default_anonymization_level='partial',
+            default_access_level='read',
+            created_by='system'
+        )
+
+        # Create an active TrustRelationship between org1 and org2
+        self.trust_relationship = TrustRelationship.objects.create(
+            source_organization=self.org1,
+            target_organization=self.org2,
+            trust_level=self.medium_trust_level,
+            status='active',
+            approved_by_source=True,
+            approved_by_target=True,
+            anonymization_level='partial', # Explicitly set for clarity
+            access_level='read',
+            created_by=self.user1
         )
         
         # Create sample STIX objects

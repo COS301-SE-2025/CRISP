@@ -3,18 +3,19 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from django.contrib.auth import logout
+from django.contrib.auth import logout, get_user_model
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from ..services.auth_service import AuthenticationService
 from ..services.user_service import UserService
 from ..services.trust_aware_service import TrustAwareService
 from ..services.invitation_service import PasswordResetService
-from ..models import CustomUser, AuthenticationLog
+from ..models import CustomUser, AuthenticationLog, Organization
 import logging
 import json
 import uuid
 from django.core.serializers.json import DjangoJSONEncoder
+from django.db import transaction
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,8 @@ class UUIDEncoder(json.JSONEncoder):
         if isinstance(obj, uuid.UUID):
             return str(obj)
         return super().default(obj)
+
+User = get_user_model()
 
 @method_decorator(csrf_exempt, name='dispatch')
 class AuthenticationViewSet(viewsets.ViewSet):
@@ -463,68 +466,74 @@ class AuthenticationViewSet(viewsets.ViewSet):
                     'message': 'Passwords do not match'
                 }, status=status.HTTP_400_BAD_REQUEST)
             
-            # Find or create organization by name
             try:
-                from ..models import Organization
-                
-                # First try to find existing organization by name
-                try:
-                    org = Organization.objects.get(name=organization)
-                    created = False
-                except Organization.DoesNotExist:
-                    # Organization doesn't exist, create a new one with unique domain
-                    base_domain = organization.lower().replace(' ', '') + '.local'
-                    domain = base_domain
-                    counter = 1
+                with transaction.atomic():
+                    # Find or create organization by name
+                    try:
+                        # First try to find existing organization by name
+                        org = Organization.objects.get(name=organization)
+                        created = False
+                    except Organization.DoesNotExist:
+                        # Create a temporary user for organization creation
+                        temp_user = User.objects.create_user(
+                            username=f"temp_{uuid.uuid4().hex[:8]}",
+                            email=email,
+                            password="temporary_password"
+                        )
+                        
+                        # Organization doesn't exist, create a new one with unique domain
+                        base_domain = organization.lower().replace(' ', '') + '.local'
+                        domain = base_domain
+                        counter = 1
+                        
+                        # Ensure domain is unique
+                        while Organization.objects.filter(domain=domain).exists():
+                            domain = f"{base_domain.replace('.local', '')}{counter}.local"
+                            counter += 1
+                        
+                        org = Organization.objects.create(
+                            name=organization,
+                            domain=domain,
+                            contact_email=email,
+                            organization_type='educational',
+                            is_active=True,
+                            is_verified=False,
+                            created_by=temp_user  # Pass user object, not string
+                        )
+                        created = True
                     
-                    # Ensure domain is unique
-                    while Organization.objects.filter(domain=domain).exists():
-                        domain = f"{base_domain.replace('.local', '')}{counter}.local"
-                        counter += 1
-                    
-                    org = Organization.objects.create(
-                        name=organization,
-                        domain=domain,
-                        contact_email=email,
-                        organization_type='educational',
-                        is_active=True,
-                        is_verified=False,
-                        created_by=username
-                    )
-                    created = True
-                
-                # Create user using UserService with correct parameter order
-                user_data = {
-                    'username': username,
-                    'password': password,
-                    'email': email,
-                    'first_name': first_name,
-                    'last_name': last_name,
-                    'organization_id': str(org.id),
-                    'role': role,
-                    'ip_address': request.META.get('REMOTE_ADDR', 'Unknown'),
-                    'user_agent': request.META.get('HTTP_USER_AGENT', 'Unknown')
-                }
-                
-                # Call with correct parameter order: creating_user, user_data
-                user = self.user_service.create_user(
-                    creating_user=request.user if request.user.is_authenticated else None,
-                    user_data=user_data
-                )
-                
-                result = {
-                    'success': True,
-                    'user_info': {
-                        'id': str(user.id),
-                        'username': user.username,
-                        'email': user.email,
-                        'first_name': user.first_name,
-                        'last_name': user.last_name,
-                        'role': user.role,
-                        'organization': user.organization.name if user.organization else None
+                    # Create user using UserService with correct parameter order
+                    user_data = {
+                        'username': username,
+                        'password': password,
+                        'email': email,
+                        'first_name': first_name,
+                        'last_name': last_name,
+                        'organization_id': str(org.id),
+                        'role': role,
+                        'ip_address': request.META.get('REMOTE_ADDR', 'Unknown'),
+                        'user_agent': request.META.get('HTTP_USER_AGENT', 'Unknown')
                     }
-                }
-                
+                    
+                    # Call with correct parameter order: creating_user, user_data
+                    user = self.user_service.create_user(
+                        creating_user=request.user if request.user.is_authenticated else None,
+                        user_data=user_data
+                    )
+                    
+                    result = {
+                        'success': True,
+                        'user_info': {
+                            'id': str(user.id),
+                            'username': user.username,
+                            'email': user.email,
+                            'first_name': user.first_name,
+                            'last_name': user.last_name,
+                            'role': user.role,
+                            'organization': user.organization.name if user.organization else None
+                        }
+                    }
+                    
             except Exception as e:
                 logger.error(f"User creation error: {str(e)}")
                 result = {

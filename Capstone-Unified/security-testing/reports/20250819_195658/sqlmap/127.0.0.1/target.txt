@@ -1,0 +1,1 @@
+http://127.0.0.1:8000/admin/ (GET)  # /usr/bin/sqlmap -u http://127.0.0.1:8000/admin/ --batch --level=1 --risk=1 --timeout=3 --retries=1 --delay=5 --threads=1 --technique=B --time-sec=2 --output-dir=security-testing/reports/20250819_195658/sqlmap --no-cast --skip-urlencode --flush-session --fresh-queries --answers=continue=Y,follow=N,keep=N

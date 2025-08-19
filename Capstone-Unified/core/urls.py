@@ -7,8 +7,25 @@ from django.urls import path, include
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenRefreshView
+from rest_framework import routers # Import routers
 from core.models.models import ThreatFeed, Indicator, TTPData, CustomUser, Organization
 from core.api import auth_api, user_api, trust_api, organization_api
+from core.api.threat_feed_views import (
+    ThreatFeedViewSet, # Import ThreatFeedViewSet
+    indicators_list, indicators_bulk_import, indicator_update, indicator_share, # Import indicator views
+    threat_activity_chart_data, system_health, recent_activities, # Import other views
+    ttps_list, ttp_detail, mitre_matrix, ttp_trends, ttp_export,
+    ttp_mitre_mapping, ttp_bulk_mapping, ttp_mapping_validation,
+    ttp_auto_map_existing, ttp_technique_frequencies, ttp_tactic_frequencies,
+    ttp_technique_trends, ttp_feed_comparison, ttp_seasonal_patterns,
+    ttp_clear_aggregation_cache, ttp_filter_options, ttp_advanced_search,
+    ttp_search_suggestions, ttp_matrix_cell_details, ttp_technique_details
+)
+
+# Set up REST API router
+router = routers.DefaultRouter()
+router.register(r'threat-feeds', ThreatFeedViewSet, basename='threat-feed')
+
 
 @api_view(['GET'])
 def status_view(request):
@@ -80,6 +97,43 @@ organization_urlpatterns = [
     path('<uuid:organization_id>/trust-relationships/', organization_api.get_organization_trust_relationships, name='organization_trust_relationships'),
 ]
 
+# TTP URLs
+ttp_urlpatterns = [
+    path('', ttps_list, name='ttps-list'),
+    path('mitre-matrix/', mitre_matrix, name='mitre-matrix'),
+    path('trends/', ttp_trends, name='ttp-trends'),
+    path('export/', ttp_export, name='ttp-export'),
+    path('mitre-mapping/', ttp_mitre_mapping, name='ttp-mitre-mapping'),
+    path('bulk-mapping/', ttp_bulk_mapping, name='ttp-bulk-mapping'),
+    path('mapping-validation/', ttp_mapping_validation, name='ttp-mapping-validation'),
+    path('auto-map-existing/', ttp_auto_map_existing, name='ttp-auto-map-existing'),
+    path('technique-frequencies/', ttp_technique_frequencies, name='ttp-technique-frequencies'),
+    path('tactic-frequencies/', ttp_tactic_frequencies, name='ttp-tactic-frequencies'),
+    path('technique-trends/', ttp_technique_trends, name='ttp-technique-trends'),
+    path('feed-comparison/', ttp_feed_comparison, name='ttp-feed-comparison'),
+    path('seasonal-patterns/', ttp_seasonal_patterns, name='ttp-seasonal-patterns'),
+    path('clear-aggregation-cache/', ttp_clear_aggregation_cache, name='ttp-clear-aggregation-cache'),
+    path('filter-options/', ttp_filter_options, name='ttp-filter-options'),
+    path('advanced-search/', ttp_advanced_search, name='ttp-advanced-search'),
+    path('search-suggestions/', ttp_search_suggestions, name='ttp-search-suggestions'),
+    path('matrix-cell-details/', ttp_matrix_cell_details, name='ttp-matrix-cell-details'),
+    path('technique-details/<str:technique_id>/', ttp_technique_details, name='ttp-technique-details'),
+    path('<int:ttp_id>/', ttp_detail, name='ttp-detail'),
+]
+
+# Threat Feed URLs (moved from crisp_unified/urls.py)
+threat_feed_urlpatterns = [
+    path('', include(router.urls)), # Include router URLs here
+    path('indicators/', indicators_list, name='indicators-list'),
+    path('indicators/bulk-import/', indicators_bulk_import, name='indicators-bulk-import'),
+    path('indicators/<int:indicator_id>/update/', indicator_update, name='indicator-update'),
+    path('indicators/<int:indicator_id>/share/', indicator_share, name='indicator-share'),
+    path('threat-activity-chart/', threat_activity_chart_data, name='threat-activity-chart'),
+    path('system-health/', system_health, name='system-health'),
+    path('recent-activities/', recent_activities, name='recent-activities'),
+]
+
+
 # Main URL patterns
 urlpatterns = [
     path('', status_view, name='core-status'),
@@ -87,4 +141,6 @@ urlpatterns = [
     path('users/', include(user_urlpatterns)),
     path('trust/', include(trust_urlpatterns)),
     path('organizations/', include(organization_urlpatterns)),
+    path('ttps/', include(ttp_urlpatterns)), # TTP URLs
+    path('', include(threat_feed_urlpatterns)), # Threat Feed URLs (no prefix, as they are already under 'api/' in crisp_unified/urls.py)
 ]

@@ -124,7 +124,7 @@ class OrganizationService:
                     is_publisher=org_data.get('is_publisher', True),
                     is_verified=org_data.get('is_verified', True),
                     is_active=True,
-                    created_by=creating_user.username if creating_user else 'system'
+                    created_by=creating_user if creating_user else None
                 )
                 
                 # Create primary user

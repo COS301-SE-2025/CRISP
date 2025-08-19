@@ -1,6 +1,6 @@
 import uuid
 from django.utils import timezone
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model  # Use this instead
 from sqlite3 import IntegrityError
 import random
 from core.models.models import (
@@ -8,6 +8,8 @@ from core.models.models import (
     Collection, STIXObject, CollectionObject
 )
 
+# Get the correct user model
+User = get_user_model()
 
 def create_test_user(base_name='testuser', unique=True):
     """Create a test user with unique username and email."""
