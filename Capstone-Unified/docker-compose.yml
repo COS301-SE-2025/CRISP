@@ -52,7 +52,7 @@ services:
       - DB_PORT=5432
       - REDIS_URL=redis://redis:6379/0
       - ALLOWED_HOSTS=localhost,127.0.0.1,backend,frontend
-      - POPULATE_TEST_DATA=true
+      - POPULATE_TEST_DATA=false
     volumes:
       - ./logs:/app/logs
       - ./media:/app/media
@@ -66,19 +66,11 @@ services:
       - crisp-network
     command: >
       sh -c "until pg_isready -h db -p 5432; do echo 'Waiting for db...'; sleep 2; done &&
-             echo 'Making migrations...' &&
-             python manage.py makemigrations core || echo 'Core migrations skipped' &&
-             python manage.py makemigrations trust_management || echo 'Trust management migrations skipped' &&
-             python manage.py makemigrations user_management || echo 'User management migrations skipped' &&
-             python manage.py makemigrations alerts || echo 'Alerts migrations skipped' &&
-             echo 'Running migrations...' &&
              python manage.py migrate &&
              python manage.py setup_base_users &&
              if [ \"$$POPULATE_TEST_DATA\" = \"true\" ]; then
                echo 'Populating test data...' &&
-               python manage.py init_trust_levels || echo 'Trust levels initialization skipped' &&
-               python manage.py populate_database --no-input &&
-               python manage.py populate_trust_data || echo 'Trust data population skipped';
+               python manage.py populate_database --no-input;
              fi &&
              python manage.py collectstatic --noinput &&
              python manage.py runserver 0.0.0.0:8000"
@@ -117,7 +109,7 @@ services:
       - DB_PORT=5432
       - REDIS_URL=redis://redis-test:6379/0
       - ALLOWED_HOSTS=localhost,127.0.0.1,backend-test,frontend-test
-      - POPULATE_TEST_DATA=true
+      - POPULATE_TEST_DATA=false
     volumes:
       - ./logs:/app/logs
       - ./media:/app/media
@@ -135,9 +127,7 @@ services:
              python manage.py setup_base_users &&
              if [ \"$$POPULATE_TEST_DATA\" = \"true\" ]; then
                echo 'Populating test data...' &&
-               python manage.py init_trust_levels || echo 'Trust levels initialization skipped' &&
-               python manage.py populate_database --no-input &&
-               python manage.py populate_trust_data || echo 'Trust data population skipped';
+               python manage.py populate_database --no-input;
              fi &&
              python manage.py collectstatic --noinput &&
              python manage.py runserver 0.0.0.0:8000"
