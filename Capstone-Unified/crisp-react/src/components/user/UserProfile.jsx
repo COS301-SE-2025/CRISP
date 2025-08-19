@@ -150,98 +150,113 @@ const UserProfile = ({ active }) => {
           <div className="profile-content">
             <div className="info-section">
               <h4>Personal Information</h4>
-              <div className="info-grid">
-                <div className="info-item">
-                  <label>Username</label>
-                  <span>{profile.username}</span>
-                </div>
-                
-                <div className="info-item">
-                  <label>Email Address</label>
-                  {editMode ? (
-                    <input
-                      type="email"
-                      value={editData.email}
-                      onChange={(e) => setEditData({...editData, email: e.target.value})}
-                      className="form-input inline-edit"
-                      placeholder="Enter your email address"
-                    />
-                  ) : (
-                    <span>{profile.email}</span>
-                  )}
-                </div>
-                
-                <div className="info-item">
-                  <label>First Name</label>
-                  {editMode ? (
-                    <input
-                      type="text"
-                      value={editData.first_name}
-                      onChange={(e) => setEditData({...editData, first_name: e.target.value})}
-                      className="form-input inline-edit"
-                      placeholder="Enter your first name"
-                    />
-                  ) : (
-                    <span>{profile.first_name || 'Not set'}</span>
-                  )}
-                </div>
-                
-                <div className="info-item">
-                  <label>Last Name</label>
-                  {editMode ? (
-                    <input
-                      type="text"
-                      value={editData.last_name}
-                      onChange={(e) => setEditData({...editData, last_name: e.target.value})}
-                      className="form-input inline-edit"
-                      placeholder="Enter your last name"
-                    />
-                  ) : (
-                    <span>{profile.last_name || 'Not set'}</span>
-                  )}
-                </div>
-              </div>
+              <table className="profile-table">
+                <thead>
+                  <tr>
+                    <th>Username</th>
+                    <th>Email Address</th>
+                    <th>First Name</th>
+                    <th>Last Name</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>{profile.username}</td>
+                    <td>
+                      {editMode ? (
+                        <input
+                          type="email"
+                          value={editData.email}
+                          onChange={(e) => setEditData({...editData, email: e.target.value})}
+                          className="form-input inline-edit"
+                          placeholder="Enter your email address"
+                        />
+                      ) : (
+                        profile.email
+                      )}
+                    </td>
+                    <td>
+                      {editMode ? (
+                        <input
+                          type="text"
+                          value={editData.first_name}
+                          onChange={(e) => setEditData({...editData, first_name: e.target.value})}
+                          className="form-input inline-edit"
+                          placeholder="Enter your first name"
+                        />
+                      ) : (
+                        profile.first_name || 'Not set'
+                      )}
+                    </td>
+                    <td>
+                      {editMode ? (
+                        <input
+                          type="text"
+                          value={editData.last_name}
+                          onChange={(e) => setEditData({...editData, last_name: e.target.value})}
+                          className="form-input inline-edit"
+                          placeholder="Enter your last name"
+                        />
+                      ) : (
+                        profile.last_name || 'Not set'
+                      )}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
             <div className="info-section">
               <h4>Account Information</h4>
-              <div className="info-grid">
-                <div className="info-item">
-                  <label>Organization</label>
-                  <span>{profile.organization?.name || 'No organization'}</span>
-                </div>
-                
-                <div className="info-item">
-                  <label>Role</label>
-                  <span className={`role-badge ${profile.role?.toLowerCase()}`}>
-                    {profile.role}
-                  </span>
-                </div>
-                
-                <div className="info-item">
-                  <label>Account Status</label>
-                  <span className={`status-badge ${profile.is_active ? 'active' : 'inactive'}`}>
-                    {profile.is_active ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-                
-                <div className="info-item">
-                  <label>Verified</label>
-                  <span className={`status-badge ${profile.is_verified ? 'verified' : 'unverified'}`}>
-                    {profile.is_verified ? 'Verified' : 'Unverified'}
-                  </span>
-                </div>
-                
-                <div className="info-item">
-                  <label>Member Since</label>
-                  <span>{new Date(profile.created_at || profile.date_joined).toLocaleDateString()}</span>
-                </div>
-                
-                <div className="info-item">
-                  <label>Last Login</label>
-                  <span>{profile.last_login ? new Date(profile.last_login).toLocaleString() : 'Never'}</span>
-                </div>
-              </div>
+              <table className="profile-table">
+                <thead>
+                  <tr>
+                    <th>Organization</th>
+                    <th>Role</th>
+                    <th>Account Status</th>
+                    <th>Verified</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>{profile.organization?.name || 'No organization'}</td>
+                    <td>
+                      <span className={`role-badge ${profile.role?.toLowerCase()}`}>
+                        {profile.role}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`status-badge ${profile.is_active ? 'active' : 'inactive'}`}>
+                        {profile.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`status-badge ${profile.is_verified ? 'verified' : 'unverified'}`}>
+                        {profile.is_verified ? 'Verified' : 'Unverified'}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              
+              <table className="profile-table" style={{marginTop: '20px'}}>
+                <thead>
+                  <tr>
+                    <th>Member Since</th>
+                    <th>Last Login</th>
+                    <th></th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>{new Date(profile.created_at || profile.date_joined).toLocaleDateString()}</td>
+                    <td>{profile.last_login ? new Date(profile.last_login).toLocaleString() : 'Never'}</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
             {editMode && (
@@ -268,7 +283,6 @@ const UserProfile = ({ active }) => {
           max-width: 1000px;
           margin: 0 auto;
         }
-
 
         .success-message {
           background: #d4edda;
@@ -370,6 +384,45 @@ const UserProfile = ({ active }) => {
           gap: 20px;
         }
 
+        .profile-table {
+          width: 100%;
+          border-collapse: collapse;
+          background: white;
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          margin-bottom: 10px;
+        }
+
+        .profile-table th {
+          background: linear-gradient(135deg, #0056b3, #004494);
+          color: white;
+          padding: 15px 12px;
+          text-align: center;
+          font-weight: 600;
+          font-size: 14px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          border: none;
+        }
+
+        .profile-table td {
+          padding: 18px 12px;
+          text-align: center;
+          border-bottom: 1px solid #f1f3f4;
+          font-size: 16px;
+          color: #333;
+          vertical-align: middle;
+        }
+
+        .profile-table tbody tr:hover {
+          background-color: #f8f9fa;
+        }
+
+        .profile-table tbody tr:last-child td {
+          border-bottom: none;
+        }
+
         .info-item {
           display: flex;
           flex-direction: column;
@@ -461,19 +514,22 @@ const UserProfile = ({ active }) => {
         }
 
         .inline-edit {
-          background: #f8f9fa;
-          border: 2px solid #e9ecef;
+          background: white;
+          border: 2px solid #0056b3;
           padding: 8px 12px;
           font-size: 16px;
           color: #333;
           width: 100%;
-          max-width: 300px;
+          max-width: 250px;
+          border-radius: 6px;
+          text-align: center;
         }
 
         .inline-edit:focus {
           background: white;
-          border-color: #0056b3;
-          box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1);
+          border-color: #004494;
+          box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.2);
+          outline: none;
         }
 
         .save-section {
@@ -571,8 +627,20 @@ const UserProfile = ({ active }) => {
             grid-template-columns: 1fr;
           }
 
+          .profile-table {
+            font-size: 14px;
+          }
+
+          .profile-table th,
+          .profile-table td {
+            padding: 12px 8px;
+            font-size: 12px;
+          }
+
           .inline-edit {
             max-width: 100%;
+            font-size: 14px;
+            padding: 6px 8px;
           }
 
           .save-section .form-actions {
