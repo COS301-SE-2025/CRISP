@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const UserProfile = ({ active }) => {
-  if (!active) return null;
+const UserProfile = ({ active = true }) => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -9,8 +8,10 @@ const UserProfile = ({ active }) => {
   const [editData, setEditData] = useState({});
 
   useEffect(() => {
-    fetchProfile();
-  }, []);
+    if (active) {
+      fetchProfile();
+    }
+  }, [active]);
 
   const fetchProfile = async () => {
     try {
@@ -22,18 +23,34 @@ const UserProfile = ({ active }) => {
           'Content-Type': 'application/json',
         }
       });
+      
       if (response.ok) {
         const data = await response.json();
-        setProfile(data.user);
+        console.log('Profile data:', data);
+        
+        let userProfile = null;
+        if (data.success && data.data?.user) {
+          userProfile = data.data.user;
+        } else if (data.user) {
+          userProfile = data.user;
+        } else if (data.success && data.user) {
+          userProfile = data.user;
+        } else {
+          throw new Error('Invalid profile response format');
+        }
+        
+        setProfile(userProfile);
         setEditData({
-          first_name: data.user.first_name || '',
-          last_name: data.user.last_name || '',
-          email: data.user.email || ''
+          first_name: userProfile.first_name || '',
+          last_name: userProfile.last_name || '',
+          email: userProfile.email || ''
         });
       } else {
-        throw new Error('Failed to fetch profile');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to fetch profile');
       }
     } catch (err) {
+      console.error('Profile fetch error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -54,12 +71,25 @@ const UserProfile = ({ active }) => {
 
       if (response.ok) {
         const data = await response.json();
-        setProfile(data.user);
+        
+        let updatedProfile = null;
+        if (data.success && data.data?.user) {
+          updatedProfile = data.data.user;
+        } else if (data.user) {
+          updatedProfile = data.user;
+        } else {
+          throw new Error('Invalid update response format');
+        }
+        
+        setProfile(updatedProfile);
         setEditMode(false);
+        setError(null);
       } else {
-        throw new Error('Failed to update profile');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to update profile');
       }
     } catch (err) {
+      console.error('Profile update error:', err);
       setError(err.message);
     }
   };
@@ -71,7 +101,10 @@ const UserProfile = ({ active }) => {
       email: profile.email || ''
     });
     setEditMode(false);
+    setError(null);
   };
+
+  if (!active) return null;
 
   if (loading) {
     return (
@@ -98,35 +131,63 @@ const UserProfile = ({ active }) => {
     );
   }
 
+  if (!profile) {
+    return (
+      <div className="user-profile">
+        <div className="error-state">
+          <i className="fas fa-user-slash"></i>
+          <p>No profile data available</p>
+          <button onClick={fetchProfile} className="btn btn-primary">
+            Refresh
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="user-profile">
       <div className="header">
-        <h2>User Profile</h2>
-        {!editMode && (
-          <button 
-            className="btn btn-primary"
-            onClick={() => setEditMode(true)}
-          >
-            <i className="fas fa-edit"></i>
-            Edit Profile
-          </button>
-        )}
+        <h1>My Profile</h1>
       </div>
+
+      {error && (
+        <div className="error-banner">
+          <i className="fas fa-exclamation-triangle"></i>
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="close-btn">
+            <i className="fas fa-times"></i>
+          </button>
+        </div>
+      )}
 
       <div className="profile-card">
         <div className="profile-header">
-          <div className="profile-avatar">
-            <i className="fas fa-user"></i>
+          <div className="profile-info">
+            <div className="profile-avatar">
+              <i className="fas fa-user"></i>
+            </div>
+            <div className="profile-title">
+              <h2>{profile.first_name} {profile.last_name}</h2>
+              <span className={`role-badge ${profile.role?.toLowerCase()}`}>
+                {profile.role}
+              </span>
+            </div>
           </div>
-          <div className="profile-title">
-            <h3>{profile.first_name} {profile.last_name}</h3>
-            <p className="profile-role">{profile.role}</p>
-          </div>
+          {!editMode && (
+            <button 
+              className="edit-profile-btn"
+              onClick={() => setEditMode(true)}
+            >
+              <i className="fas fa-edit"></i>
+              Edit Profile
+            </button>
+          )}
         </div>
 
         <div className="profile-details">
           {editMode ? (
-            <form className="edit-form">
+            <form className="edit-form" onSubmit={(e) => e.preventDefault()}>
               <div className="form-group">
                 <label>First Name</label>
                 <input
@@ -177,7 +238,7 @@ const UserProfile = ({ active }) => {
               
               <div className="info-item">
                 <label>Email</label>
-                <span>{profile.email}</span>
+                <span>{profile.email || 'Not provided'}</span>
               </div>
               
               <div className="info-item">
@@ -210,8 +271,8 @@ const UserProfile = ({ active }) => {
               </div>
               
               <div className="info-item">
-                <label>Joined</label>
-                <span>{new Date(profile.created_at).toLocaleDateString()}</span>
+                <label>Member Since</label>
+                <span>{profile.created_at ? new Date(profile.created_at).toLocaleDateString() : 'Unknown'}</span>
               </div>
             </div>
           )}
@@ -220,148 +281,218 @@ const UserProfile = ({ active }) => {
 
       <style jsx>{`
         .user-profile {
-          padding: 20px;
-          max-width: 800px;
+          padding: 2rem;
+          max-width: 1200px;
           margin: 0 auto;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
         .header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 20px;
+          margin-bottom: 2rem;
         }
 
-        .header h2 {
+        .header h1 {
           margin: 0;
           color: #333;
+          font-size: 2rem;
+          font-weight: 600;
+        }
+
+        .error-banner {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          padding: 1rem 1.25rem;
+          background-color: #f8d7da;
+          color: #721c24;
+          border: 1px solid #f5c6cb;
+          border-radius: 8px;
+          margin-bottom: 1.5rem;
+        }
+
+        .close-btn {
+          background: none;
+          border: none;
+          color: #721c24;
+          cursor: pointer;
+          margin-left: auto;
+          padding: 0.25rem;
+          border-radius: 4px;
+          transition: background-color 0.2s;
+        }
+
+        .close-btn:hover {
+          background-color: rgba(0, 0, 0, 0.1);
         }
 
         .profile-card {
           background: white;
           border-radius: 12px;
-          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          border: 1px solid #e9ecef;
           overflow: hidden;
         }
 
         .profile-header {
-          background: linear-gradient(135deg, #0056b3, #004494);
-          color: white;
-          padding: 30px;
+          padding: 2rem;
+          background: #f8f9fa;
+          border-bottom: 1px solid #e9ecef;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+        }
+
+        .profile-info {
           display: flex;
           align-items: center;
-          gap: 20px;
+          gap: 1.5rem;
         }
 
         .profile-avatar {
           width: 80px;
           height: 80px;
-          background: rgba(255,255,255,0.2);
+          background: #dc3545;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 32px;
+          font-size: 2rem;
+          color: white;
+          flex-shrink: 0;
         }
 
-        .profile-title h3 {
-          margin: 0 0 5px 0;
-          font-size: 24px;
+        .profile-title h2 {
+          margin: 0 0 0.5rem 0;
+          color: #333;
+          font-size: 1.75rem;
           font-weight: 600;
         }
 
-        .profile-role {
-          margin: 0;
-          opacity: 0.9;
-          font-size: 16px;
+        .edit-profile-btn {
+          background: #dc3545;
+          color: white;
+          border: none;
+          padding: 0.75rem 1.5rem;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 0.875rem;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          transition: all 0.2s;
+        }
+
+        .edit-profile-btn:hover {
+          background: #c82333;
+          transform: translateY(-1px);
         }
 
         .profile-details {
-          padding: 30px;
+          padding: 2rem;
         }
 
         .info-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-          gap: 20px;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 1.5rem;
         }
 
         .info-item {
-          display: flex;
-          flex-direction: column;
-          gap: 5px;
+          background: #f8f9fa;
+          padding: 1.25rem;
+          border-radius: 8px;
+          border: 1px solid #e9ecef;
+          transition: all 0.2s;
+        }
+
+        .info-item:hover {
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          transform: translateY(-1px);
         }
 
         .info-item label {
+          display: block;
           font-weight: 600;
-          color: #495057;
-          font-size: 14px;
+          color: #6c757d;
+          font-size: 0.75rem;
           text-transform: uppercase;
           letter-spacing: 0.5px;
+          margin-bottom: 0.5rem;
         }
 
         .info-item span {
-          font-size: 16px;
+          font-size: 1rem;
           color: #333;
+          font-weight: 500;
         }
 
         .edit-form {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 1.5rem;
+          margin-bottom: 2rem;
         }
 
         .form-group {
           display: flex;
           flex-direction: column;
-          gap: 5px;
+          gap: 0.5rem;
         }
 
         .form-group label {
           font-weight: 600;
           color: #495057;
-          font-size: 14px;
+          font-size: 0.875rem;
         }
 
         .form-input {
-          padding: 12px;
-          border: 1px solid #dee2e6;
-          border-radius: 6px;
-          font-size: 14px;
-          transition: border-color 0.2s;
+          padding: 0.75rem;
+          border: 2px solid #e9ecef;
+          border-radius: 8px;
+          font-size: 1rem;
+          transition: all 0.2s;
+          background: white;
         }
 
         .form-input:focus {
           outline: none;
-          border-color: #0056b3;
+          border-color: #dc3545;
+          box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
         }
 
         .form-actions {
           display: flex;
-          gap: 10px;
+          gap: 1rem;
           justify-content: flex-end;
+          grid-column: 1 / -1;
+          padding-top: 1rem;
+          border-top: 1px solid #e9ecef;
         }
 
         .btn {
-          padding: 10px 20px;
+          padding: 0.75rem 1.5rem;
           border: none;
-          border-radius: 6px;
+          border-radius: 8px;
           cursor: pointer;
-          font-size: 14px;
+          font-size: 0.875rem;
           font-weight: 500;
           display: inline-flex;
           align-items: center;
-          gap: 8px;
-          transition: background-color 0.2s;
+          gap: 0.5rem;
+          transition: all 0.2s;
+          text-decoration: none;
         }
 
         .btn-primary {
-          background: #0056b3;
+          background: #dc3545;
           color: white;
         }
 
         .btn-primary:hover {
-          background: #004494;
+          background: #c82333;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
         }
 
         .btn-secondary {
@@ -371,58 +502,111 @@ const UserProfile = ({ active }) => {
 
         .btn-secondary:hover {
           background: #5a6268;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
         }
 
         .role-badge,
         .status-badge {
-          padding: 6px 12px;
-          border-radius: 15px;
-          font-size: 12px;
+          padding: 0.5rem 1rem;
+          border-radius: 20px;
+          font-size: 0.75rem;
           font-weight: 600;
           width: fit-content;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         .role-badge.admin {
-          background: #e3f2fd;
+          background: #e7f3ff;
           color: #1976d2;
+          border: 1px solid #bbdefb;
         }
 
-        .role-badge.user {
+        .role-badge.viewer {
           background: #f3e5f5;
           color: #7b1fa2;
+          border: 1px solid #e1bee7;
+        }
+
+        .role-badge.publisher {
+          background: #fff8e1;
+          color: #f57f17;
+          border: 1px solid #ffecb3;
         }
 
         .role-badge.bluevisionadmin {
           background: #e8f5e8;
           color: #2e7d32;
+          border: 1px solid #c8e6c9;
         }
 
         .status-badge.active {
           background: #e8f5e8;
           color: #2e7d32;
+          border: 1px solid #c8e6c9;
         }
 
         .status-badge.inactive {
-          background: #fff3e0;
-          color: #f57c00;
+          background: #ffebee;
+          color: #c62828;
+          border: 1px solid #ffcdd2;
         }
 
         .loading-state,
         .error-state {
           text-align: center;
-          padding: 60px 20px;
+          padding: 4rem 2rem;
+          background: white;
+          border-radius: 12px;
+          border: 1px solid #e9ecef;
         }
 
         .loading-state i {
-          font-size: 32px;
-          color: #0056b3;
-          margin-bottom: 15px;
+          font-size: 3rem;
+          color: #dc3545;
+          margin-bottom: 1rem;
+          display: block;
         }
 
         .error-state i {
-          font-size: 32px;
+          font-size: 3rem;
           color: #dc3545;
-          margin-bottom: 15px;
+          margin-bottom: 1rem;
+          display: block;
+        }
+
+        .loading-state p,
+        .error-state p {
+          margin: 0 0 1.5rem 0;
+          color: #6c757d;
+          font-size: 1.125rem;
+        }
+
+        @media (max-width: 768px) {
+          .user-profile {
+            padding: 1rem;
+          }
+          
+          .profile-header {
+            flex-direction: column;
+            gap: 1.5rem;
+            align-items: flex-start;
+          }
+          
+          .profile-info {
+            flex-direction: column;
+            text-align: center;
+            gap: 1rem;
+          }
+          
+          .info-grid {
+            grid-template-columns: 1fr;
+          }
+          
+          .edit-form {
+            grid-template-columns: 1fr;
+          }
         }
       `}</style>
     </div>

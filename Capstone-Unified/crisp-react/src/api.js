@@ -303,6 +303,35 @@ export const getOrganizationTypes = async () => {
   return await response.json();
 };
 
+export const getOrganizationTrustRelationships = async (orgId) => {
+  const response = await fetch(`${API_BASE_URL}/api/organizations/${orgId}/trust-relationships/`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch organization trust relationships');
+  }
+
+  return await response.json();
+};
+
+export const getOrganizationTrustGroups = async (orgId) => {
+  // Trust groups are retrieved from the community endpoint with organization filtering
+  const response = await fetch(`${API_BASE_URL}/api/trust/community/?organization=${orgId}`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch organization trust groups');
+  }
+
+  return await response.json();
+};
+
 // Trust Management Functions
 export const getTrustRelationships = async (queryParams = {}) => {
   const params = new URLSearchParams(queryParams).toString();

@@ -5,6 +5,8 @@ import UserManagement from './components/enhanced/UserManagement.jsx';
 import OrganisationManagement from './components/enhanced/OrganisationManagement.jsx';
 import TrustManagement from './components/enhanced/TrustManagement.jsx';
 import Institutions from './components/institutions/Institutions.jsx';
+import AdminSettings from './components/enhanced/AdminSettings.jsx';
+import Settings from './components/enhanced/Settings.jsx';
 
 // Error Boundary for Chart Component
 class ChartErrorBoundary extends React.Component {
@@ -390,6 +392,10 @@ function App({ user, onLogout, isAdmin }) {
           
           {/* User Profile */}
           <UserProfile active={activePage === 'profile'} />
+          
+          {/* Settings Components */}
+          <Settings active={activePage === 'account-settings'} />
+          <AdminSettings active={activePage === 'admin-settings'} />
           
           {/* Management Components */}
           <UserManagement active={activePage === 'user-management'} />

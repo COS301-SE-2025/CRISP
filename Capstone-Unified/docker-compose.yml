@@ -52,7 +52,7 @@ services:
       - DB_PORT=5432
       - REDIS_URL=redis://redis:6379/0
       - ALLOWED_HOSTS=localhost,127.0.0.1,backend,frontend
-      - POPULATE_TEST_DATA=true
+      - POPULATE_TEST_DATA=false
     volumes:
       - ./logs:/app/logs
       - ./media:/app/media

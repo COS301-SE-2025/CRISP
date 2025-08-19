@@ -2781,4 +2781,162 @@ section#ioc-management .card-actions .btn-sm {
   align-items: center;
   gap: 16px;
 }
+
+/* Confirmation Modal Styles */
+.confirmation-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+
+.confirmation-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow: hidden;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.confirmation-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #e9ecef;
+  background: #f8f9fa;
+}
+
+.confirmation-modal-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.confirmation-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #6c757d;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.confirmation-modal-close:hover {
+  background-color: #e9ecef;
+  color: #495057;
+}
+
+.confirmation-modal-body {
+  padding: 2rem;
+}
+
+.confirmation-modal-body p {
+  margin: 0;
+  color: #666;
+  line-height: 1.5;
+  font-size: 1rem;
+}
+
+.confirmation-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1.5rem 2rem;
+  border-top: 1px solid #e9ecef;
+  background: #f8f9fa;
+}
+
+.confirmation-modal-footer .btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.confirmation-modal-footer .btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.confirmation-modal-footer .btn-secondary:hover {
+  background: #5a6268;
+}
+
+.confirmation-modal-footer .btn-primary {
+  background: #007bff;
+  color: white;
+}
+
+.confirmation-modal-footer .btn-primary:hover {
+  background: #0056b3;
+}
+
+.confirmation-modal-footer .btn-danger {
+  background: #dc3545;
+  color: white;
+}
+
+.confirmation-modal-footer .btn-danger:hover {
+  background: #c82333;
+}
+
+.confirmation-modal-footer .btn-success {
+  background: #28a745;
+  color: white;
+}
+
+.confirmation-modal-footer .btn-success:hover {
+  background: #218838;
+}
+
+.confirmation-btn-green {
+  background: #28a745 !important;
+}
+
+.confirmation-btn-green:hover {
+  background: #218838 !important;
+}
+
+.confirmation-btn-red {
+  background: #dc3545 !important;
+}
+
+.confirmation-btn-red:hover {
+  background: #c82333 !important;
+}
 EOF < /dev/null

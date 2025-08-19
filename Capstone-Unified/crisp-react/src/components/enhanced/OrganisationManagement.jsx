@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { getOrganizations, createOrganization, updateOrganization, deactivateOrganization, reactivateOrganization, deleteOrganizationPermanently, getOrganizationDetails, getOrganizationTypes } from '../../api.js';
+import { getOrganizations, createOrganization, updateOrganization, deactivateOrganization, reactivateOrganization, deleteOrganizationPermanently, getOrganizationDetails, getOrganizationTypes, getOrganizationTrustRelationships, getOrganizationTrustGroups } from '../../api.js';
 import LoadingSpinner from './LoadingSpinner.jsx';
 import ConfirmationModal from './ConfirmationModal.jsx';
 import Pagination from './Pagination.jsx';
@@ -9,6 +9,8 @@ import * as api from '../../api.js';
 const OrganisationManagement = ({ active = true, initialSection = null }) => {
   const [organizations, setOrganizations] = useState([]); // This will be filtered/paginated organizations
   const [organizationTypes, setOrganizationTypes] = useState(['educational', 'government', 'private']);
+  const [trustRelationships, setTrustRelationships] = useState([]);
+  const [trustGroups, setTrustGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(() => {
@@ -69,10 +71,62 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
     }
   };
 
+  const loadTrustRelationships = async () => {
+    try {
+      console.log('Loading trust relationships...');
+      const response = await api.getTrustRelationships();
+      console.log('Trust relationships response:', response);
+      
+      let trustRelationshipsData = [];
+      if (response.success && response.trusts) {
+        trustRelationshipsData = response.trusts;
+      } else if (response.data?.trusts) {
+        trustRelationshipsData = response.data.trusts;
+      } else if (response.trusts) {
+        trustRelationshipsData = response.trusts;
+      } else if (Array.isArray(response)) {
+        trustRelationshipsData = response;
+      }
+      
+      console.log('Loaded trust relationships:', trustRelationshipsData);
+      setTrustRelationships(trustRelationshipsData);
+    } catch (err) {
+      console.error('Failed to load trust relationships:', err);
+      setTrustRelationships([]);
+    }
+  };
+
+  const loadTrustGroups = async () => {
+    try {
+      console.log('Loading trust groups...');
+      const response = await api.getTrustGroups();
+      console.log('Trust groups response:', response);
+      
+      let trustGroupsData = [];
+      if (response.success && response.community_trusts) {
+        trustGroupsData = response.community_trusts;
+      } else if (response.data?.community_trusts) {
+        trustGroupsData = response.data.community_trusts;
+      } else if (response.community_trusts) {
+        trustGroupsData = response.community_trusts;
+      } else if (Array.isArray(response)) {
+        trustGroupsData = response;
+      }
+      
+      console.log('Loaded trust groups:', trustGroupsData);
+      setTrustGroups(trustGroupsData);
+    } catch (err) {
+      console.error('Failed to load trust groups:', err);
+      setTrustGroups([]);
+    }
+  };
+
   useEffect(() => {
     if (active) {
       loadOrganizations();
       loadOrganizationTypes();
+      loadTrustRelationships();
+      loadTrustGroups();
     }
   }, [active]);
 
@@ -647,6 +701,37 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
               }}>
                 <span>{organization.contact_email || 'No email'}</span>
                 {organization.description && <span>{organization.description.substring(0, 50)}...</span>}
+              </div>
+              <div style={{ 
+                marginTop: '0.5rem', 
+                color: '#495057', 
+                fontSize: '0.75rem',
+                display: 'flex',
+                gap: '1rem',
+                flexWrap: 'wrap'
+              }}>
+                <span style={{
+                  padding: '0.15rem 0.4rem',
+                  borderRadius: '3px',
+                  backgroundColor: '#e3f2fd',
+                  color: '#1565c0'
+                }}>
+                  Trust Relationships: {trustRelationships.filter(tr => 
+                    tr.source_organization?.id === organization.id || 
+                    tr.target_organization?.id === organization.id
+                  ).length}
+                </span>
+                <span style={{
+                  padding: '0.15rem 0.4rem',
+                  borderRadius: '3px',
+                  backgroundColor: '#f3e5f5',
+                  color: '#7b1fa2'
+                }}>
+                  Trust Groups: {trustGroups.filter(tg => 
+                    tg.organizations?.some(org => org.id === organization.id) ||
+                    tg.members?.some(member => member.organization_id === organization.id)
+                  ).length}
+                </span>
               </div>
             </div>
             <div style={{ 
