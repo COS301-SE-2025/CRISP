@@ -7,7 +7,8 @@ import OrganisationManagement from './components/enhanced/OrganisationManagement
 import TrustManagement from './components/enhanced/TrustManagement.jsx';
 import Institutions from './components/institutions/Institutions.jsx';
 import BlueVLogo from './assets/enhanced/BlueV2.png';
-import { getOrganizations } from './api.js';
+import * as api from './api.js';
+import { getOrganizations, getThreatFeedTtps, getMitreMatrix, getTtpFeedComparison, getTtpSeasonalPatterns, getTtpTechniqueFrequencies, getTtps, getTtpFilterOptions, getTtpTrends, getTtpDetails, updateTtp, getMatrixCellDetails, getTechniqueDetails, exportTtps } from './api.js';
 
 // Error Boundary for Chart Component
 class ChartErrorBoundary extends React.Component {
@@ -128,112 +129,6 @@ const getAuthHeaders = () => {
   return headers;
 };
 
-const api = {
-  get: async (endpoint) => {
-    try {
-      // Check cache first
-      const cacheKey = endpoint;
-      const cached = apiCache.get(cacheKey);
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-        return cached.data;
-      }
-
-      const headers = getAuthHeaders();
-      const token = localStorage.getItem('crisp_auth_token');
-      
-      // Don't make API calls if we don't have a token (except for auth endpoints)
-      if (!token && !endpoint.includes('/auth/')) {
-        return null;
-      }
-      
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        headers: headers
-      });
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          // Token expired or invalid - redirect to login with proper base path
-          localStorage.removeItem('crisp_auth_token');
-          localStorage.removeItem('crisp_user');
-          window.location.href = '/static/react/login';
-        }
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      // Cache the response for dashboard endpoints only
-      if (endpoint.includes('/api/threat-feeds/') || 
-          endpoint.includes('/api/system-health/') ||
-          endpoint.includes('/api/organizations/')) {
-        apiCache.set(cacheKey, {
-          data: data,
-          timestamp: Date.now()
-        });
-      }
-      
-      return data;
-    } catch (error) {
-      // Only log non-auth errors to reduce console spam
-      if (!error.message.includes('401')) {
-        console.error(`API Error: ${endpoint}`, error);
-      }
-      return null;
-    }
-  },
-  
-  post: async (endpoint, data) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data)
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return await response.json();
-    } catch (error) {
-      console.error(`API Error: ${endpoint}`, error);
-      return null;
-    }
-  },
-  
-  put: async (endpoint, data) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data)
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return await response.json();
-    } catch (error) {
-      console.error(`API Error: ${endpoint}`, error);
-      return null;
-    }
-  },
-  
-  delete: async (endpoint) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      
-      // For DELETE requests, we might get 204 No Content with no response body
-      if (response.status === 204) {
-        return { success: true };
-      }
-      
-      // Try to parse JSON, but handle empty responses
-      const text = await response.text();
-      return text ? JSON.parse(text) : { success: true };
-    } catch (error) {
-      console.error(`API Error: ${endpoint}`, error);
-      return null;
-    }
-  }
-};
 
 function App({ user, onLogout, isAdmin }) {
   
@@ -5776,17 +5671,17 @@ function TTPAnalysis({ active }) {
     setAggregationLoading(true);
     try {
       // Fetch multiple aggregation endpoints individually to handle failures gracefully
-      const feedComparisonPromise = api.get('/api/ttps/feed-comparison/?days=30').catch(err => {
+      const feedComparisonPromise = getTtpFeedComparison(30).catch(err => {
         console.warn('Feed comparison endpoint not available:', err);
         return null;
       });
       
-      const techniqueFreqPromise = api.get('/api/ttps/technique-frequencies/?days=30').catch(err => {
+      const techniqueFreqPromise = getTtpTechniqueFrequencies(30).catch(err => {
         console.warn('Technique frequencies endpoint not available:', err);
         return null;
       });
       
-      const seasonalPatternsPromise = api.get('/api/ttps/seasonal-patterns/?days=180').catch(err => {
+      const seasonalPatternsPromise = getTtpSeasonalPatterns(180).catch(err => {
         console.warn('Seasonal patterns endpoint not available:', err);
         return null;
       });
@@ -5853,7 +5748,7 @@ function TTPAnalysis({ active }) {
 
     while (hasMore) {
       try {
-        const response = await api.get(`/api/threat-feeds/${feedId}/ttps/?page=${page}&page_size=${pageSize}`);
+        const response = await getThreatFeedTtps(feedId, { page, page_size: pageSize });
         
         if (response && response.results) {
           // Add results from this page (even if 0 results)
@@ -5936,7 +5831,8 @@ function TTPAnalysis({ active }) {
         params.append('has_subtechniques', currentFilters.has_subtechniques);
       }
       
-      const response = await api.get(`/api/ttps/?${params.toString()}`);
+      const queryParams = Object.fromEntries(params.entries());
+      const response = await getTtps(queryParams);
       if (response && response.success) {
         setTtpData(response.results || []);
         setTotalCount(response.count || 0);
@@ -5964,7 +5860,7 @@ function TTPAnalysis({ active }) {
   // Fetch filter options for dropdowns
   const fetchFilterOptions = async () => {
     try {
-      const response = await api.get('/api/ttps/filter-options/');
+      const response = await getTtpFilterOptions();
       if (response && response.success) {
         setFilterOptions(response.options);
       }
@@ -6149,7 +6045,7 @@ function TTPAnalysis({ active }) {
     setTrendsLoading(true);
     try {
       // Get TTP trends data from the API
-      const response = await api.get('/api/ttps/trends/?days=120&granularity=month&group_by=tactic');
+      const response = await getTtpTrends(120, 'month', 'tactic');
       if (response && response.series) {
         setTrendsData(response.series);
       } else {
@@ -6166,7 +6062,7 @@ function TTPAnalysis({ active }) {
     setMatrixLoading(true);
     try {
       // Get MITRE matrix data from the API
-      const response = await api.get('/api/ttps/mitre-matrix/');
+      const response = await getMitreMatrix();
       if (response && response.success) {
         setMatrixData(response);
       } else {
@@ -6191,13 +6087,7 @@ function TTPAnalysis({ active }) {
     setShowMatrixCellModal(true);
     
     try {
-      let url = `/api/ttps/matrix-cell-details/?tactic=${tactic}`;
-      if (technique) {
-        url += `&technique_id=${technique}`;
-      }
-      url += '&include_related=true&page_size=50';
-      
-      const response = await api.get(url);
+      const response = await getMatrixCellDetails(tactic, technique, true, 50);
       if (response && response.success) {
         setMatrixCellData(response);
       } else {
@@ -6217,8 +6107,7 @@ function TTPAnalysis({ active }) {
     setShowTechniqueModal(true);
     
     try {
-      const url = `/api/ttps/technique-details/${techniqueId}/`;
-      const response = await api.get(url);
+      const response = await getTechniqueDetails(techniqueId);
       if (response && response.success) {
         setTechniqueData(response);
       } else {
@@ -6256,16 +6145,16 @@ function TTPAnalysis({ active }) {
     setIsEditMode(false);
     
     try {
-      const response = await api.get(`/api/ttps/${ttpId}/`);
+      const response = await getTtpDetails(ttpId);
       if (response && response.success) {
-        setSelectedTTP(response.ttp);
+        setSelectedTTP(response.data);
         setEditFormData({
-          name: response.ttp.name || '',
-          description: response.ttp.description || '',
-          mitre_technique_id: response.ttp.mitre_technique_id || '',
-          mitre_tactic: response.ttp.mitre_tactic || '',
-          mitre_subtechnique: response.ttp.mitre_subtechnique || '',
-          threat_feed_id: response.ttp.threat_feed?.id || ''
+          name: response.data.name || '',
+          description: response.data.description || '',
+          mitre_technique_id: response.data.mitre?.technique_id || '',
+          mitre_tactic: response.data.mitre?.tactic || '',
+          mitre_subtechnique: response.data.mitre?.subtechnique || '',
+          threat_feed_id: response.data.threat_feed?.id || ''
         });
       } else {
         console.error('Failed to fetch TTP details');
@@ -6300,7 +6189,7 @@ function TTPAnalysis({ active }) {
     if (!selectedTTP) return;
     
     try {
-      const response = await api.put(`/api/ttps/${selectedTTP.id}/`, editFormData);
+      const response = await updateTtp(selectedTTP.id, editFormData);
       if (response && response.success) {
         // Update the TTP in local state
         setTtpData(prevData => 
@@ -6361,35 +6250,21 @@ function TTPAnalysis({ active }) {
     setExportError('');
     
     try {
-      // Build query parameters
-      const params = new URLSearchParams();
-      params.append('format', exportFormat);
-      
-      // Add filters if specified
-      if (exportFilters.tactic) params.append('tactic', exportFilters.tactic);
-      if (exportFilters.technique_id) params.append('technique_id', exportFilters.technique_id);
-      if (exportFilters.feed_id) params.append('feed_id', exportFilters.feed_id);
-      if (exportFilters.created_after) params.append('created_after', exportFilters.created_after);
-      if (exportFilters.created_before) params.append('created_before', exportFilters.created_before);
-      if (exportFilters.fields) params.append('fields', exportFilters.fields);
-      
-      params.append('include_anonymized', exportFilters.include_anonymized.toString());
-      params.append('include_original', exportFilters.include_original.toString());
-      params.append('limit', exportFilters.limit.toString());
+      // Build filters object
+      const filters = {
+        tactic: exportFilters.tactic,
+        technique_id: exportFilters.technique_id,
+        feed_id: exportFilters.feed_id,
+        created_after: exportFilters.created_after,
+        created_before: exportFilters.created_before,
+        fields: exportFilters.fields,
+        include_anonymized: exportFilters.include_anonymized,
+        include_original: exportFilters.include_original,
+        limit: exportFilters.limit
+      };
       
       // Make the API request
-      const response = await fetch(`/api/ttps/export/?${params.toString()}`, {
-        method: 'GET',
-        headers: {
-          'Accept': exportFormat === 'csv' ? 'text/csv' : 
-                   exportFormat === 'stix' ? 'application/stix+json' : 
-                   'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Export failed: ${response.status} ${response.statusText}`);
-      }
+      const response = await exportTtps(exportFormat, filters);
       
       // Get the blob and filename from response
       const blob = await response.blob();
@@ -8019,12 +7894,12 @@ function TTPAnalysis({ active }) {
                       
                       <div className="ttp-badges">
                         <span className="badge badge-primary">
-                          {selectedTTP.mitre_technique_id || 'No MITRE ID'}
+                          {selectedTTP.mitre?.technique_id || 'No MITRE ID'}
                         </span>
                         <span className="badge badge-secondary">
-                          {selectedTTP.mitre_tactic_display || selectedTTP.mitre_tactic || 'No Tactic'}
+                          {selectedTTP.mitre?.tactic_display || selectedTTP.mitre?.tactic || 'No Tactic'}
                         </span>
-                        {selectedTTP.is_anonymized && (
+                        {selectedTTP.anonymization?.is_anonymized && (
                           <span className="badge badge-info">Anonymized</span>
                         )}
                       </div>
@@ -8068,7 +7943,7 @@ function TTPAnalysis({ active }) {
                             />
                           ) : (
                             <span className="technique-id-display">
-                              {selectedTTP.mitre_technique_id || 'Not specified'}
+                              {selectedTTP.mitre?.technique_id || 'Not specified'}
                             </span>
                           )}
                         </div>
@@ -8097,11 +7972,11 @@ function TTPAnalysis({ active }) {
                               <option value="impact">Impact</option>
                             </select>
                           ) : (
-                            <span>{selectedTTP.mitre_tactic_display || selectedTTP.mitre_tactic || 'Not specified'}</span>
+                            <span>{selectedTTP.mitre?.tactic_display || selectedTTP.mitre?.tactic || 'Not specified'}</span>
                           )}
                         </div>
                       </div>
-                      {(selectedTTP.mitre_subtechnique || isEditMode) && (
+                      {(selectedTTP.mitre?.subtechnique || isEditMode) && (
                         <div className="detail-row">
                           <label>Sub-technique:</label>
                           <div className="detail-value">
@@ -8114,7 +7989,7 @@ function TTPAnalysis({ active }) {
                                 placeholder="Sub-technique name"
                               />
                             ) : (
-                              <span>{selectedTTP.mitre_subtechnique || 'None'}</span>
+                              <span>{selectedTTP.mitre?.subtechnique || 'None'}</span>
                             )}
                           </div>
                         </div>
@@ -9301,31 +9176,92 @@ function Organisations({ active }) {
 function Reports({ active }) {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState('all');
 
-  const sampleReports = [
+  const mockReports = [
     {
-      id: 1,
-      title: "Weekly Threat Intelligence Summary",
-      type: "summary",
-      date: "2025-01-08",
-      status: "completed",
-      description: "Comprehensive overview of threat landscape for the week"
+      id: '1',
+      title: 'Education Sector Ransomware Campaign',
+      type: 'Campaign Analysis',
+      date: 'May 19, 2025',
+      views: 148,
+      description: 'Analysis of ongoing ransomware campaign targeting education institutions in South Africa and neighboring countries.',
+      stats: [
+        { label: 'Institutions Targeted', value: '18' },
+        { label: 'Related IoCs', value: '42' },
+        { label: 'TTPs Identified', value: '8' },
+        { label: 'Severity', value: 'High' }
+      ]
     },
     {
-      id: 2,
-      title: "APT Campaign Analysis",
-      type: "campaign", 
-      date: "2025-01-05",
-      status: "completed",
-      description: "Deep dive into recent APT activities and TTPs"
+      id: '2',
+      title: 'Threat Intelligence Digest: Week 20',
+      type: 'Weekly Summary',
+      date: 'May 17, 2025',
+      views: 127,
+      description: 'Weekly summary of significant threat intelligence findings and trends for the week ending May 17, 2025.',
+      stats: [
+        { label: 'New IoCs', value: '86' },
+        { label: 'TTPs Observed', value: '12' },
+        { label: 'Critical Alerts', value: '4' },
+        { label: 'Threat Actors', value: '3' }
+      ]
     },
     {
-      id: 3,
-      title: "Vulnerability Trend Report",
-      type: "trend",
-      date: "2025-01-01",
-      status: "draft",
-      description: "Analysis of vulnerability trends and exploitation patterns"
+      id: '3',
+      title: 'University Data Breach Investigation',
+      type: 'Incident Analysis',
+      date: 'May 15, 2025',
+      views: 215,
+      description: 'Detailed analysis of recent data breach affecting a major university, including timeline, attack vectors, and remediation steps.',
+      stats: [
+        { label: 'IoCs Discovered', value: '28' },
+        { label: 'TTPs Identified', value: '6' },
+        { label: 'Threat Actor', value: 'APT-EDU-01' },
+        { label: 'Severity', value: 'Medium' }
+      ]
+    },
+    {
+      id: '4',
+      title: 'Emerging Phishing Techniques in 2025',
+      type: 'Trend Analysis',
+      date: 'May 10, 2025',
+      views: 342,
+      description: 'Analysis of evolving phishing techniques observed across multiple sectors, with focus on AI-generated content and deep fakes.',
+      stats: [
+        { label: 'IoCs Analyzed', value: '53' },
+        { label: 'New Techniques', value: '7' },
+        { label: 'Organizations', value: '14' },
+        { label: 'Relevance', value: 'High' }
+      ]
+    },
+    {
+      id: '5',
+      title: 'Financial Sector Threat Landscape',
+      type: 'Sector Analysis',
+      date: 'May 5, 2025',
+      views: 198,
+      description: 'Comprehensive overview of current threats targeting financial institutions in Southern Africa, with focus on banking trojans and ATM malware.',
+      stats: [
+        { label: 'IoCs Analyzed', value: '94' },
+        { label: 'TTPs Identified', value: '16' },
+        { label: 'Threat Actors', value: '5' },
+        { label: 'Severity', value: 'High' }
+      ]
+    },
+    {
+      id: '6',
+      title: 'EDU-Ransom Malware Analysis',
+      type: 'Technical Analysis',
+      date: 'May 2, 2025',
+      views: 276,
+      description: 'Technical deep-dive into the EDU-Ransom malware strain targeting educational institutions, including code analysis and IOC extraction.',
+      stats: [
+        { label: 'IoCs Generated', value: '37' },
+        { label: 'TTPs Mapped', value: '9' },
+        { label: 'Attribution', value: 'RansomGroup-X' },
+        { label: 'Severity', value: 'Critical' }
+      ]
     }
   ];
 
@@ -9334,11 +9270,17 @@ function Reports({ active }) {
       setLoading(true);
       // Simulate API call
       setTimeout(() => {
-        setReports(sampleReports);
+        let filteredReports = mockReports;
+        if (filter !== 'all') {
+          filteredReports = mockReports.filter(r => {
+            return r.type.toLowerCase().replace(' ', '_') === filter;
+          });
+        }
+        setReports(filteredReports);
         setLoading(false);
-      }, 1000);
+      }, 500);
     }
-  }, [active]);
+  }, [active, filter]);
 
   if (!active) return null;
 
@@ -9346,13 +9288,63 @@ function Reports({ active }) {
     <section id="reports" className={`page-section ${active ? 'active' : ''}`}>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Reports & Analytics</h1>
-          <p className="page-subtitle">Generate and manage threat intelligence reports</p>
+          <h1 className="page-title">Threat Intelligence Reports</h1>
+          <p className="page-subtitle">Access and manage comprehensive threat reports</p>
         </div>
         <div className="action-buttons">
-          <button className="btn btn-primary">
-            <i className="fas fa-plus"></i> Generate Report
+          <button className="btn btn-outline">
+            <i className="fas fa-filter"></i> Filter
           </button>
+          <button className="btn btn-primary">
+            <i className="fas fa-plus"></i> Create New Report
+          </button>
+        </div>
+      </div>
+
+      <div className="filters-section">
+        <div className="filters-grid">
+          <div className="filter-group">
+            <label className="filter-label">Report Type</label>
+            <div className="filter-control">
+              <select value={filter} onChange={(e) => setFilter(e.target.value)}>
+                <option value="all">All Types</option>
+                <option value="incident">Incident</option>
+                <option value="campaign">Campaign</option>
+                <option value="trend">Trend Analysis</option>
+                <option value="summary">Weekly Summary</option>
+              </select>
+            </div>
+          </div>
+          <div className="filter-group">
+            <label className="filter-label">Sector Focus</label>
+            <div className="filter-control">
+              <select>
+                <option value="">All Sectors</option>
+                <option value="education">Education</option>
+                <option value="financial">Financial</option>
+                <option value="government">Government</option>
+                <option value="healthcare">Healthcare</option>
+              </select>
+            </div>
+          </div>
+          <div className="filter-group">
+            <label className="filter-label">Date Range</label>
+            <div className="filter-control">
+              <select>
+                <option value="">All Time</option>
+                <option value="week">Last Week</option>
+                <option value="month">Last Month</option>
+                <option value="quarter">Last Quarter</option>
+                <option value="year">Last Year</option>
+              </select>
+            </div>
+          </div>
+          <div className="filter-group">
+            <label className="filter-label">Search</label>
+            <div className="filter-control">
+              <input type="text" placeholder="Search reports..." />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -9362,97 +9354,49 @@ function Reports({ active }) {
           <p>Loading reports...</p>
         </div>
       ) : (
-        <div className="reports-grid">
-          <div className="stats-row">
-            <div className="stat-card">
-              <div className="stat-icon">
-                <i className="fas fa-file-alt"></i>
-              </div>
-              <div className="stat-content">
-                <h3>{reports.length}</h3>
-                <p>Total Reports</p>
-              </div>
+        <div className="report-grid">
+          {reports.length === 0 ? (
+            <div className="empty-state">
+              <i className="fas fa-file-alt"></i>
+              <h3>No reports found</h3>
+              <p>Generate your first report to see analytics and insights.</p>
+              <button className="btn btn-primary">
+                <i className="fas fa-plus"></i> Generate Report
+              </button>
             </div>
-            
-            <div className="stat-card">
-              <div className="stat-icon">
-                <i className="fas fa-check-circle"></i>
-              </div>
-              <div className="stat-content">
-                <h3>{reports.filter(r => r.status === 'completed').length}</h3>
-                <p>Completed</p>
-              </div>
-            </div>
-            
-            <div className="stat-card">
-              <div className="stat-icon">
-                <i className="fas fa-edit"></i>
-              </div>
-              <div className="stat-content">
-                <h3>{reports.filter(r => r.status === 'draft').length}</h3>
-                <p>Drafts</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="reports-list">
-            <h3 style={{marginBottom: '1rem', color: '#333'}}>Recent Reports</h3>
-            {reports.length === 0 ? (
-              <div className="empty-state">
-                <i className="fas fa-file-alt" style={{fontSize: '48px', color: '#dee2e6'}}></i>
-                <h3>No reports available</h3>
-                <p>Generate your first threat intelligence report.</p>
-                <button className="btn btn-primary">
-                  <i className="fas fa-plus"></i> Generate Report
-                </button>
-              </div>
-            ) : (
-              <div className="reports-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Report Title</th>
-                      <th>Type</th>
-                      <th>Date</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reports.map(report => (
-                      <tr key={report.id}>
-                        <td data-label="Report Title">
-                          <div className="report-info">
-                            <div className="report-title">{report.title}</div>
-                            <div className="report-description">{report.description}</div>
-                          </div>
-                        </td>
-                        <td data-label="Type">
-                          <span className="report-type">{report.type}</span>
-                        </td>
-                        <td data-label="Date">{report.date}</td>
-                        <td data-label="Status">
-                          <span className={`status-badge ${report.status}`}>
-                            {report.status}
-                          </span>
-                        </td>
-                        <td data-label="Actions">
-                          <div className="actions">
-                            <button className="btn btn-sm btn-outline" title="View Report">
-                              <i className="fas fa-eye"></i> View
-                            </button>
-                            <button className="btn btn-sm btn-outline" title="Download Report">
-                              <i className="fas fa-download"></i> Download
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+          ) : (
+            reports.map(report => (
+              <div key={report.id} className="report-card">
+                <div className="report-header">
+                  <div className="report-type">{report.type}</div>
+                  <h3 className="report-title">{report.title}</h3>
+                  <div className="report-meta">
+                    <span>{report.date}</span>
+                    <span><i className="fas fa-eye"></i> {report.views}</span>
+                  </div>
+                </div>
+                <div className="report-content">
+                  <div className="report-stats">
+                    {report.stats.map((stat, index) => (
+                      <div key={index} className="report-stat">
+                        <div className="stat-number">{stat.value}</div>
+                        <div className="stat-label">{stat.label}</div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                  <p>{report.description}</p>
+                  <div className="report-actions">
+                    <button className="btn btn-outline btn-sm">
+                      <i className="fas fa-share-alt"></i> Share
+                    </button>
+                    <button className="btn btn-primary btn-sm">
+                      <i className="fas fa-eye"></i> View Report
+                    </button>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
+            ))
+          )}
         </div>
       )}
     </section>
@@ -12014,6 +11958,7 @@ function CSSStyles() {
         .profile-card {
             background: white;
             border-radius: 12px;
+            align-items: center;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             overflow: hidden;
         }
@@ -12941,6 +12886,111 @@ function CSSStyles() {
             .summary-stats {
                 gap: 1rem;
             }
+        }
+
+        /* Reports Section - Prototype Styling */
+        .report-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 20px;
+        }
+        
+        .report-card {
+          background-color: var(--white);
+          border-radius: 10px;
+          overflow: hidden;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+          transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .report-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .report-header {
+          padding: 20px;
+          background-color: var(--light-blue);
+          border-bottom: 1px solid var(--medium-gray);
+        }
+        
+        .report-type {
+          display: inline-block;
+          padding: 4px 10px;
+          background-color: var(--primary-blue);
+          color: white;
+          font-size: 12px;
+          font-weight: 600;
+          border-radius: 20px;
+          margin-bottom: 10px;
+        }
+        
+        .report-title {
+          font-size: 18px;
+          font-weight: 600;
+          margin-bottom: 5px;
+          color: var(--dark-blue);
+          margin-top: 0;
+        }
+        
+        .report-meta {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          color: var(--text-muted);
+          font-size: 13px;
+        }
+        
+        .report-content {
+          padding: 20px;
+        }
+        
+        .report-stats {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 15px;
+          margin-bottom: 15px;
+        }
+        
+        .report-stat {
+          text-align: center;
+        }
+        
+        .stat-number {
+          font-size: 24px;
+          font-weight: 700;
+          color: var(--dark-blue);
+          margin-bottom: 5px;
+        }
+        
+        .stat-label {
+          font-size: 13px;
+          color: var(--text-muted);
+        }
+        
+        .report-content p {
+          margin-bottom: 15px;
+          line-height: 1.5;
+          color: #495057;
+          font-size: 14px;
+        }
+        
+        .report-actions {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 15px;
+        }
+
+        @media (max-width: 1200px) {
+          .report-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+        
+        @media (max-width: 768px) {
+          .report-grid {
+            grid-template-columns: 1fr;
+          }
         }
 
       `}
