@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { getUsersList, createUser, updateUser, deactivateUser, reactivateUser, deleteUserPermanently, changeUsername, getUserDetails, getOrganizations, getCurrentUser } from '../../api.js';
+import { getUsersList, createUser, updateUser, deactivateUser, reactivateUser, deleteUserPermanently, getUserDetails, getOrganizations, getCurrentUser } from '../../api.js';
 import LoadingSpinner from './LoadingSpinner.jsx';
 import ConfirmationModal from './ConfirmationModal.jsx';
 import Pagination from './Pagination.jsx';
@@ -517,20 +517,9 @@ const UserManagement = ({ active = true, initialSection = null }) => {
               delete updateData.password; // Don't send empty password
             }
             
-            // Handle username change separately if it's different
-            if (updateData.username !== selectedUser.username) {
-              console.log('Username changed, updating via changeUsername API');
-              await api.changeUsername(selectedUser.id, updateData.username);
-              // Remove username from updateData to avoid duplicate update
-              delete updateData.username;
-            }
-            
-            // Update other fields if there are any remaining
-            if (Object.keys(updateData).length > 0) {
-              console.log('Updating user with data:', updateData);
-              console.log('Selected user ID:', selectedUser.id);
-              await api.updateUser(selectedUser.id, updateData);
-            }
+            console.log('Updating user with data:', updateData);
+            console.log('Selected user ID:', selectedUser.id);
+            await api.updateUser(selectedUser.id, updateData);
           }
           setShowModal(false);
           setError(null); // Clear any previous errors

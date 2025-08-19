@@ -164,20 +164,6 @@ export const deleteUserPermanently = async (userId, reason = '') => {
   return await response.json();
 };
 
-export const changeUsername = async (userId, newUsername) => {
-  const response = await fetch(`${API_BASE_URL}/api/users/${userId}/change_username/`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ username: newUsername }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || 'Failed to change username');
-  }
-
-  return await response.json();
-};
 
 // Organization Management Functions
 export const getOrganizations = async (queryParams = {}) => {
