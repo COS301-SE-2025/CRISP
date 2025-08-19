@@ -450,9 +450,9 @@ function Header({ showPage, user, onLogout, isAdmin, navigateToRegisterUser }) {
     <header>
       <div className="container header-container">
        <a href="#" className="logo">
-          
-            <img src={BlueVLogo} alt="CRISP Logo" />
-
+          <img 
+            src={BlueVLogo} alt="CRISP Logo" style={{ width: '150px', height: 'auto' }}
+          />
         </a>
         <div className="nav-actions">
           <div className="search-bar">
