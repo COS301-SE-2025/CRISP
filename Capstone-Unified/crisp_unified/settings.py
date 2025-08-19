@@ -233,7 +233,7 @@ OTX_SETTINGS = {
     'ENABLED': os.getenv('OTX_ENABLED', 'True').lower() == 'true',
     'FETCH_INTERVAL': int(os.getenv('OTX_FETCH_INTERVAL', '3600')),
     'BATCH_SIZE': int(os.getenv('OTX_BATCH_SIZE', '10')),  # Reduced from 50 to 10 for faster processing
-    'MAX_AGE_DAYS': int(os.getenv('OTX_MAX_AGE_DAYS', '2')),  # Changed from 30 to 7 days
+    'MAX_AGE_DAYS': int(os.getenv('OTX_MAX_AGE_DAYS', '2')),  # Changed from 30 to 2 days
 }
 
 # TAXII Server Configuration
