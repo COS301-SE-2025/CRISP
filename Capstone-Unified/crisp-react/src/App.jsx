@@ -7,7 +7,8 @@ import OrganisationManagement from './components/enhanced/OrganisationManagement
 import TrustManagement from './components/enhanced/TrustManagement.jsx';
 import Institutions from './components/institutions/Institutions.jsx';
 import BlueVLogo from './assets/enhanced/BlueV2.png';
-import { getOrganizations } from './api.js';
+import * as api from './api.js';
+import { getOrganizations, getThreatFeedTtps, getMitreMatrix, getTtpFeedComparison, getTtpSeasonalPatterns, getTtpTechniqueFrequencies, getTtps, getTtpFilterOptions, getTtpTrends, getTtpDetails, updateTtp, getMatrixCellDetails, getTechniqueDetails, exportTtps } from './api.js';
 
 // Error Boundary for Chart Component
 class ChartErrorBoundary extends React.Component {
@@ -128,112 +129,6 @@ const getAuthHeaders = () => {
   return headers;
 };
 
-const api = {
-  get: async (endpoint) => {
-    try {
-      // Check cache first
-      const cacheKey = endpoint;
-      const cached = apiCache.get(cacheKey);
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-        return cached.data;
-      }
-
-      const headers = getAuthHeaders();
-      const token = localStorage.getItem('crisp_auth_token');
-      
-      // Don't make API calls if we don't have a token (except for auth endpoints)
-      if (!token && !endpoint.includes('/auth/')) {
-        return null;
-      }
-      
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        headers: headers
-      });
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          // Token expired or invalid - redirect to login with proper base path
-          localStorage.removeItem('crisp_auth_token');
-          localStorage.removeItem('crisp_user');
-          window.location.href = '/static/react/login';
-        }
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      // Cache the response for dashboard endpoints only
-      if (endpoint.includes('/api/threat-feeds/') || 
-          endpoint.includes('/api/system-health/') ||
-          endpoint.includes('/api/organizations/')) {
-        apiCache.set(cacheKey, {
-          data: data,
-          timestamp: Date.now()
-        });
-      }
-      
-      return data;
-    } catch (error) {
-      // Only log non-auth errors to reduce console spam
-      if (!error.message.includes('401')) {
-        console.error(`API Error: ${endpoint}`, error);
-      }
-      return null;
-    }
-  },
-  
-  post: async (endpoint, data) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data)
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return await response.json();
-    } catch (error) {
-      console.error(`API Error: ${endpoint}`, error);
-      return null;
-    }
-  },
-  
-  put: async (endpoint, data) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data)
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return await response.json();
-    } catch (error) {
-      console.error(`API Error: ${endpoint}`, error);
-      return null;
-    }
-  },
-  
-  delete: async (endpoint) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      
-      // For DELETE requests, we might get 204 No Content with no response body
-      if (response.status === 204) {
-        return { success: true };
-      }
-      
-      // Try to parse JSON, but handle empty responses
-      const text = await response.text();
-      return text ? JSON.parse(text) : { success: true };
-    } catch (error) {
-      console.error(`API Error: ${endpoint}`, error);
-      return null;
-    }
-  }
-};
 
 function App({ user, onLogout, isAdmin }) {
   
@@ -5737,17 +5632,17 @@ function TTPAnalysis({ active }) {
     setAggregationLoading(true);
     try {
       // Fetch multiple aggregation endpoints individually to handle failures gracefully
-      const feedComparisonPromise = api.get('/api/ttps/feed-comparison/?days=30').catch(err => {
+      const feedComparisonPromise = getTtpFeedComparison(30).catch(err => {
         console.warn('Feed comparison endpoint not available:', err);
         return null;
       });
       
-      const techniqueFreqPromise = api.get('/api/ttps/technique-frequencies/?days=30').catch(err => {
+      const techniqueFreqPromise = getTtpTechniqueFrequencies(30).catch(err => {
         console.warn('Technique frequencies endpoint not available:', err);
         return null;
       });
       
-      const seasonalPatternsPromise = api.get('/api/ttps/seasonal-patterns/?days=180').catch(err => {
+      const seasonalPatternsPromise = getTtpSeasonalPatterns(180).catch(err => {
         console.warn('Seasonal patterns endpoint not available:', err);
         return null;
       });
@@ -5814,7 +5709,7 @@ function TTPAnalysis({ active }) {
 
     while (hasMore) {
       try {
-        const response = await api.get(`/api/threat-feeds/${feedId}/ttps/?page=${page}&page_size=${pageSize}`);
+        const response = await getThreatFeedTtps(feedId, { page, page_size: pageSize });
         
         if (response && response.results) {
           // Add results from this page (even if 0 results)
@@ -5897,7 +5792,8 @@ function TTPAnalysis({ active }) {
         params.append('has_subtechniques', currentFilters.has_subtechniques);
       }
       
-      const response = await api.get(`/api/ttps/?${params.toString()}`);
+      const queryParams = Object.fromEntries(params.entries());
+      const response = await getTtps(queryParams);
       if (response && response.success) {
         setTtpData(response.results || []);
         setTotalCount(response.count || 0);
@@ -5925,7 +5821,7 @@ function TTPAnalysis({ active }) {
   // Fetch filter options for dropdowns
   const fetchFilterOptions = async () => {
     try {
-      const response = await api.get('/api/ttps/filter-options/');
+      const response = await getTtpFilterOptions();
       if (response && response.success) {
         setFilterOptions(response.options);
       }
@@ -6110,7 +6006,7 @@ function TTPAnalysis({ active }) {
     setTrendsLoading(true);
     try {
       // Get TTP trends data from the API
-      const response = await api.get('/api/ttps/trends/?days=120&granularity=month&group_by=tactic');
+      const response = await getTtpTrends(120, 'month', 'tactic');
       if (response && response.series) {
         setTrendsData(response.series);
       } else {
@@ -6127,7 +6023,7 @@ function TTPAnalysis({ active }) {
     setMatrixLoading(true);
     try {
       // Get MITRE matrix data from the API
-      const response = await api.get('/api/ttps/mitre-matrix/');
+      const response = await getMitreMatrix();
       if (response && response.success) {
         setMatrixData(response);
       } else {
@@ -6152,13 +6048,7 @@ function TTPAnalysis({ active }) {
     setShowMatrixCellModal(true);
     
     try {
-      let url = `/api/ttps/matrix-cell-details/?tactic=${tactic}`;
-      if (technique) {
-        url += `&technique_id=${technique}`;
-      }
-      url += '&include_related=true&page_size=50';
-      
-      const response = await api.get(url);
+      const response = await getMatrixCellDetails(tactic, technique, true, 50);
       if (response && response.success) {
         setMatrixCellData(response);
       } else {
@@ -6178,8 +6068,7 @@ function TTPAnalysis({ active }) {
     setShowTechniqueModal(true);
     
     try {
-      const url = `/api/ttps/technique-details/${techniqueId}/`;
-      const response = await api.get(url);
+      const response = await getTechniqueDetails(techniqueId);
       if (response && response.success) {
         setTechniqueData(response);
       } else {
@@ -6217,16 +6106,16 @@ function TTPAnalysis({ active }) {
     setIsEditMode(false);
     
     try {
-      const response = await api.get(`/api/ttps/${ttpId}/`);
+      const response = await getTtpDetails(ttpId);
       if (response && response.success) {
-        setSelectedTTP(response.ttp);
+        setSelectedTTP(response.data);
         setEditFormData({
-          name: response.ttp.name || '',
-          description: response.ttp.description || '',
-          mitre_technique_id: response.ttp.mitre_technique_id || '',
-          mitre_tactic: response.ttp.mitre_tactic || '',
-          mitre_subtechnique: response.ttp.mitre_subtechnique || '',
-          threat_feed_id: response.ttp.threat_feed?.id || ''
+          name: response.data.name || '',
+          description: response.data.description || '',
+          mitre_technique_id: response.data.mitre?.technique_id || '',
+          mitre_tactic: response.data.mitre?.tactic || '',
+          mitre_subtechnique: response.data.mitre?.subtechnique || '',
+          threat_feed_id: response.data.threat_feed?.id || ''
         });
       } else {
         console.error('Failed to fetch TTP details');
@@ -6261,7 +6150,7 @@ function TTPAnalysis({ active }) {
     if (!selectedTTP) return;
     
     try {
-      const response = await api.put(`/api/ttps/${selectedTTP.id}/`, editFormData);
+      const response = await updateTtp(selectedTTP.id, editFormData);
       if (response && response.success) {
         // Update the TTP in local state
         setTtpData(prevData => 
@@ -6322,35 +6211,21 @@ function TTPAnalysis({ active }) {
     setExportError('');
     
     try {
-      // Build query parameters
-      const params = new URLSearchParams();
-      params.append('format', exportFormat);
-      
-      // Add filters if specified
-      if (exportFilters.tactic) params.append('tactic', exportFilters.tactic);
-      if (exportFilters.technique_id) params.append('technique_id', exportFilters.technique_id);
-      if (exportFilters.feed_id) params.append('feed_id', exportFilters.feed_id);
-      if (exportFilters.created_after) params.append('created_after', exportFilters.created_after);
-      if (exportFilters.created_before) params.append('created_before', exportFilters.created_before);
-      if (exportFilters.fields) params.append('fields', exportFilters.fields);
-      
-      params.append('include_anonymized', exportFilters.include_anonymized.toString());
-      params.append('include_original', exportFilters.include_original.toString());
-      params.append('limit', exportFilters.limit.toString());
+      // Build filters object
+      const filters = {
+        tactic: exportFilters.tactic,
+        technique_id: exportFilters.technique_id,
+        feed_id: exportFilters.feed_id,
+        created_after: exportFilters.created_after,
+        created_before: exportFilters.created_before,
+        fields: exportFilters.fields,
+        include_anonymized: exportFilters.include_anonymized,
+        include_original: exportFilters.include_original,
+        limit: exportFilters.limit
+      };
       
       // Make the API request
-      const response = await fetch(`/api/ttps/export/?${params.toString()}`, {
-        method: 'GET',
-        headers: {
-          'Accept': exportFormat === 'csv' ? 'text/csv' : 
-                   exportFormat === 'stix' ? 'application/stix+json' : 
-                   'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Export failed: ${response.status} ${response.statusText}`);
-      }
+      const response = await exportTtps(exportFormat, filters);
       
       // Get the blob and filename from response
       const blob = await response.blob();
@@ -7980,12 +7855,12 @@ function TTPAnalysis({ active }) {
                       
                       <div className="ttp-badges">
                         <span className="badge badge-primary">
-                          {selectedTTP.mitre_technique_id || 'No MITRE ID'}
+                          {selectedTTP.mitre?.technique_id || 'No MITRE ID'}
                         </span>
                         <span className="badge badge-secondary">
-                          {selectedTTP.mitre_tactic_display || selectedTTP.mitre_tactic || 'No Tactic'}
+                          {selectedTTP.mitre?.tactic_display || selectedTTP.mitre?.tactic || 'No Tactic'}
                         </span>
-                        {selectedTTP.is_anonymized && (
+                        {selectedTTP.anonymization?.is_anonymized && (
                           <span className="badge badge-info">Anonymized</span>
                         )}
                       </div>
@@ -8029,7 +7904,7 @@ function TTPAnalysis({ active }) {
                             />
                           ) : (
                             <span className="technique-id-display">
-                              {selectedTTP.mitre_technique_id || 'Not specified'}
+                              {selectedTTP.mitre?.technique_id || 'Not specified'}
                             </span>
                           )}
                         </div>
@@ -8058,11 +7933,11 @@ function TTPAnalysis({ active }) {
                               <option value="impact">Impact</option>
                             </select>
                           ) : (
-                            <span>{selectedTTP.mitre_tactic_display || selectedTTP.mitre_tactic || 'Not specified'}</span>
+                            <span>{selectedTTP.mitre?.tactic_display || selectedTTP.mitre?.tactic || 'Not specified'}</span>
                           )}
                         </div>
                       </div>
-                      {(selectedTTP.mitre_subtechnique || isEditMode) && (
+                      {(selectedTTP.mitre?.subtechnique || isEditMode) && (
                         <div className="detail-row">
                           <label>Sub-technique:</label>
                           <div className="detail-value">
@@ -8075,7 +7950,7 @@ function TTPAnalysis({ active }) {
                                 placeholder="Sub-technique name"
                               />
                             ) : (
-                              <span>{selectedTTP.mitre_subtechnique || 'None'}</span>
+                              <span>{selectedTTP.mitre?.subtechnique || 'None'}</span>
                             )}
                           </div>
                         </div>
