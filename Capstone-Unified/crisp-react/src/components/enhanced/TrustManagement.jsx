@@ -46,6 +46,12 @@ function TrustManagement({ active, initialTab = null }) {
   const [detailItem, setDetailItem] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   
+  // Group members modal
+  const [showMembersModal, setShowMembersModal] = useState(false);
+  const [groupMembers, setGroupMembers] = useState([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  
   // Search and filter
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -615,6 +621,36 @@ function TrustManagement({ active, initialTab = null }) {
     setSelectedItemForActions(null);
   };
 
+  const showGroupMembers = async (group) => {
+    try {
+      setSelectedGroup(group);
+      setMembersLoading(true);
+      setShowMembersModal(true);
+      
+      console.log('🔍 FETCHING members for group:', group.id);
+      const response = await api.getTrustGroupMembers(group.id);
+      
+      if (response.success) {
+        setGroupMembers(response.data.members || []);
+        console.log('✅ GROUP MEMBERS loaded:', response.data.members);
+      } else {
+        throw new Error(response.message || 'Failed to fetch group members');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching group members:', error);
+      setError(`Failed to fetch group members: ${error.message}`);
+      setGroupMembers([]);
+    } finally {
+      setMembersLoading(false);
+    }
+  };
+
+  const closeMembersModal = () => {
+    setShowMembersModal(false);
+    setSelectedGroup(null);
+    setGroupMembers([]);
+  };
+
   const handleAction = (actionType) => {
     const item = selectedItemForActions;
     if (!item) return;
@@ -693,6 +729,11 @@ function TrustManagement({ active, initialTab = null }) {
           }
         });
         setShowConfirmation(true);
+        break;
+        
+      case 'view_members':
+        closeActionsPopup();
+        showGroupMembers(item);
         break;
         
       case 'delete':
@@ -1861,6 +1902,31 @@ function TrustManagement({ active, initialTab = null }) {
                 </button>
               )}
               
+              {activeTab === 'groups' && (
+                <button
+                  onClick={() => {
+                    closeActionsPopup();
+                    handleAction('view_members');
+                  }}
+                  style={{
+                    padding: '0.75rem 1rem',
+                    backgroundColor: '#17a2b8',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    transition: 'all 0.2s ease',
+                    textAlign: 'left'
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#138496'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#17a2b8'}
+                >
+                  View Members
+                </button>
+              )}
+              
               <button
                 onClick={() => {
                   closeActionsPopup();
@@ -1906,6 +1972,108 @@ function TrustManagement({ active, initialTab = null }) {
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Group Members Modal */}
+      {showMembersModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '1.5rem',
+            width: '90%',
+            maxWidth: '600px',
+            maxHeight: '80vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0 }}>
+                Group Members: {selectedGroup?.name}
+              </h3>
+              <button
+                onClick={closeMembersModal}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  color: '#6c757d'
+                }}
+              >
+                ×
+              </button>
+            </div>
+            
+            {membersLoading ? (
+              <div style={{ textAlign: 'center', padding: '2rem' }}>
+                <div>Loading members...</div>
+              </div>
+            ) : groupMembers.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#6c757d' }}>
+                <p>No members found in this group.</p>
+              </div>
+            ) : (
+              <div>
+                <div style={{ marginBottom: '1rem', color: '#6c757d' }}>
+                  Total Members: {groupMembers.length}
+                </div>
+                
+                {groupMembers.map((member) => (
+                  <div
+                    key={member.id}
+                    style={{
+                      padding: '1rem',
+                      border: '1px solid #e9ecef',
+                      borderRadius: '6px',
+                      marginBottom: '0.5rem',
+                      backgroundColor: '#f8f9fa'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>
+                          {member.name}
+                        </div>
+                        <div style={{ fontSize: '0.875rem', color: '#6c757d' }}>
+                          {member.domain && <span>Domain: {member.domain}</span>}
+                          {member.organization_type && <span> • Type: {member.organization_type}</span>}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#6c757d', marginTop: '0.25rem' }}>
+                          {member.joined_at && <span>Joined: {new Date(member.joined_at).toLocaleDateString()}</span>}
+                          {member.approved_by && <span> • Approved by: {member.approved_by}</span>}
+                        </div>
+                      </div>
+                      <div>
+                        <span style={{
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                          fontWeight: '600',
+                          textTransform: 'uppercase',
+                          backgroundColor: member.membership_type === 'administrator' ? '#d4edda' : '#e2e3e5',
+                          color: member.membership_type === 'administrator' ? '#155724' : '#495057'
+                        }}>
+                          {member.membership_type}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

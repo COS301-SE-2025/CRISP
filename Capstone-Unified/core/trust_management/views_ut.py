@@ -771,6 +771,56 @@ class TrustGroupViewSet(viewsets.ViewSet):
                 'message': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @action(detail=True, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def members(self, request, pk=None):
+        """Get members of a trust group."""
+        try:
+            # Use core models if trust_management models are empty
+            from core.models.models import TrustGroup as CoreTrustGroup, TrustGroupMembership as CoreTrustGroupMembership
+            
+            group = CoreTrustGroup.objects.get(id=pk, is_active=True)
+            
+            # Get all active memberships for this group
+            memberships = CoreTrustGroupMembership.objects.filter(
+                trust_group=group,
+                is_active=True
+            ).select_related('organization')
+            
+            members_data = []
+            for membership in memberships:
+                org = membership.organization
+                members_data.append({
+                    'id': str(org.id),
+                    'name': org.name,
+                    'domain': getattr(org, 'domain', ''),
+                    'organization_type': getattr(org, 'organization_type', ''),
+                    'membership_type': membership.membership_type,
+                    'joined_at': membership.joined_at.isoformat() if membership.joined_at else None,
+                    'approved_by': membership.approved_by
+                })
+            
+            return Response({
+                'success': True,
+                'data': {
+                    'group_id': str(group.id),
+                    'group_name': group.name,
+                    'member_count': len(members_data),
+                    'members': members_data
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except CoreTrustGroup.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Trust group not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Failed to get trust group members: {str(e)}")
+            return Response({
+                'success': False,
+                'message': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 class TrustMetricsViewSet(viewsets.ViewSet):
     """ViewSet for trust metrics."""
     permission_classes = [permissions.IsAuthenticated]
