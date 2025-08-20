@@ -277,6 +277,7 @@ function App({ user, onLogout, isAdmin }) {
           <TrustManagement active={activePage === 'trust-management'} />
           <UserManagement active={activePage === 'user-management'} />
           <Reports active={activePage === 'reports'} />
+          <Notifications active={activePage === 'notifications'} />
           <UserProfile active={activePage === 'profile'} />
           <AccountSettings active={activePage === 'account-settings'} />
         </div>
@@ -556,6 +557,8 @@ function Dashboard({ active, showPage, user }) {
     avg_daily: 0,
     type_distribution: []
   });
+  const [chartDateRange, setChartDateRange] = useState('30');
+  const [chartFilterType, setChartFilterType] = useState('');
 
   // System Health Monitoring State
   const [systemHealth, setSystemHealth] = useState({
@@ -1584,9 +1587,9 @@ function Dashboard({ active, showPage, user }) {
         </div>
       </div>
 
-      {/* Main Grid */}
+      {/* Main Grid - Reorganized for better space utilization */}
       <div className="main-grid">
-        {/* Threat Feed */}
+        {/* Left Column: Recent Threat Intelligence */}
         <div>
           <div className="card">
             <div className="card-header">
@@ -1828,12 +1831,14 @@ function Dashboard({ active, showPage, user }) {
                 </div>
               ) : (
                 <ul className="organisation-list">
-                  {connectedOrganizations.map((org, index) => (
-                    <li key={org.id || index} className="organisation-item">
-                      <div className="organisation-logo">{org.logo}</div>
-                      <div className="organisation-details">
-                        <div className="organisation-name">{org.name}</div>
-                        <div className="organisation-stats">
+                  {connectedOrganizations.slice(0, 8).map((org, index) => (
+                    <li key={org.id || index} className="organisation-item" style={{ padding: '0.5rem', marginBottom: '0.5rem' }}>
+                      <div className="organisation-logo" style={{ fontSize: '0.875rem', minWidth: '32px', height: '32px' }}>{org.logo}</div>
+                      <div className="organisation-details" style={{ flex: 1, minWidth: 0 }}>
+                        <div className="organisation-name" style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.25rem' }}>
+                          {org.name.length > 25 ? org.name.substring(0, 25) + '...' : org.name}
+                        </div>
+                        <div className="organisation-stats" style={{ fontSize: '0.75rem', display: 'flex', gap: '0.75rem' }}>
                           <div className="stat-item">
                             <i className="fas fa-exchange-alt"></i> {org.ioc_count} IoCs
                           </div>
@@ -1842,17 +1847,22 @@ function Dashboard({ active, showPage, user }) {
                           </div>
                         </div>
                       </div>
-                      <div className="trust-level">
+                      <div className="trust-level" style={{ width: '40px', height: '4px' }}>
                         <div className="trust-fill" style={{ width: `${org.trust_level}%` }}></div>
                       </div>
                     </li>
                   ))}
+                  {connectedOrganizations.length > 8 && (
+                    <li style={{ textAlign: 'center', padding: '0.5rem', fontSize: '0.75rem', color: '#666' }}>
+                      +{connectedOrganizations.length - 8} more organizations
+                    </li>
+                  )}
                 </ul>
               )}
             </div>
           </div>
 
-          {/* Recent Activity */}
+          {/* Recent Activity - Under Connected Organizations, same width */}
           <div className="card">
             <div className="card-header">
               <h2 className="card-title"><i className="fas fa-history card-icon"></i> Recent Activity</h2>
@@ -1879,24 +1889,21 @@ function Dashboard({ active, showPage, user }) {
                 </div>
               ) : (
                 <div className="activity-container">
-                  {recentActivities.length > 5 && (
-                    <div className="activity-scroll-indicator visible">
-                      <i className="fas fa-arrows-alt-v"></i> Scroll for more
-                    </div>
-                  )}
-                  <ul className={`activity-stream ${recentActivities.length > 5 ? 'has-scroll' : ''}`}>
-                    {recentActivities.map((activity) => (
-                      <li key={activity.id} className="activity-item">
-                        <div className="activity-icon">
-                          <i className={activity.icon}></i>
-                        </div>
-                        <div className="activity-details">
-                          <div className="activity-text">{activity.title}</div>
+                  <ul className="activity-stream clean-style">
+                    {recentActivities.slice(0, 8).map((activity, index) => (
+                      <li key={activity.id || index} className="activity-item clean">
+                        <div className="activity-content">
+                          <div className="activity-header">
+                            <div className="activity-icon-inline">
+                              <i className={activity.icon}></i>
+                            </div>
+                            <div className="activity-title">{activity.title}</div>
+                          </div>
                           {activity.description && (
                             <div className="activity-description">{activity.description}</div>
                           )}
-                          <div className="activity-meta">
-                            <div className="activity-time">{activity.time_ago}</div>
+                          <div className="activity-footer">
+                            <span className="activity-time">{activity.time_ago}</span>
                             <span className={`badge ${activity.badge_type}`}>
                               {activity.badge_text}
                             </span>
@@ -1910,6 +1917,7 @@ function Dashboard({ active, showPage, user }) {
             </div>
           </div>
         </div>
+
       </div>
 
       {/* System Health & Feed Status Monitoring */}
@@ -3506,6 +3514,8 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
       console.log('Indicators refreshed successfully');
     } catch (error) {
       console.error('Error refreshing indicators:', error);
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -3517,15 +3527,6 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
           <p className="page-subtitle">Manage and analyze indicators of compromise</p>
         </div>
         <div className="action-buttons">
-          <button 
-            className="btn btn-outline" 
-            onClick={handleRefresh} 
-            disabled={loading}
-            title="Refresh IoCs data"
-          >
-            <i className={`fas fa-sync-alt ${loading ? 'fa-spin' : ''}`}></i> 
-            {loading ? 'Refreshing...' : 'Refresh'}
-          </button>
           <button className="btn btn-outline" onClick={() => setShowExportModal(true)}><i className="fas fa-file-export"></i> Export IoCs</button>
           <button className="btn btn-outline" onClick={() => setShowImportModal(true)}><i className="fas fa-file-import"></i> Import IoCs</button>
           <button className="btn btn-primary" onClick={() => setShowAddModal(true)}><i className="fas fa-plus"></i> Add New IoC</button>
@@ -3660,6 +3661,69 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
         </div>
       </div>
 
+      {/* IoC Statistics - Moved to top for better space utilization */}
+      <div className="card">
+        <div className="card-header">
+          <h2 className="card-title"><i className="fas fa-chart-pie card-icon"></i> IoC Statistics</h2>
+        </div>
+        <div className="card-content">
+          <div className="stats-grid">
+            <div className="stat-card">
+              <div className="stat-title">
+                <div className="stat-icon"><i className="fas fa-search"></i></div>
+                <span>Total IoCs{Object.values(filters).some(f => f !== '') ? ' (Filtered)' : ''}</span>
+              </div>
+              <div className="stat-value">{Object.values(filters).some(f => f !== '') ? filteredIndicators.length : indicators.length}</div>
+              <div className="stat-description">
+                {Object.values(filters).some(f => f !== '') ? 
+                  `${filteredIndicators.length} of ${indicators.length} match filters` :
+                  'All indicators in system'
+                }
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-title">
+                <div className="stat-icon"><i className="fas fa-exclamation-triangle"></i></div>
+                <span>High Severity</span>
+              </div>
+              <div className="stat-value">
+                {(Object.values(filters).some(f => f !== '') ? filteredIndicators : indicators)
+                  .filter(ind => ind.severity.toLowerCase() === 'high').length}
+              </div>
+              <div className="stat-description">
+                Critical threat indicators
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-title">
+                <div className="stat-icon"><i className="fas fa-user-secret"></i></div>
+                <span>Anonymized</span>
+              </div>
+              <div className="stat-value">
+                {(Object.values(filters).some(f => f !== '') ? filteredIndicators : indicators)
+                  .filter(ind => ind.status.toLowerCase() === 'anonymized').length}
+              </div>
+              <div className="stat-description">
+                Privacy-protected IoCs
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-title">
+                <div className="stat-icon"><i className="fas fa-chart-line"></i></div>
+                <span>Active</span>
+              </div>
+              <div className="stat-value">
+                {(Object.values(filters).some(f => f !== '') ? filteredIndicators : indicators)
+                  .filter(ind => ind.status.toLowerCase() === 'active').length}
+              </div>
+              <div className="stat-description">
+                Currently monitored IoCs
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="card">
         <div className="card-header">
           <h2 className="card-title"><i className="fas fa-search card-icon"></i> Indicators of Compromise</h2>
@@ -3690,7 +3754,7 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
               </select>
             </div>
             <button 
-              className="btn btn-outline btn-sm" 
+              className={`btn btn-outline btn-sm ${loading ? 'loading' : ''}`}
               onClick={handleRefresh} 
               disabled={loading}
               style={{
@@ -3703,10 +3767,19 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
                 borderRadius: '4px',
                 lineHeight: '1',
                 minHeight: '32px',
-                maxHeight: '32px'
+                maxHeight: '32px',
+                opacity: loading ? 0.7 : 1,
+                cursor: loading ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s ease'
               }}
             >
-              <i className={`fas fa-sync-alt ${loading ? 'fa-spin' : ''}`}></i> 
+              <i 
+                className={`fas fa-sync-alt ${loading ? 'fa-spin' : ''}`}
+                style={{
+                  animation: loading ? 'spin 1s linear infinite' : 'none',
+                  color: loading ? '#0056b3' : 'inherit'
+                }}
+              ></i> 
               {loading ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
@@ -3954,68 +4027,6 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
             </button>
           </div>
         )}
-      </div>
-
-      <div className="card mt-4">
-        <div className="card-header">
-          <h2 className="card-title"><i className="fas fa-chart-pie card-icon"></i> IoC Statistics</h2>
-        </div>
-        <div className="card-content">
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-title">
-                <div className="stat-icon"><i className="fas fa-search"></i></div>
-                <span>Total IoCs{Object.values(filters).some(f => f !== '') ? ' (Filtered)' : ''}</span>
-              </div>
-              <div className="stat-value">{Object.values(filters).some(f => f !== '') ? filteredIndicators.length : indicators.length}</div>
-              <div className="stat-description">
-                {Object.values(filters).some(f => f !== '') ? 
-                  `${filteredIndicators.length} of ${indicators.length} match filters` :
-                  'All indicators in system'
-                }
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-title">
-                <div className="stat-icon"><i className="fas fa-exclamation-triangle"></i></div>
-                <span>High Severity</span>
-              </div>
-              <div className="stat-value">
-                {(Object.values(filters).some(f => f !== '') ? filteredIndicators : indicators)
-                  .filter(ind => ind.severity.toLowerCase() === 'high').length}
-              </div>
-              <div className="stat-description">
-                Critical threat indicators
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-title">
-                <div className="stat-icon"><i className="fas fa-user-secret"></i></div>
-                <span>Anonymized</span>
-              </div>
-              <div className="stat-value">
-                {(Object.values(filters).some(f => f !== '') ? filteredIndicators : indicators)
-                  .filter(ind => ind.status.toLowerCase() === 'anonymized').length}
-              </div>
-              <div className="stat-description">
-                Privacy-protected IoCs
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-title">
-                <div className="stat-icon"><i className="fas fa-chart-line"></i></div>
-                <span>Active</span>
-              </div>
-              <div className="stat-value">
-                {(Object.values(filters).some(f => f !== '') ? filteredIndicators : indicators)
-                  .filter(ind => ind.status.toLowerCase() === 'active').length}
-              </div>
-              <div className="stat-description">
-                Currently monitored IoCs
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Add New IoC Modal */}
@@ -11412,9 +11423,145 @@ function CSSStyles() {
             border-collapse: collapse;
         }
         
-        /* IoC Management table needs minimum width for Actions column */
+        /* IoC Management table with optimized column widths */
         #ioc-management .data-table {
             min-width: 1200px;
+            table-layout: fixed;
+        }
+        
+        #ioc-management .data-table th:nth-child(1) { width: 40px; }   /* Checkbox */
+        #ioc-management .data-table th:nth-child(2) { width: 80px; }   /* Type */
+        #ioc-management .data-table th:nth-child(3) { width: 120px; }  /* Title */
+        #ioc-management .data-table th:nth-child(4) { width: 200px; }  /* Value */
+        #ioc-management .data-table th:nth-child(5) { width: 150px; }  /* Description */
+        #ioc-management .data-table th:nth-child(6) { width: 80px; }   /* Severity */
+        #ioc-management .data-table th:nth-child(7) { width: 100px; }  /* Source */
+        #ioc-management .data-table th:nth-child(8) { width: 110px; }  /* Date Added */
+        #ioc-management .data-table th:nth-child(9) { width: 80px; }   /* Status */
+        #ioc-management .data-table th:nth-child(10) { width: 120px; } /* Actions */
+        
+        /* Ensure text wraps properly and doesn't overflow */
+        #ioc-management .data-table td {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            white-space: normal;
+            max-width: 0;
+        }
+        
+        /* Keep specific columns from wrapping */
+        #ioc-management .data-table td:nth-child(1),  /* Checkbox */
+        #ioc-management .data-table td:nth-child(6),  /* Severity */
+        #ioc-management .data-table td:nth-child(9),  /* Status */
+        #ioc-management .data-table td:nth-child(10) { /* Actions */
+            white-space: nowrap;
+        }
+        
+        /* Refresh button loading animation */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .btn.loading {
+            position: relative;
+        }
+        
+        .btn.loading:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        
+        /* Clean Recent Activity Styling - No Indentation */
+        .activity-stream.clean-style {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .activity-item.clean {
+            padding: 0.75rem 1rem;
+            border-bottom: none;
+            transition: background-color 0.2s ease;
+            border-left: none;
+        }
+        
+        .activity-item.clean:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .activity-item.clean:last-child {
+            border-bottom: none;
+        }
+        
+        .activity-content {
+            display: block;
+        }
+        
+        .activity-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .activity-icon-inline {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #e3f2fd;
+            color: #1976d2;
+            font-size: 0.7rem;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        
+        .activity-title {
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #333;
+            flex: 1;
+            line-height: 1.3;
+        }
+        
+        .activity-description {
+            font-size: 0.8rem;
+            color: #666;
+            line-height: 1.4;
+            margin-bottom: 0.5rem;
+        }
+        
+        .activity-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .activity-time {
+            font-size: 0.75rem;
+            color: #999;
+        }
+        
+        /* Height matching adjustments - Only adjust right side heights to match left side */
+        
+        /* Connected Organizations (right top) = Recent Threat Intelligence (left top) natural height */
+        .side-panels .card:first-child .card-content {
+            min-height: 594px;
+            max-height: 594px;
+            overflow-y: auto;
+        }
+        
+        .side-panels .card:first-child .organisation-list {
+            max-height: 550px;
+        }
+        
+        /* Recent Activity (right bottom) = Threat Activity Trends (left bottom) chart height */
+        .side-panels .card:nth-child(2) .card-content {
+            height: 430px;
+            max-height: 430px;
+            overflow-y: auto;
         }
         
         /* Dashboard tables should remain compact */
@@ -11661,6 +11808,27 @@ function CSSStyles() {
             box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
         }
 
+        /* Apply same blue scrollbar styling to organization list */
+        .organisation-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .organisation-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .organisation-list::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .organisation-list::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, var(--secondary-blue) 0%, var(--primary-blue) 100%);
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+        }
+
         /* Fade indicator for scroll */
         .activity-stream::after {
             content: '';
@@ -11683,7 +11851,7 @@ function CSSStyles() {
             padding: 15px;
             display: flex;
             gap: 15px;
-            border-bottom: 1px solid var(--medium-gray);
+            border-bottom: none;
             background-color: white;
             border-radius: 8px;
             margin-bottom: 8px;
@@ -14016,6 +14184,161 @@ function CSSStyles() {
             font-size: 0.75rem;
             color: var(--text-muted);
             font-style: italic;
+        }
+
+        /* Recent TTP Analyses - Beautiful Grid Layout */
+        .recent-ttps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+            padding: 1rem 0;
+        }
+
+        .recent-ttp-item {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border: 1px solid #e3e6ea;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .recent-ttp-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(180deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+            transform: scaleY(0);
+            transform-origin: bottom;
+            transition: transform 0.3s ease;
+        }
+
+        .recent-ttp-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 123, 255, 0.15);
+            border-color: var(--primary-blue);
+        }
+
+        .recent-ttp-item:hover::before {
+            transform: scaleY(1);
+        }
+
+        .ttp-rank {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+            color: white;
+            font-weight: 700;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+        }
+
+        .ttp-info {
+            margin-bottom: 1rem;
+            padding-right: 3rem;
+        }
+
+        .ttp-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+
+        .ttp-technique {
+            display: inline-block;
+            background: rgba(0, 123, 255, 0.1);
+            color: var(--primary-blue);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            border: 1px solid rgba(0, 123, 255, 0.2);
+        }
+
+        .ttp-tactic {
+            background: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: inline-block;
+            margin-left: 0.5rem;
+            border: 1px solid rgba(40, 167, 69, 0.2);
+        }
+
+        .ttp-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 1rem;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .ttp-feed {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            background: #f8f9fa;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            max-width: 60%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .ttp-date {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .ttp-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .ttp-status.active {
+            background: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+            border: 1px solid rgba(40, 167, 69, 0.3);
+        }
+
+        .ttp-status.inactive {
+            background: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+            border: 1px solid rgba(220, 53, 69, 0.3);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .recent-ttps-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .recent-ttp-item {
+                padding: 1rem;
+            }
+            
+            .ttp-info {
+                padding-right: 2.5rem;
+            }
         }
 
         /* Feed Source Cell */
