@@ -5544,6 +5544,15 @@ function TTPAnalysis({ active }) {
   const [matrixLoading, setMatrixLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   
+  // Matrix filtering state
+  const [showMatrixFilters, setShowMatrixFilters] = useState(false);
+  const [matrixFilters, setMatrixFilters] = useState({
+    tactic: '',
+    minTechniques: 0,
+    maxTechniques: 100,
+    search: ''
+  });
+  
   // Feed analysis state
   const [frequencyData, setFrequencyData] = useState(null);
   const [aggregationLoading, setAggregationLoading] = useState(false);
@@ -5575,6 +5584,12 @@ function TTPAnalysis({ active }) {
     has_subtechniques: ''
   });
   const [activeFiltersCount, setActiveFiltersCount] = useState(0);
+  
+  // Update active filters count when filters change
+  useEffect(() => {
+    const count = Object.values(filters).filter(value => value && value.toString().trim() !== '').length;
+    setActiveFiltersCount(count);
+  }, [filters]);
   
   // TTP Detail Modal state
   const [showTTPModal, setShowTTPModal] = useState(false);
@@ -6354,8 +6369,121 @@ function TTPAnalysis({ active }) {
     setIsExporting(false);
   };
 
-  const renderMatrixHeaders = () => {
+  // Filter matrix data based on current filters
+  const getFilteredMatrixData = () => {
     if (!matrixData || !matrixData.matrix) {
+      return null;
+    }
+
+    let filteredMatrix = { ...matrixData };
+    let matrix = { ...matrixData.matrix };
+
+    // Apply tactic filter
+    if (matrixFilters.tactic) {
+      matrix = {
+        [matrixFilters.tactic]: matrix[matrixFilters.tactic]
+      };
+    }
+
+    // Apply technique count filters and search filter
+    Object.keys(matrix).forEach(tacticKey => {
+      const tactic = matrix[tacticKey];
+      if (tactic && tactic.techniques) {
+        const techniqueCount = tactic.techniques.length;
+        
+        // Filter by technique count
+        if (techniqueCount < matrixFilters.minTechniques || techniqueCount > matrixFilters.maxTechniques) {
+          delete matrix[tacticKey];
+          return;
+        }
+
+        // Filter by search term in technique names
+        if (matrixFilters.search) {
+          const searchTerm = matrixFilters.search.toLowerCase();
+          const filteredTechniques = tactic.techniques.filter(technique => 
+            technique.name?.toLowerCase().includes(searchTerm) ||
+            technique.technique_id?.toLowerCase().includes(searchTerm)
+          );
+          
+          if (filteredTechniques.length === 0) {
+            delete matrix[tacticKey];
+          } else {
+            matrix[tacticKey] = {
+              ...tactic,
+              techniques: filteredTechniques
+            };
+          }
+        }
+      }
+    });
+
+    return {
+      ...filteredMatrix,
+      matrix: matrix
+    };
+  };
+
+  // Filter TTP data based on current filters
+  const getFilteredTtpData = () => {
+    if (!ttpData || ttpData.length === 0) {
+      return [];
+    }
+
+    return ttpData.filter(ttp => {
+      // Search filter
+      if (filters.search) {
+        const searchTerm = filters.search.toLowerCase();
+        const matchesSearch = (
+          ttp.name?.toLowerCase().includes(searchTerm) ||
+          ttp.mitre_technique_id?.toLowerCase().includes(searchTerm) ||
+          ttp.mitre_tactic?.toLowerCase().includes(searchTerm) ||
+          ttp.description?.toLowerCase().includes(searchTerm)
+        );
+        if (!matchesSearch) return false;
+      }
+
+      // MITRE Tactic filter
+      if (filters.tactics && filters.tactics.length > 0) {
+        if (!filters.tactics.includes(ttp.mitre_tactic)) return false;
+      }
+
+      // Threat Feed filter
+      if (filters.threat_feed_ids && filters.threat_feed_ids.length > 0) {
+        if (!ttp.threat_feed || !filters.threat_feed_ids.includes(ttp.threat_feed.id)) return false;
+      }
+
+      // MITRE Technique filter
+      if (filters.techniques && filters.techniques.length > 0) {
+        if (!filters.techniques.includes(ttp.mitre_technique_id)) return false;
+      }
+
+      // Date range filters
+      if (filters.date_from || filters.date_to) {
+        const ttpDate = new Date(ttp.created_at);
+        if (filters.date_from && ttpDate < new Date(filters.date_from)) return false;
+        if (filters.date_to && ttpDate > new Date(filters.date_to)) return false;
+      }
+
+      // Anonymization status filter
+      if (filters.anonymized_only) {
+        const isAnonymized = filters.anonymized_only === 'true';
+        if (ttp.is_anonymized !== isAnonymized) return false;
+      }
+
+      // Subtechniques filter
+      if (filters.has_subtechniques) {
+        const hasSubtechniques = filters.has_subtechniques === 'true';
+        const ttpHasSubtechniques = !!ttp.mitre_subtechnique;
+        if (ttpHasSubtechniques !== hasSubtechniques) return false;
+      }
+
+      return true;
+    });
+  };
+
+  const renderMatrixHeaders = () => {
+    const filteredData = getFilteredMatrixData();
+    if (!filteredData || !filteredData.matrix) {
       return null;
     }
 
@@ -6378,7 +6506,7 @@ function TTPAnalysis({ active }) {
       <thead>
         <tr>
           {tacticOrder.map(tactic => {
-            const tacticData = matrixData.matrix[tactic.code];
+            const tacticData = filteredData.matrix[tactic.code];
             const count = tacticData ? tacticData.technique_count : 0;
             return (
               <th 
@@ -6412,11 +6540,12 @@ function TTPAnalysis({ active }) {
   };
 
   const renderDynamicMatrix = () => {
-    if (!matrixData || !matrixData.matrix) {
+    const filteredData = getFilteredMatrixData();
+    if (!filteredData || !filteredData.matrix) {
       return null;
     }
 
-    const tactics = Object.values(matrixData.matrix);
+    const tactics = Object.values(filteredData.matrix);
     
     // MITRE ATT&CK Enterprise tactics in order
     const tacticOrder = [
@@ -6441,7 +6570,7 @@ function TTPAnalysis({ active }) {
       const row = [];
       
       tacticOrder.forEach(tacticCode => {
-        const tacticData = matrixData.matrix[tacticCode];
+        const tacticData = filteredData.matrix[tacticCode];
         if (tacticData && tacticData.techniques && tacticData.techniques.length > rowIndex) {
           const technique = tacticData.techniques[rowIndex];
           row.push({
@@ -7119,9 +7248,84 @@ function TTPAnalysis({ active }) {
             >
               <i className={`fas ${matrixLoading ? 'fa-spinner fa-spin' : 'fa-sync-alt'}`}></i> Refresh
             </button>
-            <button className="btn btn-outline btn-sm"><i className="fas fa-filter"></i> Filter</button>
+            <button 
+              className={`btn btn-outline btn-sm ${showMatrixFilters ? 'active' : ''}`}
+              onClick={() => setShowMatrixFilters(!showMatrixFilters)}
+            >
+              <i className="fas fa-filter"></i> Filter
+            </button>
           </div>
         </div>
+        
+        {/* Matrix Filter Panel */}
+        {showMatrixFilters && (
+          <div className="filters-panel" style={{borderBottom: '1px solid #e9ecef', padding: '1.5rem', background: '#f8f9fa'}}>
+            <div className="filters-grid" style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem'}}>
+              
+              <div className="filter-group">
+                <label className="filter-label">Search Techniques</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Search technique names..."
+                  value={matrixFilters.search}
+                  onChange={(e) => setMatrixFilters({...matrixFilters, search: e.target.value})}
+                />
+              </div>
+
+              <div className="filter-group">
+                <label className="filter-label">Filter by Tactic</label>
+                <select
+                  className="form-control"
+                  value={matrixFilters.tactic}
+                  onChange={(e) => setMatrixFilters({...matrixFilters, tactic: e.target.value})}
+                >
+                  <option value="">All Tactics</option>
+                  {matrixData?.matrix && Object.keys(matrixData.matrix).map(tacticKey => (
+                    <option key={tacticKey} value={tacticKey}>
+                      {matrixData.matrix[tacticKey]?.tactic_name || tacticKey}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="filter-group">
+                <label className="filter-label">Min Techniques per Tactic</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  min="0"
+                  max="100"
+                  value={matrixFilters.minTechniques}
+                  onChange={(e) => setMatrixFilters({...matrixFilters, minTechniques: parseInt(e.target.value) || 0})}
+                />
+              </div>
+
+              <div className="filter-group">
+                <label className="filter-label">Max Techniques per Tactic</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  min="0"
+                  max="100"
+                  value={matrixFilters.maxTechniques}
+                  onChange={(e) => setMatrixFilters({...matrixFilters, maxTechniques: parseInt(e.target.value) || 100})}
+                />
+              </div>
+
+            </div>
+            
+            <div className="filter-actions" style={{marginTop: '1rem', display: 'flex', gap: '0.5rem'}}>
+              <button 
+                className="btn btn-outline btn-sm"
+                onClick={() => setMatrixFilters({tactic: '', minTechniques: 0, maxTechniques: 100, search: ''})}
+              >
+                <i className="fas fa-times"></i> Clear Filters
+              </button>
+            </div>
+          </div>
+        )}
+        
         <div className="card-content">
           <div className="matrix-container">
             {matrixLoading ? (
@@ -7135,26 +7339,34 @@ function TTPAnalysis({ active }) {
                   {renderMatrixHeaders()}
                   {renderDynamicMatrix()}
                 </table>
-                {matrixData.statistics && (
-                  <div className="matrix-stats" style={{marginTop: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '8px'}}>
-                    <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem'}}>
-                      <div>
-                        <strong>Total Techniques:</strong> {matrixData.total_techniques}
-                      </div>
-                      <div>
-                        <strong>Active Tactics:</strong> {matrixData.statistics.tactics_with_techniques}
-                      </div>
-                      <div>
-                        <strong>Avg per Tactic:</strong> {matrixData.statistics.average_techniques_per_tactic}
-                      </div>
-                      {matrixData.statistics.most_common_tactic && (
+                {(() => {
+                  const filteredData = getFilteredMatrixData();
+                  const filteredTactics = filteredData ? Object.keys(filteredData.matrix).length : 0;
+                  const filteredTechniques = filteredData ? Object.values(filteredData.matrix).reduce((total, tactic) => total + (tactic.techniques?.length || 0), 0) : 0;
+                  
+                  return (
+                    <div className="matrix-stats" style={{marginTop: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '8px'}}>
+                      <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem'}}>
                         <div>
-                          <strong>Top Tactic:</strong> {matrixData.matrix[matrixData.statistics.most_common_tactic]?.tactic_name}
+                          <strong>Displayed Techniques:</strong> {filteredTechniques}
                         </div>
-                      )}
+                        <div>
+                          <strong>Displayed Tactics:</strong> {filteredTactics}
+                        </div>
+                        {matrixData.statistics && (
+                          <>
+                            <div>
+                              <strong>Total Available:</strong> {matrixData.total_techniques} techniques
+                            </div>
+                            <div>
+                              <strong>Avg per Tactic:</strong> {filteredTactics > 0 ? (filteredTechniques / filteredTactics).toFixed(1) : '0'}
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </>
             ) : (
               <div style={{textAlign: 'center', padding: '4rem'}}>
@@ -7163,31 +7375,6 @@ function TTPAnalysis({ active }) {
                 <p style={{color: '#888', fontSize: '0.9rem'}}>Matrix will populate as TTP data becomes available</p>
               </div>
             )}
-          </div>
-        </div>
-      </div>
-
-      <div className="card mt-4">
-        <div className="card-header">
-          <h2 className="card-title"><i className="fas fa-chart-line card-icon"></i> TTP Trends</h2>
-          <div className="card-actions">
-            <button className="btn btn-outline btn-sm"><i className="fas fa-calendar-alt"></i> Last 90 Days</button>
-          </div>
-        </div>
-        <div className="card-content">
-          <div className="chart-container" ref={ttpChartRef}>
-            {trendsLoading ? (
-              <div style={{textAlign: 'center', padding: '4rem'}}>
-                <i className="fas fa-spinner fa-spin" style={{fontSize: '2rem', color: '#0056b3'}}></i>
-                <p style={{marginTop: '1rem', color: '#666'}}>Loading TTP trends data...</p>
-              </div>
-            ) : trendsData.length === 0 ? (
-              <div style={{textAlign: 'center', padding: '4rem'}}>
-                <i className="fas fa-chart-line" style={{fontSize: '2rem', color: '#ccc'}}></i>
-                <p style={{marginTop: '1rem', color: '#666'}}>No TTP trends data available</p>
-                <p style={{color: '#888', fontSize: '0.9rem'}}>TTP data will appear here as it becomes available</p>
-              </div>
-            ) : null}
           </div>
         </div>
       </div>
@@ -7232,6 +7419,152 @@ function TTPAnalysis({ active }) {
             </div>
           </div>
           
+          {/* TTP Intelligence Filter Panel */}
+          {showFilters && (
+            <div className="filters-panel" style={{borderBottom: '1px solid #e9ecef', padding: '1.5rem', background: '#f8f9fa'}}>
+              <div className="filters-grid" style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem'}}>
+                
+                <div className="filter-group">
+                  <label className="filter-label">Search TTPs</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search TTP names, techniques..."
+                    value={filters.search}
+                    onChange={(e) => setFilters({...filters, search: e.target.value})}
+                  />
+                </div>
+
+                <div className="filter-group">
+                  <label className="filter-label">MITRE Tactic</label>
+                  <select
+                    className="form-control"
+                    value={filters.tactics.length > 0 ? filters.tactics[0] : ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFilters({...filters, tactics: value ? [value] : []});
+                    }}
+                  >
+                    <option value="">All Tactics</option>
+                    {filterOptions?.mitre_tactics?.map(tactic => (
+                      <option key={tactic.value} value={tactic.value}>
+                        {tactic.label} ({tactic.count})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="filter-group">
+                  <label className="filter-label">Threat Feed</label>
+                  <select
+                    className="form-control"
+                    value={filters.threat_feed_ids.length > 0 ? filters.threat_feed_ids[0] : ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFilters({...filters, threat_feed_ids: value ? [parseInt(value)] : []});
+                    }}
+                  >
+                    <option value="">All Feeds</option>
+                    {filterOptions?.threat_feeds?.map(feed => (
+                      <option key={feed.id} value={feed.id.toString()}>
+                        {feed.name} ({feed.ttp_count || 0})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="filter-group">
+                  <label className="filter-label">MITRE Technique</label>
+                  <select
+                    className="form-control"
+                    value={filters.techniques.length > 0 ? filters.techniques[0] : ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFilters({...filters, techniques: value ? [value] : []});
+                    }}
+                  >
+                    <option value="">All Techniques</option>
+                    {filterOptions?.techniques?.map(technique => (
+                      <option key={technique.value} value={technique.value}>
+                        {technique.label} ({technique.count})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="filter-group">
+                  <label className="filter-label">Date Range</label>
+                  <div style={{display: 'flex', gap: '0.5rem'}}>
+                    <input
+                      type="date"
+                      className="form-control"
+                      placeholder="From"
+                      value={filters.date_from}
+                      onChange={(e) => setFilters({...filters, date_from: e.target.value})}
+                      style={{fontSize: '0.85rem'}}
+                    />
+                    <input
+                      type="date"
+                      className="form-control"
+                      placeholder="To"
+                      value={filters.date_to}
+                      onChange={(e) => setFilters({...filters, date_to: e.target.value})}
+                      style={{fontSize: '0.85rem'}}
+                    />
+                  </div>
+                </div>
+
+                <div className="filter-group">
+                  <label className="filter-label">Anonymization Status</label>
+                  <select
+                    className="form-control"
+                    value={filters.anonymized_only}
+                    onChange={(e) => setFilters({...filters, anonymized_only: e.target.value})}
+                  >
+                    <option value="">All Statuses</option>
+                    <option value="true">Anonymized Only</option>
+                    <option value="false">Original Only</option>
+                  </select>
+                </div>
+
+                <div className="filter-group">
+                  <label className="filter-label">Subtechniques</label>
+                  <select
+                    className="form-control"
+                    value={filters.has_subtechniques}
+                    onChange={(e) => setFilters({...filters, has_subtechniques: e.target.value})}
+                  >
+                    <option value="">All TTPs</option>
+                    <option value="true">With Subtechniques</option>
+                    <option value="false">Without Subtechniques</option>
+                  </select>
+                </div>
+
+              </div>
+              
+              <div className="filter-actions" style={{marginTop: '1rem', display: 'flex', gap: '0.5rem'}}>
+                <button 
+                  className="btn btn-outline btn-sm"
+                  onClick={() => setFilters({
+                    search: '', 
+                    tactics: [], 
+                    threat_feed_ids: [], 
+                    techniques: [],
+                    date_from: '',
+                    date_to: '',
+                    anonymized_only: '',
+                    has_subtechniques: ''
+                  })}
+                >
+                  <i className="fas fa-times"></i> Clear Filters
+                </button>
+                <span className="filter-info" style={{fontSize: '0.85rem', color: '#666', marginLeft: 'auto', alignSelf: 'center'}}>
+                  Showing {getFilteredTtpData().length} of {totalCount} TTPs
+                </span>
+              </div>
+            </div>
+          )}
+          
           <div className="card-content">
             <table className="data-table">
               <thead>
@@ -7263,8 +7596,8 @@ function TTPAnalysis({ active }) {
                       <i className="fas fa-spinner fa-spin"></i> Loading threat intelligence...
                     </td>
                   </tr>
-                ) : ttpData.length > 0 ? (
-                  ttpData.map((ttp) => (
+                ) : getFilteredTtpData().length > 0 ? (
+                  getFilteredTtpData().map((ttp) => (
                     <tr key={ttp.id}>
                       <td>{ttp.id}</td>
                       <td>
@@ -7319,6 +7652,16 @@ function TTPAnalysis({ active }) {
                       </td>
                     </tr>
                   ))
+                ) : ttpData.length > 0 ? (
+                  <tr>
+                    <td colSpan="8" style={{textAlign: 'center', padding: '2rem'}}>
+                      <div className="empty-state">
+                        <i className="fas fa-filter"></i>
+                        <p>No TTPs match your current filters</p>
+                        <p className="text-muted">Try adjusting your search criteria</p>
+                      </div>
+                    </td>
+                  </tr>
                 ) : (
                   <tr>
                     <td colSpan="8" style={{textAlign: 'center', padding: '2rem'}}>
@@ -7471,8 +7814,8 @@ function TTPAnalysis({ active }) {
         </div>
       )}
 
-      {/* TTP Trends Chart (shared across relevant tabs) */}
-      {(activeTab === 'matrix' || activeTab === 'list') && (
+      {/* TTP Trends Chart (only shown on list tab) */}
+      {activeTab === 'list' && (
         <div className="card mt-4">
           <div className="card-header">
             <h2 className="card-title"><i className="fas fa-chart-line card-icon"></i> TTP Trends Chart</h2>
@@ -7674,46 +8017,25 @@ function TTPAnalysis({ active }) {
         </div>
       )}
 
-      {/* Recent TTP Analyses (only shown on matrix and list tabs) */}
-      {(activeTab === 'matrix' || activeTab === 'list') && (
+      {/* Recent TTP Analyses (only shown on overview tab) */}
+      {activeTab === 'overview' && (
         <div className="card mt-4">
           <div className="card-header">
             <div className="filters-header">
               <h2 className="card-title"><i className="fas fa-tasks card-icon"></i> Recent TTP Analyses</h2>
               <div className="filter-actions">
-                {loading && (
-                  <span style={{fontSize: '0.85rem', color: '#6c757d'}}>
-                    <i className="fas fa-spinner fa-spin" style={{marginRight: '5px'}}></i>
-                    Filtering...
-                  </span>
-                )}
-                {activeFiltersCount > 0 && (
-                  <span className="filtered-count">
-                    {activeFiltersCount} filter{activeFiltersCount !== 1 ? 's' : ''} applied
-                  </span>
-                )}
                 <button 
-                  className={`btn btn-outline btn-sm ${showFilters ? 'active' : ''}`}
-                  onClick={() => setShowFilters(!showFilters)}
-                  disabled={loading}
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setActiveTab('list')}
                 >
-                  <i className="fas fa-filter"></i> Filters
+                  <i className="fas fa-arrow-right"></i> View All
                 </button>
-                {activeFiltersCount > 0 && (
-                  <button 
-                    className="btn btn-outline btn-sm text-danger"
-                    onClick={clearAllFilters}
-                    title="Clear all filters"
-                  >
-                    <i className="fas fa-times"></i> Clear
-                  </button>
-                )}
               </div>
             </div>
         </div>
 
-          {/* Filter Panel */}
-          {showFilters && (
+          {/* Simplified content - no filters */}
+          {false && (
             <div className="filters-panel" style={{borderBottom: '1px solid #e9ecef', padding: '1.5rem', background: '#f8f9fa'}}>
               <div className="filters-grid" style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem'}}>
                 
@@ -7877,8 +8199,8 @@ function TTPAnalysis({ active }) {
             </div>
           )}
 
-          {/* Active Filters Summary */}
-          {activeFiltersCount > 0 && (
+          {/* No active filters - simplified */}
+          {false && (
             <div className="active-filters-summary" style={{padding: '1rem', borderBottom: '1px solid #e9ecef', background: '#fff'}}>
               <div style={{display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem'}}>
                 <span style={{fontSize: '0.875rem', fontWeight: '600', color: '#495057'}}>
@@ -8035,110 +8357,47 @@ function TTPAnalysis({ active }) {
             </div>
           )}
 
-        <div className="card-content">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th 
-                  className="sortable-header"
-                  onClick={() => handleSort('id')}
-                  style={{cursor: 'pointer', userSelect: 'none'}}
-                >
-                  ID
-                  {getSortIcon('id')}
-                </th>
-                <th 
-                  className="sortable-header"
-                  onClick={() => handleSort('name')}
-                  style={{cursor: 'pointer', userSelect: 'none'}}
-                >
-                  Name
-                  {getSortIcon('name')}
-                </th>
-                <th 
-                  className="sortable-header"
-                  onClick={() => handleSort('mitre_technique_id')}
-                  style={{cursor: 'pointer', userSelect: 'none'}}
-                >
-                  MITRE Technique
-                  {getSortIcon('mitre_technique_id')}
-                </th>
-                <th 
-                  className="sortable-header"
-                  onClick={() => handleSort('mitre_tactic')}
-                  style={{cursor: 'pointer', userSelect: 'none'}}
-                >
-                  Tactic
-                  {getSortIcon('mitre_tactic')}
-                </th>
-                <th>Threat Feed</th>
-                <th 
-                  className="sortable-header"
-                  onClick={() => handleSort('created_at')}
-                  style={{cursor: 'pointer', userSelect: 'none'}}
-                >
-                  Created
-                  {getSortIcon('created_at')}
-                </th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="8" style={{textAlign: 'center', padding: '2rem'}}>
-                    <i className="fas fa-spinner fa-spin"></i> Loading TTPs...
-                  </td>
-                </tr>
-              ) : ttpData.length > 0 ? (
-                ttpData.map((ttp) => (
-                  <tr key={ttp.id}>
-                    <td>{ttp.id}</td>
-                    <td style={{fontSize: '0.9rem', fontWeight: '500'}}>
-                      {ttp.name || `[Debug: ID ${ttp.id}] Missing Name`}
-                    </td>
-                    <td>{ttp.mitre_technique_id}</td>
-                    <td>{ttp.mitre_tactic_display || ttp.mitre_tactic}</td>
-                    <td style={{fontSize: '0.85rem'}}>{ttp.threat_feed ? ttp.threat_feed.name : 'No Feed'}</td>
-                    <td>{new Date(ttp.created_at).toLocaleDateString()}</td>
-                    <td>
+          <div className="card-content">
+            {loading ? (
+              <div style={{textAlign: 'center', padding: '2rem'}}>
+                <i className="fas fa-spinner fa-spin"></i> Loading recent TTPs...
+              </div>
+            ) : ttpData.length > 0 ? (
+              <div className="recent-ttps-grid">
+                {ttpData.slice(0, 10).map((ttp, index) => (
+                  <div key={ttp.id} className="recent-ttp-item">
+                    <div className="ttp-rank">#{index + 1}</div>
+                    <div className="ttp-info">
+                      <div className="ttp-name">{ttp.name || `TTP ${ttp.id}`}</div>
+                      <div className="ttp-technique">{ttp.mitre_technique_id}</div>
+                      <div className="ttp-tactic">{ttp.mitre_tactic_display || ttp.mitre_tactic}</div>
+                    </div>
+                    <div className="ttp-meta">
+                      <div className="ttp-feed">{ttp.threat_feed?.name || 'No Feed'}</div>
+                      <div className="ttp-date">{new Date(ttp.created_at).toLocaleDateString()}</div>
                       <span className={`badge ${ttp.is_anonymized ? 'badge-info' : 'badge-success'}`}>
                         {ttp.is_anonymized ? 'Anonymized' : 'Active'}
                       </span>
-                    </td>
-                    <td>
+                    </div>
+                    <div className="ttp-actions">
                       <button 
                         className="btn btn-outline btn-sm" 
                         title="View TTP Details"
                         onClick={() => openTTPModal(ttp.id)}
-                        style={{marginRight: '5px'}}
                       >
                         <i className="fas fa-eye"></i>
                       </button>
-                      <button className="btn btn-outline btn-sm" title="Share" style={{marginRight: '5px'}}>
-                        <i className="fas fa-share-alt"></i>
-                      </button>
-                      <button 
-                        className="btn btn-outline btn-sm text-danger" 
-                        title="Delete TTP"
-                        onClick={() => deleteTTP(ttp.id)}
-                      >
-                        <i className="fas fa-trash"></i>
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="8" style={{textAlign: 'center', padding: '2rem'}}>
-                    No TTPs found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{textAlign: 'center', padding: '2rem', color: '#6c757d'}}>
+                <i className="fas fa-info-circle" style={{fontSize: '2rem', marginBottom: '1rem'}}></i>
+                <p>No recent TTPs found</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -11603,24 +11862,26 @@ function CSSStyles() {
         }
         
         .mitre-matrix {
-            min-width: 900px;
+            min-width: 1200px;
             border-collapse: collapse;
+            width: 100%;
         }
         
         .mitre-matrix th {
-            background-color: var(--primary-blue);
-            color: white;
-            padding: 12px;
+            background-color: #0056b3 !important;
+            color: white !important;
+            padding: 16px;
             text-align: center;
-            font-size: 14px;
+            font-size: 16px;
+            font-weight: 600;
         }
         
         .matrix-cell {
-            width: 100px;
-            height: 60px;
+            width: 140px;
+            height: 80px;
             border: 1px solid var(--medium-gray);
-            padding: 10px;
-            font-size: 12px;
+            padding: 12px;
+            font-size: 13px;
             vertical-align: top;
             position: relative;
             transition: all 0.3s;
@@ -13744,6 +14005,7 @@ function CSSStyles() {
             font-weight: 500;
             color: var(--text-dark);
             margin-bottom: 0.25rem;
+            font-size: 0.85rem;
         }
 
         .ttp-name-cell .ttp-subtechnique {
@@ -13770,6 +14032,7 @@ function CSSStyles() {
             display: flex;
             flex-direction: column;
             gap: 1.5rem;
+            padding-bottom: 3rem;
         }
 
         .trends-content {
@@ -13833,6 +14096,10 @@ function CSSStyles() {
         }
 
         /* Trend Insights */
+        .trend-insights {
+            margin-top: 2rem;
+        }
+
         .trend-insights h3 {
             margin: 0 0 1rem 0;
             color: var(--text-dark);

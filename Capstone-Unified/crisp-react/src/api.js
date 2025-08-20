@@ -638,6 +638,20 @@ export const addOrganizationToTrustGroup = async (groupId, organizationId) => {
   return await response.json();
 };
 
+export const getTrustGroupMembers = async (groupId) => {
+  const response = await fetch(`${API_BASE_URL}/api/trust-management/groups/${groupId}/members/`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch trust group members');
+  }
+
+  return await response.json();
+};
+
 export const getTrustMetrics = async () => {
   const response = await fetch(`${API_BASE_URL}/api/trust-management/metrics/`, {
     method: 'GET',
