@@ -271,6 +271,7 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
   };
 
   const handleEditOrganization = async (organizationId) => {
+    console.log('handleEditOrganization called with ID:', organizationId);
     try {
       setModalLoading(true);
       setError(null); // Clear any previous errors
@@ -331,6 +332,7 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
   };
 
   const handleViewOrganization = async (organizationId) => {
+    console.log('handleViewOrganization called with ID:', organizationId);
     try {
       setModalLoading(true);
       setError(null); // Clear any previous errors
@@ -378,6 +380,7 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
       
       console.log('Setting form data for view:', formDataToSet);
       setFormData(formDataToSet);
+      setModalMode('view');
       setShowModal(true);
     } catch (err) {
       console.error('Error in handleViewOrganization:', err);
@@ -741,6 +744,7 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
   const totalItems = filteredOrganizations.length;
 
   const handleOrganizationClick = (organization) => {
+    console.log('Organization card clicked:', organization.name, organization.id);
     setSelectedOrganizationForActions(organization);
     setShowActionsPopup(true);
   };
@@ -1476,6 +1480,7 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
             }}>
               <button
                 onClick={() => {
+                  console.log('View Details clicked for organization:', selectedOrganizationForActions.id);
                   closeActionsPopup();
                   handleViewOrganization(selectedOrganizationForActions.id);
                 }}
@@ -1499,6 +1504,7 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
               
               <button
                 onClick={() => {
+                  console.log('Edit Organisation clicked for organization:', selectedOrganizationForActions.id);
                   closeActionsPopup();
                   handleEditOrganization(selectedOrganizationForActions.id);
                 }}

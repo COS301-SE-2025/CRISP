@@ -9405,6 +9405,13 @@ function Organisations({ active }) {
   const [error, setError] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState(null);
+  const [orgModalMode, setOrgModalMode] = useState('view');
+  const [showOrgModal, setShowOrgModal] = useState(false);
+  const [orgValidationErrors, setOrgValidationErrors] = useState({});
+  const [orgValidationChecking, setOrgValidationChecking] = useState({});
+  const [isOrgFormValid, setIsOrgFormValid] = useState(false);
+  const [orgModalLoading, setOrgModalLoading] = useState(false);
+  const [orgSubmitting, setOrgSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     domain: '',
@@ -9616,11 +9623,27 @@ function Organisations({ active }) {
                           <div className="actions">
                             <button 
                               className="btn btn-sm btn-outline"
-                              onClick={() => setSelectedOrg(org)}
+                              onClick={() => {
+                                console.log('View button clicked for org:', org.name, org.id);
+                                setSelectedOrg(org);
+                                setOrgModalMode('view');
+                                setShowOrgModal(true);
+                                console.log('Modal state set - showOrgModal:', true, 'modalMode:', 'view');
+                              }}
                             >
                               <i className="fas fa-eye"></i>
                             </button>
-                            <button className="btn btn-sm btn-outline">
+                            <button 
+                              className="btn btn-sm btn-primary"
+                              onClick={() => {
+                                console.log('Edit button clicked for org:', org.name, org.id);
+                                setSelectedOrg(org);
+                                setOrgModalMode('edit');
+                                setShowOrgModal(true);
+                                console.log('Modal state set - showOrgModal:', true, 'modalMode:', 'edit');
+                              }}
+                              style={{ marginLeft: '0.5rem' }}
+                            >
                               <i className="fas fa-edit"></i>
                             </button>
                           </div>
@@ -9805,70 +9828,247 @@ function Organisations({ active }) {
         </div>
       )}
 
-      {/* Organization Details Modal */}
-      {selectedOrg && (
-        <div className="modal-overlay" onClick={() => setSelectedOrg(null)}>
-          <div className="modal large" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{selectedOrg.name}</h3>
-              <button 
-                className="close-btn"
-                onClick={() => setSelectedOrg(null)}
+      {/* Enhanced Organization Details Modal */}
+      {showOrgModal && selectedOrg && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+            width: '90%',
+            maxWidth: '600px',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{
+              padding: '1.5rem',
+              borderBottom: '1px solid #e9ecef',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{ marginBottom: 0, color: '#333' }}>
+                {orgModalMode === 'view' ? 'View Organisation' : 'Edit Organisation'}
+              </h2>
+              <button
+                onClick={() => {
+                  setShowOrgModal(false);
+                  setSelectedOrg(null);
+                  setOrgValidationErrors({});
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  color: '#999',
+                  cursor: 'pointer',
+                  padding: '0',
+                  width: '30px',
+                  height: '30px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
               >
-                <i className="fas fa-times"></i>
+                ×
               </button>
             </div>
-            <div className="modal-body">
-              <div className="org-details">
-                <div className="detail-row">
-                  <label>Name:</label>
-                  <span>{selectedOrg.name}</span>
+            
+            <div style={{ padding: '1.5rem' }}>
+              {orgModalLoading ? (
+                <div style={{ textAlign: 'center', padding: '2rem' }}>
+                  <div>Loading organization details...</div>
                 </div>
-                <div className="detail-row">
-                  <label>Type:</label>
-                  <span>{selectedOrg.organization_type || 'Not specified'}</span>
-                </div>
-                <div className="detail-row">
-                  <label>Domain:</label>
-                  <span>{selectedOrg.domain || 'Not specified'}</span>
-                </div>
-                <div className="detail-row">
-                  <label>Contact Email:</label>
-                  <span>{selectedOrg.contact_email || 'Not specified'}</span>
-                </div>
-                <div className="detail-row">
-                  <label>Website:</label>
-                  <span>
-                    {selectedOrg.website ? (
-                      <a href={selectedOrg.website} target="_blank" rel="noopener noreferrer">
-                        {selectedOrg.website}
-                      </a>
-                    ) : 'Not specified'}
-                  </span>
-                </div>
-                <div className="detail-row">
-                  <label>Description:</label>
-                  <span>{selectedOrg.description || 'No description provided'}</span>
-                </div>
-                <div className="detail-row">
-                  <label>Members:</label>
-                  <span>{selectedOrg.member_count || 0}</span>
-                </div>
-                <div className="detail-row">
-                  <label>Status:</label>
-                  <span className={`status-badge ${selectedOrg.is_active ? 'active' : 'inactive'}`}>
-                    {selectedOrg.is_active ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-              </div>
+              ) : (
+                <form onSubmit={(e) => e.preventDefault()}>
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: '#333' }}>
+                      Organisation Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={selectedOrg.name || ''}
+                      disabled={orgModalMode === 'view'}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        backgroundColor: orgModalMode === 'view' ? '#f8f9fa' : 'white',
+                        color: '#333'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: '#333' }}>
+                      Domain
+                    </label>
+                    <input
+                      type="text"
+                      value={selectedOrg.domain || ''}
+                      disabled={orgModalMode === 'view'}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        backgroundColor: orgModalMode === 'view' ? '#f8f9fa' : 'white',
+                        color: '#333'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: '#333' }}>
+                      Contact Email *
+                    </label>
+                    <input
+                      type="email"
+                      value={selectedOrg.contact_email || ''}
+                      disabled={orgModalMode === 'view'}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        backgroundColor: orgModalMode === 'view' ? '#f8f9fa' : 'white',
+                        color: '#333'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: '#333' }}>
+                      Organisation Type *
+                    </label>
+                    <select
+                      value={selectedOrg.organization_type || 'educational'}
+                      disabled={orgModalMode === 'view'}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        backgroundColor: orgModalMode === 'view' ? '#f8f9fa' : 'white',
+                        color: '#333'
+                      }}
+                    >
+                      <option value="educational">Educational</option>
+                      <option value="government">Government</option>
+                      <option value="private">Private</option>
+                    </select>
+                  </div>
+
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: '#333' }}>
+                      Description
+                    </label>
+                    <textarea
+                      value={selectedOrg.description || ''}
+                      disabled={orgModalMode === 'view'}
+                      rows="3"
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        backgroundColor: orgModalMode === 'view' ? '#f8f9fa' : 'white',
+                        color: '#333',
+                        resize: 'vertical'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: '#333' }}>
+                      Website
+                    </label>
+                    <input
+                      type="url"
+                      value={selectedOrg.website || ''}
+                      disabled={orgModalMode === 'view'}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        backgroundColor: orgModalMode === 'view' ? '#f8f9fa' : 'white',
+                        color: '#333'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: '#333' }}>
+                      Status
+                    </label>
+                    <span className={`status-badge ${selectedOrg.is_active ? 'active' : 'inactive'}`}>
+                      {selectedOrg.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: '#333' }}>
+                      Members
+                    </label>
+                    <span style={{ color: '#666' }}>{selectedOrg.member_count || 0}</span>
+                  </div>
+                </form>
+              )}
             </div>
-            <div className="modal-footer">
-              <button 
-                className="btn btn-secondary"
-                onClick={() => setSelectedOrg(null)}
+            
+            <div style={{
+              padding: '1.5rem',
+              borderTop: '1px solid #e9ecef',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '1rem'
+            }}>
+              <button
+                onClick={() => {
+                  setShowOrgModal(false);
+                  setSelectedOrg(null);
+                  setOrgValidationErrors({});
+                }}
+                style={{
+                  padding: '0.5rem 1rem',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                  backgroundColor: 'white',
+                  color: '#333',
+                  cursor: 'pointer'
+                }}
               >
-                Close
+                {orgModalMode === 'view' ? 'Close' : 'Cancel'}
               </button>
+              {orgModalMode === 'edit' && (
+                <button
+                  type="submit"
+                  disabled={orgSubmitting}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    border: 'none',
+                    borderRadius: '4px',
+                    backgroundColor: orgSubmitting ? '#ccc' : '#007bff',
+                    color: 'white',
+                    cursor: orgSubmitting ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {orgSubmitting ? 'Saving...' : 'Save Changes'}
+                </button>
+              )}
             </div>
           </div>
         </div>
