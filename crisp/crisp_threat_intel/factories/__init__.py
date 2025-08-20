@@ -1,1 +1,0 @@
-# STIX object factories package

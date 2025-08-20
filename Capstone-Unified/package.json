@@ -1,0 +1,35 @@
+{
+  "name": "crisp-unified-platform",
+  "version": "1.0.0",
+  "description": "CRISP Trust Management Platform - Complete Test Suite",
+  "scripts": {
+    "test:all": "./run-all-tests.sh",
+    "test:quick": "./run-quick-tests.sh",
+    "test:backend": "python manage.py run_orchestrated_tests",
+    "test:frontend": "cd crisp-react && npm run test:all",
+    "test:e2e": "cd crisp-react && npm run test:e2e",
+    "test:integration": "cd crisp-react && npm run test:integration",
+    "install:all": "pip install -r requirements.txt && cd crisp-react && npm install",
+    "setup:test": "npm run install:all && cd crisp-react && npm run playwright:install",
+    "ci:test": "./run-all-tests.sh --verbose",
+    "dev:test": "./run-quick-tests.sh"
+  },
+  "keywords": [
+    "crisp",
+    "trust-management",
+    "threat-intelligence",
+    "django",
+    "react",
+    "testing"
+  ],
+  "author": "CRISP Development Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "."
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "python": ">=3.8.0"
+  }
+}

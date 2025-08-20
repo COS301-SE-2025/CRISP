@@ -1,0 +1,41 @@
+---
+env:
+  contexts:
+    - name: "CRISP_vite"
+      urls:
+        - "http://127.0.0.1:5173"
+      includePaths:
+        - "http://127.0.0.1:5173/.*"
+      excludePaths: []
+  parameters:
+    failOnError: false
+    failOnWarning: false
+    progressToStdout: true
+
+jobs:
+  - type: spider
+    parameters:
+      context: "CRISP_vite"
+      url: "http://127.0.0.1:5173"
+      maxDuration: 2
+      maxDepth: 5
+      numberOfThreads: 5
+      
+  - type: activeScan
+    parameters:
+      context: "CRISP_vite"
+      policy: "Default Policy"
+      maxRuleDurationInMins: 1
+      maxScanDurationInMins: 5
+      
+  - type: report
+    parameters:
+      template: "traditional-html"
+      reportDir: "/mnt/c/Users/jadyn/Documents/University of Pretoria/2025/Capstone/Capstone-Unified/security-testing/reports/20250819_195658"
+      reportFile: "zap_vite_report.html"
+      
+  - type: report
+    parameters:
+      template: "traditional-json"
+      reportDir: "/mnt/c/Users/jadyn/Documents/University of Pretoria/2025/Capstone/Capstone-Unified/security-testing/reports/20250819_195658"
+      reportFile: "zap_vite_report.json"
