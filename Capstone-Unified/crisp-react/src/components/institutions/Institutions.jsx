@@ -573,7 +573,7 @@ const Institutions = ({ active, api, showPage, user }) => {
             <div style={{
               background: 'white',
               borderRadius: '8px',
-              padding: '1.5rem',
+              padding: '1.2rem',
               boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
               border: '1px solid #e5e7eb'
             }}>
@@ -667,9 +667,12 @@ const Institutions = ({ active, api, showPage, user }) => {
             <div style={{
               background: 'white',
               borderRadius: '8px',
-              padding: '1.5rem',
+              padding: '1.2rem',
               boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              border: '1px solid #e5e7eb'
+              border: '1px solid #e5e7eb',
+              height: '234px',
+              display: 'flex',
+              flexDirection: 'column'
             }}>
               <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem'}}>
                 <h3 style={{margin: 0, fontSize: '1.125rem', fontWeight: '600', color: '#333'}}>Trust Groups</h3>
@@ -682,55 +685,68 @@ const Institutions = ({ active, api, showPage, user }) => {
               </div>
               
               <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '1rem'
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: '0.75rem',
+                flex: 1,
+                overflow: 'hidden'
               }}>
                 {trustGroups.length === 0 ? (
                   <div style={{
+                    gridColumn: '1 / -1',
                     textAlign: 'center',
-                    padding: '2rem',
-                    color: '#666'
+                    padding: '1rem',
+                    color: '#666',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center'
                   }}>
-                    <i className="fas fa-users" style={{fontSize: '2rem', marginBottom: '1rem', opacity: 0.3}}></i>
-                    <div>No trust groups found</div>
+                    <i className="fas fa-users" style={{fontSize: '1.5rem', marginBottom: '0.5rem', opacity: 0.3}}></i>
+                    <div style={{fontSize: '0.875rem'}}>No trust groups found</div>
                   </div>
                 ) : (
-                  trustGroups.slice(0, 3).map((group, index) => (
+                  trustGroups.slice(0, 2).map((group, index) => (
                     <div key={index} style={{
-                      padding: '1rem',
+                      padding: '0.6rem',
                       border: '1px solid #e5e7eb',
                       borderRadius: '6px',
-                      background: '#f9fafb'
+                      background: '#f9fafb',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      height: '120px'
                     }}>
-                      <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem'}}>
-                        <i className="fas fa-users" style={{
-                          color: '#667eea',
-                          fontSize: '1rem'
-                        }}></i>
-                        <h4 style={{margin: 0, fontSize: '0.875rem', fontWeight: '600', color: '#333'}}>
-                          {group.name}
-                        </h4>
+                      <div>
+                        <div style={{display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem'}}>
+                          <i className="fas fa-users" style={{
+                            color: '#667eea',
+                            fontSize: '0.75rem'
+                          }}></i>
+                          <h4 style={{margin: 0, fontSize: '0.75rem', fontWeight: '600', color: '#333', lineHeight: 1.2}}>
+                            {group.name.length > 12 ? group.name.substring(0, 12) + '...' : group.name}
+                          </h4>
+                        </div>
+                        
+                        {group.description && (
+                          <p style={{
+                            fontSize: '0.65rem',
+                            color: '#666',
+                            margin: '0 0 0.4rem 0',
+                            lineHeight: 1.2
+                          }}>
+                            {group.description.length > 35 ? group.description.substring(0, 35) + '...' : group.description}
+                          </p>
+                        )}
                       </div>
                       
-                      {group.description && (
-                        <p style={{
-                          fontSize: '0.75rem',
-                          color: '#666',
-                          margin: '0 0 0.5rem 0',
-                          lineHeight: 1.4
-                        }}>
-                          {group.description.length > 60 ? group.description.substring(0, 60) + '...' : group.description}
-                        </p>
-                      )}
-                      
-                      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                        <span style={{fontSize: '0.625rem', color: '#666'}}>
+                      <div style={{marginTop: 'auto'}}>
+                        <div style={{fontSize: '0.55rem', color: '#666', marginBottom: '0.2rem'}}>
                           {group.member_count || 0} members
-                        </span>
+                        </div>
                         <span style={{
-                          fontSize: '0.5rem',
-                          padding: '0.125rem 0.25rem',
+                          fontSize: '0.45rem',
+                          padding: '0.1rem 0.2rem',
                           borderRadius: '3px',
                           backgroundColor: group.is_active ? '#dcfce7' : '#fee2e2',
                           color: group.is_active ? '#166534' : '#dc2626',
