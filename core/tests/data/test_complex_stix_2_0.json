@@ -1,0 +1,298 @@
+{
+  "type": "bundle",
+  "id": "bundle--5d0092c5-5f74-4287-9642-33f4c354e56d",
+  "objects": [
+    {
+      "type": "indicator",
+      "id": "indicator--8e2e2d2b-17d4-4cbf-938f-98ee46b3cd3f",
+      "created": "2017-01-01T12:34:56.000Z",
+      "modified": "2017-01-01T12:34:56.000Z",
+      "name": "APT Group XYZ C2 Server",
+      "description": "Command and Control server used by APT Group XYZ. This server hosts malware at the URL https://malicious-domain.example/payload.exe and communicates on IP address 192.168.56.101.",
+      "labels": [
+        "malicious-activity",
+        "command-and-control",
+        "apt"
+      ],
+      "valid_from": "2017-01-01T00:00:00.000Z",
+      "pattern": "[ipv4-addr:value = '192.168.56.101'] OR [domain-name:value = 'malicious-domain.example'] OR [url:value = 'https://malicious-domain.example/payload.exe']",
+      "created_by_ref": "identity--f431f809-377b-45e0-aa1c-6a4751cae5ff",
+      "object_marking_refs": [
+        "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
+      ]
+    },
+    {
+      "type": "malware",
+      "id": "malware--31b940d4-6f7f-459a-80ea-9c1f17b58abc",
+      "created": "2017-01-01T12:34:56.000Z",
+      "modified": "2017-01-01T12:34:56.000Z",
+      "name": "RIPTIDE",
+      "description": "RIPTIDE is a remote access trojan (RAT) used by APT Group XYZ since 2016. It is typically delivered via spear-phishing emails containing malicious Word documents. The backdoor communicates with C2 servers at 192.168.56.101 and exfiltrates data using steganography techniques.",
+      "labels": [
+        "remote-access-trojan",
+        "backdoor"
+      ],
+      "created_by_ref": "identity--f431f809-377b-45e0-aa1c-6a4751cae5ff",
+      "object_marking_refs": [
+        "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
+      ]
+    },
+    {
+      "type": "relationship",
+      "id": "relationship--20a3489f-f95f-4dcd-a93f-5080cc4f3596",
+      "created": "2017-01-01T12:34:56.000Z",
+      "modified": "2017-01-01T12:34:56.000Z",
+      "relationship_type": "indicates",
+      "source_ref": "indicator--8e2e2d2b-17d4-4cbf-938f-98ee46b3cd3f",
+      "target_ref": "malware--31b940d4-6f7f-459a-80ea-9c1f17b58abc",
+      "created_by_ref": "identity--f431f809-377b-45e0-aa1c-6a4751cae5ff",
+      "object_marking_refs": [
+        "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
+      ]
+    },
+    {
+      "type": "identity",
+      "id": "identity--f431f809-377b-45e0-aa1c-6a4751cae5ff",
+      "created": "2017-01-01T12:34:56.000Z",
+      "modified": "2017-01-01T12:34:56.000Z",
+      "name": "ACME Cybersecurity",
+      "identity_class": "organization",
+      "contact_information": "info@acme-security.example.com, tel:+1-555-123-4567",
+      "sectors": [
+        "technology"
+      ]
+    },
+    {
+      "type": "marking-definition",
+      "id": "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da",
+      "created": "2017-01-01T12:34:56.000Z",
+      "definition_type": "tlp",
+      "definition": {
+        "tlp": "AMBER"
+      }
+    },
+    {
+      "type": "campaign",
+      "id": "campaign--83422c77-904c-4dc1-aff5-5c38f3a2c55c",
+      "created": "2017-01-01T12:34:56.000Z",
+      "modified": "2017-01-01T12:34:56.000Z",
+      "name": "Operation BlackWinter",
+      "description": "Operation BlackWinter is a cyber espionage campaign targeting critical infrastructure organizations. Attackers use spear-phishing emails sent from compromised accounts like admin@target-org.example.com and deploy the RIPTIDE malware to establish persistence.",
+      "aliases": [
+        "BlackWinter",
+        "Winter Bear"
+      ],
+      "first_seen": "2016-12-01T00:00:00.000Z",
+      "objective": "espionage",
+      "created_by_ref": "identity--f431f809-377b-45e0-aa1c-6a4751cae5ff",
+      "object_marking_refs": [
+        "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
+      ]
+    },
+    {
+      "type": "relationship",
+      "id": "relationship--2cab14de-1d1b-4e54-a914-9c77f1e29a26",
+      "created": "2017-01-01T12:34:56.000Z",
+      "modified": "2017-01-01T12:34:56.000Z",
+      "relationship_type": "uses",
+      "source_ref": "campaign--83422c77-904c-4dc1-aff5-5c38f3a2c55c",
+      "target_ref": "malware--31b940d4-6f7f-459a-80ea-9c1f17b58abc",
+      "created_by_ref": "identity--f431f809-377b-45e0-aa1c-6a4751cae5ff",
+      "object_marking_refs": [
+        "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
+      ]
+    },
+    {
+      "type": "threat-actor",
+      "id": "threat-actor--56f3f0db-b5d5-431c-ae56-c18f02caf500",
+      "created": "2017-01-01T12:34:56.000Z",
+      "modified": "2017-01-01T12:34:56.000Z",
+      "name": "APT Group XYZ",
+      "description": "APT Group XYZ is a sophisticated threat actor that has been active since at least 2015. The group primarily targets organizations in the energy, finance, and government sectors. They use spear-phishing emails with malicious attachments sent from spoofed addresses like ceo@victim-org.example.com. Their infrastructure includes command and control servers at 192.168.56.101 and 192.168.56.102.",
+      "labels": [
+        "nation-state",
+        "apt"
+      ],
+      "aliases": [
+        "Cozy Panda",
+        "Hidden Dragon"
+      ],
+      "roles": [
+        "agent"
+      ],
+      "goals": [
+        "espionage",
+        "intellectual property theft"
+      ],
+      "sophistication": "advanced",
+      "resource_level": "government",
+      "primary_motivation": "organizational-gain",
+      "created_by_ref": "identity--f431f809-377b-45e0-aa1c-6a4751cae5ff",
+      "object_marking_refs": [
+        "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
+      ]
+    },
+    {
+      "type": "relationship",
+      "id": "relationship--2f3615e5-89e9-4bcc-9e21-01181102d67f",
+      "created": "2017-01-01T12:34:56.000Z",
+      "modified": "2017-01-01T12:34:56.000Z",
+      "relationship_type": "attributed-to",
+      "source_ref": "campaign--83422c77-904c-4dc1-aff5-5c38f3a2c55c",
+      "target_ref": "threat-actor--56f3f0db-b5d5-431c-ae56-c18f02caf500",
+      "created_by_ref": "identity--f431f809-377b-45e0-aa1c-6a4751cae5ff",
+      "object_marking_refs": [
+        "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
+      ]
+    },
+    {
+      "type": "attack-pattern",
+      "id": "attack-pattern--19da6e1c-71ab-4c2f-886d-d620d09d3b5a",
+      "created": "2017-01-01T12:34:56.000Z",
+      "modified": "2017-01-01T12:34:56.000Z",
+      "name": "Spearphishing Attachment",
+      "description": "Adversaries may send spearphishing emails with a malicious attachment in an attempt to gain access to victim systems. Spearphishing attachments are different from other forms of spearphishing in that they employ malware attached to an email. The attachment may be an office document with embedded macros that connect to 192.168.56.103 to download additional payloads.",
+      "kill_chain_phases": [
+        {
+          "kill_chain_name": "mitre-attack",
+          "phase_name": "initial-access"
+        }
+      ],
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "T1193",
+          "url": "https://attack.mitre.org/techniques/T1193/"
+        }
+      ],
+      "created_by_ref": "identity--f431f809-377b-45e0-aa1c-6a4751cae5ff",
+      "object_marking_refs": [
+        "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
+      ]
+    },
+    {
+      "type": "relationship",
+      "id": "relationship--3b73ef0b-cef3-45f0-ab8e-e7cfb756d637",
+      "created": "2017-01-01T12:34:56.000Z",
+      "modified": "2017-01-01T12:34:56.000Z",
+      "relationship_type": "uses",
+      "source_ref": "threat-actor--56f3f0db-b5d5-431c-ae56-c18f02caf500",
+      "target_ref": "attack-pattern--19da6e1c-71ab-4c2f-886d-d620d09d3b5a",
+      "created_by_ref": "identity--f431f809-377b-45e0-aa1c-6a4751cae5ff",
+      "object_marking_refs": [
+        "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
+      ]
+    },
+    {
+      "type": "observed-data",
+      "id": "observed-data--b67d30ff-02ac-498a-92f9-32f845f448cf",
+      "created": "2017-01-01T12:34:56.000Z",
+      "modified": "2017-01-01T12:34:56.000Z",
+      "first_observed": "2017-01-01T00:00:00.000Z",
+      "last_observed": "2017-01-01T00:00:00.000Z",
+      "number_observed": 1,
+      "objects": {
+        "0": {
+          "type": "file",
+          "hashes": {
+            "MD5": "11b25b4240f5046f6ccf574a4dcd6c61",
+            "SHA-1": "a0a1f8a71e634326cb933bec073f4a458118ba12",
+            "SHA-256": "2e7bc4c1d4291a023fce48d0a75dcfd142cae0b3fb0202affe7211ccb2f6d37a"
+          },
+          "name": "Invoice_January2017.doc",
+          "size": 245760
+        },
+        "1": {
+          "type": "email-addr",
+          "value": "finance@victim-org.example.com"
+        },
+        "2": {
+          "type": "email-message",
+          "is_multipart": true,
+          "from_ref": "1",
+          "subject": "January Invoice",
+          "received_lines": [
+            "from mail.sender.example.com ([192.168.56.104]) by mail.victim-org.example.com with ESMTP"
+          ],
+          "body_multipart": [
+            {
+              "content_type": "text/plain",
+              "content": "Please find attached our invoice for January 2017."
+            },
+            {
+              "content_type": "application/msword",
+              "content_disposition": "attachment; filename=\"Invoice_January2017.doc\"",
+              "body_raw_ref": "0"
+            }
+          ]
+        }
+      },
+      "created_by_ref": "identity--f431f809-377b-45e0-aa1c-6a4751cae5ff",
+      "object_marking_refs": [
+        "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
+      ]
+    },
+    {
+      "type": "relationship",
+      "id": "relationship--5fb178c8-b3f3-4e45-b477-f911a44092e6",
+      "created": "2017-01-01T12:34:56.000Z",
+      "modified": "2017-01-01T12:34:56.000Z",
+      "relationship_type": "uses",
+      "source_ref": "malware--31b940d4-6f7f-459a-80ea-9c1f17b58abc",
+      "target_ref": "attack-pattern--19da6e1c-71ab-4c2f-886d-d620d09d3b5a",
+      "created_by_ref": "identity--f431f809-377b-45e0-aa1c-6a4751cae5ff",
+      "object_marking_refs": [
+        "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
+      ]
+    },
+    {
+      "type": "report",
+      "id": "report--84e4d88f-44ea-4bcd-bbf3-b2c1c320bcb3",
+      "created": "2017-01-02T12:34:56.000Z",
+      "modified": "2017-01-02T12:34:56.000Z",
+      "name": "APT Group XYZ Campaign Analysis",
+      "description": "This report provides analysis of the Operation BlackWinter campaign attributed to APT Group XYZ. The attackers used spear-phishing emails with malicious Word documents to deliver the RIPTIDE malware. Command and control infrastructure includes servers at 192.168.56.101, 192.168.56.102, and 192.168.56.103. Exfiltration was conducted through encrypted channels to domains malicious-domain.example and exfil.evil-domain.example.",
+      "published": "2017-01-02T00:00:00.000Z",
+      "labels": [
+        "threat-report"
+      ],
+      "object_refs": [
+        "indicator--8e2e2d2b-17d4-4cbf-938f-98ee46b3cd3f",
+        "malware--31b940d4-6f7f-459a-80ea-9c1f17b58abc",
+        "campaign--83422c77-904c-4dc1-aff5-5c38f3a2c55c",
+        "threat-actor--56f3f0db-b5d5-431c-ae56-c18f02caf500",
+        "attack-pattern--19da6e1c-71ab-4c2f-886d-d620d09d3b5a",
+        "observed-data--b67d30ff-02ac-498a-92f9-32f845f448cf"
+      ],
+      "created_by_ref": "identity--f431f809-377b-45e0-aa1c-6a4751cae5ff",
+      "object_marking_refs": [
+        "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
+      ]
+    },
+    {
+      "type": "course-of-action",
+      "id": "course-of-action--8e2e2d2b-17d4-4cbf-938f-98ee46b3cd3f",
+      "created": "2017-01-02T12:34:56.000Z",
+      "modified": "2017-01-02T12:34:56.000Z",
+      "name": "Block C2 Traffic",
+      "description": "Block outbound traffic to known C2 servers used by APT Group XYZ, including 192.168.56.101, 192.168.56.102, and 192.168.56.103. Also block DNS resolution for malicious-domain.example and exfil.evil-domain.example.",
+      "created_by_ref": "identity--f431f809-377b-45e0-aa1c-6a4751cae5ff",
+      "object_marking_refs": [
+        "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
+      ]
+    },
+    {
+      "type": "relationship",
+      "id": "relationship--b2cfd4ee-ef18-4b42-b16a-13cae793f5e8",
+      "created": "2017-01-02T12:34:56.000Z",
+      "modified": "2017-01-02T12:34:56.000Z",
+      "relationship_type": "mitigates",
+      "source_ref": "course-of-action--8e2e2d2b-17d4-4cbf-938f-98ee46b3cd3f",
+      "target_ref": "indicator--8e2e2d2b-17d4-4cbf-938f-98ee46b3cd3f",
+      "created_by_ref": "identity--f431f809-377b-45e0-aa1c-6a4751cae5ff",
+      "object_marking_refs": [
+        "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
+      ]
+    }
+  ]
+}
