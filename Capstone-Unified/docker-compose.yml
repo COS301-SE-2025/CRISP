@@ -69,8 +69,18 @@ services:
              python manage.py migrate &&
              python manage.py setup_base_users &&
              if [ \"$$POPULATE_TEST_DATA\" = \"true\" ]; then
-               echo 'Populating test data...' &&
-               python manage.py populate_database --no-input;
+               echo 'Populating base data...' &&
+               python manage.py populate_database --no-input &&
+               echo 'Populating TTP data...' &&
+               python manage.py populate_ttp_data --count 250 --clear-existing &&
+               echo 'Populating OTX threat intelligence...' &&
+               python manage.py populate_otx_threats --create-feeds --limit 100 &&
+               echo 'Populating trust data...' &&
+               python manage.py populate_trust_data --relationships 100 --fix-tables &&
+               echo 'Populating reports demo data...' &&
+               python manage.py populate_reports_demo &&
+               echo 'Publishing feeds...' &&
+               python manage.py publish_feeds;
              fi &&
              python manage.py collectstatic --noinput &&
              python manage.py runserver 0.0.0.0:8000"
@@ -80,13 +90,14 @@ services:
     build:
       context: .
       target: frontend-dev
+    working_dir: /app/crisp-react
     ports:
       - "5173:5173"
     environment:
       - VITE_API_URL=http://localhost:8000
     volumes:
-      - ./crisp-react:/app
-      - /app/node_modules
+      - .:/app
+      - /app/crisp-react/node_modules
     depends_on:
       - backend
     networks:
@@ -126,8 +137,18 @@ services:
              python manage.py migrate &&
              python manage.py setup_base_users &&
              if [ \"$$POPULATE_TEST_DATA\" = \"true\" ]; then
-               echo 'Populating test data...' &&
-               python manage.py populate_database --no-input;
+               echo 'Populating comprehensive test data...' &&
+               python manage.py populate_database --no-input &&
+               echo 'Populating TTP data with larger dataset...' &&
+               python manage.py populate_ttp_data --count 500 --clear-existing --days-back 180 &&
+               echo 'Populating OTX threat intelligence...' &&
+               python manage.py populate_otx_threats --create-feeds --limit 200 &&
+               echo 'Populating trust data...' &&
+               python manage.py populate_trust_data --relationships 200 --fix-tables &&
+               echo 'Populating reports demo data...' &&
+               python manage.py populate_reports_demo &&
+               echo 'Publishing feeds...' &&
+               python manage.py publish_feeds;
              fi &&
              python manage.py collectstatic --noinput &&
              python manage.py runserver 0.0.0.0:8000"
