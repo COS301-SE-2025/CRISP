@@ -38,12 +38,12 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y postgresql-client libpq-dev
+        sudo apt-get install -y postgresql-client
         
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r Capstone-Unified/requirements.txt
+        pip install -r crisp/requirements.txt
         pip install pytest pytest-cov coverage pytest-django
         pip install flake8 bandit safety
         
