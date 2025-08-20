@@ -273,8 +273,12 @@ function App({ user, onLogout, isAdmin }) {
           />
           <TTPAnalysis active={activePage === 'ttp-analysis'} />
           <Institutions active={activePage === 'institutions'} api={api} showPage={showPage} user={user} />
+          <OrganisationManagement active={activePage === 'organisation-management'} />
+          <TrustManagement active={activePage === 'trust-management'} />
+          <UserManagement active={activePage === 'user-management'} />
           <Reports active={activePage === 'reports'} />
           <UserProfile active={activePage === 'profile'} />
+          <AccountSettings active={activePage === 'account-settings'} />
         </div>
       </main>
       <CSSStyles />

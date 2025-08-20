@@ -581,7 +581,7 @@ const Institutions = ({ active, api, showPage, user }) => {
               <h3 style={{margin: 0, fontSize: '1.125rem', fontWeight: '600', color: '#333'}}>Recent Organizations</h3>
               <button 
                 className="btn btn-sm btn-outline"
-                onClick={() => setActiveView('organizations')}
+                onClick={() => showPage('organisation-management')}
               >
                 <i className="fas fa-arrow-right"></i> View All ({organizations.length})
               </button>
@@ -678,7 +678,7 @@ const Institutions = ({ active, api, showPage, user }) => {
                 <h3 style={{margin: 0, fontSize: '1.125rem', fontWeight: '600', color: '#333'}}>Trust Groups</h3>
                 <button 
                   className="btn btn-sm btn-outline"
-                  onClick={() => setActiveView('trust-groups')}
+                  onClick={() => showPage('trust-management')}
                 >
                   <i className="fas fa-arrow-right"></i> View All ({trustGroups.length})
                 </button>
@@ -775,7 +775,7 @@ const Institutions = ({ active, api, showPage, user }) => {
               <h3 style={{margin: 0, fontSize: '1.125rem', fontWeight: '600', color: '#333'}}>Trust Relationships</h3>
               <button 
                 className="btn btn-sm btn-outline"
-                onClick={() => setActiveView('trust-relationships')}
+                onClick={() => showPage('trust-management')}
               >
                 <i className="fas fa-arrow-right"></i> View All ({trustRelationships.length})
               </button>
