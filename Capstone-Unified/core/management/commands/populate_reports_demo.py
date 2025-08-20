@@ -157,6 +157,13 @@ class Command(BaseCommand):
         # Get available trust levels
         trust_levels = list(TrustLevel.objects.filter(is_active=True).order_by('numerical_value'))
         
+        # If no trust levels exist, create basic ones
+        if not trust_levels:
+            self.stdout.write("No trust levels found, creating basic trust levels...")
+            from django.core.management import call_command
+            call_command('init_trust_levels')
+            trust_levels = list(TrustLevel.objects.filter(is_active=True).order_by('numerical_value'))
+        
         for i, source_org in enumerate(organizations):
             for target_org in organizations[i+1:]:
                 if random.random() < 0.8:  # 80% chance of relationship
@@ -167,6 +174,11 @@ class Command(BaseCommand):
                     ]
                     if not suitable_levels:
                         suitable_levels = trust_levels
+                    
+                    # Fallback if still no levels available
+                    if not suitable_levels:
+                        self.stdout.write("Warning: No trust levels available, skipping trust relationships")
+                        return
                     
                     trust_level = random.choice(suitable_levels)
                     TrustRelationship.objects.get_or_create(

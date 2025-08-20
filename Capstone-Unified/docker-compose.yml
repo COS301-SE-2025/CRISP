@@ -67,6 +67,8 @@ services:
     command: >
       sh -c "until pg_isready -h db -p 5432; do echo 'Waiting for db...'; sleep 2; done &&
              python manage.py migrate &&
+             echo 'Initializing trust levels...' &&
+             python manage.py init_trust_levels &&
              python manage.py setup_base_users &&
              if [ \"$$POPULATE_TEST_DATA\" = \"true\" ]; then
                echo 'Populating base data...' &&
