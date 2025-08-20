@@ -561,251 +561,254 @@ const Institutions = ({ active, api, showPage, user }) => {
 
       {/* Overview Content */}
       {activeView === 'overview' && (
-        <>
-          {/* Recent Organizations Preview */}
-          <div style={{display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem', marginBottom: '2rem'}}>
-        {/* Organizations Preview */}
-        <div style={{
-          background: 'white',
-          borderRadius: '8px',
-          padding: '1.5rem',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          border: '1px solid #e5e7eb'
-        }}>
-          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem'}}>
-            <h3 style={{margin: 0, fontSize: '1.125rem', fontWeight: '600', color: '#333'}}>Recent Organizations</h3>
-            <button 
-              className="btn btn-sm btn-outline"
-              onClick={() => setActiveView('organizations')}
-            >
-              <i className="fas fa-arrow-right"></i> View All ({organizations.length})
-            </button>
-          </div>
-          
-          <div className="table-responsive">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Organization</th>
-                  <th>Type</th>
-                  <th>Members</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {organizations.length === 0 ? (
-                  <tr>
-                    <td colSpan="4" style={{textAlign: 'center', padding: '2rem', color: '#666'}}>
-                      <i className="fas fa-building" style={{fontSize: '2rem', marginBottom: '1rem', opacity: 0.3}}></i>
-                      <div>No organizations found</div>
-                    </td>
-                  </tr>
-                ) : (
-                  organizations.slice(0, 5).map(org => (
-                    <tr key={org.id}>
-                      <td>
-                        <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
-                          <i 
-                            className={getOrganizationTypeIcon(org.organization_type || org.type)}
-                            style={{ 
-                              color: getOrganizationTypeColor(org.organization_type || org.type),
-                              fontSize: '1.25rem' 
-                            }}
-                          ></i>
-                          <div>
-                            <div style={{fontWeight: '600', color: '#333'}}>{org.name}</div>
-                            {org.description && (
-                              <div style={{fontSize: '0.75rem', color: '#666', marginTop: '0.125rem'}}>
-                                {org.description.length > 40 ? org.description.substring(0, 40) + '...' : org.description}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span style={{
-                          backgroundColor: getOrganizationTypeColor(org.organization_type || org.type) + '20',
-                          color: getOrganizationTypeColor(org.organization_type || org.type),
-                          padding: '0.25rem 0.5rem',
-                          borderRadius: '4px',
-                          fontSize: '0.75rem',
-                          fontWeight: '600',
-                          textTransform: 'capitalize'
-                        }}>
-                          {org.organization_type || org.type || 'Unknown'}
-                        </span>
-                      </td>
-                      <td style={{color: '#333', fontWeight: '500'}}>
-                        {org.member_count || 0}
-                      </td>
-                      <td>
-                        <span style={{
-                          padding: '0.25rem 0.5rem',
-                          borderRadius: '4px',
-                          fontSize: '0.75rem',
-                          fontWeight: '600',
-                          backgroundColor: org.is_active !== false ? '#e8f5e8' : '#fff3e0',
-                          color: org.is_active !== false ? '#2e7d32' : '#f57c00'
-                        }}>
-                          {org.is_active !== false ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Trust Relationships Preview */}
-        <div style={{
-          background: 'white',
-          borderRadius: '8px',
-          padding: '1.5rem',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          border: '1px solid #e5e7eb'
-        }}>
-          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem'}}>
-            <h3 style={{margin: 0, fontSize: '1.125rem', fontWeight: '600', color: '#333'}}>Trust Relationships</h3>
-            <button 
-              className="btn btn-sm btn-outline"
-              onClick={() => setActiveView('trust-relationships')}
-            >
-              <i className="fas fa-arrow-right"></i> View All ({trustRelationships.length})
-            </button>
-          </div>
-          
-          <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-            {trustRelationships.length === 0 ? (
-              <div style={{textAlign: 'center', padding: '2rem', color: '#666'}}>
-                <i className="fas fa-handshake" style={{fontSize: '2rem', marginBottom: '1rem', opacity: 0.3}}></i>
-                <div style={{fontSize: '0.875rem'}}>No trust relationships</div>
-              </div>
-            ) : (
-              trustRelationships.slice(0, 4).map((trust, index) => (
-                <div key={index} style={{
-                  padding: '1rem',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '6px',
-                  background: '#f9fafb'
-                }}>
-                  <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem'}}>
-                    <i className="fas fa-handshake" style={{color: '#667eea', fontSize: '1rem'}}></i>
-                    <span style={{fontSize: '0.875rem', fontWeight: '600', color: '#333'}}>
-                      {trust.relationship_type || 'Partnership'}
-                    </span>
-                  </div>
-                  <div style={{fontSize: '0.75rem', color: '#666', lineHeight: 1.4}}>
-                    <div><strong>{trust.source_organization?.name || 'Organization A'}</strong></div>
-                    <div style={{margin: '0.25rem 0', color: '#999'}}>↔</div>
-                    <div><strong>{trust.target_organization?.name || 'Organization B'}</strong></div>
-                  </div>
-                  <div style={{marginTop: '0.5rem'}}>
-                    <span style={{
-                      fontSize: '0.625rem',
-                      padding: '0.125rem 0.375rem',
-                      borderRadius: '3px',
-                      backgroundColor: trust.status === 'active' ? '#dcfce7' : '#fef3c7',
-                      color: trust.status === 'active' ? '#166534' : '#92400e',
-                      textTransform: 'uppercase',
-                      fontWeight: '600'
-                    }}>
-                      {trust.status || 'pending'}
-                    </span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Trust Groups Preview */}
-      <div style={{
-        background: 'white',
-        borderRadius: '8px',
-        padding: '1.5rem',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        border: '1px solid #e5e7eb',
-        marginBottom: '2rem'
-      }}>
-        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem'}}>
-          <h3 style={{margin: 0, fontSize: '1.125rem', fontWeight: '600', color: '#333'}}>Trust Groups</h3>
-          <button 
-            className="btn btn-sm btn-outline"
-            onClick={() => setActiveView('trust-groups')}
-          >
-            <i className="fas fa-arrow-right"></i> View All ({trustGroups.length})
-          </button>
-        </div>
-        
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '1rem'
+          gridTemplateColumns: '1fr 1fr',
+          gap: '2rem',
+          alignItems: 'start'
         }}>
-          {trustGroups.length === 0 ? (
+          {/* Left Column - Organizations and Trust Groups stacked */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            {/* Organizations Preview */}
             <div style={{
-              gridColumn: '1 / -1',
-              textAlign: 'center',
-              padding: '3rem',
-              color: '#666'
+              background: 'white',
+              borderRadius: '8px',
+              padding: '1.5rem',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              border: '1px solid #e5e7eb'
             }}>
-              <i className="fas fa-users" style={{fontSize: '3rem', marginBottom: '1rem', opacity: 0.3}}></i>
-              <div>No trust groups found</div>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem'}}>
+              <h3 style={{margin: 0, fontSize: '1.125rem', fontWeight: '600', color: '#333'}}>Recent Organizations</h3>
+              <button 
+                className="btn btn-sm btn-outline"
+                onClick={() => setActiveView('organizations')}
+              >
+                <i className="fas fa-arrow-right"></i> View All ({organizations.length})
+              </button>
             </div>
-          ) : (
-            trustGroups.slice(0, 3).map((group, index) => (
-              <div key={index} style={{
-                padding: '1.5rem',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                background: '#f9fafb'
-              }}>
-                <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem'}}>
-                  <i className="fas fa-users" style={{
-                    color: '#667eea',
-                    fontSize: '1.25rem'
-                  }}></i>
-                  <h4 style={{margin: 0, fontSize: '1rem', fontWeight: '600', color: '#333'}}>
-                    {group.name}
-                  </h4>
-                </div>
-                
-                {group.description && (
-                  <p style={{
-                    fontSize: '0.875rem',
-                    color: '#666',
-                    margin: '0 0 1rem 0',
-                    lineHeight: 1.4
-                  }}>
-                    {group.description.length > 100 ? group.description.substring(0, 100) + '...' : group.description}
-                  </p>
-                )}
-                
-                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                  <span style={{fontSize: '0.75rem', color: '#666'}}>
-                    {group.member_count || 0} members
-                  </span>
-                  <span style={{
-                    fontSize: '0.625rem',
-                    padding: '0.125rem 0.375rem',
-                    borderRadius: '3px',
-                    backgroundColor: group.is_active ? '#dcfce7' : '#fee2e2',
-                    color: group.is_active ? '#166534' : '#dc2626',
-                    textTransform: 'uppercase',
-                    fontWeight: '600'
-                  }}>
-                    {group.is_active ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
+            
+            <div className="table-responsive">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Organization</th>
+                    <th>Type</th>
+                    <th>Members</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {organizations.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" style={{textAlign: 'center', padding: '2rem', color: '#666'}}>
+                        <i className="fas fa-building" style={{fontSize: '2rem', marginBottom: '1rem', opacity: 0.3}}></i>
+                        <div>No organizations found</div>
+                      </td>
+                    </tr>
+                  ) : (
+                    organizations.slice(0, 5).map(org => (
+                      <tr key={org.id}>
+                        <td>
+                          <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
+                            <i 
+                              className={getOrganizationTypeIcon(org.organization_type || org.type)}
+                              style={{ 
+                                color: getOrganizationTypeColor(org.organization_type || org.type),
+                                fontSize: '1.25rem' 
+                              }}
+                            ></i>
+                            <div>
+                              <div style={{fontWeight: '600', color: '#333'}}>{org.name}</div>
+                              {org.description && (
+                                <div style={{fontSize: '0.75rem', color: '#666', marginTop: '0.125rem'}}>
+                                  {org.description.length > 40 ? org.description.substring(0, 40) + '...' : org.description}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <span style={{
+                            backgroundColor: getOrganizationTypeColor(org.organization_type || org.type) + '20',
+                            color: getOrganizationTypeColor(org.organization_type || org.type),
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            fontWeight: '600',
+                            textTransform: 'capitalize'
+                          }}>
+                            {org.organization_type || org.type || 'Unknown'}
+                          </span>
+                        </td>
+                        <td style={{color: '#333', fontWeight: '500'}}>
+                          {org.member_count || 0}
+                        </td>
+                        <td>
+                          <span style={{
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            fontWeight: '600',
+                            backgroundColor: org.is_active !== false ? '#e8f5e8' : '#fff3e0',
+                            color: org.is_active !== false ? '#2e7d32' : '#f57c00'
+                          }}>
+                            {org.is_active !== false ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+            {/* Trust Groups Preview - Now in left column under Organizations */}
+            <div style={{
+              background: 'white',
+              borderRadius: '8px',
+              padding: '1.5rem',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              border: '1px solid #e5e7eb'
+            }}>
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem'}}>
+                <h3 style={{margin: 0, fontSize: '1.125rem', fontWeight: '600', color: '#333'}}>Trust Groups</h3>
+                <button 
+                  className="btn btn-sm btn-outline"
+                  onClick={() => setActiveView('trust-groups')}
+                >
+                  <i className="fas fa-arrow-right"></i> View All ({trustGroups.length})
+                </button>
               </div>
-            ))
-          )}
+              
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem'
+              }}>
+                {trustGroups.length === 0 ? (
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '2rem',
+                    color: '#666'
+                  }}>
+                    <i className="fas fa-users" style={{fontSize: '2rem', marginBottom: '1rem', opacity: 0.3}}></i>
+                    <div>No trust groups found</div>
+                  </div>
+                ) : (
+                  trustGroups.slice(0, 3).map((group, index) => (
+                    <div key={index} style={{
+                      padding: '1rem',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                      background: '#f9fafb'
+                    }}>
+                      <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem'}}>
+                        <i className="fas fa-users" style={{
+                          color: '#667eea',
+                          fontSize: '1rem'
+                        }}></i>
+                        <h4 style={{margin: 0, fontSize: '0.875rem', fontWeight: '600', color: '#333'}}>
+                          {group.name}
+                        </h4>
+                      </div>
+                      
+                      {group.description && (
+                        <p style={{
+                          fontSize: '0.75rem',
+                          color: '#666',
+                          margin: '0 0 0.5rem 0',
+                          lineHeight: 1.4
+                        }}>
+                          {group.description.length > 60 ? group.description.substring(0, 60) + '...' : group.description}
+                        </p>
+                      )}
+                      
+                      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                        <span style={{fontSize: '0.625rem', color: '#666'}}>
+                          {group.member_count || 0} members
+                        </span>
+                        <span style={{
+                          fontSize: '0.5rem',
+                          padding: '0.125rem 0.25rem',
+                          borderRadius: '3px',
+                          backgroundColor: group.is_active ? '#dcfce7' : '#fee2e2',
+                          color: group.is_active ? '#166534' : '#dc2626',
+                          textTransform: 'uppercase',
+                          fontWeight: '600'
+                        }}>
+                          {group.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Trust Relationships */}
+          <div style={{
+            background: 'white',
+            borderRadius: '8px',
+            padding: '1.5rem',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb'
+          }}>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem'}}>
+              <h3 style={{margin: 0, fontSize: '1.125rem', fontWeight: '600', color: '#333'}}>Trust Relationships</h3>
+              <button 
+                className="btn btn-sm btn-outline"
+                onClick={() => setActiveView('trust-relationships')}
+              >
+                <i className="fas fa-arrow-right"></i> View All ({trustRelationships.length})
+              </button>
+            </div>
+            
+            <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+              {trustRelationships.length === 0 ? (
+                <div style={{textAlign: 'center', padding: '2rem', color: '#666'}}>
+                  <i className="fas fa-handshake" style={{fontSize: '2rem', marginBottom: '1rem', opacity: 0.3}}></i>
+                  <div style={{fontSize: '0.875rem'}}>No trust relationships</div>
+                </div>
+              ) : (
+                trustRelationships.slice(0, 4).map((trust, index) => (
+                  <div key={index} style={{
+                    padding: '1rem',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '6px',
+                    background: '#f9fafb'
+                  }}>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem'}}>
+                      <i className="fas fa-handshake" style={{color: '#667eea', fontSize: '1rem'}}></i>
+                      <span style={{fontSize: '0.875rem', fontWeight: '600', color: '#333'}}>
+                        {trust.relationship_type || 'Partnership'}
+                      </span>
+                    </div>
+                    <div style={{fontSize: '0.75rem', color: '#666', lineHeight: 1.4}}>
+                      <div><strong>{trust.source_organization?.name || 'Organization A'}</strong></div>
+                      <div style={{margin: '0.25rem 0', color: '#999'}}>↔</div>
+                      <div><strong>{trust.target_organization?.name || 'Organization B'}</strong></div>
+                    </div>
+                    <div style={{marginTop: '0.5rem'}}>
+                      <span style={{
+                        fontSize: '0.625rem',
+                        padding: '0.125rem 0.375rem',
+                        borderRadius: '3px',
+                        backgroundColor: trust.status === 'active' ? '#dcfce7' : '#fef3c7',
+                        color: trust.status === 'active' ? '#166534' : '#92400e',
+                        textTransform: 'uppercase',
+                        fontWeight: '600'
+                      }}>
+                        {trust.status || 'pending'}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
-      </div>
-        </>
       )}
 
       {/* All Organizations View */}
@@ -1180,7 +1183,7 @@ const Institutions = ({ active, api, showPage, user }) => {
               </div>
             </div>
             <div className="modal-footer">
-              <button 
+              <button
                 className="btn btn-secondary"
                 onClick={() => setSelectedOrg(null)}
               >
@@ -1191,6 +1194,13 @@ const Institutions = ({ active, api, showPage, user }) => {
         </div>
       )}
 
+      <style jsx>{`
+    .table-responsive {
+      width: 100%;
+      min-width: 0;
+      height: 100%;
+    }
+  `}</style>
     </section>
   );
 };

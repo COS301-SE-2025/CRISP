@@ -83,7 +83,7 @@ const UserProfile = ({ active }) => {
 
   if (loading) {
     return (
-      <div className="user-profile">
+      <div className="user-profile-page">
         <div className="loading-state">
           <i className="fas fa-spinner fa-spin"></i>
           <p>Loading profile...</p>
@@ -94,7 +94,7 @@ const UserProfile = ({ active }) => {
 
   if (error) {
     return (
-      <div className="user-profile">
+      <div className="user-profile-page">
         <div className="error-state">
           <i className="fas fa-exclamation-triangle"></i>
           <p>Error loading profile: {error}</p>
@@ -107,7 +107,7 @@ const UserProfile = ({ active }) => {
   }
 
   return (
-    <div className="user-profile">
+    <div className="user-profile-page">
       {successMessage && (
         <div className="success-message">
           <i className="fas fa-check-circle"></i>
@@ -129,14 +129,14 @@ const UserProfile = ({ active }) => {
               <i className="fas fa-user"></i>
             </div>
             <div className="profile-title">
-              <h3>{editMode ? `${editData.first_name} ${editData.last_name}` : `${profile.first_name} ${profile.last_name}`}</h3>
+              <h3>{editMode ? `${editData.first_name} ${editData.last_name}` : `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.username}</h3>
               <p className="profile-role">{profile.role}</p>
             </div>
           </div>
           {!editMode && (
             <div className="header-actions">
               <button 
-                className="btn btn-outline"
+                className="btn btn-primary"
                 onClick={() => setEditMode(true)}
               >
                 <i className="fas fa-edit"></i>
@@ -147,21 +147,17 @@ const UserProfile = ({ active }) => {
         </div>
 
         <div className="profile-details">
-          <div className="profile-content">
+          <div className="profile-grid">
             <div className="info-section">
               <h4>Personal Information</h4>
               <table className="profile-table">
-                <thead>
-                  <tr>
-                    <th>Username</th>
-                    <th>Email Address</th>
-                    <th>First Name</th>
-                    <th>Last Name</th>
-                  </tr>
-                </thead>
                 <tbody>
                   <tr>
+                    <th>Username</th>
                     <td>{profile.username}</td>
+                  </tr>
+                  <tr>
+                    <th>Email Address</th>
                     <td>
                       {editMode ? (
                         <input
@@ -175,6 +171,9 @@ const UserProfile = ({ active }) => {
                         profile.email
                       )}
                     </td>
+                  </tr>
+                  <tr>
+                    <th>First Name</th>
                     <td>
                       {editMode ? (
                         <input
@@ -188,6 +187,9 @@ const UserProfile = ({ active }) => {
                         profile.first_name || 'Not set'
                       )}
                     </td>
+                  </tr>
+                  <tr>
+                    <th>Last Name</th>
                     <td>
                       {editMode ? (
                         <input
@@ -209,78 +211,68 @@ const UserProfile = ({ active }) => {
             <div className="info-section">
               <h4>Account Information</h4>
               <table className="profile-table">
-                <thead>
-                  <tr>
-                    <th>Organization</th>
-                    <th>Role</th>
-                    <th>Account Status</th>
-                    <th>Verified</th>
-                  </tr>
-                </thead>
                 <tbody>
                   <tr>
+                    <th>Organization</th>
                     <td>{profile.organization?.name || 'No organization'}</td>
+                  </tr>
+                  <tr>
+                    <th>Role</th>
                     <td>
                       <span className={`role-badge ${profile.role?.toLowerCase()}`}>
                         {profile.role}
                       </span>
                     </td>
+                  </tr>
+                  <tr>
+                    <th>Account Status</th>
                     <td>
                       <span className={`status-badge ${profile.is_active ? 'active' : 'inactive'}`}>
                         {profile.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
+                  </tr>
+                  <tr>
+                    <th>Verified</th>
                     <td>
                       <span className={`status-badge ${profile.is_verified ? 'verified' : 'unverified'}`}>
                         {profile.is_verified ? 'Verified' : 'Unverified'}
                       </span>
                     </td>
                   </tr>
-                </tbody>
-              </table>
-              
-              <table className="profile-table" style={{marginTop: '20px'}}>
-                <thead>
                   <tr>
                     <th>Member Since</th>
-                    <th>Last Login</th>
-                    <th></th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
                     <td>{new Date(profile.created_at || profile.date_joined).toLocaleDateString()}</td>
+                  </tr>
+                  <tr>
+                    <th>Last Login</th>
                     <td>{profile.last_login ? new Date(profile.last_login).toLocaleString() : 'Never'}</td>
-                    <td></td>
-                    <td></td>
                   </tr>
                 </tbody>
               </table>
             </div>
-
-            {editMode && (
-              <div className="save-section">
-                <div className="form-actions">
-                  <button type="button" onClick={handleSave} className="btn btn-primary">
-                    <i className="fas fa-save"></i>
-                    Save Changes
-                  </button>
-                  <button type="button" onClick={handleCancel} className="btn btn-secondary">
-                    <i className="fas fa-times"></i>
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
+
+          {editMode && (
+            <div className="save-section">
+              <div className="form-actions">
+                <button type="button" onClick={handleCancel} className="btn btn-secondary">
+                  <i className="fas fa-times"></i>
+                  Cancel
+                </button>
+                <button type="button" onClick={handleSave} className="btn btn-primary">
+                  <i className="fas fa-save"></i>
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       <style jsx>{`
-        .user-profile {
-          padding: 20px;
-          max-width: 1000px;
+        .user-profile-page {
+          max-width: 1200px;
           margin: 0 auto;
         }
 
@@ -311,18 +303,20 @@ const UserProfile = ({ active }) => {
         .profile-card {
           background: white;
           border-radius: 12px;
-          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.08);
           overflow: hidden;
+          border: 1px solid #dee2e6;
         }
 
         .profile-header {
-          background: linear-gradient(135deg, #0056b3, #004494);
-          color: white;
-          padding: 30px;
+          background: #f8f9fa;
+          color: #333;
+          padding: 24px 30px;
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 20px;
+          border-bottom: 1px solid #dee2e6;
         }
 
         .profile-header .profile-info {
@@ -337,35 +331,38 @@ const UserProfile = ({ active }) => {
         }
 
         .profile-avatar {
-          width: 80px;
-          height: 80px;
-          background: rgba(255,255,255,0.2);
+          width: 60px;
+          height: 60px;
+          background: linear-gradient(135deg, #0056b3, #004494);
+          color: white;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 32px;
+          font-size: 28px;
         }
 
         .profile-title h3 {
-          margin: 0 0 5px 0;
-          font-size: 24px;
+          margin: 0 0 4px 0;
+          font-size: 22px;
           font-weight: 600;
         }
 
         .profile-role {
           margin: 0;
-          opacity: 0.9;
+          opacity: 0.8;
           font-size: 16px;
+          color: #0056b3;
+          font-weight: 500;
         }
 
         .profile-details {
           padding: 30px;
         }
 
-        .profile-content {
-          display: flex;
-          flex-direction: column;
+        .profile-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
           gap: 30px;
         }
 
@@ -378,98 +375,67 @@ const UserProfile = ({ active }) => {
           padding-bottom: 10px;
         }
 
-        .info-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-          gap: 20px;
-        }
-
         .profile-table {
           width: 100%;
           border-collapse: collapse;
-          background: white;
-          border-radius: 8px;
-          overflow: hidden;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-          margin-bottom: 10px;
         }
 
-        .profile-table th {
-          background: linear-gradient(135deg, #0056b3, #004494);
-          color: white;
-          padding: 15px 12px;
-          text-align: center;
-          font-weight: 600;
-          font-size: 14px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          border: none;
-        }
-
+        .profile-table th,
         .profile-table td {
-          padding: 18px 12px;
-          text-align: center;
+          padding: 15px 10px;
+          text-align: left;
           border-bottom: 1px solid #f1f3f4;
-          font-size: 16px;
-          color: #333;
+          font-size: 15px;
           vertical-align: middle;
         }
 
-        .profile-table tbody tr:hover {
-          background-color: #f8f9fa;
+        .profile-table th {
+          font-weight: 600;
+          color: #6c757d;
+          width: 150px;
         }
 
+        .profile-table td {
+          color: #333;
+        }
+
+        .profile-table tbody tr:last-child th,
         .profile-table tbody tr:last-child td {
           border-bottom: none;
         }
 
-        .info-item {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .info-item label {
-          font-weight: 600;
-          color: #495057;
-          font-size: 14px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .info-item span {
-          font-size: 16px;
-          color: #333;
-        }
-
-
-        .form-input {
-          padding: 12px;
-          border: 1px solid #dee2e6;
+        .form-input.inline-edit {
+          padding: 8px 12px;
           border-radius: 6px;
+          border: 1px solid var(--medium-gray);
+          width: 240px;
+          background-color: white;
           font-size: 14px;
-          transition: border-color 0.2s, box-shadow 0.2s;
+          transition: all 0.3s;
+          color: black;
         }
 
-        .form-input:focus {
+        .form-input.inline-edit:focus {
           outline: none;
           border-color: #0056b3;
           box-shadow: 0 0 0 2px rgba(0, 86, 179, 0.1);
         }
 
-        .form-input::placeholder {
-          color: #adb5bd;
+        .save-section {
+          margin-top: 30px;
+          padding-top: 20px;
+          border-top: 1px solid #dee2e6;
         }
 
         .form-actions {
           display: flex;
           gap: 12px;
           justify-content: flex-end;
-          margin-top: 10px;
+          margin-top: 0;
         }
 
         .btn {
-          padding: 12px 24px;
+          padding: 10px 20px;
           border: none;
           border-radius: 6px;
           cursor: pointer;
@@ -499,48 +465,6 @@ const UserProfile = ({ active }) => {
 
         .btn-secondary:hover {
           background: #5a6268;
-        }
-
-        .btn-outline {
-          background: transparent;
-          color: white;
-          border: 2px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .btn-outline:hover {
-          background: rgba(255, 255, 255, 0.1);
-          border-color: rgba(255, 255, 255, 0.5);
-          color: white;
-        }
-
-        .inline-edit {
-          background: white;
-          border: 2px solid #0056b3;
-          padding: 8px 12px;
-          font-size: 16px;
-          color: #333;
-          width: 100%;
-          max-width: 250px;
-          border-radius: 6px;
-          text-align: center;
-        }
-
-        .inline-edit:focus {
-          background: white;
-          border-color: #004494;
-          box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.2);
-          outline: none;
-        }
-
-        .save-section {
-          margin-top: 30px;
-          padding-top: 20px;
-          border-top: 2px solid #f1f3f4;
-        }
-
-        .save-section .form-actions {
-          justify-content: center;
-          margin-top: 0;
         }
 
         .role-badge,
@@ -602,8 +526,14 @@ const UserProfile = ({ active }) => {
           color: #dc3545;
         }
 
+        @media (max-width: 992px) {
+          .profile-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
         @media (max-width: 768px) {
-          .user-profile {
+          .user-profile-page {
             padding: 10px;
           }
 
@@ -613,42 +543,7 @@ const UserProfile = ({ active }) => {
             gap: 15px;
           }
 
-          .profile-info {
-            flex-direction: column;
-            text-align: center;
-          }
-
           .header-actions {
-            width: 100%;
-            justify-content: center;
-          }
-
-          .info-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .profile-table {
-            font-size: 14px;
-          }
-
-          .profile-table th,
-          .profile-table td {
-            padding: 12px 8px;
-            font-size: 12px;
-          }
-
-          .inline-edit {
-            max-width: 100%;
-            font-size: 14px;
-            padding: 6px 8px;
-          }
-
-          .save-section .form-actions {
-            flex-direction: column;
-            gap: 10px;
-          }
-
-          .save-section .form-actions .btn {
             width: 100%;
             justify-content: center;
           }

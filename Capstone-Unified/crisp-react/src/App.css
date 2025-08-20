@@ -386,6 +386,7 @@ div.pagination-wrapper {
   -webkit-overflow-scrolling: touch;
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  height: 100%
 }
 
 .table-responsive::-webkit-scrollbar {
@@ -1422,8 +1423,6 @@ section#ioc-management .card-actions .btn-sm {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
   box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
-  position: relative;
-  z-index: 1;
 }
 
 .remove-org-btn:hover {
@@ -2732,7 +2731,7 @@ section#ioc-management .card-actions .btn-sm {
 }
 
 .technique-title {
-  margin-bottom: 15px;
+  margin-bottom:  15px;
 }
 
 .technique-title h4 {
@@ -2956,4 +2955,69 @@ section#ioc-management .card-actions .btn-sm {
   align-items: center;
   gap: 16px;
 }
-/* EOF < /dev/null */
+
+/* Custom Checkbox Styles */
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  gap: 0.75rem;
+  font-size: 1rem;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.custom-checkbox {
+  position: relative;
+  height: 20px;
+  width: 20px;
+  background-color: #ffffff;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.checkbox-label:hover input ~ .custom-checkbox {
+  border-color: #0056b3;
+}
+
+.checkbox-label input:checked ~ .custom-checkbox {
+  background-color: #0056b3;
+  border-color: #0056b3;
+}
+
+.custom-checkbox:after {
+  content: "";
+  position: absolute;
+  display: none;
+  left: 6px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.checkbox-label input:checked ~ .custom-checkbox:after {
+  display: block;
+}
+
+.checkbox-label input:focus ~ .custom-checkbox {
+  box-shadow: 0 0 0 2px rgba(0, 86, 179, 0.25);
+}
+
+.checkbox-label span {
+    color: var(--text-dark);
+}

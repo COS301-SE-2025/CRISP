@@ -371,6 +371,9 @@ const Notifications = () => {
 
         .notification-content {
           flex: 1;
+          display: flex;
+          flex-direction: column;
+          padding-right: 1rem;
         }
 
         .notification-header {
@@ -390,6 +393,10 @@ const Notifications = () => {
           border-radius: 50%;
           font-size: 16px;
           flex-shrink: 0;
+        }
+
+        .notification-meta {
+          flex: 1;
         }
 
         .notification-meta h4 {

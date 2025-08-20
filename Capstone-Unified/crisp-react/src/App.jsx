@@ -141,6 +141,8 @@ function App({ user, onLogout, isAdmin }) {
     modalParams: {}
   });
 
+  const [lastUpdate, setLastUpdate] = useState(Date.now());
+
   // Initialize app
   useEffect(() => {
     // Small delay to prevent flash and ensure everything is ready
@@ -252,54 +254,30 @@ function App({ user, onLogout, isAdmin }) {
   }
 
   return (
-    <div className="App">
-      {/* Header */}
+    <div className="App" style={{ visibility: isLoading ? 'hidden' : 'visible' }}>
       <Header showPage={showPage} user={user} onLogout={onLogout} isAdmin={isAdmin} navigateToRegisterUser={navigateToRegisterUser} />
-      
-      {/* Main Navigation */}
       <MainNav activePage={activePage} showPage={showPage} user={user} onLogout={onLogout} isAdmin={isAdmin} />
-
-      {/* Main Content */}
       <main className="main-content">
         <div className="container">
-          {/* Dashboard */}
           <Dashboard active={activePage === 'dashboard'} showPage={showPage} user={user} />
-
-          {/* Threat Feeds */}
-          <ThreatFeedsErrorBoundary>
-            <ThreatFeeds active={activePage === 'threat-feeds'} navigationState={navigationState} setNavigationState={setNavigationState} />
-          </ThreatFeedsErrorBoundary>
-
-          {/* IoC Management */}
-          <IoCManagement active={activePage === 'ioc-management'} />
-
-          {/* TTP Analysis */}
+          <ThreatFeeds 
+            active={activePage === 'threat-feeds'} 
+            navigationState={navigationState} 
+            setNavigationState={setNavigationState}
+            onConsumptionComplete={() => setLastUpdate(Date.now())}
+          />
+          <IoCManagement 
+            active={activePage === 'ioc-management'}
+            lastUpdate={lastUpdate}
+            onRefresh={() => setLastUpdate(Date.now())}
+          />
           <TTPAnalysis active={activePage === 'ttp-analysis'} />
-
-          {/* Organisations */}
           <Institutions active={activePage === 'institutions'} api={api} showPage={showPage} user={user} />
-
-          
-
-          {/* Reports */}
           <Reports active={activePage === 'reports'} />
-          
-          {/* Notifications */}
-          <Notifications active={activePage === 'notifications'} />
-          
-          {/* User Profile */}
           <UserProfile active={activePage === 'profile'} />
-          
-          {/* Account Settings */}
-          <AccountSettings active={activePage === 'account-settings'} />
-          
-          {/* Management Components */}
-          <UserManagement active={activePage === 'user-management'} />
-          <OrganisationManagement active={activePage === 'organisation-management'} />
-          <TrustManagement active={activePage === 'trust-management'} />
         </div>
       </main>
-
+      <CSSStyles />
     </div>
   );
 }
@@ -2308,10 +2286,11 @@ function Dashboard({ active, showPage, user }) {
 }
 
 // Threat Feeds Component
-function ThreatFeeds({ active, navigationState, setNavigationState }) {
-  
+function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptionComplete}) {
+  const [feeds, setFeeds] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [threatFeeds, setThreatFeeds] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState('all');
@@ -2490,6 +2469,7 @@ function ThreatFeeds({ active, navigationState, setNavigationState }) {
           // Refresh feeds after consumption
           await fetchThreatFeeds();
           console.log('Feed refresh completed');
+          if (onConsumptionComplete) onConsumptionComplete();
           return; // Exit early, no need to poll
         }
         
@@ -2574,6 +2554,7 @@ function ThreatFeeds({ active, navigationState, setNavigationState }) {
                 
                 // Refresh feeds after consumption
                 await fetchThreatFeeds();
+                if (onConsumptionComplete) onConsumptionComplete();
                 }
               }
             }
@@ -3167,13 +3148,14 @@ function ThreatFeeds({ active, navigationState, setNavigationState }) {
 }
 
 // IoC Management Component
-function IoCManagement({ active }) {
+function IoCManagement({ active, lastUpdate, onRefresh }) {
   if (!active) return null;
   
   const [indicators, setIndicators] = useState([]);
   const [filteredIndicators, setFilteredIndicators] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [error, setError] = useState(null);
   const [newIoC, setNewIoC] = useState({
     type: '',
     value: '',
@@ -3293,7 +3275,7 @@ function IoCManagement({ active }) {
       fetchIndicators();
       fetchThreatFeeds();
     }
-  }, [active]);
+  }, [active, lastUpdate]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -3511,8 +3493,16 @@ function IoCManagement({ active }) {
   };
 
   // Handle refresh
-  const handleRefresh = () => {
-    fetchIndicators();
+  const handleRefresh = async () => {
+    setLoading(true);
+    try {
+      await fetchIndicators();
+      if (onRefresh) onRefresh();
+      // Show a brief success message
+      console.log('Indicators refreshed successfully');
+    } catch (error) {
+      console.error('Error refreshing indicators:', error);
+    }
   };
   
   return (
@@ -3523,6 +3513,15 @@ function IoCManagement({ active }) {
           <p className="page-subtitle">Manage and analyze indicators of compromise</p>
         </div>
         <div className="action-buttons">
+          <button 
+            className="btn btn-outline" 
+            onClick={handleRefresh} 
+            disabled={loading}
+            title="Refresh IoCs data"
+          >
+            <i className={`fas fa-sync-alt ${loading ? 'fa-spin' : ''}`}></i> 
+            {loading ? 'Refreshing...' : 'Refresh'}
+          </button>
           <button className="btn btn-outline" onClick={() => setShowExportModal(true)}><i className="fas fa-file-export"></i> Export IoCs</button>
           <button className="btn btn-outline" onClick={() => setShowImportModal(true)}><i className="fas fa-file-import"></i> Import IoCs</button>
           <button className="btn btn-primary" onClick={() => setShowAddModal(true)}><i className="fas fa-plus"></i> Add New IoC</button>
@@ -13131,144 +13130,6 @@ function CSSStyles() {
             cursor: pointer;
         }
 
-        /* Profile Styles */
-        .profile-content {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .profile-card {
-            background: white;
-            border-radius: 12px;
-            align-items: center;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        .profile-header {
-            background: linear-gradient(135deg, #0056b3, #004494);
-            color: white;
-            padding: 2rem;
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
-
-        .profile-avatar {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-        }
-
-        .profile-info h3 {
-            margin: 0 0 0.5rem 0;
-            font-size: 1.5rem;
-            font-weight: 600;
-        }
-
-        .profile-role {
-            margin: 0;
-            opacity: 0.9;
-            font-size: 1rem;
-            text-transform: uppercase;
-            font-weight: 500;
-            letter-spacing: 0.5px;
-        }
-
-        .profile-details {
-            padding: 2rem;
-        }
-
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .info-item {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .info-item label {
-            font-weight: 600;
-            color: #666;
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .info-item span {
-            font-size: 1rem;
-            color: #333;
-            padding: 0.5rem 0;
-            border-bottom: 1px solid #eee;
-        }
-
-        .role-badge {
-            display: inline-block;
-            padding: 0.5rem 1rem !important;
-            border-radius: 20px;
-            font-size: 0.875rem !important;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border: none !important;
-        }
-
-        .role-badge.bluevisionadmin {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .role-badge.admin {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .role-badge.publisher {
-            background: #cce5ff;
-            color: #004085;
-        }
-
-        .role-badge.viewer {
-            background: #f8f9fa;
-            color: #495057;
-        }
-
-        .edit-form {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
-        .form-actions {
-            display: flex;
-            gap: 1rem;
-            justify-content: flex-end;
-            margin-top: 2rem;
-            padding-top: 1rem;
-            border-top: 1px solid #eee;
-        }
-
-        .checkbox-label input[type="checkbox"] {
-            width: auto !important;
-            margin: 0;
-        }
-
-        .modal-footer {
-            display: flex;
-            gap: 1rem;
-            justify-content: flex-end;
-            margin-top: 1.5rem;
-        }
-
         /* Additional styles for Add IoC Modal */
         .form-grid {
             display: grid;
@@ -14185,103 +14046,238 @@ function Notifications({ active }) {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
     if (active) {
-      // Simulated notifications data
-      setTimeout(() => {
-        setNotifications([
-          {
-            id: '1',
-            type: 'threat_alert',
-            title: 'New High-Priority Threat Detected',
-            message: 'A new malware strain has been identified in your organization\'s threat feed.',
-            severity: 'high',
-            read: false,
-            created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-          },
-          {
-            id: '2',
-            type: 'trust_request',
-            title: 'Trust Relationship Request',
-            message: 'Organization "CyberSecure Inc." has requested a bilateral trust relationship.',
-            severity: 'medium',
-            read: false,
-            created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          },
-          {
-            id: '3',
-            type: 'feed_update',
-            title: 'Threat Feed Updated',
-            message: 'Your subscribed threat feed "MITRE ATT&CK" has been updated with 15 new indicators.',
-            severity: 'low',
-            read: true,
-            created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-          }
-        ]);
-        setLoading(false);
-      }, 500);
+      fetchNotifications();
     }
-  }, [active]);
+  }, [active, filter]);
+
+  const fetchNotifications = () => {
+    // Simulated notifications data
+    setLoading(true);
+    setTimeout(() => {
+      const mockNotifications = [
+        {
+          id: '1',
+          type: 'threat_alert',
+          title: 'New High-Priority Threat Detected',
+          message: 'A new malware strain has been identified in your organization\'s threat feed.',
+          severity: 'high',
+          read: false,
+          created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+          source: 'Threat Intelligence'
+        },
+        {
+          id: '2',
+          type: 'trust_request',
+          title: 'Trust Relationship Request',
+          message: 'Organization "CyberSecure Inc." has requested a bilateral trust relationship.',
+          severity: 'medium',
+          read: false,
+          created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          source: 'Trust Management'
+        },
+        {
+          id: '3',
+          type: 'feed_update',
+          title: 'Threat Feed Updated',
+          message: 'Your subscribed threat feed "MITRE ATT&CK" has been updated with 15 new indicators.',
+          severity: 'low',
+          read: true,
+          created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+          source: 'Feed Management'
+        },
+        {
+          id: '4',
+          type: 'system',
+          title: 'System Maintenance Scheduled',
+          message: 'Scheduled maintenance window on Sunday 2 AM - 4 AM UTC.',
+          severity: 'medium',
+          read: true,
+          created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+          source: 'System'
+        }
+      ];
+
+      let filteredNotifications = mockNotifications;
+      if (filter !== 'all') {
+        filteredNotifications = mockNotifications.filter(n => {
+          if (filter === 'unread') return !n.read;
+          if (filter === 'read') return n.read;
+          return n.type === filter;
+        });
+      }
+      
+      setNotifications(filteredNotifications);
+      setLoading(false);
+      setError(null);
+    }, 500);
+  };
 
   const markAsRead = (notificationId) => {
     setNotifications(prev =>
-      prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
+      prev.map(n =>
+        n.id === notificationId ? { ...n, read: true } : n
+      )
+    );
+  };
+
+  const markAllAsRead = () => {
+    setNotifications(prev =>
+      prev.map(n => ({ ...n, read: true }))
     );
   };
 
   const deleteNotification = (notificationId) => {
-    setNotifications(prev => prev.filter(n => n.id !== notificationId));
+    setNotifications(prev =>
+      prev.filter(n => n.id !== notificationId)
+    );
+  };
+
+  const getNotificationIcon = (type) => {
+    const icons = {
+      threat_alert: 'fas fa-exclamation-triangle',
+      trust_request: 'fas fa-handshake',
+      feed_update: 'fas fa-rss',
+      system: 'fas fa-cog',
+      user_invitation: 'fas fa-user-plus'
+    };
+    return icons[type] || 'fas fa-bell';
+  };
+
+  const getSeverityColor = (severity) => {
+    const colors = {
+      high: '#dc3545',
+      medium: '#ffc107',
+      low: '#28a745'
+    };
+    return colors[severity] || '#6c757d';
+  };
+
+  const formatTimeAgo = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMs = now - date;
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInHours / 24);
+
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    if (diffInDays < 7) return `${diffInDays}d ago`;
+    return date.toLocaleDateString();
   };
 
   if (!active) return null;
 
-  return (
-    <section id="notifications" className={`page-section ${active ? 'active' : ''}`}>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Notifications</h1>
-          <p className="page-subtitle">Stay updated with system alerts and activities</p>
-        </div>
-        <div className="action-buttons">
-          <button className="btn btn-outline">
-            <i className="fas fa-check-double"></i> Mark All Read
-          </button>
-        </div>
-      </div>
-
-      {loading ? (
+  if (loading) {
+    return (
+      <section id="notifications" className="page-section active">
         <div className="loading-state">
           <i className="fas fa-spinner fa-spin"></i>
           <p>Loading notifications...</p>
         </div>
-      ) : (
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section id="notifications" className="page-section active">
+        <div className="error-state">
+          <i className="fas fa-exclamation-triangle"></i>
+          <p>Error loading notifications: {error}</p>
+          <button onClick={fetchNotifications} className="btn btn-primary">
+            Retry
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  return (
+    <section id="notifications" className="page-section active">
+      <div className="notifications-container">
+        <div className="header">
+          <div className="title-section">
+            <h2>Notifications</h2>
+            {unreadCount > 0 && (
+              <span className="unread-badge">{unreadCount}</span>
+            )}
+          </div>
+          <div className="header-actions">
+            {unreadCount > 0 && (
+              <button onClick={markAllAsRead} className="btn btn-outline">
+                <i className="fas fa-check-double"></i>
+                Mark All Read
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="filters">
+          <button
+            className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
+            onClick={() => setFilter('all')}
+          >
+            All
+          </button>
+          <button
+            className={`filter-btn ${filter === 'unread' ? 'active' : ''}`}
+            onClick={() => setFilter('unread')}
+          >
+            Unread
+          </button>
+          <button
+            className={`filter-btn ${filter === 'threat_alert' ? 'active' : ''}`}
+            onClick={() => setFilter('threat_alert')}
+          >
+            Threats
+          </button>
+          <button
+            className={`filter-btn ${filter === 'trust_request' ? 'active' : ''}`}
+            onClick={() => setFilter('trust_request')}
+          >
+            Trust
+          </button>
+          <button
+            className={`filter-btn ${filter === 'feed_update' ? 'active' : ''}`}
+            onClick={() => setFilter('feed_update')}
+          >
+            Feeds
+          </button>
+        </div>
+
         <div className="notifications-list">
           {notifications.length === 0 ? (
             <div className="empty-state">
-              <i className="fas fa-bell-slash" style={{fontSize: '48px', color: '#dee2e6'}}></i>
+              <i className="fas fa-bell-slash"></i>
               <h3>No notifications</h3>
               <p>You're all caught up! No notifications to show.</p>
             </div>
           ) : (
             notifications.map(notification => (
-              <div key={notification.id} className={`notification-item ${!notification.read ? 'unread' : ''}`}>
+              <div
+                key={notification.id}
+                className={`notification-item ${!notification.read ? 'unread' : ''}`}
+              >
                 <div className="notification-content">
                   <div className="notification-header">
                     <div className="notification-icon">
-                      <i className={
-                        notification.type === 'threat_alert' ? 'fas fa-exclamation-triangle' :
-                        notification.type === 'trust_request' ? 'fas fa-handshake' :
-                        'fas fa-rss'
-                      } style={{
-                        color: notification.severity === 'high' ? '#dc3545' :
-                               notification.severity === 'medium' ? '#ffc107' : '#28a745'
-                      }}></i>
+                      <i
+                        className={getNotificationIcon(notification.type)}
+                        style={{ color: getSeverityColor(notification.severity) }}
+                      ></i>
                     </div>
                     <div className="notification-meta">
                       <h4>{notification.title}</h4>
                       <div className="meta-info">
-                        <span>{new Date(notification.created_at).toLocaleString()}</span>
+                        <span className="source">{notification.source}</span>
+                        <span className="separator">•</span>
+                        <span className="time">{formatTimeAgo(notification.created_at)}</span>
                         {!notification.read && <span className="unread-dot"></span>}
                       </div>
                     </div>
@@ -14293,6 +14289,7 @@ function Notifications({ active }) {
                     <button
                       onClick={() => markAsRead(notification.id)}
                       className="btn btn-sm btn-outline"
+                      title="Mark as read"
                     >
                       <i className="fas fa-check"></i>
                     </button>
@@ -14300,6 +14297,7 @@ function Notifications({ active }) {
                   <button
                     onClick={() => deleteNotification(notification.id)}
                     className="btn btn-sm btn-danger"
+                    title="Delete notification"
                   >
                     <i className="fas fa-trash"></i>
                   </button>
@@ -14308,7 +14306,196 @@ function Notifications({ active }) {
             ))
           )}
         </div>
-      )}
+      </div>
+
+      <style jsx>{`
+        .notifications-container {
+          padding: 20px;
+          max-width: 900px;
+          margin: 0 auto;
+        }
+        .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+        }
+        .title-section {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        .header h2 {
+          margin: 0;
+          color: #333;
+        }
+        .unread-badge {
+          background: #dc3545;
+          color: white;
+          padding: 4px 8px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 600;
+          min-width: 20px;
+          text-align: center;
+        }
+        .filters {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 20px;
+          padding-bottom: 15px;
+          border-bottom: 1px solid #dee2e6;
+        }
+        .filter-btn {
+          padding: 8px 16px;
+          background: none;
+          border: 1px solid #dee2e6;
+          border-radius: 20px;
+          cursor: pointer;
+          font-size: 14px;
+          color: #6c757d;
+          transition: all 0.2s;
+        }
+        .filter-btn:hover {
+          background: #f8f9fa;
+          color: #495057;
+        }
+        .filter-btn.active {
+          background: #0056b3;
+          color: white;
+          border-color: #0056b3;
+        }
+        .notifications-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .notification-item {
+          background: white;
+          border: 1px solid #dee2e6;
+          border-radius: 8px;
+          padding: 16px;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          transition: all 0.2s;
+        }
+        .notification-item:hover {
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .notification-item.unread {
+          border-left: 4px solid #0056b3;
+          background: #f8f9ff;
+        }
+        .notification-content {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          padding-right: 1rem;
+        }
+        .notification-header {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          margin-bottom: 8px;
+        }
+        .notification-icon {
+          width: 40px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #f8f9fa;
+          border-radius: 50%;
+          font-size: 16px;
+          flex-shrink: 0;
+        }
+        .notification-meta {
+          flex: 1;
+        }
+        .notification-meta h4 {
+          margin: 0 0 4px 0;
+          font-size: 16px;
+          font-weight: 600;
+          color: #333;
+        }
+        .meta-info {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 12px;
+          color: #6c757d;
+        }
+        .separator {
+          opacity: 0.5;
+        }
+        .unread-dot {
+          width: 6px;
+          height: 6px;
+          background: #0056b3;
+          border-radius: 50%;
+        }
+        .notification-message {
+          margin: 0;
+          color: #495057;
+          line-height: 1.4;
+          padding-left: 52px; /* Aligns with title */
+        }
+        .notification-actions {
+          display: flex;
+          gap: 8px;
+          flex-shrink: 0;
+          margin-left: 16px;
+        }
+        .btn {
+          padding: 8px 16px;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 14px;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          transition: background-color 0.2s;
+        }
+        .btn-primary {
+          background: #0056b3;
+          color: white;
+        }
+        .btn-outline {
+          background: transparent;
+          border: 1px solid #dee2e6;
+          color: #495057;
+        }
+        .btn-outline:hover {
+          background: #f8f9fa;
+        }
+        .btn-sm {
+          padding: 4px 8px;
+          font-size: 12px;
+        }
+        .btn-danger {
+          background: #dc3545;
+          color: white;
+        }
+        .btn-danger:hover {
+          background: #c82333;
+        }
+        .empty-state, .loading-state, .error-state {
+          text-align: center;
+          padding: 60px 20px;
+          color: #6c757d;
+        }
+        .empty-state i, .loading-state i, .error-state i {
+          font-size: 48px;
+          margin-bottom: 20px;
+          opacity: 0.5;
+        }
+        .empty-state h3 {
+          margin: 0 0 10px 0;
+          color: #495057;
+        }
+      `}</style>
     </section>
   );
 }
