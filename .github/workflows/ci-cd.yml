@@ -194,22 +194,15 @@ jobs:
       run: |
         echo "Running security vulnerability scans..."
         cd Capstone-Unified
-        # Create a more lenient bandit config that excludes the failing low-severity issues
-        cat > bandit-ci.yaml << 'EOF'
-# Bandit config for CI - excludes low-severity issues that are acceptable in development
-tests: [B102, B103, B104, B105, B106, B107, B108, B201, B301, B302, B303, B304, B305, B306, B307, B308, B310, B312, B313, B314, B315, B316, B317, B318, B319, B321, B323, B324, B401, B402, B403, B404, B406, B407, B408, B409, B411, B412, B413, B501, B502, B503, B504, B505, B506, B507, B601, B602, B603, B604, B606, B608, B609, B610, B611, B701, B702, B703]
-skips: [
-  B101,  # assert_used - acceptable in test files
-  B110,  # try_except_pass - acceptable for graceful error handling
-  B112,  # try_except_continue - acceptable in data processing loops
-  B311,  # random - acceptable for non-cryptographic purposes
-  B405,  # xml_etree - will be addressed separately
-  B605,  # start_process_with_shell - acceptable for management commands
-  B607   # start_process_with_partial_path - acceptable for pip installs
-]
-EOF
-        # Run bandit with the more lenient config
-        bandit -r core/ crisp_unified/ -f json -o bandit-report.json -c bandit-ci.yaml --exclude=crisp_unified/migrations/,core/tests/ --severity-level medium || true
+        # Use the existing bandit config file from your security-testing directory
+        if [ -f "security-testing/configs/bandit_fixed.yaml" ]; then
+          bandit -r core/ crisp_unified/ -f json -o bandit-report.json -c security-testing/configs/bandit_fixed.yaml --exclude=crisp_unified/migrations/,core/tests/ --severity-level medium || true
+        else
+          # Fallback: create a simple bandit config
+          echo "tests: [B102, B103, B104, B105, B106, B107, B108, B201, B301, B302, B303, B304, B305, B306, B307, B308, B310, B312, B313, B314, B315, B316, B317, B318, B319, B321, B323, B324, B401, B402, B403, B404, B406, B407, B408, B409, B411, B412, B413, B501, B502, B503, B504, B505, B506, B507, B601, B602, B603, B604, B606, B608, B609, B610, B611, B701, B702, B703]" > bandit-ci.yaml
+          echo "skips: [B101, B110, B112, B311, B405, B605, B607]" >> bandit-ci.yaml
+          bandit -r core/ crisp_unified/ -f json -o bandit-report.json -c bandit-ci.yaml --exclude=crisp_unified/migrations/,core/tests/ --severity-level medium || true
+        fi
         
         # Run safety check (this usually passes)
         safety check --file=requirements.txt || true
