@@ -49,7 +49,7 @@ jobs:
         
     - name: Verify core module imports
       env:
-        PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/core
+        PYTHONPATH: ${{ github.workspace }}/Capstone-Unified
       run: |
         echo "Verifying core module imports..."
         python3 -c "
@@ -65,7 +65,7 @@ jobs:
 
     - name: Verify Django configuration
       env:
-        DJANGO_SETTINGS_MODULE: crisp_threat_intel.settings
+        DJANGO_SETTINGS_MODULE: crisp_unified.settings
         SECRET_KEY: test-secret-key-for-ci-cd-pipeline
         DB_NAME: crisp_test
         DB_USER: postgres
@@ -76,13 +76,13 @@ jobs:
         EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
         OTX_API_KEY: test-key
         OTX_ENABLED: False
-        PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/core
+        PYTHONPATH: ${{ github.workspace }}/Capstone-Unified
       run: |
         echo "Verifying Django configuration..."
-        cd crisp
+        cd Capstone-Unified
         python3 -c "
         import os
-        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crisp_threat_intel.settings')
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crisp_unified.settings')
         import django
         django.setup()
         print('Django configuration verified')
@@ -90,7 +90,7 @@ jobs:
 
     - name: Run database migrations
       env:
-        DJANGO_SETTINGS_MODULE: crisp_threat_intel.settings
+        DJANGO_SETTINGS_MODULE: crisp_unified.settings
         SECRET_KEY: test-secret-key-for-ci-cd-pipeline
         DB_NAME: crisp_test
         DB_USER: postgres
@@ -101,26 +101,26 @@ jobs:
         EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
         OTX_API_KEY: test-key
         OTX_ENABLED: False
-        PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/core
+        PYTHONPATH: ${{ github.workspace }}/Capstone-Unified
       run: |
         echo "Executing database migrations..."
-        cd crisp
+        cd Capstone-Unified
         python manage.py migrate --noinput
         echo "Database migrations completed successfully"
 
     - name: Run core module tests
       env:
-        PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/core
+        PYTHONPATH: ${{ github.workspace }}/Capstone-Unified
         DJANGO_SETTINGS_MODULE: ""
       run: |
         echo "Running core module tests..."
-        cd core
+        cd Capstone-Unified/core
         python -m pytest tests/test_strategies.py tests/test_import_verification.py tests/test_observer_integration.py -v --tb=short
         echo "Core module tests completed successfully"
         
     - name: Run Django application tests
       env:
-        DJANGO_SETTINGS_MODULE: crisp_threat_intel.settings
+        DJANGO_SETTINGS_MODULE: crisp_unified.settings
         SECRET_KEY: test-secret-key-for-ci-cd-pipeline
         DB_NAME: crisp_test
         DB_USER: postgres
@@ -131,16 +131,16 @@ jobs:
         EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
         OTX_API_KEY: test-key
         OTX_ENABLED: False
-        PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/core
+        PYTHONPATH: ${{ github.workspace }}/Capstone-Unified
       run: |
         echo "Running Django application tests..."
-        cd crisp
+        cd Capstone-Unified
         python manage.py test --verbosity=2 --failfast
         echo "Django application tests completed successfully"
 
     - name: Run integration tests
       env:
-        DJANGO_SETTINGS_MODULE: crisp_threat_intel.settings
+        DJANGO_SETTINGS_MODULE: crisp_unified.settings
         SECRET_KEY: test-secret-key-for-ci-cd-pipeline
         DB_NAME: crisp_test
         DB_USER: postgres
@@ -151,10 +151,10 @@ jobs:
         EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
         OTX_API_KEY: test-key
         OTX_ENABLED: False
-        PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/core
+        PYTHONPATH: ${{ github.workspace }}/Capstone-Unified
       run: |
         echo "Running integration tests..."
-        cd core
+        cd Capstone-Unified/core
         python -m pytest tests/test_django_observer_integration.py -v --tb=short
         echo "Integration tests completed successfully"
 
