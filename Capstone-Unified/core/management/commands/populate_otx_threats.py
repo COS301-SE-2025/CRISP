@@ -4,7 +4,8 @@ Management command to populate threat intelligence from AlienVault OTX
 import logging
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from core.models.models import ThreatFeed, Organization, CustomUser, TrustLevel
+from core.models.models import ThreatFeed, Organization, TrustLevel
+from core.user_management.models import CustomUser
 from core.services.otx_taxii_service import OTXTaxiiService
 
 logger = logging.getLogger(__name__)

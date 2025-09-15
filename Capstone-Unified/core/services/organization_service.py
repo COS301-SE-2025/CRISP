@@ -9,9 +9,10 @@ from django.core.exceptions import ValidationError, PermissionDenied
 from django.utils import timezone
 from django.db.models import Count, Q
 from core.models.models import (
-    CustomUser, Organization, AuthenticationLog,
+    Organization,
     TrustRelationship, TrustLevel, TrustGroup, TrustGroupMembership
 )
+from core.user_management.models import CustomUser, AuthenticationLog
 from .trust_service import TrustService
 from datetime import timedelta
 import re
@@ -32,6 +33,7 @@ class OrganizationService:
         """Create a new organization with primary user"""
         
         # Validate required fields
+        contact_email = kwargs.get('contact_email') or (org_data and org_data.get('contact_email'))
         if not name or not organization_type or not contact_email:
             raise ValidationError("Name, organization type, and contact email are required")
         

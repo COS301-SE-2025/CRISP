@@ -5,7 +5,8 @@ import random
 import uuid
 from django.core.management.base import BaseCommand
 from django.db import connection
-from core.models.models import Organization, CustomUser
+from core.models.models import Organization, 
+from core.user_management.models import CustomUser
 from faker import Faker
 
 fake = Faker()

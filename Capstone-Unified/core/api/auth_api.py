@@ -13,7 +13,8 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from core.models.models import CustomUser, AuthenticationLog
+from core.user_management.models import AuthenticationLog
+from core.user_management.models import CustomUser
 from core.services.auth_service import AuthenticationService
 from core.services.audit_service import AuditService
 from core.serializers.auth_serializer import UserSerializer

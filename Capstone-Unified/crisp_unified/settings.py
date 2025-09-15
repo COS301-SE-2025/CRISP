@@ -29,7 +29,7 @@ DEBUG = os.getenv('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 # Custom User Model - CRITICAL: Must be set before any migrations are run
-AUTH_USER_MODEL = 'core.CustomUser'
+AUTH_USER_MODEL = 'user_management.CustomUser'
 
 # Security settings
 SESSION_COOKIE_SECURE = not DEBUG

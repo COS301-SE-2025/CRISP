@@ -11,7 +11,9 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
-from core.models.models import TrustRelationship, TrustGroup, Organization, CustomUser, TrustLevel
+from core.models.models import TrustRelationship, Organization, TrustLevel
+from core.trust_management.models import TrustGroup
+from core.user_management.models import CustomUser
 from core.services.trust_service import TrustService
 from core.services.access_control_service import AccessControlService
 from core.serializers.trust_serializer import (

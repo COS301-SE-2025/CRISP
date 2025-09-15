@@ -11,9 +11,11 @@ from rest_framework_simplejwt.exceptions import TokenError
 from typing import Dict, Optional, Tuple
 from datetime import timedelta
 from core.models.models import (
-    CustomUser, UserSession, AuthenticationLog,
+    UserSession,
     TrustRelationship, Organization
 )
+from core.user_management.models import AuthenticationLog
+from core.user_management.models import CustomUser
 from .trust_service import TrustService
 import hashlib
 import json

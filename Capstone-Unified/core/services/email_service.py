@@ -13,7 +13,9 @@ from django.conf import settings
 from django.utils import timezone
 from django.core.mail import send_mail, EmailMultiAlternatives
 from datetime import datetime
-from core.models.models import CustomUser, Organization, AuthenticationLog
+from core.models.models import Organization
+from core.user_management.models import AuthenticationLog
+from core.user_management.models import CustomUser
 from .access_control_service import AccessControlService
 from .audit_service import AuditService
 

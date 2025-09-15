@@ -7,7 +7,8 @@ import os
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from core.models.models import Organization, CustomUser
+from core.models.models import Organization
+from core.user_management.models import CustomUser
 from core.services.organization_service import OrganizationService
 from core.services.user_service import UserService
 
@@ -94,6 +95,15 @@ class Command(BaseCommand):
             )
             return existing_org
         
+        # Primary user data for BlueVision admin
+        primary_user_data = {
+            'username': 'bluevision_admin',
+            'email': 'admin@bluevision.tech',
+            'password': 'AdminPass123',
+            'first_name': 'BlueVision',
+            'last_name': 'Administrator'
+        }
+
         result = org_service.create_organization(
             name='BlueVision Technologies',
             domain='bluevision.tech',
@@ -101,6 +111,7 @@ class Command(BaseCommand):
             description='BlueVision Technologies - CRISP Platform Administrator',
             contact_email='admin@bluevision.tech',
             contact_phone='+1-555-CRISP-01',
+            primary_user_data=primary_user_data,
             created_by=None  # System creation
         )
         

@@ -10,9 +10,9 @@ from django.utils import timezone
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from core.models.models import (
-    CustomUser, Organization, UserInvitation, PasswordResetToken,
-    AuthenticationLog
+    Organization, UserInvitation, PasswordResetToken
 )
+from core.user_management.models import CustomUser, AuthenticationLog
 import logging
 
 logger = logging.getLogger(__name__)

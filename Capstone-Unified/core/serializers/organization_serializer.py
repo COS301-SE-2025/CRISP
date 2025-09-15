@@ -3,7 +3,8 @@ Organization Serializers - Organization model serialization for API responses
 """
 
 from rest_framework import serializers
-from core.models.models import Organization, CustomUser
+from core.models.models import Organization
+from core.user_management.models import CustomUser
 
 class OrganizationSerializer(serializers.ModelSerializer):
     """Basic organization serializer"""

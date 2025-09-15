@@ -8,7 +8,8 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework import routers # Import routers
-from core.models.models import ThreatFeed, Indicator, TTPData, CustomUser, Organization
+from core.models.models import ThreatFeed, Indicator, TTPData, Organization
+from core.user_management.models import CustomUser
 from core.api import auth_api, user_api, trust_api, organization_api
 from core.api.threat_feed_views import (
     ThreatFeedViewSet, # Import ThreatFeedViewSet

@@ -27,8 +27,11 @@ except ImportError:
     from tqdm import tqdm
 
 from core.models.models import (
-    CustomUser, Organization, UserSession, UserProfile,
-    ThreatFeed, Collection, Feed, UserInvitation, SystemActivity,
+    Organization, ThreatFeed, Collection, Feed, SystemActivity, UserProfile
+)
+from core.user_management.models.user_models import CustomUser, UserSession
+from core.user_management.models.invitation_models import UserInvitation
+from core.trust_management.models.trust_models import (
     TrustLevel, TrustRelationship, TrustGroup, TrustGroupMembership
 )
 

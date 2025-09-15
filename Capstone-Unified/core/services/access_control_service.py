@@ -7,8 +7,9 @@ from typing import Dict, List, Optional, Tuple, Any, Set
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied
 from core.models.models import (
-    CustomUser, Organization, TrustRelationship, TrustLevel, TrustGroup
+    Organization, TrustRelationship, TrustLevel, TrustGroup
 )
+from core.user_management.models import CustomUser
 import logging
 
 logger = logging.getLogger(__name__)

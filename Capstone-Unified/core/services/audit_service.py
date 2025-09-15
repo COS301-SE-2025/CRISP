@@ -10,9 +10,11 @@ from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.db import transaction
 from core.models.models import (
-    CustomUser, Organization, AuthenticationLog, TrustLog, 
+    Organization, TrustLog, 
     TrustRelationship, TrustGroup
 )
+from core.user_management.models import AuthenticationLog
+from core.user_management.models import CustomUser
 import logging
 import json
 import random

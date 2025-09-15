@@ -156,18 +156,22 @@ class Command(BaseCommand):
         """Create trust relationships within a sector"""
         # Get available trust levels
         trust_levels = list(TrustLevel.objects.filter(is_active=True).order_by('numerical_value'))
-        
+
+        if not trust_levels:
+            self.stdout.write(self.style.WARNING('No trust levels found. Skipping trust relationships.'))
+            return
+
         for i, source_org in enumerate(organizations):
             for target_org in organizations[i+1:]:
                 if random.random() < 0.8:  # 80% chance of relationship
                     # Select appropriate trust level based on min/max range
                     suitable_levels = [
-                        tl for tl in trust_levels 
+                        tl for tl in trust_levels
                         if min_trust * 100 <= tl.numerical_value <= max_trust * 100
                     ]
                     if not suitable_levels:
                         suitable_levels = trust_levels
-                    
+
                     trust_level = random.choice(suitable_levels)
                     TrustRelationship.objects.get_or_create(
                         source_organization=source_org,
@@ -186,18 +190,22 @@ class Command(BaseCommand):
         """Create trust relationships between different sectors"""
         # Get available trust levels
         trust_levels = list(TrustLevel.objects.filter(is_active=True).order_by('numerical_value'))
-        
+
+        if not trust_levels:
+            self.stdout.write(self.style.WARNING('No trust levels found. Skipping cross-sector trust relationships.'))
+            return
+
         for source_org in org_list1:
             for target_org in org_list2:
                 if random.random() < 0.4:  # 40% chance of cross-sector relationship
                     # Select appropriate trust level based on min/max range
                     suitable_levels = [
-                        tl for tl in trust_levels 
+                        tl for tl in trust_levels
                         if min_trust * 100 <= tl.numerical_value <= max_trust * 100
                     ]
                     if not suitable_levels:
                         suitable_levels = trust_levels
-                    
+
                     trust_level = random.choice(suitable_levels)
                     TrustRelationship.objects.get_or_create(
                         source_organization=source_org,

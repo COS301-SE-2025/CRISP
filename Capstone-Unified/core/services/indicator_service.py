@@ -1,6 +1,7 @@
 import logging
 from typing import Optional, Dict, Any, List
-from core.models.models import Indicator, CustomUser, Organization
+from core.models.models import Indicator, Organization
+from core.user_management.models import CustomUser
 from core.repositories.indicator_repository import IndicatorRepository
 from .access_control_service import AccessControlService
 from .audit_service import AuditService

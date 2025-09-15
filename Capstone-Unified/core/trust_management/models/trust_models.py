@@ -3,7 +3,8 @@ from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from datetime import timedelta
-from core.models.models import CustomUser, Organization
+from django.conf import settings
+from core.models.models import Organization
 
 
 TRUST_LEVEL_CHOICES = [
@@ -350,7 +351,7 @@ class TrustRelationship(models.Model):
         help_text="Whether target organization has approved"
     )
     approved_by_source_user = models.ForeignKey(
-        CustomUser,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -358,7 +359,7 @@ class TrustRelationship(models.Model):
         help_text="User who approved on behalf of source organization"
     )
     approved_by_target_user = models.ForeignKey(
-        CustomUser,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -404,7 +405,7 @@ class TrustRelationship(models.Model):
     
     # Audit fields
     created_by = models.ForeignKey(
-        CustomUser,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -412,7 +413,7 @@ class TrustRelationship(models.Model):
         help_text="User who created this relationship"
     )
     last_modified_by = models.ForeignKey(
-        CustomUser,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -420,7 +421,7 @@ class TrustRelationship(models.Model):
         help_text="User who last modified this relationship"
     )
     revoked_by = models.ForeignKey(
-        CustomUser,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -680,7 +681,7 @@ class TrustLog(models.Model):
         related_name='trust_logs_as_user'
     )
     user = models.ForeignKey(
-        CustomUser,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -752,7 +753,9 @@ class TrustLog(models.Model):
                        trust_group=None, ip_address=None, user_agent=None,
                        success=True, failure_reason=None, details=None):
         """Convenience method to log trust events"""
-        from core.user_management.models import Organization, CustomUser
+        from core.user_management.models import Organization
+        from django.contrib.auth import get_user_model
+        CustomUser = get_user_model()
         from unittest.mock import Mock
         
         # Convert source organization if it's a string UUID

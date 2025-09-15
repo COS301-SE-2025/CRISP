@@ -1,7 +1,8 @@
 from typing import Dict, List, Optional, Tuple, Any
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied
-from core.models.models import CustomUser, Organization
+from core.models.models import Organization
+from core.user_management.models import CustomUser
 from core.trust_management.models import TrustRelationship, TrustLevel, TrustGroup
 import logging
 from django.utils.deprecation import MiddlewareMixin

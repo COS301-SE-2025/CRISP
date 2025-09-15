@@ -8,8 +8,9 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 from core.models.models import (
     TrustRelationship, TrustGroup, TrustGroupMembership, 
-    TrustLevel, TrustLog, Organization, CustomUser
+    TrustLevel, TrustLog, Organization
 )
+from core.user_management.models import CustomUser
 import uuid
 import logging
 

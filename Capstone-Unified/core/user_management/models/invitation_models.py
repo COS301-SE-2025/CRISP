@@ -9,7 +9,8 @@ import uuid
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
-from core.models.models import CustomUser, Organization
+from django.conf import settings
+from core.models.models import Organization
 
 class UserInvitation(models.Model):
     """
@@ -37,7 +38,7 @@ class UserInvitation(models.Model):
         help_text="Organization extending the invitation"
     )
     inviter = models.ForeignKey(
-        CustomUser, 
+        settings.AUTH_USER_MODEL, 
         on_delete=models.CASCADE,
         related_name='user_mgmt_sent_invitations',
         help_text="User who sent the invitation"
@@ -69,7 +70,7 @@ class UserInvitation(models.Model):
         help_text="When the invitation was accepted"
     )
     accepted_by = models.ForeignKey(
-        CustomUser,
+        settings.AUTH_USER_MODEL,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
@@ -137,7 +138,7 @@ class PasswordResetToken(models.Model):
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
-        CustomUser,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='user_mgmt_password_reset_tokens',
         help_text="User requesting password reset"

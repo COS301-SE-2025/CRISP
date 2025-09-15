@@ -10,7 +10,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
-from core.models.models import Organization, CustomUser, TrustRelationship
+from core.models.models import Organization, TrustRelationship
+from core.user_management.models import CustomUser
 from core.services.organization_service import OrganizationService
 from core.services.access_control_service import AccessControlService
 from core.serializers.organization_serializer import (

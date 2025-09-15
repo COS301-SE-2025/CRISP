@@ -8,9 +8,10 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from core.models.models import (
-    CustomUser, Organization, UserProfile, AuthenticationLog,
+    Organization, UserProfile, 
     UserSession, TrustedDevice, UserInvitation, PasswordResetToken
 )
+from core.user_management.models import CustomUser, AuthenticationLog
 from datetime import timedelta
 import secrets
 import hashlib

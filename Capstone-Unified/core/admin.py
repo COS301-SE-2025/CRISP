@@ -4,9 +4,10 @@ from django.utils.safestring import mark_safe
 import json
 
 from core.models.models import (
-    Organization, STIXObject, Collection, CollectionObject, Feed, Identity, CustomUser,
+    Organization, STIXObject, Collection, CollectionObject, Feed, Identity,
     TrustLevel, TrustRelationship, TrustGroup, TrustGroupMembership
 )
+from core.user_management.models import CustomUser
 
 try:
     from core.models.models import Institution, Indicator, ThreatFeed, TTPData

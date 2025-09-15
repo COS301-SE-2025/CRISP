@@ -61,184 +61,6 @@ ORGANIZATION_TYPE_CHOICES = [
 ]
 
 
-class CustomUserManager(BaseUserManager):
-    """Custom user manager for CustomUser model"""
-    
-    def create_user(self, username, email, password=None, organization=None, **extra_fields):
-        """Create and save a regular user"""
-        if not email:
-            raise ValueError('The Email field must be set')
-        if not username:
-            raise ValueError('The Username field must be set')
-        
-        email = self.normalize_email(email)
-        user = self.model(username=username, email=email, organization=organization, **extra_fields)
-        
-        if password:
-            user.set_password(password)  # This properly hashes the password
-        
-        user.save(using=self._db)
-        
-        # Force reload to ensure password is properly set
-        user.refresh_from_db()
-        return user
-    
-    def create_superuser(self, username, email, password=None, organization=None, **extra_fields):
-        """Create and save a superuser"""
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('role', 'BlueVisionAdmin')
-        
-        return self.create_user(username, email, password, organization, **extra_fields)
-
-
-class CustomUser(AbstractUser):
-    """
-    Custom user model extending Django's AbstractUser.
-    Supports role-based access control and trust-aware operations.
-    """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    
-    objects = CustomUserManager()
-    
-    # Organization relationship (defined after Organization model)
-    organization = models.ForeignKey(
-        'Organization', 
-        on_delete=models.CASCADE, 
-        null=True, 
-        blank=True,
-        related_name='users'
-    )
-    
-    # Role and permissions
-    role = models.CharField(
-        max_length=20,
-        choices=USER_ROLE_CHOICES,
-        default='viewer',
-        help_text="User's role in the system"
-    )
-    is_publisher = models.BooleanField(
-        default=False,
-        help_text="Whether user can publish threat intelligence"
-    )
-    is_verified = models.BooleanField(
-        default=False,
-        help_text="Whether user account is verified"
-    )
-    
-    # Security fields
-    failed_login_attempts = models.IntegerField(
-        default=0,
-        help_text="Number of consecutive failed login attempts"
-    )
-    account_locked_until = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="When account lock expires"
-    )
-    password_changed_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="When password was last changed"
-    )
-    
-    # Two-factor authentication
-    two_factor_enabled = models.BooleanField(
-        default=False,
-        help_text="Whether two-factor authentication is enabled"
-    )
-    two_factor_secret = models.CharField(
-        max_length=32,
-        blank=True,
-        help_text="Secret for two-factor authentication"
-    )
-    
-    # Trusted devices
-    trusted_devices = models.JSONField(
-        default=list,
-        blank=True,
-        help_text="List of trusted device fingerprints"
-    )
-    
-    # User preferences
-    preferences = models.JSONField(
-        default=dict,
-        blank=True,
-        help_text="User preferences and settings"
-    )
-    
-    # Metadata
-    metadata = models.JSONField(
-        default=dict,
-        blank=True,
-        help_text="Additional user metadata"
-    )
-    
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = 'User'
-        verbose_name_plural = 'Users'
-        ordering = ['username']
-        indexes = [
-            models.Index(fields=['role']),
-            models.Index(fields=['organization']),
-            models.Index(fields=['is_active']),
-            models.Index(fields=['is_verified']),
-            models.Index(fields=['email']),
-        ]
-
-    def __str__(self):
-        return f"{self.username} ({self.get_role_display()})"
-
-    @property
-    def is_account_locked(self):
-        """Check if account is currently locked"""
-        if self.account_locked_until:
-            return timezone.now() < self.account_locked_until
-        return False
-
-    @property
-    def is_bluevision_admin(self):
-        """Check if user is a BlueVision administrator"""
-        return self.role == 'BlueVisionAdmin'
-
-    @property
-    def can_manage_users(self):
-        """Check if user can manage other users"""
-        return self.role in ['publisher', 'BlueVisionAdmin']
-
-    @property
-    def can_manage_trust_relationships(self):
-        """Check if user can manage trust relationships"""
-        return self.role in ['publisher', 'BlueVisionAdmin']
-
-    def lock_account(self, duration_minutes=15):
-        """Lock user account for specified duration"""
-        self.account_locked_until = timezone.now() + timedelta(minutes=duration_minutes)
-        self.save(update_fields=['account_locked_until'])
-
-    def unlock_account(self):
-        """Unlock user account"""
-        self.account_locked_until = None
-        self.failed_login_attempts = 0
-        self.save(update_fields=['account_locked_until', 'failed_login_attempts'])
-
-    def save(self, *args, **kwargs):
-        """Override save to handle password hashing and set defaults."""
-        # Set defaults for required fields if they're empty
-        if not self.trusted_devices:
-            self.trusted_devices = []
-        if not self.preferences:
-            self.preferences = {}
-        if not self.metadata:
-            self.metadata = {}
-            
-        super().save(*args, **kwargs)
-
-
 class Organization(models.Model):
     """
     Organization model represents educational institutions or other organizations.
@@ -279,7 +101,7 @@ class Organization(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(
-        'CustomUser', 
+        'user_management.CustomUser', 
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True,
@@ -371,7 +193,7 @@ class STIXObject(models.Model):
     # System metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    created_by = models.ForeignKey('CustomUser', on_delete=models.SET_NULL, null=True, related_name='created_stix_objects')
+    created_by = models.ForeignKey('user_management.CustomUser', on_delete=models.SET_NULL, null=True, related_name='created_stix_objects')
     source_organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='stix_objects')
     anonymized = models.BooleanField(default=False)
     anonymization_strategy = models.CharField(max_length=50, blank=True, null=True)
@@ -520,7 +342,7 @@ class Feed(models.Model):
     alias = models.SlugField(max_length=50, unique=True)
     name = models.CharField(max_length=255)
     status = models.CharField(max_length=50)
-    created_by = models.ForeignKey('CustomUser', on_delete=models.CASCADE)
+    created_by = models.ForeignKey('user_management.CustomUser', on_delete=models.CASCADE)
     
     # Relationships
     collection = models.ForeignKey(Collection, on_delete=models.CASCADE, related_name='feeds')
@@ -660,7 +482,7 @@ class Identity(models.Model):
     identity_class = models.CharField(max_length=100)
     organization = models.OneToOneField('Organization', on_delete=models.CASCADE, related_name='stix_identity')
     raw_data = models.TextField()
-    created_by = models.ForeignKey('CustomUser', on_delete=models.SET_NULL, null=True)
+    created_by = models.ForeignKey('user_management.CustomUser', on_delete=models.SET_NULL, null=True)
 
     class Meta:
         verbose_name_plural = "Identities"
@@ -1203,7 +1025,7 @@ class TrustRelationship(models.Model):
         help_text="Whether target organization has approved"
     )
     approved_by_source_user = models.ForeignKey(
-        'CustomUser',
+        'user_management.CustomUser',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -1211,7 +1033,7 @@ class TrustRelationship(models.Model):
         help_text="User who approved on behalf of source organization"
     )
     approved_by_target_user = models.ForeignKey(
-        'CustomUser',
+        'user_management.CustomUser',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -1257,7 +1079,7 @@ class TrustRelationship(models.Model):
     
     # Audit fields
     created_by = models.ForeignKey(
-        'CustomUser',
+        'user_management.CustomUser',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -1265,7 +1087,7 @@ class TrustRelationship(models.Model):
         help_text="User who created this relationship"
     )
     last_modified_by = models.ForeignKey(
-        'CustomUser',
+        'user_management.CustomUser',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -1273,7 +1095,7 @@ class TrustRelationship(models.Model):
         help_text="User who last modified this relationship"
     )
     revoked_by = models.ForeignKey(
-        'CustomUser',
+        'user_management.CustomUser',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -1646,7 +1468,7 @@ class TrustLog(models.Model):
         related_name='trust_logs_as_user'
     )
     user = models.ForeignKey(
-        'CustomUser',
+        'user_management.CustomUser',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -1894,106 +1716,13 @@ class SharingPolicy(models.Model):
         }
 
 
-class AuthenticationLog(models.Model):
-    """
-    Comprehensive logging of authentication events for audit purposes.
-    """
-    ACTION_CHOICES = [
-        ('login_success', 'Login Success'),
-        ('login_failure', 'Login Failure'),
-        ('logout', 'Logout'),
-        ('password_change', 'Password Change'),
-        ('password_reset', 'Password Reset'),
-        ('account_locked', 'Account Locked'),
-        ('account_unlocked', 'Account Unlocked'),
-        ('user_created', 'User Created'),
-        ('user_modified', 'User Modified'),
-        ('user_deactivated', 'User Deactivated'),
-        ('two_factor_enabled', 'Two-Factor Enabled'),
-        ('two_factor_disabled', 'Two-Factor Disabled'),
-        ('trusted_device_added', 'Trusted Device Added'),
-        ('trusted_device_removed', 'Trusted Device Removed'),
-        ('token_refresh', 'Token Refresh'),
-        ('session_expired', 'Session Expired'),
-    ]
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(
-        'CustomUser',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='core_authentication_logs'
-    )
-    action = models.CharField(
-        max_length=50,
-        choices=ACTION_CHOICES,
-        help_text="Type of authentication action"
-    )
-    ip_address = models.GenericIPAddressField(
-        null=True,
-        blank=True,
-        help_text="IP address from which action was performed"
-    )
-    user_agent = models.TextField(
-        null=True,
-        blank=True,
-        help_text="User agent string"
-    )
-    success = models.BooleanField(
-        default=True,
-        help_text="Whether the action was successful"
-    )
-    failure_reason = models.CharField(
-        max_length=255,
-        null=True,
-        blank=True,
-        help_text="Reason for failure if action was unsuccessful"
-    )
-    additional_data = models.JSONField(
-        default=dict,
-        help_text="Additional data about the authentication event"
-    )
-    timestamp = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        verbose_name = 'Authentication Log'
-        verbose_name_plural = 'Authentication Logs'
-        ordering = ['-timestamp']
-        indexes = [
-            models.Index(fields=['user', '-timestamp']),
-            models.Index(fields=['action', '-timestamp']),
-            models.Index(fields=['ip_address', '-timestamp']),
-            models.Index(fields=['success', '-timestamp']),
-        ]
-
-    def __str__(self):
-        username = self.user.username if self.user else 'Unknown'
-        status = "SUCCESS" if self.success else "FAILURE"
-        return f"{self.action} - {username} - {status} - {self.timestamp}"
-
-    @classmethod
-    def log_authentication_event(cls, user, action, ip_address=None, user_agent=None,
-                                success=True, failure_reason=None, additional_data=None):
-        """Convenience method to log authentication events"""
-        return cls.objects.create(
-            user=user,
-            action=action,
-            ip_address=ip_address,
-            user_agent=user_agent,
-            success=success,
-            failure_reason=failure_reason,
-            additional_data=additional_data or {}
-        )
-
-
 class UserSession(models.Model):
     """
     Track active user sessions for security and management purposes.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
-        'CustomUser',
+        'user_management.CustomUser',
         on_delete=models.CASCADE,
         related_name='sessions'
     )
@@ -2072,7 +1801,7 @@ class UserProfile(models.Model):
     Extended user profile information and preferences.
     """
     user = models.OneToOneField(
-        'CustomUser',
+        'user_management.CustomUser',
         on_delete=models.CASCADE,
         related_name='profile'
     )
@@ -2146,7 +1875,7 @@ class TrustedDevice(models.Model):
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
-        'CustomUser',
+        'user_management.CustomUser',
         on_delete=models.CASCADE,
         related_name='devices'
     )
@@ -2233,7 +1962,7 @@ class UserInvitation(models.Model):
         help_text="Organization extending the invitation"
     )
     inviter = models.ForeignKey(
-        'CustomUser', 
+        'user_management.CustomUser', 
         on_delete=models.CASCADE,
         related_name='core_sent_invitations',
         help_text="User who sent the invitation"
@@ -2265,7 +1994,7 @@ class UserInvitation(models.Model):
         help_text="When the invitation was accepted"
     )
     accepted_by = models.ForeignKey(
-        'CustomUser',
+        'user_management.CustomUser',
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
@@ -2332,7 +2061,7 @@ class PasswordResetToken(models.Model):
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
-        'CustomUser',
+        'user_management.CustomUser',
         on_delete=models.CASCADE,
         related_name='core_password_reset_tokens',
         help_text="User requesting password reset"
@@ -2434,7 +2163,7 @@ class SystemActivity(models.Model):
     
     # Activity metadata
     metadata = models.JSONField(default=dict, blank=True)  # Store additional data like counts, etc.
-    user = models.ForeignKey('CustomUser', on_delete=models.SET_NULL, null=True, blank=True)
+    user = models.ForeignKey('user_management.CustomUser', on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
@@ -2494,4 +2223,4 @@ class SystemActivity(models.Model):
     
     class Meta:
         ordering = ['-created_at']
-        db_table = 'system_activities'
+        db_table = 'core_systemactivity'

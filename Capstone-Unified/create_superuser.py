@@ -1,4 +1,5 @@
-from core.models.models import CustomUser, Organization
+from core.models.models import , Organization
+from core.user_management.models import CustomUser
 from django.contrib.auth.hashers import make_password
 
 # Create default organization

@@ -1,6 +1,7 @@
 import logging
 from typing import Optional, Dict, Any, List
-from core.models.models import TTPData, CustomUser, Organization
+from core.models.models import TTPData, Organization
+from core.user_management.models import CustomUser
 from core.repositories.ttp_repository import TTPRepository
 from .access_control_service import AccessControlService
 from .audit_service import AuditService

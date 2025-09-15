@@ -3,7 +3,9 @@ Trust Serializers - Trust relationship model serialization for API responses
 """
 
 from rest_framework import serializers
-from core.models.models import TrustRelationship, TrustGroup, TrustLevel, Organization, CustomUser
+from core.models.models import TrustRelationship, TrustLevel, Organization
+from core.trust_management.models import TrustGroup
+from core.user_management.models import CustomUser
 
 class OrganizationBasicSerializer(serializers.ModelSerializer):
     """Basic organization serializer for trust relationships"""
