@@ -3,7 +3,7 @@ Publish Feeds Management Command
 """
 from django.core.management.base import BaseCommand
 from core.models.models import Feed
-from crisp_unified.utils import publish_feed
+from settings.utils import publish_feed
 
 
 class Command(BaseCommand):

@@ -17,7 +17,7 @@ from core.models.models import (
     Organization, STIXObject, Collection, CollectionObject, Feed
 )
 from core.patterns.strategy.enums import AnonymizationLevel
-from crisp_unified.utils import generate_bundle_from_collection
+from settings.utils import generate_bundle_from_collection
 
 
 class FullWorkflowTestCase(TransactionTestCase):

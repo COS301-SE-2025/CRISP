@@ -6,7 +6,7 @@ Creates admin, publisher, and viewer users with default credentials for Docker s
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from core.models.models import Organization, 
+from core.models.models import Organization 
 from core.user_management.models import CustomUser
 from core.services.organization_service import OrganizationService
 from core.services.user_service import UserService

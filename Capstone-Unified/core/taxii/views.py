@@ -108,7 +108,7 @@ class TAXIIBaseView(APIView):
             return 1.0
         
         # Import here to avoid circular imports
-        from crisp_unified.utils import get_trust_level
+        from settings.utils import get_trust_level
         return get_trust_level(source_org, target_org)
     
     def apply_anonymization(self, stix_objects, requesting_org, source_org):

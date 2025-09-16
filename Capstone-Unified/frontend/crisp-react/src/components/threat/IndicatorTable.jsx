@@ -8,104 +8,94 @@ const IndicatorTable = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
   const [currentPage, setCurrentPage] = useState(1);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
   const itemsPerPage = 20;
 
   useEffect(() => {
     fetchIndicators();
   }, [filter, searchTerm]);
 
+  // Auto-refresh every 30 seconds when enabled
+  useEffect(() => {
+    let interval;
+    if (autoRefresh) {
+      interval = setInterval(() => {
+        fetchIndicators();
+        setLastRefresh(new Date());
+      }, 30000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [autoRefresh, filter, searchTerm]);
+
+  // Listen for feed consumption completion events
+  useEffect(() => {
+    const handleFeedUpdate = (event) => {
+      // Refresh indicators when feed consumption completes
+      fetchIndicators();
+      setLastRefresh(new Date());
+    };
+
+    // Listen for custom events from other components
+    window.addEventListener('feedConsumptionComplete', handleFeedUpdate);
+    window.addEventListener('indicatorsUpdated', handleFeedUpdate);
+
+    return () => {
+      window.removeEventListener('feedConsumptionComplete', handleFeedUpdate);
+      window.removeEventListener('indicatorsUpdated', handleFeedUpdate);
+    };
+  }, []);
+
   const fetchIndicators = async () => {
     try {
       setLoading(true);
-      // Mock indicator data - replace with actual API call
-      const mockIndicators = [
-        {
-          id: '1',
-          type: 'IP Address',
-          value: '192.168.1.100',
-          threat_type: 'Command & Control',
-          confidence: 'high',
-          severity: 'critical',
-          source: 'AlienVault OTX',
-          created_at: '2025-01-15T14:30:00Z',
-          first_seen: '2025-01-14T10:15:00Z',
-          last_seen: '2025-01-15T13:45:00Z',
-          tags: ['botnet', 'c2', 'malware'],
-          description: 'Known command and control server for banking trojan',
-          ttps: ['T1071.001', 'T1105'],
-          false_positive_score: 0.1
-        },
-        {
-          id: '2',
-          type: 'Domain',
-          value: 'malicious-site.example.com',
-          threat_type: 'Phishing',
-          confidence: 'medium',
-          severity: 'high',
-          source: 'Internal Feed',
-          created_at: '2025-01-15T12:20:00Z',
-          first_seen: '2025-01-15T08:30:00Z',
-          last_seen: '2025-01-15T12:15:00Z',
-          tags: ['phishing', 'credential-theft', 'social-engineering'],
-          description: 'Phishing domain impersonating major bank login page',
-          ttps: ['T1566.002', 'T1539'],
-          false_positive_score: 0.2
-        },
-        {
-          id: '3',
-          type: 'File Hash',
-          value: 'a1b2c3d4e5f6789012345678901234567890abcd',
-          threat_type: 'Malware',
-          confidence: 'high',
-          severity: 'critical',
-          source: 'MISP Feed',
-          created_at: '2025-01-15T10:10:00Z',
-          first_seen: '2025-01-12T14:20:00Z',
-          last_seen: '2025-01-15T09:55:00Z',
-          tags: ['ransomware', 'encryption', 'persistence'],
-          description: 'Ransomware payload with advanced evasion techniques',
-          ttps: ['T1486', 'T1027', 'T1547.001'],
-          false_positive_score: 0.05
-        },
-        {
-          id: '4',
-          type: 'URL',
-          value: 'https://suspicious-download.net/payload.exe',
-          threat_type: 'Malware Distribution',
-          confidence: 'medium',
-          severity: 'high',
-          source: 'Emerging Threats',
-          created_at: '2025-01-15T09:45:00Z',
-          first_seen: '2025-01-15T06:30:00Z',
-          last_seen: '2025-01-15T09:40:00Z',
-          tags: ['dropper', 'payload', 'infection-vector'],
-          description: 'Malware distribution site hosting multiple payloads',
-          ttps: ['T1105', 'T1027'],
-          false_positive_score: 0.15
-        },
-        {
-          id: '5',
-          type: 'Email',
-          value: 'admin@phishing-bank.com',
-          threat_type: 'Phishing',
-          confidence: 'high',
-          severity: 'medium',
-          source: 'Internal Feed',
-          created_at: '2025-01-14T16:20:00Z',
-          first_seen: '2025-01-14T12:10:00Z',
-          last_seen: '2025-01-14T16:15:00Z',
-          tags: ['spear-phishing', 'business-email-compromise'],
-          description: 'Email address used in targeted phishing campaign',
-          ttps: ['T1566.001', 'T1078'],
-          false_positive_score: 0.1
-        }
-      ];
 
-      let filteredIndicators = mockIndicators;
+      // Fetch actual indicators from API
+      const response = await fetch('/api/indicators/', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          // Add auth headers if needed
+          ...(localStorage.getItem('token') && {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          })
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Handle different response formats
+      let indicatorsList = Array.isArray(data) ? data : data.results || data.indicators || [];
+
+      // Transform API response to match component format
+      const apiIndicators = indicatorsList.map(indicator => ({
+        id: indicator.id,
+        type: indicator.indicator_type || indicator.type || 'Unknown',
+        value: indicator.value || indicator.indicator_value || '',
+        threat_type: indicator.threat_type || 'Unknown',
+        confidence: indicator.confidence || 'medium',
+        severity: indicator.severity || 'medium',
+        source: indicator.source || indicator.feed_name || 'Unknown',
+        created_at: indicator.created_at || indicator.timestamp || new Date().toISOString(),
+        first_seen: indicator.first_seen || indicator.created_at || new Date().toISOString(),
+        last_seen: indicator.last_seen || indicator.created_at || new Date().toISOString(),
+        tags: indicator.tags || [],
+        description: indicator.description || '',
+        ttps: indicator.ttps || [],
+        false_positive_score: indicator.false_positive_score || 0
+      }));
+
+      let filteredIndicators = apiIndicators;
       
       // Apply type filter
       if (filter !== 'all') {
-        filteredIndicators = mockIndicators.filter(i => 
+        filteredIndicators = apiIndicators.filter(i =>
           i.type === filter || i.threat_type === filter || i.confidence === filter || i.severity === filter
         );
       }
@@ -218,6 +208,30 @@ const IndicatorTable = () => {
               className="search-input"
             />
             <i className="fas fa-search"></i>
+          </div>
+          <div className="refresh-controls">
+            <button
+              className={`btn btn-outline ${autoRefresh ? 'active' : ''}`}
+              onClick={() => setAutoRefresh(!autoRefresh)}
+              title={autoRefresh ? 'Disable auto-refresh' : 'Enable auto-refresh'}
+            >
+              <i className={`fas fa-sync-alt ${autoRefresh ? 'fa-spin' : ''}`}></i>
+              Auto
+            </button>
+            <button
+              className="btn btn-outline"
+              onClick={() => {
+                fetchIndicators();
+                setLastRefresh(new Date());
+              }}
+              title="Manual refresh"
+            >
+              <i className="fas fa-refresh"></i>
+              Refresh
+            </button>
+            <span className="last-refresh">
+              Last: {lastRefresh.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+            </span>
           </div>
           <button className="btn btn-primary">
             <i className="fas fa-download"></i>
@@ -508,6 +522,29 @@ const IndicatorTable = () => {
           position: absolute;
           right: 12px;
           color: #6c757d;
+        }
+
+        .refresh-controls {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .refresh-controls .btn {
+          padding: 6px 12px;
+          font-size: 12px;
+        }
+
+        .refresh-controls .btn.active {
+          background: #0056b3;
+          color: white;
+          border-color: #0056b3;
+        }
+
+        .last-refresh {
+          font-size: 11px;
+          color: #6c757d;
+          white-space: nowrap;
         }
 
         .stats-row {

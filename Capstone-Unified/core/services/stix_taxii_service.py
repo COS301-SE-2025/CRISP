@@ -6,7 +6,7 @@ from stix2 import parse as stix2_parse
 from django.conf import settings
 from django.utils import timezone
 
-from core.models.models import ThreatFeed, Indicator, TTPData, , Organization
+from core.models.models import ThreatFeed, Indicator, TTPData, Organization
 from core.user_management.models import CustomUser
 from core.patterns.factory.stix_indicator_integrated import StixIndicatorCreator
 from core.patterns.factory.stix_ttp_integrated import StixTTPCreator

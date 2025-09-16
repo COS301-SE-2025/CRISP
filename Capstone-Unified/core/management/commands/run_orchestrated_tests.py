@@ -1,6 +1,6 @@
 import sys
 from django.core.management.base import BaseCommand
-from crisp_unified.main_test_runner import CRISPTestOrchestrator
+from settings.main_test_runner import CRISPTestOrchestrator
 
 
 class Command(BaseCommand):

@@ -52,11 +52,15 @@ services:
       - DB_PORT=5432
       - REDIS_URL=redis://redis:6379/0
       - ALLOWED_HOSTS=localhost,127.0.0.1,backend,frontend
-      - POPULATE_TEST_DATA=false
+      - POPULATE_TEST_DATA=true
     volumes:
       - ./logs:/app/logs
       - ./media:/app/media
-      - .:/app
+      - ./core:/app/core
+      - ./settings:/app/settings
+      - ./manage.py:/app/manage.py
+      - ./requirements.txt:/app/requirements.txt
+      - ./.env:/app/.env
     depends_on:
       db:
         condition: service_healthy
@@ -70,7 +74,9 @@ services:
              python manage.py setup_base_users &&
              if [ \"$$POPULATE_TEST_DATA\" = \"true\" ]; then
                echo 'Populating test data...' &&
-               python manage.py populate_database --no-input;
+               python manage.py populate_database --no-input &&
+               echo 'Populating TTP data...' &&
+               python manage.py populate_ttp_data --count 100;
              fi &&
              python manage.py collectstatic --noinput &&
              python manage.py runserver 0.0.0.0:8000"
@@ -85,7 +91,7 @@ services:
     environment:
       - VITE_API_URL=http://localhost:8000
     volumes:
-      - ./crisp-react:/app
+      - ./frontend/crisp-react:/app
       - /app/node_modules
     depends_on:
       - backend
@@ -109,11 +115,15 @@ services:
       - DB_PORT=5432
       - REDIS_URL=redis://redis-test:6379/0
       - ALLOWED_HOSTS=localhost,127.0.0.1,backend-test,frontend-test
-      - POPULATE_TEST_DATA=false
+      - POPULATE_TEST_DATA=true
     volumes:
       - ./logs:/app/logs
       - ./media:/app/media
-      - .:/app
+      - ./core:/app/core
+      - ./settings:/app/settings
+      - ./manage.py:/app/manage.py
+      - ./requirements.txt:/app/requirements.txt
+      - ./.env:/app/.env
     depends_on:
       db-test:
         condition: service_healthy
@@ -127,7 +137,9 @@ services:
              python manage.py setup_base_users &&
              if [ \"$$POPULATE_TEST_DATA\" = \"true\" ]; then
                echo 'Populating test data...' &&
-               python manage.py populate_database --no-input;
+               python manage.py populate_database --no-input &&
+               echo 'Populating TTP data...' &&
+               python manage.py populate_ttp_data --count 100;
              fi &&
              python manage.py collectstatic --noinput &&
              python manage.py runserver 0.0.0.0:8000"
@@ -181,7 +193,7 @@ services:
     environment:
       - VITE_API_URL=http://localhost:8001
     volumes:
-      - ./crisp-react:/app
+      - ./frontend/crisp-react:/app
       - /app/node_modules
     depends_on:
       - backend-test

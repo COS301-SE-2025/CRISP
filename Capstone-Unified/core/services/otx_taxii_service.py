@@ -175,15 +175,26 @@ class OTXTaxiiService:
                 
                 logger.info("client.poll returned an iterator")
                 
-                # Convert the iterator to a list
-                logger.info(f"Converting iterator to a list (max {limit if limit else 'unlimited'} blocks)")
+                # Convert the iterator to a list with safety limits
+                # Default to a reasonable limit to prevent infinite processing
+                effective_limit = limit if limit is not None else 50  # Default to 50 blocks max
+                logger.info(f"Converting iterator to a list (max {effective_limit} blocks)")
                 safe_blocks = []
                 count = 0
-                
+
+                import time
+                start_time = time.time()
+                timeout_seconds = 300  # 5 minute timeout for block retrieval
+
                 for block in content_blocks:
+                    # Check timeout
+                    if time.time() - start_time > timeout_seconds:
+                        logger.warning(f"Timeout reached after {timeout_seconds} seconds, stopping block retrieval")
+                        break
+
                     safe_blocks.append(block)
                     count += 1
-                    
+
                     if count == 1:
                         logger.info("First block details:")
 
@@ -195,9 +206,14 @@ class OTXTaxiiService:
 
                         if hasattr(block, 'binding'):
                             logger.info(f"Binding: {block.binding}")
-                    
-                    if limit and count >= limit:
-                        logger.info(f"Reached limit of {limit} blocks")
+
+                    # Log progress every 10 blocks
+                    if count % 10 == 0:
+                        elapsed = time.time() - start_time
+                        logger.info(f"Retrieved {count} blocks so far... (elapsed: {elapsed:.1f}s)")
+
+                    if count >= effective_limit:
+                        logger.info(f"Reached limit of {effective_limit} blocks")
                         break
                         
                 logger.info(f"Returning {len(safe_blocks)} blocks")
@@ -227,7 +243,7 @@ class OTXTaxiiService:
         try:
             # Use OTX settings if parameters not provided
             if force_days is None:
-                force_days = settings.OTX_SETTINGS.get('MAX_AGE_DAYS', 1)
+                force_days = settings.OTX_SETTINGS.get('MAX_AGE_DAYS', 30)
             if batch_size is None:
                 batch_size = settings.OTX_SETTINGS.get('BATCH_SIZE', 10)
             
@@ -260,8 +276,8 @@ class OTXTaxiiService:
                 begin_date = threat_feed.last_sync
                 logger.info(f"Using last sync time: {begin_date}")
             else:
-                begin_date = timezone.now() - timedelta(days=7)
-                logger.info(f"Using default begin_date (7 days ago): {begin_date}")
+                begin_date = timezone.now() - timedelta(days=30)
+                logger.info(f"Using default begin_date (30 days ago): {begin_date}")
             
             # Make timezone-aware if needed
             if begin_date and not begin_date.tzinfo:

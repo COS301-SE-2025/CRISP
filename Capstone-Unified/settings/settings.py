@@ -5,15 +5,16 @@ from datetime import timedelta
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
+# BASE_DIR is the root of the project (Capstone-Unified)
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Add core patterns to Python path for imports
-CORE_PATH = BASE_DIR.parent / 'core'
+CORE_PATH = BASE_DIR / 'core'
 if str(CORE_PATH) not in sys.path:
     sys.path.append(str(CORE_PATH))
 
-# Add the root directory
-ROOT_PATH = BASE_DIR.parent
+# Root path is the same as BASE_DIR now
+ROOT_PATH = BASE_DIR
 if str(ROOT_PATH) not in sys.path:
     sys.path.append(str(ROOT_PATH))
 
@@ -82,7 +83,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'crisp_unified.urls'
+ROOT_URLCONF = 'settings.urls'
 
 TEMPLATES = [
     {
@@ -100,7 +101,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'crisp_unified.wsgi.application'
+WSGI_APPLICATION = 'settings.wsgi.application'
 
 # Database configuration
 DATABASES = {
@@ -231,7 +232,7 @@ OTX_SETTINGS = {
     'ENABLED': os.getenv('OTX_ENABLED', 'True').lower() == 'true',
     'FETCH_INTERVAL': int(os.getenv('OTX_FETCH_INTERVAL', '3600')),
     'BATCH_SIZE': int(os.getenv('OTX_BATCH_SIZE', '10')),  # Reduced from 50 to 10 for faster processing
-    'MAX_AGE_DAYS': int(os.getenv('OTX_MAX_AGE_DAYS', '2')),  # Changed from 30 to 2 days
+    'MAX_AGE_DAYS': int(os.getenv('OTX_MAX_AGE_DAYS', '30')),  # 30 days for better data retrieval
 }
 
 # TAXII Server Configuration

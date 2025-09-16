@@ -18,4 +18,4 @@ ALTER SCHEMA public OWNER TO crisp_user;
 EOF
 
 echo "Database reset complete. Running migrations..."
-python3 manage.py migrate
+cd ../.. && python3 manage.py migrate

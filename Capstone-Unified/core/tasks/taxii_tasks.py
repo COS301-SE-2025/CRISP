@@ -1,7 +1,7 @@
 import logging
 from datetime import timedelta
 from django.utils import timezone
-from crisp_unified.celery import app
+from settings.celery import app
 from core.patterns.observer.threat_feed import ThreatFeed
 from core.services.stix_taxii_service import StixTaxiiService
 

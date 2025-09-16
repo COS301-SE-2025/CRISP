@@ -226,7 +226,7 @@ class STIXObject(models.Model):
             
         if anonymization_level is None:
             # Determine anonymization level based on trust
-            from crisp_unified.utils import get_anonymization_level
+            from settings.utils import get_anonymization_level
             anonymization_level = get_anonymization_level(self.source_organization, requesting_org)
         
         try:
@@ -248,7 +248,7 @@ class STIXObject(models.Model):
     
     def get_trust_level(self, requesting_org):
         """Get trust level between source and requesting organization"""
-        from crisp_unified.utils import get_trust_level
+        from settings.utils import get_trust_level
         return get_trust_level(self.source_organization, requesting_org)
     
     def to_json(self):
@@ -307,7 +307,7 @@ class Collection(models.Model):
         """
         Generate anonymized bundle for requesting organization using advanced anonymization.
         """
-        from crisp_unified.utils import generate_bundle_from_collection
+        from settings.utils import generate_bundle_from_collection
         return generate_bundle_from_collection(
             self, 
             filters=filters, 
@@ -387,7 +387,7 @@ class Feed(models.Model):
         Publish the feed's content as a STIX bundle
         """
         try:
-            from crisp_unified.utils import generate_bundle_from_collection
+            from settings.utils import generate_bundle_from_collection
             
             # Generate bundle from collection
             bundle = generate_bundle_from_collection(self.collection)

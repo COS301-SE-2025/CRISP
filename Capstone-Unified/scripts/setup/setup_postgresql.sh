@@ -58,7 +58,7 @@ pip3 install psycopg2-binary --break-system-packages
 
 # Run Django migrations
 echo "Running Django migrations..."
-python3 manage.py migrate
+cd ../.. && python3 manage.py migrate
 
 # Create superuser
 echo "Creating superuser..."

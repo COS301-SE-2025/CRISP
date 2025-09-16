@@ -153,8 +153,8 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
             batch_size = request.query_params.get('batch_size', 100)
             force_days = request.query_params.get('force_days')
             
-            # Validate parameters
-            limit = None
+            # Validate parameters with reasonable defaults
+            limit = 10  # Default to 10 blocks for faster processing
             if limit_param:
                 try:
                     limit = int(limit_param)
@@ -199,7 +199,7 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
                     "task_id": task.id
                 })
             
-            stats = service.consume_feed(feed)
+            stats = service.consume_feed(feed, limit=limit, force_days=force_days, batch_size=batch_size)
             
             # Format response properly for API consumers
             if isinstance(stats, tuple):

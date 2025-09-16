@@ -2481,6 +2481,16 @@ function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptio
           // Refresh feeds after consumption
           await fetchThreatFeeds();
           console.log('Feed refresh completed');
+
+          // Dispatch event to notify other components
+          window.dispatchEvent(new CustomEvent('feedConsumptionComplete', {
+            detail: {
+              feedId,
+              indicators: result.indicators || 0,
+              ttps: result.ttps || 0
+            }
+          }));
+
           if (onConsumptionComplete) onConsumptionComplete();
           return; // Exit early, no need to poll
         }
@@ -2504,7 +2514,16 @@ function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptio
                 total: result.indicators || 0
               }
             }));
-            
+
+            // Dispatch event to notify other components
+            window.dispatchEvent(new CustomEvent('feedConsumptionComplete', {
+              detail: {
+                feedId,
+                indicators: result.indicators || 0,
+                ttps: result.ttps || 0
+              }
+            }));
+
             setTimeout(() => {
               setConsumingFeeds(prev => prev.filter(id => id !== feedId));
               setFeedProgress(prev => {
@@ -2548,7 +2567,16 @@ function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptio
                 if (progress.stage === 'Completed' || (progress.percentage && progress.percentage >= 100)) {
                 clearInterval(progressInterval);
                 activeIntervals.current = activeIntervals.current.filter(id => id !== progressInterval);
-                
+
+                // Dispatch event to notify other components
+                window.dispatchEvent(new CustomEvent('feedConsumptionComplete', {
+                  detail: {
+                    feedId,
+                    indicators: progress.current || 0,
+                    ttps: progress.ttps || 0
+                  }
+                }));
+
                 // Remove from consuming set after a brief delay to show completion
                 const completionTimeout = setTimeout(() => {
                   setConsumingFeeds(prev => prev.filter(id => id !== feedId));
@@ -3289,6 +3317,27 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
     }
   }, [active, lastUpdate]);
 
+  // Listen for feed consumption completion events for real-time updates
+  useEffect(() => {
+    if (!active) return;
+
+    const handleFeedUpdate = (event) => {
+      console.log('IoCManagement: Feed consumption completed, refreshing indicators...', event.detail);
+      // Refresh indicators when feed consumption completes
+      fetchIndicators();
+      if (onRefresh) onRefresh();
+    };
+
+    // Listen for custom events from feed consumption
+    window.addEventListener('feedConsumptionComplete', handleFeedUpdate);
+    window.addEventListener('indicatorsUpdated', handleFeedUpdate);
+
+    return () => {
+      window.removeEventListener('feedConsumptionComplete', handleFeedUpdate);
+      window.removeEventListener('indicatorsUpdated', handleFeedUpdate);
+    };
+  }, [active]);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
@@ -3319,72 +3368,80 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
   const fetchIndicators = async () => {
     setLoading(true);
     try {
-      // Get real indicator data from feeds
-      const feedData = await api.get('/api/threat-feeds/');
-      if (feedData && feedData.results) {
-        let allIndicators = [];
-        let totalIndicatorCount = 0;
-        
-        for (const feed of feedData.results) {
-          const feedStatus = await api.get(`/api/threat-feeds/${feed.id}/status/`);
-          if (feedStatus && feedStatus.indicator_count > 0) {
-            totalIndicatorCount += feedStatus.indicator_count;
-            
-            // Fetch ALL indicators from this feed, not just 50
-            let page = 1;
-            let hasMore = true;
-            
-            while (hasMore) {
-              const indicatorsData = await api.get(`/api/threat-feeds/${feed.id}/indicators/?page=${page}&page_size=100`);
-              if (indicatorsData && indicatorsData.results && indicatorsData.results.length > 0) {
-                const realIndicators = indicatorsData.results.map(indicator => ({
-                  id: indicator.id,
-                  type: indicator.type === 'ip' ? 'IP Address' : 
-                        indicator.type === 'domain' ? 'Domain' :
-                        indicator.type === 'url' ? 'URL' :
-                        indicator.type === 'file_hash' ? 'File Hash' :
-                        indicator.type === 'email' ? 'Email' : 
-                        indicator.type === 'user_agent' ? 'User Agent' :
-                        indicator.type === 'registry' ? 'Registry Key' :
-                        indicator.type === 'mutex' ? 'Mutex' :
-                        indicator.type === 'process' ? 'Process' : indicator.type,
-                  rawType: indicator.type,
-                  title: indicator.name || '',
-                  value: indicator.value,
-                  severity: indicator.confidence >= 75 ? 'High' : 
-                           indicator.confidence >= 50 ? 'Medium' : 'Low',
-                  confidence: indicator.confidence,
-                  source: indicator.source || feed.name || 'Unknown',
-                  description: indicator.description || '',
-                  created: new Date(indicator.created_at).toISOString().split('T')[0],
-                  createdDate: new Date(indicator.created_at),
-                  status: indicator.is_anonymized ? 'Anonymized' : 'Active',
-                  feedId: feed.id,
-                  feedName: feed.name
-                }));
-                allIndicators.push(...realIndicators);
-                
-                // Check if there are more pages
-                hasMore = indicatorsData.next !== null;
-                page++;
-              } else {
-                hasMore = false;
-              }
-            }
+      // Fetch ALL indicators by paginating through all pages
+      console.log('IoCManagement: Fetching all indicators from /api/indicators/...');
+
+      let allIndicators = [];
+      let page = 1;
+      let hasMore = true;
+      let totalFetched = 0;
+
+      while (hasMore) {
+        console.log(`IoCManagement: Fetching page ${page}...`);
+        const indicatorsData = await api.get(`/api/indicators/?page=${page}&page_size=100`);
+
+        if (indicatorsData && indicatorsData.results && indicatorsData.results.length > 0) {
+          totalFetched += indicatorsData.results.length;
+          console.log(`IoCManagement: Page ${page} returned ${indicatorsData.results.length} indicators (total so far: ${totalFetched})`);
+
+          // Transform indicators to match IoC Management table format
+          const transformedIndicators = indicatorsData.results.map(indicator => ({
+            id: indicator.id,
+            type: indicator.indicator_type || indicator.type === 'ip' ? 'IP Address' :
+                  indicator.type === 'domain' ? 'Domain' :
+                  indicator.type === 'url' ? 'URL' :
+                  indicator.type === 'file_hash' ? 'File Hash' :
+                  indicator.type === 'email' ? 'Email' :
+                  indicator.type === 'user_agent' ? 'User Agent' :
+                  indicator.type === 'registry' ? 'Registry Key' :
+                  indicator.type === 'mutex' ? 'Mutex' :
+                  indicator.type === 'process' ? 'Process' : (indicator.type || 'Unknown'),
+            rawType: indicator.type,
+            title: indicator.name || indicator.title || '',
+            value: indicator.value || indicator.indicator_value || '',
+            severity: indicator.severity || (indicator.confidence >= 75 ? 'High' :
+                     indicator.confidence >= 50 ? 'Medium' : 'Low'),
+            confidence: indicator.confidence || 50,
+            source: indicator.source || indicator.feed_name || 'Unknown',
+            description: indicator.description || '',
+            created: indicator.created_at ? new Date(indicator.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            createdDate: indicator.created_at ? new Date(indicator.created_at) : new Date(),
+            status: indicator.is_anonymized ? 'Anonymized' : 'Active',
+            feedId: indicator.threat_feed_id || indicator.feed_id,
+            feedName: indicator.source || indicator.feed_name || 'Unknown'
+          }));
+
+          allIndicators.push(...transformedIndicators);
+
+          // Check if there are more pages
+          hasMore = indicatorsData.next !== null;
+          page++;
+
+          // Safety limit to prevent infinite loops
+          if (page > 100) {
+            console.warn('IoCManagement: Reached page limit (100), stopping pagination');
+            hasMore = false;
           }
+        } else {
+          hasMore = false;
         }
-        
-        // Sort indicators by creation date (newest first)
-        allIndicators.sort((a, b) => b.createdDate - a.createdDate);
-        
-        setIndicators(allIndicators);
-        setTotalItems(allIndicators.length);
-        console.log(`Loaded ${allIndicators.length} indicators from ${feedData.results.length} feeds`);
       }
+
+      // Sort indicators by creation date (newest first)
+      allIndicators.sort((a, b) => b.createdDate - a.createdDate);
+
+      setIndicators(allIndicators);
+      setTotalItems(allIndicators.length);
+      console.log(`IoCManagement: Successfully loaded ${allIndicators.length} total indicators from ${page - 1} pages`);
+
     } catch (error) {
-      console.error('Error fetching indicators:', error);
+      console.error('IoCManagement: Error fetching indicators:', error);
+      setError('Failed to load indicators. Please try again.');
+      setIndicators([]);
+      setTotalItems(0);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   // Filter application logic

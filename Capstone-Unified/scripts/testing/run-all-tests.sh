@@ -143,9 +143,9 @@ if [ "$SKIP_BACKEND" = false ]; then
     print_status "Running Django backend test orchestrator..."
     
     if [ "$VERBOSE" = true ]; then
-        python3 manage.py run_orchestrated_tests --verbosity=2
+        cd ../.. && python3 manage.py run_orchestrated_tests --verbosity=2
     else
-        python3 manage.py run_orchestrated_tests
+        cd ../.. && python3 manage.py run_orchestrated_tests
     fi
     
     BACKEND_RESULT=$?
@@ -161,7 +161,7 @@ fi
 if [ "$SKIP_FRONTEND" = false ]; then
     print_status "======== RUNNING FRONTEND TESTS ========"
     
-    cd crisp-react
+    cd ../../frontend/crisp-react
     
     # Install frontend dependencies
     if [ ! -d "node_modules" ] || [ "package.json" -nt "node_modules" ]; then
@@ -198,7 +198,7 @@ fi
 if [ "$SKIP_E2E" = false ]; then
     print_status "======== RUNNING END-TO-END TESTS ========"
     
-    cd crisp-react
+    cd ../../frontend/crisp-react
     
     # Install Playwright browsers if needed
     if [ ! -d "~/.cache/ms-playwright" ]; then

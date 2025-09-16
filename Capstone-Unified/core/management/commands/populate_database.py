@@ -585,6 +585,7 @@ class Command(BaseCommand):
                     )
                     collections.append(collection)
             except Exception as e:
+                self.stdout.write(f"Error creating collection: {e}")
                 continue
         
         # Create threat feeds
@@ -594,15 +595,103 @@ class Command(BaseCommand):
                 org = random.choice(self.organizations)
                 collection = random.choice(collections) if collections else None
                 
+                # Create realistic TAXII feed configurations with REAL collection IDs
+                feed_configs = [
+                    {
+                        'name': 'MITRE ATT&CK Enterprise',
+                        'description': 'MITRE ATT&CK Enterprise tactics, techniques, and procedures',
+                        'taxii_server_url': 'https://cti-taxii.mitre.org',
+                        'taxii_api_root': 'stix',
+                        'taxii_collection_id': '95ecc380-afe9-11e4-9b6c-751b66dd541e',
+                        'is_external': True,
+                        'is_public': True,
+                        'sync_interval_hours': 24,
+                    },
+                    {
+                        'name': 'AlienVault OTX - General',
+                        'description': 'AlienVault Open Threat Exchange general threat intelligence',
+                        'taxii_server_url': 'https://otx.alienvault.com',
+                        'taxii_api_root': 'taxii',
+                        'taxii_collection_id': 'user_AlienVault',
+                        'is_external': True,
+                        'is_public': True,
+                        'sync_interval_hours': 6,
+                    },
+                    {
+                        'name': 'AlienVault OTX - DataDefenders',
+                        'description': 'AlienVault OTX DataDefenders collection',
+                        'taxii_server_url': 'https://otx.alienvault.com',
+                        'taxii_api_root': 'taxii',
+                        'taxii_collection_id': 'user_datadefenders',
+                        'is_external': True,
+                        'is_public': True,
+                        'sync_interval_hours': 12,
+                    },
+                    {
+                        'name': 'MITRE ATT&CK Mobile',
+                        'description': 'MITRE ATT&CK Mobile tactics and techniques',
+                        'taxii_server_url': 'https://cti-taxii.mitre.org',
+                        'taxii_api_root': 'stix',
+                        'taxii_collection_id': '2f669986-b40b-4423-b720-4396ca6a462b',
+                        'is_external': True,
+                        'is_public': True,
+                        'sync_interval_hours': 24,
+                    },
+                    {
+                        'name': 'MITRE ATT&CK ICS',
+                        'description': 'MITRE ATT&CK Industrial Control Systems',
+                        'taxii_server_url': 'https://cti-taxii.mitre.org',
+                        'taxii_api_root': 'stix',
+                        'taxii_collection_id': '02c3ef24-9cd4-48f3-a99f-b74ce24f1d34',
+                        'is_external': True,
+                        'is_public': True,
+                        'sync_interval_hours': 24,
+                    },
+                    {
+                        'name': f'{org.name} Internal Feed',
+                        'description': f'Internal threat intelligence feed for {org.name}',
+                        'taxii_server_url': f"https://internal.{org.name.lower().replace(' ', '-').replace(',', '')}.com/taxii/",
+                        'taxii_api_root': 'internal',
+                        'taxii_collection_id': f"internal-collection",
+                        'is_external': False,
+                        'is_public': False,
+                        'sync_interval_hours': 1,
+                    }
+                ]
+
+                # Select a random config or use a generic one
+                if i < len(feed_configs):
+                    config = feed_configs[i % len(feed_configs)]
+                else:
+                    # Use a cycling pattern from the valid configs
+                    base_config = feed_configs[i % len(feed_configs)]
+                    config = {
+                        'name': f"{fake.company()} {base_config['name']} Clone {i}",
+                        'description': f"Mirror of {base_config['description']} for {fake.company()}",
+                        'taxii_server_url': base_config['taxii_server_url'],
+                        'taxii_api_root': base_config['taxii_api_root'],
+                        'taxii_collection_id': base_config['taxii_collection_id'],
+                        'is_external': base_config['is_external'],
+                        'is_public': random.choice([True, False]),
+                        'sync_interval_hours': random.choice([6, 12, 24, 48]),
+                    }
+
                 with transaction.atomic():
                     threat_feed = ThreatFeed.objects.create(
-                        name=f"{fake.word().title()} Threat Feed {i}",
-                        description=fake.text(),
-                        feed_type=random.choice(['STIX', 'IOC', 'Custom']),
-                        is_active=random.choice([True, True, False]),
-                        created_by=user,
-                        organization=org,
-                        trust_level=random.choice(self.trust_levels) if self.trust_levels else None
+                        name=config['name'],
+                        description=config['description'],
+                        taxii_server_url=config['taxii_server_url'],
+                        taxii_api_root=config['taxii_api_root'],
+                        taxii_collection_id=config['taxii_collection_id'],
+                        taxii_username=config.get('taxii_username'),
+                        taxii_password=config.get('taxii_password'),
+                        owner=org,
+                        is_external=config['is_external'],
+                        is_public=config['is_public'],
+                        sync_interval_hours=config['sync_interval_hours'],
+                        is_active=True,
+                        last_sync=fake.date_time_between(start_date='-30d', end_date='now', tzinfo=timezone.get_current_timezone()) if random.choice([True, False]) else None,
+                        sync_count=random.randint(0, 100) if random.choice([True, False]) else 0
                     )
                     
                     # Create associated Feed if collection exists
@@ -613,13 +702,14 @@ class Command(BaseCommand):
                             description=f"TAXII feed for {threat_feed.name}",
                             created_by=user,
                             collection=collection,
-                            organization=org,
+                            source_organization=org,
                             is_active=True
                         )
-                    
+
                     created_count += 1
-                    
+
             except Exception as e:
+                self.stdout.write(f"Error creating threat feed {i}: {e}")
                 continue
                 
         self.stdout.write(f"Created {created_count} threat feeds")

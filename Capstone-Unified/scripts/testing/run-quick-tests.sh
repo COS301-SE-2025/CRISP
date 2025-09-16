@@ -38,12 +38,12 @@ elif [ -f "env/bin/activate" ]; then
     source env/bin/activate
 fi
 
-python3 manage.py test core.tests.test_repository core.tests.test_utils core.user_management.tests --verbosity=1 --keepdb
+cd ../.. && python3 manage.py test core.tests.test_repository core.tests.test_utils core.user_management.tests --verbosity=1 --keepdb
 BACKEND_RESULT=$?
 
 # 2. Frontend Unit Tests
 print_status "Running frontend unit tests..."
-cd crisp-react
+cd ../../frontend/crisp-react
 npm run test -- --run --reporter=basic
 FRONTEND_RESULT=$?
 cd ..
