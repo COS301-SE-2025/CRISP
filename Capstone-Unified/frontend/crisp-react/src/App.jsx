@@ -3360,169 +3360,112 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
     }
   };
 
-  // Apply filters when indicators, filters, or pagination settings change
+  // Apply filters when filters change (but not when indicators change to avoid infinite loops)
   useEffect(() => {
-    applyFilters();
-  }, [indicators, filters, currentPage, itemsPerPage]);
+    if (filters.type || filters.source || filters.searchTerm) {
+      applyFilters();
+    }
+  }, [filters]);
 
-  const fetchIndicators = async () => {
+  // Initial load
+  useEffect(() => {
+    fetchIndicators(1, itemsPerPage);
+  }, []);
+
+  const fetchIndicators = async (page = 1, pageSize = itemsPerPage, filterParams = {}) => {
     setLoading(true);
     try {
-      // Fetch ALL indicators by paginating through all pages
-      console.log('IoCManagement: Fetching all indicators from /api/indicators/...');
+      // Build query parameters for server-side pagination and filtering
+      const params = new URLSearchParams({
+        page: page.toString(),
+        page_size: pageSize.toString(),
+        ordering: '-created_at' // Server-side sorting by creation date (newest first)
+      });
 
-      let allIndicators = [];
-      let page = 1;
-      let hasMore = true;
-      let totalFetched = 0;
+      // Add filter parameters if provided
+      if (filterParams.type) params.append('type', filterParams.type);
+      if (filterParams.source) params.append('source', filterParams.source);
+      if (filterParams.search) params.append('search', filterParams.search);
 
-      while (hasMore) {
-        console.log(`IoCManagement: Fetching page ${page}...`);
-        const indicatorsData = await api.get(`/api/indicators/?page=${page}&page_size=100`);
+      console.log(`IoCManagement: Fetching page ${page} with ${pageSize} items per page`);
+      const indicatorsData = await api.get(`/api/indicators/?${params.toString()}`);
 
-        if (indicatorsData && indicatorsData.results && indicatorsData.results.length > 0) {
-          totalFetched += indicatorsData.results.length;
-          console.log(`IoCManagement: Page ${page} returned ${indicatorsData.results.length} indicators (total so far: ${totalFetched})`);
+      if (indicatorsData && indicatorsData.results) {
+        console.log(`IoCManagement: Page ${page} returned ${indicatorsData.results.length} indicators`);
 
-          // Transform indicators to match IoC Management table format
-          const transformedIndicators = indicatorsData.results.map(indicator => ({
-            id: indicator.id,
-            type: indicator.indicator_type || indicator.type === 'ip' ? 'IP Address' :
-                  indicator.type === 'domain' ? 'Domain' :
-                  indicator.type === 'url' ? 'URL' :
-                  indicator.type === 'file_hash' ? 'File Hash' :
-                  indicator.type === 'email' ? 'Email' :
-                  indicator.type === 'user_agent' ? 'User Agent' :
-                  indicator.type === 'registry' ? 'Registry Key' :
-                  indicator.type === 'mutex' ? 'Mutex' :
-                  indicator.type === 'process' ? 'Process' : (indicator.type || 'Unknown'),
-            rawType: indicator.type,
-            title: indicator.name || indicator.title || '',
-            value: indicator.value || indicator.indicator_value || '',
-            severity: indicator.severity || (indicator.confidence >= 75 ? 'High' :
-                     indicator.confidence >= 50 ? 'Medium' : 'Low'),
-            confidence: indicator.confidence || 50,
-            source: indicator.source || indicator.feed_name || 'Unknown',
-            description: indicator.description || '',
-            created: indicator.created_at ? new Date(indicator.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-            createdDate: indicator.created_at ? new Date(indicator.created_at) : new Date(),
-            status: indicator.is_anonymized ? 'Anonymized' : 'Active',
-            feedId: indicator.threat_feed_id || indicator.feed_id,
-            feedName: indicator.source || indicator.feed_name || 'Unknown'
-          }));
+        // Transform indicators to match IoC Management table format
+        const transformedIndicators = indicatorsData.results.map(indicator => ({
+          id: indicator.id,
+          type: indicator.indicator_type || indicator.type === 'ip' ? 'IP Address' :
+                indicator.type === 'domain' ? 'Domain' :
+                indicator.type === 'url' ? 'URL' :
+                indicator.type === 'file_hash' ? 'File Hash' :
+                indicator.type === 'email' ? 'Email' :
+                indicator.type === 'user_agent' ? 'User Agent' :
+                indicator.type === 'registry' ? 'Registry Key' :
+                indicator.type === 'mutex' ? 'Mutex' :
+                indicator.type === 'process' ? 'Process' : (indicator.type || 'Unknown'),
+          rawType: indicator.type,
+          title: indicator.name || indicator.title || '',
+          value: indicator.value || indicator.indicator_value || '',
+          severity: indicator.severity || (indicator.confidence >= 75 ? 'High' :
+                   indicator.confidence >= 50 ? 'Medium' : 'Low'),
+          confidence: indicator.confidence || 50,
+          source: indicator.source || indicator.feed_name || 'Unknown',
+          description: indicator.description || '',
+          created: indicator.created_at ? new Date(indicator.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          createdDate: indicator.created_at ? new Date(indicator.created_at) : new Date(),
+          status: indicator.is_anonymized ? 'Anonymized' : 'Active',
+          feedId: indicator.threat_feed_id || indicator.feed_id,
+          feedName: indicator.source || indicator.feed_name || 'Unknown'
+        }));
 
-          allIndicators.push(...transformedIndicators);
+        setIndicators(transformedIndicators);
+        setFilteredIndicators(transformedIndicators); // For server-side pagination, filtered = indicators
+        setTotalItems(indicatorsData.count || 0);
+        setTotalPages(Math.ceil((indicatorsData.count || 0) / pageSize));
 
-          // Check if there are more pages
-          hasMore = indicatorsData.next !== null;
-          page++;
-
-          // Safety limit to prevent infinite loops
-          if (page > 100) {
-            console.warn('IoCManagement: Reached page limit (100), stopping pagination');
-            hasMore = false;
-          }
-        } else {
-          hasMore = false;
-        }
+        console.log(`IoCManagement: Successfully loaded ${transformedIndicators.length} indicators (total: ${indicatorsData.count})`);
+      } else {
+        setIndicators([]);
+        setFilteredIndicators([]);
+        setTotalItems(0);
+        setTotalPages(0);
       }
-
-      // Sort indicators by creation date (newest first)
-      allIndicators.sort((a, b) => b.createdDate - a.createdDate);
-
-      setIndicators(allIndicators);
-      setTotalItems(allIndicators.length);
-      console.log(`IoCManagement: Successfully loaded ${allIndicators.length} total indicators from ${page - 1} pages`);
 
     } catch (error) {
       console.error('IoCManagement: Error fetching indicators:', error);
       setError('Failed to load indicators. Please try again.');
       setIndicators([]);
+      setFilteredIndicators([]);
       setTotalItems(0);
+      setTotalPages(0);
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter application logic
+  // Apply filters with server-side pagination
   const applyFilters = () => {
-    let filtered = [...indicators];
+    // Build filter parameters for server-side filtering
+    const filterParams = {};
 
-    // Filter by type
     if (filters.type) {
-      filtered = filtered.filter(indicator => 
-        indicator.rawType === filters.type
-      );
+      filterParams.type = filters.type;
     }
 
-    // Filter by severity
-    if (filters.severity) {
-      filtered = filtered.filter(indicator => 
-        indicator.severity.toLowerCase() === filters.severity.toLowerCase()
-      );
-    }
-
-    // Filter by status
-    if (filters.status) {
-      filtered = filtered.filter(indicator => 
-        indicator.status.toLowerCase() === filters.status.toLowerCase()
-      );
-    }
-
-    // Filter by source
     if (filters.source) {
-      filtered = filtered.filter(indicator => 
-        indicator.source.toLowerCase().includes(filters.source.toLowerCase())
-      );
+      filterParams.source = filters.source;
     }
 
-    // Filter by search term (searches in title, value, and description)
+    // Combine search terms for server-side search
     if (filters.searchTerm) {
-      const searchTerm = filters.searchTerm.toLowerCase();
-      filtered = filtered.filter(indicator => 
-        indicator.value.toLowerCase().includes(searchTerm) ||
-        indicator.description.toLowerCase().includes(searchTerm) ||
-        (indicator.title && indicator.title.toLowerCase().includes(searchTerm)) ||
-        (indicator.name && indicator.name.toLowerCase().includes(searchTerm))
-      );
+      filterParams.search = filters.searchTerm;
     }
 
-    // Filter by date range
-    if (filters.dateRange) {
-      const now = new Date();
-      let cutoffDate;
-      
-      switch (filters.dateRange) {
-        case 'today':
-          cutoffDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-          break;
-        case 'week':
-          cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          break;
-        case 'month':
-          cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-          break;
-        case 'quarter':
-          cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-          break;
-        default:
-          cutoffDate = null;
-      }
-      
-      if (cutoffDate) {
-        filtered = filtered.filter(indicator => 
-          indicator.createdDate >= cutoffDate
-        );
-      }
-    }
-
-    setFilteredIndicators(filtered);
-    setTotalPages(Math.ceil(filtered.length / itemsPerPage));
-    
-    // Reset to first page if current page is beyond available pages
-    if (currentPage > Math.ceil(filtered.length / itemsPerPage)) {
-      setCurrentPage(1);
-    }
+    // Reset to first page when filters change and fetch new data
+    setCurrentPage(1);
+    fetchIndicators(1, itemsPerPage, filterParams);
   };
 
   // Handle filter changes
@@ -3547,17 +3490,24 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
     setCurrentPage(1);
   };
 
-  // Get paginated indicators
+  // Get current page indicators (server-side pagination, so just return filtered indicators)
   const getPaginatedIndicators = () => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredIndicators.slice(startIndex, endIndex);
+    return filteredIndicators;
   };
 
   // Handle page changes
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
+
+      // Build current filter parameters
+      const filterParams = {};
+      if (filters.type) filterParams.type = filters.type;
+      if (filters.source) filterParams.source = filters.source;
+      if (filters.searchTerm) filterParams.search = filters.searchTerm;
+
+      // Fetch new page data
+      fetchIndicators(page, itemsPerPage, filterParams);
     }
   };
 
@@ -3565,7 +3515,13 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
   const handleRefresh = async () => {
     setLoading(true);
     try {
-      await fetchIndicators();
+      // Build current filter parameters
+      const filterParams = {};
+      if (filters.type) filterParams.type = filters.type;
+      if (filters.source) filterParams.source = filters.source;
+      if (filters.searchTerm) filterParams.search = filters.searchTerm;
+
+      await fetchIndicators(currentPage, itemsPerPage, filterParams);
       if (onRefresh) onRefresh();
       // Show a brief success message
       console.log('Indicators refreshed successfully');
