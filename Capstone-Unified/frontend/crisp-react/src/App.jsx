@@ -3387,11 +3387,9 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
       if (filterParams.source) params.append('source', filterParams.source);
       if (filterParams.search) params.append('search', filterParams.search);
 
-      console.log(`IoCManagement: Fetching page ${page} with ${pageSize} items per page`);
       const indicatorsData = await api.get(`/api/indicators/?${params.toString()}`);
 
       if (indicatorsData && indicatorsData.results) {
-        console.log(`IoCManagement: Page ${page} returned ${indicatorsData.results.length} indicators`);
 
         // Transform indicators to match IoC Management table format
         const transformedIndicators = indicatorsData.results.map(indicator => ({
@@ -3424,8 +3422,6 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
         setFilteredIndicators(transformedIndicators); // For server-side pagination, filtered = indicators
         setTotalItems(indicatorsData.count || 0);
         setTotalPages(Math.ceil((indicatorsData.count || 0) / pageSize));
-
-        console.log(`IoCManagement: Successfully loaded ${transformedIndicators.length} indicators (total: ${indicatorsData.count})`);
       } else {
         setIndicators([]);
         setFilteredIndicators([]);
