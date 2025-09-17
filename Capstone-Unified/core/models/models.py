@@ -673,7 +673,7 @@ class Indicator(models.Model):
     description = models.TextField(blank=True, null=True)
     confidence = models.IntegerField(default=50)  # 0-100
     threat_feed = models.ForeignKey(ThreatFeed, on_delete=models.CASCADE, related_name='indicators')
-    stix_id = models.CharField(max_length=255, unique=True)
+    stix_id = models.CharField(max_length=255)
     
     # Temporal data
     first_seen = models.DateTimeField()
@@ -696,7 +696,10 @@ class Indicator(models.Model):
         pass
     
     class Meta:
-        unique_together = ['value', 'type', 'threat_feed']
+        unique_together = [
+            ['value', 'type', 'threat_feed'],
+            ['stix_id', 'threat_feed']
+        ]
         ordering = ['-last_seen']
         db_table = 'indicators'
 
