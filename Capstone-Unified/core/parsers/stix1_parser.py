@@ -276,10 +276,19 @@ class STIX1Parser:
         else:
             # Create new indicator ONLY if we have a threat feed
             if threat_feed:
-                indicator_data['threat_feed'] = threat_feed
-                Indicator.objects.create(**indicator_data)
-                stats['indicators_created'] += 1
-                logger.info(f"Created indicator: {indicator_id}")
+                try:
+                    indicator_data['threat_feed'] = threat_feed
+                    Indicator.objects.create(**indicator_data)
+                    stats['indicators_created'] += 1
+                    logger.info(f"Created indicator: {indicator_id}")
+                except Exception as e:
+                    logger.error(f"Failed to create indicator {indicator_id}: {str(e)}")
+                    # Check if it's a duplicate constraint error
+                    if 'unique constraint' in str(e).lower():
+                        logger.info(f"Indicator {indicator_id} already exists in feed {threat_feed.title}, skipping")
+                        stats['skipped'] += 1
+                    else:
+                        stats['errors'] += 1
             else:
                 # Skip creation if no threat feed is provided
                 logger.warning(f"Cannot create indicator {indicator_id}: No threat feed provided")
@@ -373,10 +382,19 @@ class STIX1Parser:
         else:
             # Create new TTP but only if there is a threat feed
             if threat_feed:
-                ttp_data['threat_feed'] = threat_feed
-                TTPData.objects.create(**ttp_data)
-                stats['ttp_created'] += 1
-                logger.info(f"Created TTP: {ttp_id}")
+                try:
+                    ttp_data['threat_feed'] = threat_feed
+                    TTPData.objects.create(**ttp_data)
+                    stats['ttp_created'] += 1
+                    logger.info(f"Created TTP: {ttp_id}")
+                except Exception as e:
+                    logger.error(f"Failed to create TTP {ttp_id}: {str(e)}")
+                    # Check if it's a duplicate constraint error
+                    if 'unique constraint' in str(e).lower():
+                        logger.info(f"TTP {ttp_id} already exists in feed {threat_feed.title}, skipping")
+                        stats['skipped'] += 1
+                    else:
+                        stats['errors'] += 1
             else:
                 logger.warning(f"Cannot create TTP {ttp_id}: No threat feed provided")
                 stats['skipped'] += 1
