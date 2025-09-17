@@ -2331,6 +2331,11 @@ function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptio
   const [showDeleteFeedModal, setShowDeleteFeedModal] = useState(false);
   const [feedToDelete, setFeedToDelete] = useState(null);
   const [deletingFeed, setDeletingFeed] = useState(false);
+
+  // Consumption parameters
+  const [consumptionParams, setConsumptionParams] = useState({
+    days_back: 30 // Default to 30 days
+  });
   
   // Refs to track intervals and timeouts for cleanup
   const activeIntervals = useRef([]);
@@ -2443,7 +2448,14 @@ function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptio
     });
     
     try {
-      const result = await api.post(`/api/threat-feeds/${feedId}/consume/`);
+      // Build query parameters for consumption
+      const params = new URLSearchParams();
+      if (consumptionParams.days_back !== 30) { // Only add if different from default
+        params.append('force_days', consumptionParams.days_back);
+      }
+
+      const url = `/api/threat-feeds/${feedId}/consume/${params.toString() ? '?' + params.toString() : ''}`;
+      const result = await api.post(url);
       if (result) {
         console.log('Feed consumption started:', result);
         
@@ -2886,6 +2898,31 @@ function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptio
           onClick={() => handleTabChange('all')}
         >
           All Feeds ({threatFeeds.length})
+        </div>
+      </div>
+
+      {/* Consumption Filter */}
+      <div className="consumption-params-section">
+        <div className="consumption-params-header">
+          <i className="fas fa-filter"></i>
+          <span>Consumption Filter</span>
+        </div>
+        <div className="consumption-params-controls">
+          <div className="param-group">
+            <label className="param-label">Days Back:</label>
+            <select
+              value={consumptionParams.days_back}
+              onChange={(e) => setConsumptionParams(prev => ({...prev, days_back: parseInt(e.target.value)}))}
+              className="param-select"
+            >
+              <option value={1}>1 day</option>
+              <option value={7}>1 week</option>
+              <option value={30}>1 month (default)</option>
+              <option value={90}>3 months</option>
+              <option value={180}>6 months</option>
+              <option value={365}>1 year</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -13217,6 +13254,56 @@ function CSSStyles() {
         .feed-item:last-child {
             border-bottom: none;
         }
+
+        /* Consumption Parameters */
+        .consumption-params-section {
+            background: var(--card-background);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid var(--medium-gray);
+            position: relative;
+        }
+
+        .consumption-params-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: var(--primary-blue);
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .consumption-params-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .param-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .param-label {
+            font-size: 14px;
+            color: var(--text-gray);
+            font-weight: 500;
+        }
+
+        .param-select {
+            padding: 6px 12px;
+            border: 1px solid var(--medium-gray);
+            border-radius: 4px;
+            background: var(--card-background);
+            color: var(--text-color);
+            font-size: 14px;
+            min-width: 150px;
+        }
+
         
         .feed-icon {
             width: 48px;
