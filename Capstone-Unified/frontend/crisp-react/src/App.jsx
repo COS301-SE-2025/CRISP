@@ -2337,7 +2337,31 @@ function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptio
     days_back: 30, // Default to 30 days
     block_limit: 10 // Default to 10 blocks
   });
-  
+  const [activePreset, setActivePreset] = useState('custom');
+
+  // Handle preset selection
+  const handlePresetSelect = (preset) => {
+    setActivePreset(preset);
+
+    const presets = {
+      'last24h': { days_back: 1, block_limit: 5 },
+      'lastweek': { days_back: 7, block_limit: 10 },
+      'lastmonth': { days_back: 30, block_limit: 10 },
+      'allavailable': { days_back: 365, block_limit: 100 },
+      'custom': { days_back: consumptionParams.days_back, block_limit: consumptionParams.block_limit }
+    };
+
+    if (presets[preset] && preset !== 'custom') {
+      setConsumptionParams(presets[preset]);
+    }
+  };
+
+  // Handle individual filter changes (switches to custom)
+  const handleParamChange = (param, value) => {
+    setConsumptionParams(prev => ({...prev, [param]: value}));
+    setActivePreset('custom');
+  };
+
   // Refs to track intervals and timeouts for cleanup
   const activeIntervals = useRef([]);
   const activeTimeouts = useRef([]);
@@ -2909,34 +2933,71 @@ function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptio
           <span>Consumption Filter</span>
         </div>
         <div className="consumption-params-controls">
-          <div className="param-group">
-            <label className="param-label">Days Back:</label>
-            <select
-              value={consumptionParams.days_back}
-              onChange={(e) => setConsumptionParams(prev => ({...prev, days_back: parseInt(e.target.value)}))}
-              className="param-select"
-            >
-              <option value={1}>1 day</option>
-              <option value={7}>1 week</option>
-              <option value={30}>1 month (default)</option>
-              <option value={90}>3 months</option>
-              <option value={180}>6 months</option>
-              <option value={365}>1 year</option>
-            </select>
-          </div>
-          <div className="param-group">
-            <label className="param-label">Data Amount:</label>
-            <select
-              value={consumptionParams.block_limit}
-              onChange={(e) => setConsumptionParams(prev => ({...prev, block_limit: parseInt(e.target.value)}))}
-              className="param-select"
-            >
-              <option value={5}>Light (5 blocks)</option>
-              <option value={10}>Standard (10 blocks)</option>
-              <option value={25}>Heavy (25 blocks)</option>
-              <option value={50}>Maximum (50 blocks)</option>
-              <option value={100}>Full Load (100 blocks)</option>
-            </select>
+          {/* Individual Filter Controls */}
+          <div className="filter-controls">
+            <div className="param-group">
+              <label className="param-label">Days Back:</label>
+              <select
+                value={consumptionParams.days_back}
+                onChange={(e) => handleParamChange('days_back', parseInt(e.target.value))}
+                className="param-select"
+              >
+                <option value={1}>1 day</option>
+                <option value={7}>1 week</option>
+                <option value={30}>1 month</option>
+                <option value={90}>3 months</option>
+                <option value={180}>6 months</option>
+                <option value={365}>1 year</option>
+              </select>
+            </div>
+            <div className="param-group">
+              <label className="param-label">Data Amount:</label>
+              <select
+                value={consumptionParams.block_limit}
+                onChange={(e) => handleParamChange('block_limit', parseInt(e.target.value))}
+                className="param-select"
+              >
+                <option value={5}>Light (5 blocks)</option>
+                <option value={10}>Standard (10 blocks)</option>
+                <option value={25}>Heavy (25 blocks)</option>
+                <option value={50}>Maximum (50 blocks)</option>
+                <option value={100}>Full Load (100 blocks)</option>
+              </select>
+            </div>
+
+            {/* Quick Preset Buttons */}
+            <div className="preset-buttons">
+              <button
+                className={`preset-btn ${activePreset === 'last24h' ? 'active' : ''}`}
+                onClick={() => handlePresetSelect('last24h')}
+              >
+                Last 24h
+              </button>
+              <button
+                className={`preset-btn ${activePreset === 'lastweek' ? 'active' : ''}`}
+                onClick={() => handlePresetSelect('lastweek')}
+              >
+                Last Week
+              </button>
+              <button
+                className={`preset-btn ${activePreset === 'lastmonth' ? 'active' : ''}`}
+                onClick={() => handlePresetSelect('lastmonth')}
+              >
+                Last Month
+              </button>
+              <button
+                className={`preset-btn ${activePreset === 'allavailable' ? 'active' : ''}`}
+                onClick={() => handlePresetSelect('allavailable')}
+              >
+                All Available
+              </button>
+              <button
+                className={`preset-btn ${activePreset === 'custom' ? 'active' : ''}`}
+                onClick={() => handlePresetSelect('custom')}
+              >
+                Custom
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -13292,9 +13353,46 @@ function CSSStyles() {
 
         .consumption-params-controls {
             display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .filter-controls {
+            display: flex;
             align-items: center;
             gap: 16px;
             flex-wrap: wrap;
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-left: auto;
+        }
+
+        .preset-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--medium-gray);
+            border-radius: 20px;
+            background: var(--card-background);
+            color: var(--text-gray);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .preset-btn:hover {
+            background: var(--light-blue);
+            color: var(--primary-blue);
+        }
+
+        .preset-btn.active {
+            background: var(--primary-blue);
+            color: white;
+            border-color: var(--primary-blue);
         }
 
         .param-group {
@@ -13316,7 +13414,7 @@ function CSSStyles() {
             background: var(--card-background);
             color: var(--text-color);
             font-size: 14px;
-            min-width: 150px;
+            min-width: 160px;
         }
 
         
