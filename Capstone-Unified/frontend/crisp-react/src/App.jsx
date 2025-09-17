@@ -2334,7 +2334,8 @@ function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptio
 
   // Consumption parameters
   const [consumptionParams, setConsumptionParams] = useState({
-    days_back: 30 // Default to 30 days
+    days_back: 30, // Default to 30 days
+    block_limit: 10 // Default to 10 blocks
   });
   
   // Refs to track intervals and timeouts for cleanup
@@ -2921,6 +2922,20 @@ function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptio
               <option value={90}>3 months</option>
               <option value={180}>6 months</option>
               <option value={365}>1 year</option>
+            </select>
+          </div>
+          <div className="param-group">
+            <label className="param-label">Data Amount:</label>
+            <select
+              value={consumptionParams.block_limit}
+              onChange={(e) => setConsumptionParams(prev => ({...prev, block_limit: parseInt(e.target.value)}))}
+              className="param-select"
+            >
+              <option value={5}>Light (5 blocks)</option>
+              <option value={10}>Standard (10 blocks)</option>
+              <option value={25}>Heavy (25 blocks)</option>
+              <option value={50}>Maximum (50 blocks)</option>
+              <option value={100}>Full Load (100 blocks)</option>
             </select>
           </div>
         </div>
