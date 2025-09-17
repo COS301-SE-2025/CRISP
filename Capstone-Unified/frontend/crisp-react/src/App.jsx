@@ -143,6 +143,41 @@ function App({ user, onLogout, isAdmin }) {
 
   const [lastUpdate, setLastUpdate] = useState(Date.now());
 
+  // Consumption parameters state
+  const [consumptionParams, setConsumptionParams] = useState({
+    days_back: 30, // Default to 30 days
+    block_limit: 10 // Default to 10 blocks
+  });
+  const [activePreset, setActivePreset] = useState('custom');
+
+  // Handle preset selection
+  const handlePresetSelect = (preset) => {
+    setActivePreset(preset);
+
+    switch (preset) {
+      case 'last24h':
+        setConsumptionParams({ days_back: 1, block_limit: 10 });
+        break;
+      case 'lastweek':
+        setConsumptionParams({ days_back: 7, block_limit: 25 });
+        break;
+      case 'lastmonth':
+        setConsumptionParams({ days_back: 30, block_limit: 50 });
+        break;
+      case 'allavailable':
+        setConsumptionParams({ days_back: 365, block_limit: 100 });
+        break;
+      default: // custom
+        break;
+    }
+  };
+
+  // Handle individual parameter changes (switches to custom)
+  const handleParamChange = (param, value) => {
+    setConsumptionParams(prev => ({...prev, [param]: value}));
+    setActivePreset('custom');
+  };
+
   // Initialize app
   useEffect(() => {
     // Small delay to prevent flash and ensure everything is ready
