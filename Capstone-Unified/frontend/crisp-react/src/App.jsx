@@ -3510,8 +3510,13 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
 
   // Apply filters when filters change (but not when indicators change to avoid infinite loops)
   useEffect(() => {
-    if (filters.type || filters.source || filters.searchTerm) {
+    const hasFilters = Object.values(filters).some(value => value !== '');
+    if (hasFilters) {
       applyFilters();
+    } else {
+      // If no filters, reload with default parameters
+      setCurrentPage(1);
+      fetchIndicators(1, itemsPerPage);
     }
   }, [filters]);
 
@@ -3569,7 +3574,7 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
         setIndicators(transformedIndicators);
         setFilteredIndicators(transformedIndicators); // For server-side pagination, filtered = indicators
         setTotalItems(indicatorsData.count || 0);
-        setTotalPages(Math.ceil((indicatorsData.count || 0) / pageSize));
+        setTotalPages(Math.ceil((indicatorsData.count || 0) / itemsPerPage));
       } else {
         setIndicators([]);
         setFilteredIndicators([]);
@@ -3606,6 +3611,9 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
     if (filters.searchTerm) {
       filterParams.search = filters.searchTerm;
     }
+
+    // Note: severity, status, and dateRange filters would need backend support
+    // For now, the backend only supports type, source, and search filters
 
     // Reset to first page when filters change and fetch new data
     setCurrentPage(1);
@@ -3706,11 +3714,11 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
             <div className="results-summary">
               {Object.values(filters).some(value => value !== '') ? (
                 <span className="filtered-count">
-                  <strong>{filteredIndicators.length}</strong> of <strong>{indicators.length}</strong> indicators match
+                  <strong>{filteredIndicators.length}</strong> of <strong>{totalItems}</strong> indicators match
                 </span>
               ) : (
                 <span className="total-count">
-                  <strong>{indicators.length}</strong> total indicators
+                  <strong>{totalItems}</strong> total indicators
                 </span>
               )}
             </div>
@@ -3830,10 +3838,10 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
                 <div className="stat-icon"><i className="fas fa-search"></i></div>
                 <span>Total IoCs{Object.values(filters).some(f => f !== '') ? ' (Filtered)' : ''}</span>
               </div>
-              <div className="stat-value">{Object.values(filters).some(f => f !== '') ? filteredIndicators.length : indicators.length}</div>
+              <div className="stat-value">{Object.values(filters).some(f => f !== '') ? filteredIndicators.length : totalItems}</div>
               <div className="stat-description">
-                {Object.values(filters).some(f => f !== '') ? 
-                  `${filteredIndicators.length} of ${indicators.length} match filters` :
+                {Object.values(filters).some(f => f !== '') ?
+                  `${filteredIndicators.length} of ${totalItems} match filters` :
                   'All indicators in system'
                 }
               </div>
@@ -4019,12 +4027,20 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
                       >
                         <i className="fas fa-edit"></i>
                       </button>
-                      <button 
-                        className="btn btn-outline btn-sm" 
+                      <button
+                        className="btn btn-outline btn-sm"
                         title="Share Indicator"
                         onClick={() => handleShareIndicator(indicator)}
+                        style={{marginRight: '5px'}}
                       >
                         <i className="fas fa-share-alt"></i>
+                      </button>
+                      <button
+                        className="btn btn-outline btn-sm btn-danger"
+                        title="Delete Indicator"
+                        onClick={() => handleDeleteIndicator(indicator)}
+                      >
+                        <i className="fas fa-trash"></i>
                       </button>
                     </td>
                   </tr>
@@ -5559,6 +5575,45 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
     setSelectedOrganisationIndex(-1);
   }
 
+  async function handleDeleteIndicator(indicator) {
+    if (!confirm(`Are you sure you want to delete the indicator "${indicator.value}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await api.delete(`/api/indicators/${indicator.id}/delete/`);
+      if (response && response.success) {
+        // Update local state immediately for better UX
+        setIndicators(prevIndicators =>
+          prevIndicators.filter(ind => ind.id !== indicator.id)
+        );
+        setFilteredIndicators(prevFiltered =>
+          prevFiltered.filter(ind => ind.id !== indicator.id)
+        );
+
+        // Update pagination counts
+        setTotalItems(prev => Math.max(0, prev - 1));
+        const newTotalPages = Math.ceil(Math.max(0, totalItems - 1) / itemsPerPage);
+        setTotalPages(newTotalPages);
+
+        // If current page becomes empty and we're not on page 1, go to previous page
+        if (currentPage > newTotalPages && newTotalPages > 0) {
+          setCurrentPage(newTotalPages);
+        }
+
+        // Refresh the indicators list from server to ensure consistency
+        await fetchIndicators();
+
+        alert('Indicator deleted successfully');
+      } else {
+        alert('Failed to delete indicator. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error deleting indicator:', error);
+      alert('Error deleting indicator. Please try again.');
+    }
+  }
+
   // Organisation search helper functions
   function getFilteredOrganisations() {
     return availableOrganisations.filter(organisation =>
@@ -5618,7 +5673,7 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
     
     try {
       const shareData = {
-        institutions: shareFormData.organisations,
+        organizations: shareFormData.organisations,
         anonymization_level: shareFormData.anonymizationLevel,
         share_method: shareFormData.shareMethod
       };
@@ -6452,6 +6507,8 @@ function TTPAnalysis({ active }) {
         );
         setSelectedTTP(updatedTtpData);
         setIsEditMode(false);
+
+        // Show success message
         alert('TTP updated successfully');
 
         // Refresh all TTP-related data to reflect changes immediately
@@ -6462,6 +6519,9 @@ function TTPAnalysis({ active }) {
           fetchFeedComparisonData(), // Feed comparison
           fetchSeasonalPatternsData() // Seasonal patterns
         ]);
+
+        // Close the modal after successful update and refresh
+        closeTTPModal();
       } else {
         alert('Failed to update TTP');
       }

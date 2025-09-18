@@ -577,11 +577,13 @@ class Command(BaseCommand):
             try:
                 with transaction.atomic():
                     collection = Collection.objects.create(
-                        stix_id=f"collection--{uuid.uuid4()}",
-                        name=f"{fake.word().title()} Threat Collection {i}",
+                        title=f"{fake.word().title()} Threat Collection {i}",
                         description=fake.text(),
-                        created_by=random.choice(self.users),
-                        source_organization=random.choice(self.organizations)
+                        alias=f"collection-{i}-{uuid.uuid4().hex[:8]}",
+                        owner=random.choice(self.organizations),
+                        can_read=True,
+                        can_write=random.choice([True, False]),
+                        media_types=["application/stix+json;version=2.1"]
                     )
                     collections.append(collection)
             except Exception as e:

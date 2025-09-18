@@ -539,9 +539,32 @@ def indicators_list(request):
             # Get pagination parameters
             page = int(request.GET.get('page', 1))
             page_size = int(request.GET.get('page_size', 20))
-            
-            # Get all indicators
-            indicators = Indicator.objects.all().order_by('-created_at')
+
+            # Get filtering parameters
+            type_filter = request.GET.get('type', '')
+            source_filter = request.GET.get('source', '')
+            search_filter = request.GET.get('search', '')
+            ordering = request.GET.get('ordering', '-created_at')
+
+            # Build the queryset with filters
+            indicators = Indicator.objects.all()
+
+            if type_filter:
+                indicators = indicators.filter(type__icontains=type_filter)
+
+            if source_filter:
+                indicators = indicators.filter(threat_feed__name__icontains=source_filter)
+
+            if search_filter:
+                from django.db.models import Q
+                indicators = indicators.filter(
+                    Q(value__icontains=search_filter) |
+                    Q(description__icontains=search_filter) |
+                    Q(name__icontains=search_filter)
+                )
+
+            # Apply ordering
+            indicators = indicators.order_by(ordering)
             
             # Calculate pagination
             start = (page - 1) * page_size
@@ -990,6 +1013,63 @@ def indicator_update(request, indicator_id):
         logger.error(f"Error updating indicator: {str(e)}")
         return Response(
             {"error": "Failed to update indicator", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['DELETE'])
+@permission_classes([AllowAny])
+def indicator_delete(request, indicator_id):
+    """Delete a specific indicator."""
+    try:
+        from core.repositories.indicator_repository import IndicatorRepository
+        from core.services.audit_service import AuditService
+
+        # Get the indicator first to check if it exists
+        indicator = IndicatorRepository.get_by_id(indicator_id)
+        if not indicator:
+            return Response(
+                {"error": "Indicator not found", "indicator_id": indicator_id},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Store indicator info for audit logging
+        indicator_info = {
+            'id': indicator.id,
+            'type': indicator.type,
+            'value': indicator.value[:50] + '...' if len(indicator.value) > 50 else indicator.value
+        }
+
+        # Delete the indicator
+        deleted = IndicatorRepository.delete(indicator_id)
+
+        if deleted:
+            # Log the deletion for audit purposes
+            audit_service = AuditService()
+            audit_service.log_activity(
+                activity_type='indicator_deleted',
+                user=request.user if hasattr(request, 'user') and request.user.is_authenticated else None,
+                description=f'Indicator {indicator_info["type"]}: {indicator_info["value"]} deleted',
+                metadata={'indicator_id': indicator_id, 'indicator_info': indicator_info}
+            )
+
+            return Response(
+                {
+                    "success": True,
+                    "message": "Indicator deleted successfully",
+                    "indicator_id": indicator_id
+                },
+                status=status.HTTP_200_OK
+            )
+        else:
+            return Response(
+                {"error": "Failed to delete indicator"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    except Exception as e:
+        logger.error(f"Error deleting indicator {indicator_id}: {str(e)}")
+        return Response(
+            {"error": "Failed to delete indicator", "details": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 

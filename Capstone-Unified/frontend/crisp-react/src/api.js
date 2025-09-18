@@ -1054,31 +1054,39 @@ export { deleteRequest as delete };
 
 export const exportTtps = async (format, filters = {}) => {
   const params = new URLSearchParams();
-  params.append('format', format);
-  
-  // Add filters if specified
+
+  // Add filters if specified (don't add format as it's in the endpoint)
   Object.entries(filters).forEach(([key, value]) => {
     if (value !== null && value !== undefined && value !== '') {
       params.append(key, value.toString());
     }
   });
-  
+
   const headers = {
     ...getAuthHeaders(),
-    'Accept': format === 'csv' ? 'text/csv' : 
-             format === 'stix' ? 'application/stix+json' : 
+    'Accept': format === 'csv' ? 'text/csv' :
+             format === 'stix' ? 'application/stix+json' :
              'application/json'
   };
-  
-  const response = await fetch(`${API_BASE_URL}/api/ttps/export/?${params.toString()}`, {
+
+  // Use dedicated endpoints instead of format parameter
+  const endpoint = format === 'csv' ? 'export-csv' :
+                   format === 'stix' ? 'export-stix' :
+                   'export';
+
+  const url = params.toString() ?
+    `${API_BASE_URL}/api/ttps/${endpoint}/?${params.toString()}` :
+    `${API_BASE_URL}/api/ttps/${endpoint}/`;
+
+  const response = await fetch(url, {
     method: 'GET',
     headers: headers
   });
-  
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || `Export failed: ${response.status} ${response.statusText}`);
   }
-  
+
   return response; // Return the response object so caller can handle blob/filename
 };

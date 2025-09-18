@@ -755,7 +755,26 @@ class AccessControlService:
         
         return False
 
-    def log_access_attempt(self, user, resource_type: str, resource_id: str, 
+    def can_share_indicator(self, user, indicator) -> bool:
+        """Check if user can share an indicator"""
+        if not user or not indicator:
+            return False
+
+        # BlueVision admins can share any indicator
+        if user.role == 'BlueVisionAdmin':
+            return True
+
+        # Publishers and admins can share indicators from their organization's feeds
+        if user.role in ['publisher', 'admin']:
+            # Check if user's organization owns the threat feed
+            if (user.organization and
+                indicator.threat_feed and
+                indicator.threat_feed.owner_id == user.organization.id):
+                return True
+
+        return False
+
+    def log_access_attempt(self, user, resource_type: str, resource_id: str,
                           action: str, success: bool, details: Dict = None):
         """Log access attempts for auditing"""
         try:

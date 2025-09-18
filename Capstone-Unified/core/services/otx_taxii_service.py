@@ -157,9 +157,8 @@ class OTXTaxiiService:
                     logger.info("Retry attempt - trying without date restrictions")
                     try:
                         test_blocks = list(client.poll(
-                            collection_name=collection_name, 
-                            uri=self.poll_url,
-                            count = 1 
+                            collection_name=collection_name,
+                            uri=self.poll_url
                         ))
                         logger.info(f"Test poll without dates returned {len(test_blocks)} blocks")
                     except Exception as e:
@@ -177,14 +176,14 @@ class OTXTaxiiService:
                 
                 # Convert the iterator to a list with safety limits
                 # Default to a reasonable limit to prevent infinite processing
-                effective_limit = limit if limit is not None else 50  # Default to 50 blocks max
+                effective_limit = limit if limit is not None else 10  # Default to 10 blocks max
                 logger.info(f"Converting iterator to a list (max {effective_limit} blocks)")
                 safe_blocks = []
                 count = 0
 
                 import time
                 start_time = time.time()
-                timeout_seconds = 300  # 5 minute timeout for block retrieval
+                timeout_seconds = 30  # 30 second timeout for block retrieval
 
                 for block in content_blocks:
                     # Check timeout
@@ -228,8 +227,8 @@ class OTXTaxiiService:
                 
                 if retry_count < max_retries:
                     import time
-                    # Wait with exponential backoff
-                    sleep_time = 2 ** (retry_count - 1)
+                    # Wait with shorter backoff for faster recovery
+                    sleep_time = 1  # Just 1 second between retries
                     logger.info(f"Retrying in {sleep_time} seconds...")
                     time.sleep(sleep_time)
         
@@ -243,9 +242,9 @@ class OTXTaxiiService:
         try:
             # Use OTX settings if parameters not provided
             if force_days is None:
-                force_days = settings.OTX_SETTINGS.get('MAX_AGE_DAYS', 30)
+                force_days = getattr(settings, 'OTX_SETTINGS', {}).get('MAX_AGE_DAYS', 7)  # Reduced to 7 days
             if batch_size is None:
-                batch_size = settings.OTX_SETTINGS.get('BATCH_SIZE', 10)
+                batch_size = getattr(settings, 'OTX_SETTINGS', {}).get('BATCH_SIZE', 5)    # Reduced to 5
             
             logger.info(f"Starting consumption of feed: {threat_feed.name} (max_age_days: {force_days}, batch_size: {batch_size})")
             
@@ -262,7 +261,12 @@ class OTXTaxiiService:
             logger.info(f"Got threat feed: {threat_feed.name}")
             collection_name = threat_feed.taxii_collection_id
             logger.info(f"Collection name: {collection_name}")
-            
+
+            # Validate collection_name - skip OTX consumption if not properly configured
+            if not collection_name:
+                logger.warning(f"Threat feed '{threat_feed.name}' does not have a taxii_collection_id configured. Skipping OTX consumption.")
+                return 0, 0  # Return success with 0 indicators/TTPs consumed
+
             # Determine begin_date
             begin_date = None
             if force_days:
