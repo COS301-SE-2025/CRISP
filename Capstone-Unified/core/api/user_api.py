@@ -209,6 +209,29 @@ def create_user(request):
                 created_by=request.user
             )
             
+            # Optionally send welcome email if requested
+            send_email = request.data.get('send_email', True)  # Default to True
+            if send_email and user.organization:
+                try:
+                    from core.services.email_service import UnifiedEmailService
+                    email_service = UnifiedEmailService()
+                    
+                    # Generate a temporary token for account setup
+                    import secrets
+                    setup_token = secrets.token_urlsafe(32)
+                    
+                    # Send welcome email (reusing invitation email template)
+                    email_result = email_service.send_user_invitation_email(
+                        email=user.email,
+                        organization=user.organization,
+                        inviter=request.user,
+                        invitation_token=setup_token
+                    )
+                    
+                    logger.info(f"Welcome email sent to {user.email}: {email_result.get('success', False)}")
+                except Exception as e:
+                    logger.warning(f"Failed to send welcome email to {user.email}: {e}")
+            
             serializer = UserSerializer(user)
             
             return Response({
