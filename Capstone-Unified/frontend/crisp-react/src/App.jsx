@@ -155,6 +155,7 @@ function App({ user, onLogout, isAdmin }) {
     block_limit: 10 // Default to 10 blocks
   });
   const [activePreset, setActivePreset] = useState('custom');
+  const [useAsync, setUseAsync] = useState(false);
 
   // Handle preset selection
   const handlePresetSelect = (preset) => {
@@ -341,11 +342,17 @@ function App({ user, onLogout, isAdmin }) {
       <main className="main-content">
         <div className="container">
           <Dashboard active={activePage === 'dashboard'} showPage={showPage} user={user} />
-          <ThreatFeeds 
-            active={activePage === 'threat-feeds'} 
-            navigationState={navigationState} 
+          <ThreatFeeds
+            active={activePage === 'threat-feeds'}
+            navigationState={navigationState}
             setNavigationState={setNavigationState}
             onConsumptionComplete={() => setLastUpdate(Date.now())}
+            useAsync={useAsync}
+            setUseAsync={setUseAsync}
+            consumptionParams={consumptionParams}
+            handleParamChange={handleParamChange}
+            activePreset={activePreset}
+            handlePresetSelect={handlePresetSelect}
           />
           <IoCManagement 
             active={activePage === 'ioc-management'}
@@ -2379,7 +2386,18 @@ function Dashboard({ active, showPage, user }) {
 }
 
 // Threat Feeds Component
-function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptionComplete}) {
+function ThreatFeeds({
+  active,
+  navigationState,
+  setNavigationState,
+  onConsumptionComplete,
+  useAsync,
+  setUseAsync,
+  consumptionParams,
+  handleParamChange,
+  activePreset,
+  handlePresetSelect
+}) {
   const [feeds, setFeeds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -2413,46 +2431,8 @@ function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptio
   const [feedToDelete, setFeedToDelete] = useState(null);
   const [deletingFeed, setDeletingFeed] = useState(false);
 
-  // Consumption parameters
-  const [consumptionParams, setConsumptionParams] = useState({
-    days_back: 30, // Default to 30 days
-    block_limit: 10 // Default to 10 blocks
-  });
-  const [activePreset, setActivePreset] = useState('custom');
-
-  // Handle preset selection
-  const handlePresetSelect = (preset) => {
-    setActivePreset(preset);
-
-    const presets = {
-      'last24h': { days_back: 1, block_limit: 5 },
-      'lastweek': { days_back: 7, block_limit: 10 },
-      'lastmonth': { days_back: 30, block_limit: 10 },
-      'allavailable': { days_back: 365, block_limit: 100 },
-      'custom': { days_back: consumptionParams.days_back, block_limit: consumptionParams.block_limit }
-    };
-
-    if (presets[preset] && preset !== 'custom') {
-      setConsumptionParams(presets[preset]);
-    }
-  };
-
-  // Handle individual filter changes (switches to custom)
-  const handleParamChange = (param, value) => {
-    // Client-side validation to ensure parameters are within valid ranges
-    let validatedValue = value;
-
-    if (param === 'days_back') {
-      // Ensure days_back is between 1 and 365
-      validatedValue = Math.max(1, Math.min(365, value));
-    } else if (param === 'block_limit') {
-      // Ensure block_limit is between 1 and 100
-      validatedValue = Math.max(1, Math.min(100, value));
-    }
-
-    setConsumptionParams(prev => ({...prev, [param]: validatedValue}));
-    setActivePreset('custom');
-  };
+  // Note: consumptionParams, activePreset, handlePresetSelect, and handleParamChange
+  // are now passed as props from the parent App component
 
   // Refs to track intervals and timeouts for cleanup
   const activeIntervals = useRef([]);
@@ -2573,13 +2553,48 @@ function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptio
       if (consumptionParams.block_limit !== 10) { // Only add if different from default
         params.append('limit', consumptionParams.block_limit);
       }
+      if (useAsync) {
+        params.append('async', 'true');
+      }
 
       const url = `/api/threat-feeds/${feedId}/consume/${params.toString() ? '?' + params.toString() : ''}`;
+      console.log('API Call URL:', url);
+      console.log('Async enabled:', useAsync);
       const result = await api.post(url);
       if (result) {
         console.log('Feed consumption started:', result);
         
-        // Check if the consumption completed immediately
+        // Check if this is async processing
+        if (result.status === 'processing' && result.task_id) {
+          console.log('Async processing started, task ID:', result.task_id);
+          // Update progress to show async processing
+          setFeedProgress(prev => ({
+            ...prev,
+            [feedId]: {
+              stage: 'Processing in Background',
+              message: `Task started: ${result.task_id}`,
+              percentage: 0,
+              taskId: result.task_id
+            }
+          }));
+
+          // Show success notification
+          alert(`Feed consumption started in background. You can continue using the app and will be notified when complete.`);
+
+          // Remove from consuming feeds immediately since it's async
+          setTimeout(() => {
+            setConsumingFeeds(prev => prev.filter(id => id !== feedId));
+            setFeedProgress(prev => {
+              const newProgress = { ...prev };
+              delete newProgress[feedId];
+              return newProgress;
+            });
+          }, 3000); // Show for 3 seconds then remove
+
+          return; // Exit early for async processing
+        }
+
+        // Check if the consumption completed immediately (sync processing)
         console.log('Checking completion status:', result.status, result.status === 'completed');
         if (result.status === 'completed') {
           console.log('Consumption completed immediately, updating UI');
@@ -3048,8 +3063,20 @@ function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptio
       {/* Consumption Filter */}
       <div className="consumption-params-section">
         <div className="consumption-params-header">
-          <i className="fas fa-filter"></i>
-          <span>Consumption Filter</span>
+          <div className="header-left">
+            <i className="fas fa-filter"></i>
+            <span>Consumption Filter</span>
+          </div>
+          <div className="header-right">
+            <label className="async-checkbox-header">
+              <input
+                type="checkbox"
+                checked={useAsync}
+                onChange={(e) => setUseAsync(e.target.checked)}
+              />
+              <span className="async-label-header">Process in background</span>
+            </label>
+          </div>
         </div>
         <div className="consumption-params-controls">
           {/* Individual Filter Controls */}
@@ -13471,12 +13498,48 @@ function CSSStyles() {
 
         .consumption-params-header {
             display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .header-left {
+            display: flex;
             align-items: center;
             gap: 8px;
             font-weight: 600;
             color: var(--primary-blue);
-            margin-bottom: 12px;
             font-size: 14px;
+        }
+
+        .header-right {
+            margin-left: auto;
+        }
+
+        .async-checkbox-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            user-select: none;
+            color: var(--text-color);
+        }
+
+        .async-checkbox-header input[type="checkbox"] {
+            width: 14px;
+            height: 14px;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .async-label-header {
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .async-checkbox-header:hover .async-label-header {
+            color: var(--primary-blue);
         }
 
         .consumption-params-controls {
@@ -13522,6 +13585,7 @@ function CSSStyles() {
             color: white;
             border-color: var(--primary-blue);
         }
+
 
         .param-group {
             display: flex;
