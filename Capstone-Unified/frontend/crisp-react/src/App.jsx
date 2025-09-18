@@ -133,8 +133,14 @@ const getAuthHeaders = () => {
 
 function App({ user, onLogout, isAdmin }) {
   
+  // Initialize activePage from URL or default to dashboard
+  const getInitialPage = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('page') || 'dashboard';
+  };
+
   // State to manage the active page and navigation parameters
-  const [activePage, setActivePage] = useState('dashboard');
+  const [activePage, setActivePage] = useState(getInitialPage);
   const [isLoading, setIsLoading] = useState(true);
   const [navigationState, setNavigationState] = useState({
     triggerModal: null,
@@ -149,6 +155,7 @@ function App({ user, onLogout, isAdmin }) {
     block_limit: 10 // Default to 10 blocks
   });
   const [activePreset, setActivePreset] = useState('custom');
+  const [useAsync, setUseAsync] = useState(false);
 
   // Handle preset selection
   const handlePresetSelect = (preset) => {
@@ -174,12 +181,43 @@ function App({ user, onLogout, isAdmin }) {
 
   // Handle individual parameter changes (switches to custom)
   const handleParamChange = (param, value) => {
-    setConsumptionParams(prev => ({...prev, [param]: value}));
+    // Client-side validation to ensure parameters are within valid ranges
+    let validatedValue = value;
+
+    if (param === 'days_back') {
+      // Ensure days_back is between 1 and 365
+      validatedValue = Math.max(1, Math.min(365, value));
+    } else if (param === 'block_limit') {
+      // Ensure block_limit is between 1 and 100
+      validatedValue = Math.max(1, Math.min(100, value));
+    }
+
+    setConsumptionParams(prev => ({...prev, [param]: validatedValue}));
     setActivePreset('custom');
   };
 
-  // Initialize app
+  // Initialize app and restore state from URL
   useEffect(() => {
+    // Restore navigation state from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const modalTrigger = urlParams.get('modal');
+    const modalParams = urlParams.get('params');
+    const pageParam = urlParams.get('page');
+    
+    if (modalTrigger) {
+      setNavigationState({
+        triggerModal: modalTrigger,
+        modalParams: modalParams ? JSON.parse(modalParams) : {}
+      });
+    }
+
+    // Ensure URL has page parameter for current active page
+    if (!pageParam && activePage) {
+      const url = new URL(window.location);
+      url.searchParams.set('page', activePage);
+      window.history.replaceState({}, '', url);
+    }
+
     // Small delay to prevent flash and ensure everything is ready
     const timer = setTimeout(() => {
       setIsLoading(false);
@@ -196,21 +234,23 @@ function App({ user, onLogout, isAdmin }) {
       modalParams: modalParams
     });
     
-    // Update URL with parameters if modal trigger is provided
+    // Always update URL with current page
+    const url = new URL(window.location);
+    url.searchParams.set('page', pageId);
+    
+    // Handle modal parameters
     if (modalTrigger) {
-      const url = new URL(window.location);
       url.searchParams.set('modal', modalTrigger);
       if (Object.keys(modalParams).length > 0) {
         url.searchParams.set('params', JSON.stringify(modalParams));
       }
-      window.history.pushState({}, '', url);
     } else {
-      // Clear URL parameters when no modal trigger
-      const url = new URL(window.location);
+      // Clear modal parameters when no modal trigger
       url.searchParams.delete('modal');
       url.searchParams.delete('params');
-      window.history.pushState({}, '', url);
     }
+    
+    window.history.pushState({}, '', url);
   };
 
   // Function to navigate to register user page/modal
@@ -222,9 +262,16 @@ function App({ user, onLogout, isAdmin }) {
   useEffect(() => {
     const handlePopState = () => {
       const urlParams = new URLSearchParams(window.location.search);
+      const pageParam = urlParams.get('page');
       const modalTrigger = urlParams.get('modal');
       const modalParams = urlParams.get('params');
       
+      // Update active page from URL
+      if (pageParam && pageParam !== activePage) {
+        setActivePage(pageParam);
+      }
+      
+      // Update modal state from URL
       if (modalTrigger) {
         setNavigationState({
           triggerModal: modalTrigger,
@@ -244,7 +291,7 @@ function App({ user, onLogout, isAdmin }) {
     handlePopState();
     
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, [activePage]);
 
 
   // Show loading screen during app initialization
@@ -295,11 +342,17 @@ function App({ user, onLogout, isAdmin }) {
       <main className="main-content">
         <div className="container">
           <Dashboard active={activePage === 'dashboard'} showPage={showPage} user={user} />
-          <ThreatFeeds 
-            active={activePage === 'threat-feeds'} 
-            navigationState={navigationState} 
+          <ThreatFeeds
+            active={activePage === 'threat-feeds'}
+            navigationState={navigationState}
             setNavigationState={setNavigationState}
             onConsumptionComplete={() => setLastUpdate(Date.now())}
+            useAsync={useAsync}
+            setUseAsync={setUseAsync}
+            consumptionParams={consumptionParams}
+            handleParamChange={handleParamChange}
+            activePreset={activePreset}
+            handlePresetSelect={handlePresetSelect}
           />
           <IoCManagement 
             active={activePage === 'ioc-management'}
@@ -2333,7 +2386,18 @@ function Dashboard({ active, showPage, user }) {
 }
 
 // Threat Feeds Component
-function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptionComplete}) {
+function ThreatFeeds({
+  active,
+  navigationState,
+  setNavigationState,
+  onConsumptionComplete,
+  useAsync,
+  setUseAsync,
+  consumptionParams,
+  handleParamChange,
+  activePreset,
+  handlePresetSelect
+}) {
   const [feeds, setFeeds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -2367,35 +2431,8 @@ function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptio
   const [feedToDelete, setFeedToDelete] = useState(null);
   const [deletingFeed, setDeletingFeed] = useState(false);
 
-  // Consumption parameters
-  const [consumptionParams, setConsumptionParams] = useState({
-    days_back: 30, // Default to 30 days
-    block_limit: 10 // Default to 10 blocks
-  });
-  const [activePreset, setActivePreset] = useState('custom');
-
-  // Handle preset selection
-  const handlePresetSelect = (preset) => {
-    setActivePreset(preset);
-
-    const presets = {
-      'last24h': { days_back: 1, block_limit: 5 },
-      'lastweek': { days_back: 7, block_limit: 10 },
-      'lastmonth': { days_back: 30, block_limit: 10 },
-      'allavailable': { days_back: 365, block_limit: 100 },
-      'custom': { days_back: consumptionParams.days_back, block_limit: consumptionParams.block_limit }
-    };
-
-    if (presets[preset] && preset !== 'custom') {
-      setConsumptionParams(presets[preset]);
-    }
-  };
-
-  // Handle individual filter changes (switches to custom)
-  const handleParamChange = (param, value) => {
-    setConsumptionParams(prev => ({...prev, [param]: value}));
-    setActivePreset('custom');
-  };
+  // Note: consumptionParams, activePreset, handlePresetSelect, and handleParamChange
+  // are now passed as props from the parent App component
 
   // Refs to track intervals and timeouts for cleanup
   const activeIntervals = useRef([]);
@@ -2513,13 +2550,51 @@ function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptio
       if (consumptionParams.days_back !== 30) { // Only add if different from default
         params.append('force_days', consumptionParams.days_back);
       }
+      if (consumptionParams.block_limit !== 10) { // Only add if different from default
+        params.append('limit', consumptionParams.block_limit);
+      }
+      if (useAsync) {
+        params.append('async', 'true');
+      }
 
       const url = `/api/threat-feeds/${feedId}/consume/${params.toString() ? '?' + params.toString() : ''}`;
+      console.log('API Call URL:', url);
+      console.log('Async enabled:', useAsync);
       const result = await api.post(url);
       if (result) {
         console.log('Feed consumption started:', result);
         
-        // Check if the consumption completed immediately
+        // Check if this is async processing
+        if (result.status === 'processing' && result.task_id) {
+          console.log('Async processing started, task ID:', result.task_id);
+          // Update progress to show async processing
+          setFeedProgress(prev => ({
+            ...prev,
+            [feedId]: {
+              stage: 'Processing in Background',
+              message: `Task started: ${result.task_id}`,
+              percentage: 0,
+              taskId: result.task_id
+            }
+          }));
+
+          // Show success notification
+          alert(`Feed consumption started in background. You can continue using the app and will be notified when complete.`);
+
+          // Remove from consuming feeds immediately since it's async
+          setTimeout(() => {
+            setConsumingFeeds(prev => prev.filter(id => id !== feedId));
+            setFeedProgress(prev => {
+              const newProgress = { ...prev };
+              delete newProgress[feedId];
+              return newProgress;
+            });
+          }, 3000); // Show for 3 seconds then remove
+
+          return; // Exit early for async processing
+        }
+
+        // Check if the consumption completed immediately (sync processing)
         console.log('Checking completion status:', result.status, result.status === 'completed');
         if (result.status === 'completed') {
           console.log('Consumption completed immediately, updating UI');
@@ -2707,8 +2782,32 @@ function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptio
       }
     } catch (error) {
       console.error('Error consuming feed:', error);
-      alert('Failed to consume feed. Please try again.');
-      
+
+      // Improved error handling for parameter validation
+      let errorMessage = 'Failed to consume feed. Please try again.';
+
+      if (error.response?.status === 400) {
+        const errorData = error.response.data;
+        if (errorData?.error) {
+          // Handle specific parameter validation errors
+          if (errorData.error.includes('limit parameter')) {
+            errorMessage = `Invalid Block Limit: ${errorData.error}`;
+          } else if (errorData.error.includes('force_days parameter')) {
+            errorMessage = `Invalid Days Back: ${errorData.error}`;
+          } else {
+            errorMessage = `Parameter Error: ${errorData.error}`;
+          }
+        }
+      } else if (error.response?.status === 404) {
+        errorMessage = 'Threat feed not found.';
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Authentication required. Please log in again.';
+      } else if (error.response?.status === 403) {
+        errorMessage = 'You do not have permission to consume this feed.';
+      }
+
+      alert(errorMessage);
+
       // Remove feed from consuming array on error
       setConsumingFeeds(prev => prev.filter(id => id !== feedId));
       setFeedProgress(prev => {
@@ -2964,8 +3063,20 @@ function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptio
       {/* Consumption Filter */}
       <div className="consumption-params-section">
         <div className="consumption-params-header">
-          <i className="fas fa-filter"></i>
-          <span>Consumption Filter</span>
+          <div className="header-left">
+            <i className="fas fa-filter"></i>
+            <span>Consumption Filter</span>
+          </div>
+          <div className="header-right">
+            <label className="async-checkbox-header">
+              <input
+                type="checkbox"
+                checked={useAsync}
+                onChange={(e) => setUseAsync(e.target.checked)}
+              />
+              <span className="async-label-header">Process in background</span>
+            </label>
+          </div>
         </div>
         <div className="consumption-params-controls">
           {/* Individual Filter Controls */}
@@ -13447,12 +13558,48 @@ function CSSStyles() {
 
         .consumption-params-header {
             display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .header-left {
+            display: flex;
             align-items: center;
             gap: 8px;
             font-weight: 600;
             color: var(--primary-blue);
-            margin-bottom: 12px;
             font-size: 14px;
+        }
+
+        .header-right {
+            margin-left: auto;
+        }
+
+        .async-checkbox-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            user-select: none;
+            color: var(--text-color);
+        }
+
+        .async-checkbox-header input[type="checkbox"] {
+            width: 14px;
+            height: 14px;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .async-label-header {
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .async-checkbox-header:hover .async-label-header {
+            color: var(--primary-blue);
         }
 
         .consumption-params-controls {
@@ -13498,6 +13645,7 @@ function CSSStyles() {
             color: white;
             border-color: var(--primary-blue);
         }
+
 
         .param-group {
             display: flex;

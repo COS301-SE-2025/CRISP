@@ -2,7 +2,7 @@ import logging
 from datetime import timedelta
 from django.utils import timezone
 from settings.celery import app
-from core.patterns.observer.threat_feed import ThreatFeed
+from core.models.models import ThreatFeed
 from core.services.stix_taxii_service import StixTaxiiService
 
 logger = logging.getLogger(__name__)
@@ -75,15 +75,27 @@ def schedule_taxii_feed_consumption():
     
     logger.info(f"Scheduled {feeds_to_update.count()} TAXII feeds for consumption")
 
-@app.task(name='consume_feed')
-def consume_feed_task(feed_id):
+@app.task(name='consume_feed_task')
+def consume_feed_task(feed_id, limit=None, force_days=None, batch_size=None):
     """
-    Consume a specific TAXII feed.
+    Consume a specific TAXII feed with parameters.
     """
-    service = StixTaxiiService()
     try:
-        stats = service.consume_feed(feed_id)
-        logger.info(f"Feed {feed_id} consumed: {stats}")
+        # Get the feed object
+        feed = ThreatFeed.objects.get(id=feed_id)
+        logger.info(f"Starting async consumption of feed: {feed.name}")
+
+        # Use OTX service for AlienVault feeds
+        if 'otx' in feed.name.lower() or 'alienvault' in feed.name.lower():
+            from core.services.otx_taxii_service import OTXTaxiiService
+            service = OTXTaxiiService()
+        else:
+            # Use generic STIX service for other feeds
+            service = StixTaxiiService()
+
+        # Consume the feed with parameters
+        stats = service.consume_feed(feed, limit=limit, force_days=force_days, batch_size=batch_size)
+        logger.info(f"Feed {feed.name} consumed successfully: {stats}")
         return stats
     except Exception as e:
         logger.error(f"Error consuming feed {feed_id}: {str(e)}")

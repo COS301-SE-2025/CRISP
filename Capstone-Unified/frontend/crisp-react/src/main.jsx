@@ -9,6 +9,7 @@ import LandingPage from "./LandingPage.jsx";
 import Construction from "./construction.jsx";
 import ForgotPassword from "./components/ForgotPassword.jsx";
 import ResetPassword from "./components/ResetPassword.jsx";
+import SessionTimeout from "./components/enhanced/SessionTimeout.jsx";
 import "./assets/index_ut.css";
 import "./assets/trust-management.css";
 
@@ -154,7 +155,14 @@ function AuthRoutes() {
 
 
   return (
-    <Routes>
+    <>
+      <SessionTimeout 
+        isAuthenticated={isAuthenticated}
+        onLogout={handleLogout}
+        timeoutMinutes={10}
+        warningMinutes={2}
+      />
+      <Routes>
         {/* Landing page route - redirect to dashboard if authenticated */}
         <Route
           path="/"
@@ -279,6 +287,7 @@ function AuthRoutes() {
         {/* Catch all route */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+    </>
   );
 }
 
