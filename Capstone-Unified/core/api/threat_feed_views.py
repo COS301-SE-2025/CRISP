@@ -161,6 +161,12 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
             if limit_param:
                 try:
                     limit = int(limit_param)
+                    # Validate range (1-100 blocks)
+                    if limit < 1 or limit > 100:
+                        return Response(
+                            {"error": "limit parameter must be between 1 and 100"},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
                 except ValueError:
                     return Response(
                         {"error": "Invalid limit parameter, must be an integer"},
@@ -170,6 +176,12 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
             if force_days:
                 try:
                     force_days = int(force_days)
+                    # Validate range (1-365 days)
+                    if force_days < 1 or force_days > 365:
+                        return Response(
+                            {"error": "force_days parameter must be between 1 and 365"},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
                 except ValueError:
                     return Response(
                         {"error": "Invalid force_days parameter, must be an integer"},

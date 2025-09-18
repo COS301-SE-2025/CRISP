@@ -143,6 +143,41 @@ function App({ user, onLogout, isAdmin }) {
 
   const [lastUpdate, setLastUpdate] = useState(Date.now());
 
+  // Consumption parameters state
+  const [consumptionParams, setConsumptionParams] = useState({
+    days_back: 30, // Default to 30 days
+    block_limit: 10 // Default to 10 blocks
+  });
+  const [activePreset, setActivePreset] = useState('custom');
+
+  // Handle preset selection
+  const handlePresetSelect = (preset) => {
+    setActivePreset(preset);
+
+    switch (preset) {
+      case 'last24h':
+        setConsumptionParams({ days_back: 1, block_limit: 10 });
+        break;
+      case 'lastweek':
+        setConsumptionParams({ days_back: 7, block_limit: 25 });
+        break;
+      case 'lastmonth':
+        setConsumptionParams({ days_back: 30, block_limit: 50 });
+        break;
+      case 'allavailable':
+        setConsumptionParams({ days_back: 365, block_limit: 100 });
+        break;
+      default: // custom
+        break;
+    }
+  };
+
+  // Handle individual parameter changes (switches to custom)
+  const handleParamChange = (param, value) => {
+    setConsumptionParams(prev => ({...prev, [param]: value}));
+    setActivePreset('custom');
+  };
+
   // Initialize app
   useEffect(() => {
     // Small delay to prevent flash and ensure everything is ready
@@ -2331,7 +2366,37 @@ function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptio
   const [showDeleteFeedModal, setShowDeleteFeedModal] = useState(false);
   const [feedToDelete, setFeedToDelete] = useState(null);
   const [deletingFeed, setDeletingFeed] = useState(false);
-  
+
+  // Consumption parameters
+  const [consumptionParams, setConsumptionParams] = useState({
+    days_back: 30, // Default to 30 days
+    block_limit: 10 // Default to 10 blocks
+  });
+  const [activePreset, setActivePreset] = useState('custom');
+
+  // Handle preset selection
+  const handlePresetSelect = (preset) => {
+    setActivePreset(preset);
+
+    const presets = {
+      'last24h': { days_back: 1, block_limit: 5 },
+      'lastweek': { days_back: 7, block_limit: 10 },
+      'lastmonth': { days_back: 30, block_limit: 10 },
+      'allavailable': { days_back: 365, block_limit: 100 },
+      'custom': { days_back: consumptionParams.days_back, block_limit: consumptionParams.block_limit }
+    };
+
+    if (presets[preset] && preset !== 'custom') {
+      setConsumptionParams(presets[preset]);
+    }
+  };
+
+  // Handle individual filter changes (switches to custom)
+  const handleParamChange = (param, value) => {
+    setConsumptionParams(prev => ({...prev, [param]: value}));
+    setActivePreset('custom');
+  };
+
   // Refs to track intervals and timeouts for cleanup
   const activeIntervals = useRef([]);
   const activeTimeouts = useRef([]);
@@ -2443,7 +2508,14 @@ function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptio
     });
     
     try {
-      const result = await api.post(`/api/threat-feeds/${feedId}/consume/`);
+      // Build query parameters for consumption
+      const params = new URLSearchParams();
+      if (consumptionParams.days_back !== 30) { // Only add if different from default
+        params.append('force_days', consumptionParams.days_back);
+      }
+
+      const url = `/api/threat-feeds/${feedId}/consume/${params.toString() ? '?' + params.toString() : ''}`;
+      const result = await api.post(url);
       if (result) {
         console.log('Feed consumption started:', result);
         
@@ -2886,6 +2958,82 @@ function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptio
           onClick={() => handleTabChange('all')}
         >
           All Feeds ({threatFeeds.length})
+        </div>
+      </div>
+
+      {/* Consumption Filter */}
+      <div className="consumption-params-section">
+        <div className="consumption-params-header">
+          <i className="fas fa-filter"></i>
+          <span>Consumption Filter</span>
+        </div>
+        <div className="consumption-params-controls">
+          {/* Individual Filter Controls */}
+          <div className="filter-controls">
+            <div className="param-group">
+              <label className="param-label">Days Back:</label>
+              <select
+                value={consumptionParams.days_back}
+                onChange={(e) => handleParamChange('days_back', parseInt(e.target.value))}
+                className="param-select"
+              >
+                <option value={1}>1 day</option>
+                <option value={7}>1 week</option>
+                <option value={30}>1 month</option>
+                <option value={90}>3 months</option>
+                <option value={180}>6 months</option>
+                <option value={365}>1 year</option>
+              </select>
+            </div>
+            <div className="param-group">
+              <label className="param-label">Data Amount:</label>
+              <select
+                value={consumptionParams.block_limit}
+                onChange={(e) => handleParamChange('block_limit', parseInt(e.target.value))}
+                className="param-select"
+              >
+                <option value={5}>Light (5 blocks)</option>
+                <option value={10}>Standard (10 blocks)</option>
+                <option value={25}>Heavy (25 blocks)</option>
+                <option value={50}>Maximum (50 blocks)</option>
+                <option value={100}>Full Load (100 blocks)</option>
+              </select>
+            </div>
+
+            {/* Quick Preset Buttons */}
+            <div className="preset-buttons">
+              <button
+                className={`preset-btn ${activePreset === 'last24h' ? 'active' : ''}`}
+                onClick={() => handlePresetSelect('last24h')}
+              >
+                Last 24h
+              </button>
+              <button
+                className={`preset-btn ${activePreset === 'lastweek' ? 'active' : ''}`}
+                onClick={() => handlePresetSelect('lastweek')}
+              >
+                Last Week
+              </button>
+              <button
+                className={`preset-btn ${activePreset === 'lastmonth' ? 'active' : ''}`}
+                onClick={() => handlePresetSelect('lastmonth')}
+              >
+                Last Month
+              </button>
+              <button
+                className={`preset-btn ${activePreset === 'allavailable' ? 'active' : ''}`}
+                onClick={() => handlePresetSelect('allavailable')}
+              >
+                All Available
+              </button>
+              <button
+                className={`preset-btn ${activePreset === 'custom' ? 'active' : ''}`}
+                onClick={() => handlePresetSelect('custom')}
+              >
+                Custom
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -3360,169 +3508,108 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
     }
   };
 
-  // Apply filters when indicators, filters, or pagination settings change
+  // Apply filters when filters change (but not when indicators change to avoid infinite loops)
   useEffect(() => {
-    applyFilters();
-  }, [indicators, filters, currentPage, itemsPerPage]);
+    if (filters.type || filters.source || filters.searchTerm) {
+      applyFilters();
+    }
+  }, [filters]);
 
-  const fetchIndicators = async () => {
+  // Initial load
+  useEffect(() => {
+    fetchIndicators(1, itemsPerPage);
+  }, []);
+
+  const fetchIndicators = async (page = 1, pageSize = itemsPerPage, filterParams = {}) => {
     setLoading(true);
     try {
-      // Fetch ALL indicators by paginating through all pages
-      console.log('IoCManagement: Fetching all indicators from /api/indicators/...');
+      // Build query parameters for server-side pagination and filtering
+      const params = new URLSearchParams({
+        page: page.toString(),
+        page_size: pageSize.toString(),
+        ordering: '-created_at' // Server-side sorting by creation date (newest first)
+      });
 
-      let allIndicators = [];
-      let page = 1;
-      let hasMore = true;
-      let totalFetched = 0;
+      // Add filter parameters if provided
+      if (filterParams.type) params.append('type', filterParams.type);
+      if (filterParams.source) params.append('source', filterParams.source);
+      if (filterParams.search) params.append('search', filterParams.search);
 
-      while (hasMore) {
-        console.log(`IoCManagement: Fetching page ${page}...`);
-        const indicatorsData = await api.get(`/api/indicators/?page=${page}&page_size=100`);
+      const indicatorsData = await api.get(`/api/indicators/?${params.toString()}`);
 
-        if (indicatorsData && indicatorsData.results && indicatorsData.results.length > 0) {
-          totalFetched += indicatorsData.results.length;
-          console.log(`IoCManagement: Page ${page} returned ${indicatorsData.results.length} indicators (total so far: ${totalFetched})`);
+      if (indicatorsData && indicatorsData.results) {
 
-          // Transform indicators to match IoC Management table format
-          const transformedIndicators = indicatorsData.results.map(indicator => ({
-            id: indicator.id,
-            type: indicator.indicator_type || indicator.type === 'ip' ? 'IP Address' :
-                  indicator.type === 'domain' ? 'Domain' :
-                  indicator.type === 'url' ? 'URL' :
-                  indicator.type === 'file_hash' ? 'File Hash' :
-                  indicator.type === 'email' ? 'Email' :
-                  indicator.type === 'user_agent' ? 'User Agent' :
-                  indicator.type === 'registry' ? 'Registry Key' :
-                  indicator.type === 'mutex' ? 'Mutex' :
-                  indicator.type === 'process' ? 'Process' : (indicator.type || 'Unknown'),
-            rawType: indicator.type,
-            title: indicator.name || indicator.title || '',
-            value: indicator.value || indicator.indicator_value || '',
-            severity: indicator.severity || (indicator.confidence >= 75 ? 'High' :
-                     indicator.confidence >= 50 ? 'Medium' : 'Low'),
-            confidence: indicator.confidence || 50,
-            source: indicator.source || indicator.feed_name || 'Unknown',
-            description: indicator.description || '',
-            created: indicator.created_at ? new Date(indicator.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-            createdDate: indicator.created_at ? new Date(indicator.created_at) : new Date(),
-            status: indicator.is_anonymized ? 'Anonymized' : 'Active',
-            feedId: indicator.threat_feed_id || indicator.feed_id,
-            feedName: indicator.source || indicator.feed_name || 'Unknown'
-          }));
+        // Transform indicators to match IoC Management table format
+        const transformedIndicators = indicatorsData.results.map(indicator => ({
+          id: indicator.id,
+          type: indicator.indicator_type || indicator.type === 'ip' ? 'IP Address' :
+                indicator.type === 'domain' ? 'Domain' :
+                indicator.type === 'url' ? 'URL' :
+                indicator.type === 'file_hash' ? 'File Hash' :
+                indicator.type === 'email' ? 'Email' :
+                indicator.type === 'user_agent' ? 'User Agent' :
+                indicator.type === 'registry' ? 'Registry Key' :
+                indicator.type === 'mutex' ? 'Mutex' :
+                indicator.type === 'process' ? 'Process' : (indicator.type || 'Unknown'),
+          rawType: indicator.type,
+          title: indicator.name || indicator.title || '',
+          value: indicator.value || indicator.indicator_value || '',
+          severity: indicator.severity || (indicator.confidence >= 75 ? 'High' :
+                   indicator.confidence >= 50 ? 'Medium' : 'Low'),
+          confidence: indicator.confidence || 50,
+          source: indicator.source || indicator.feed_name || 'Unknown',
+          description: indicator.description || '',
+          created: indicator.created_at ? new Date(indicator.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          createdDate: indicator.created_at ? new Date(indicator.created_at) : new Date(),
+          status: indicator.is_anonymized ? 'Anonymized' : 'Active',
+          feedId: indicator.threat_feed_id || indicator.feed_id,
+          feedName: indicator.source || indicator.feed_name || 'Unknown'
+        }));
 
-          allIndicators.push(...transformedIndicators);
-
-          // Check if there are more pages
-          hasMore = indicatorsData.next !== null;
-          page++;
-
-          // Safety limit to prevent infinite loops
-          if (page > 100) {
-            console.warn('IoCManagement: Reached page limit (100), stopping pagination');
-            hasMore = false;
-          }
-        } else {
-          hasMore = false;
-        }
+        setIndicators(transformedIndicators);
+        setFilteredIndicators(transformedIndicators); // For server-side pagination, filtered = indicators
+        setTotalItems(indicatorsData.count || 0);
+        setTotalPages(Math.ceil((indicatorsData.count || 0) / pageSize));
+      } else {
+        setIndicators([]);
+        setFilteredIndicators([]);
+        setTotalItems(0);
+        setTotalPages(0);
       }
-
-      // Sort indicators by creation date (newest first)
-      allIndicators.sort((a, b) => b.createdDate - a.createdDate);
-
-      setIndicators(allIndicators);
-      setTotalItems(allIndicators.length);
-      console.log(`IoCManagement: Successfully loaded ${allIndicators.length} total indicators from ${page - 1} pages`);
 
     } catch (error) {
       console.error('IoCManagement: Error fetching indicators:', error);
       setError('Failed to load indicators. Please try again.');
       setIndicators([]);
+      setFilteredIndicators([]);
       setTotalItems(0);
+      setTotalPages(0);
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter application logic
+  // Apply filters with server-side pagination
   const applyFilters = () => {
-    let filtered = [...indicators];
+    // Build filter parameters for server-side filtering
+    const filterParams = {};
 
-    // Filter by type
     if (filters.type) {
-      filtered = filtered.filter(indicator => 
-        indicator.rawType === filters.type
-      );
+      filterParams.type = filters.type;
     }
 
-    // Filter by severity
-    if (filters.severity) {
-      filtered = filtered.filter(indicator => 
-        indicator.severity.toLowerCase() === filters.severity.toLowerCase()
-      );
-    }
-
-    // Filter by status
-    if (filters.status) {
-      filtered = filtered.filter(indicator => 
-        indicator.status.toLowerCase() === filters.status.toLowerCase()
-      );
-    }
-
-    // Filter by source
     if (filters.source) {
-      filtered = filtered.filter(indicator => 
-        indicator.source.toLowerCase().includes(filters.source.toLowerCase())
-      );
+      filterParams.source = filters.source;
     }
 
-    // Filter by search term (searches in title, value, and description)
+    // Combine search terms for server-side search
     if (filters.searchTerm) {
-      const searchTerm = filters.searchTerm.toLowerCase();
-      filtered = filtered.filter(indicator => 
-        indicator.value.toLowerCase().includes(searchTerm) ||
-        indicator.description.toLowerCase().includes(searchTerm) ||
-        (indicator.title && indicator.title.toLowerCase().includes(searchTerm)) ||
-        (indicator.name && indicator.name.toLowerCase().includes(searchTerm))
-      );
+      filterParams.search = filters.searchTerm;
     }
 
-    // Filter by date range
-    if (filters.dateRange) {
-      const now = new Date();
-      let cutoffDate;
-      
-      switch (filters.dateRange) {
-        case 'today':
-          cutoffDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-          break;
-        case 'week':
-          cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          break;
-        case 'month':
-          cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-          break;
-        case 'quarter':
-          cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-          break;
-        default:
-          cutoffDate = null;
-      }
-      
-      if (cutoffDate) {
-        filtered = filtered.filter(indicator => 
-          indicator.createdDate >= cutoffDate
-        );
-      }
-    }
-
-    setFilteredIndicators(filtered);
-    setTotalPages(Math.ceil(filtered.length / itemsPerPage));
-    
-    // Reset to first page if current page is beyond available pages
-    if (currentPage > Math.ceil(filtered.length / itemsPerPage)) {
-      setCurrentPage(1);
-    }
+    // Reset to first page when filters change and fetch new data
+    setCurrentPage(1);
+    fetchIndicators(1, itemsPerPage, filterParams);
   };
 
   // Handle filter changes
@@ -3547,17 +3634,24 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
     setCurrentPage(1);
   };
 
-  // Get paginated indicators
+  // Get current page indicators (server-side pagination, so just return filtered indicators)
   const getPaginatedIndicators = () => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredIndicators.slice(startIndex, endIndex);
+    return filteredIndicators;
   };
 
   // Handle page changes
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
+
+      // Build current filter parameters
+      const filterParams = {};
+      if (filters.type) filterParams.type = filters.type;
+      if (filters.source) filterParams.source = filters.source;
+      if (filters.searchTerm) filterParams.search = filters.searchTerm;
+
+      // Fetch new page data
+      fetchIndicators(page, itemsPerPage, filterParams);
     }
   };
 
@@ -3565,7 +3659,13 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
   const handleRefresh = async () => {
     setLoading(true);
     try {
-      await fetchIndicators();
+      // Build current filter parameters
+      const filterParams = {};
+      if (filters.type) filterParams.type = filters.type;
+      if (filters.source) filterParams.source = filters.source;
+      if (filters.searchTerm) filterParams.search = filters.searchTerm;
+
+      await fetchIndicators(currentPage, itemsPerPage, filterParams);
       if (onRefresh) onRefresh();
       // Show a brief success message
       console.log('Indicators refreshed successfully');
@@ -13274,6 +13374,93 @@ function CSSStyles() {
         .feed-item:last-child {
             border-bottom: none;
         }
+
+        /* Consumption Parameters */
+        .consumption-params-section {
+            background: var(--card-background);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid var(--medium-gray);
+            position: relative;
+        }
+
+        .consumption-params-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: var(--primary-blue);
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .consumption-params-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .filter-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-left: auto;
+        }
+
+        .preset-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--medium-gray);
+            border-radius: 20px;
+            background: var(--card-background);
+            color: var(--text-gray);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .preset-btn:hover {
+            background: var(--light-blue);
+            color: var(--primary-blue);
+        }
+
+        .preset-btn.active {
+            background: var(--primary-blue);
+            color: white;
+            border-color: var(--primary-blue);
+        }
+
+        .param-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .param-label {
+            font-size: 14px;
+            color: var(--text-gray);
+            font-weight: 500;
+        }
+
+        .param-select {
+            padding: 6px 12px;
+            border: 1px solid var(--medium-gray);
+            border-radius: 4px;
+            background: var(--card-background);
+            color: var(--text-color);
+            font-size: 14px;
+            min-width: 160px;
+        }
+
         
         .feed-icon {
             width: 48px;

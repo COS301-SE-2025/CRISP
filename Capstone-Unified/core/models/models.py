@@ -673,7 +673,7 @@ class Indicator(models.Model):
     description = models.TextField(blank=True, null=True)
     confidence = models.IntegerField(default=50)  # 0-100
     threat_feed = models.ForeignKey(ThreatFeed, on_delete=models.CASCADE, related_name='indicators')
-    stix_id = models.CharField(max_length=255, unique=True)
+    stix_id = models.CharField(max_length=255)
     
     # Temporal data
     first_seen = models.DateTimeField()
@@ -696,7 +696,10 @@ class Indicator(models.Model):
         pass
     
     class Meta:
-        unique_together = ['value', 'type', 'threat_feed']
+        unique_together = [
+            ['value', 'type', 'threat_feed'],
+            ['stix_id', 'threat_feed']
+        ]
         ordering = ['-last_seen']
         db_table = 'indicators'
 
@@ -732,7 +735,7 @@ class TTPData(models.Model):
     
     # Metadata
     threat_feed = models.ForeignKey(ThreatFeed, on_delete=models.CASCADE, related_name='ttps')
-    stix_id = models.CharField(max_length=255, unique=True)
+    stix_id = models.CharField(max_length=255)
     
     # Anonymization
     is_anonymized = models.BooleanField(default=False)
@@ -750,7 +753,10 @@ class TTPData(models.Model):
         pass
     
     class Meta:
-        unique_together = ['mitre_technique_id', 'threat_feed']
+        unique_together = [
+            ['mitre_technique_id', 'threat_feed'],
+            ['stix_id', 'threat_feed']
+        ]
         ordering = ['mitre_technique_id']
         db_table = 'ttp_data'
 

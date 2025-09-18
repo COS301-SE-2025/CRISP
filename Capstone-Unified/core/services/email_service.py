@@ -67,8 +67,18 @@ class UnifiedEmailService:
             Dictionary with send result
         """
         try:
+            # Debug logging
+            logger.info(f"🔍 Email invitation debug:")
+            logger.info(f"  Inviter: {inviter.email if inviter else 'None'} (role: {inviter.role if inviter else 'None'})")
+            logger.info(f"  Organization: {organization.name if organization else 'None'}")
+            logger.info(f"  Inviter org: {inviter.organization.name if inviter and inviter.organization else 'None'}")
+            
             # Check if inviter can send invitations
-            if not self.access_control.can_invite_to_organization(inviter, organization):
+            can_invite = self.access_control.can_invite_to_organization(inviter, organization)
+            logger.info(f"  Permission check result: {can_invite}")
+            
+            if not can_invite:
+                logger.warning(f"❌ Permission denied for {inviter.email if inviter else 'None'} to invite to {organization.name if organization else 'None'}")
                 return {
                     'success': False,
                     'message': 'Insufficient permissions to send invitations',
