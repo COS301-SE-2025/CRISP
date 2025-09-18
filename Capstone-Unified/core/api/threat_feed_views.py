@@ -6,12 +6,15 @@ from datetime import timedelta, datetime
 from collections import defaultdict, OrderedDict
 from io import StringIO
 from rest_framework import viewsets, status
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action, api_view, permission_classes, renderer_classes
+from rest_framework.renderers import JSONRenderer, BrowsableAPIRenderer
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.db.models import Count, Q
 from django.http import Http404, HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from rest_framework.permissions import AllowAny
 from rest_framework.views import exception_handler
 from django.core.cache import cache
@@ -180,26 +183,117 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
             
             # Log parameters for debugging
             logger.info(f"Parameters: limit={limit}, force_days={force_days}, batch_size={batch_size}")
-            
-            # Use OTXTaxiiService
-            service = OTXTaxiiService()
-            
-            # Check if async processing is requested
-            if request.query_params.get('async', '').lower() == 'true':
-                from core.tasks.taxii_tasks import consume_feed_task
-                task = consume_feed_task.delay(
-                    feed_id=int(pk), 
-                    limit=limit, 
-                    force_days=force_days,
-                    batch_size=batch_size
-                )
-                return Response({
-                    "status": "processing",
-                    "message": "Processing started in background",
-                    "task_id": task.id
-                })
-            
-            stats = service.consume_feed(feed, limit=limit, force_days=force_days, batch_size=batch_size)
+
+            # Check if this is a VirusTotal feed and handle differently
+            if 'virustotal' in feed.name.lower():
+                logger.info("Detected VirusTotal feed - using VirusTotal API service")
+                from core.services.virustotal_service import VirusTotalService
+
+                # For VirusTotal, always use async due to rate limiting
+                if request.query_params.get('async', '').lower() != 'true':
+                    logger.info("VirusTotal feed consumption forced to async due to rate limiting")
+
+                # Quick API connection test first
+                vt_service = VirusTotalService()
+                connection_test = vt_service.test_api_connection()
+                if not connection_test['success']:
+                    return Response({
+                        'success': False,
+                        'error': f"VirusTotal API connection failed: {connection_test['error']}",
+                        'quota_info': connection_test.get('quota', 'Unknown')
+                    }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+                # Check if we have indicators to process
+                from core.models.models import Indicator
+                vt_indicators_count = Indicator.objects.filter(
+                    threat_feed=feed,
+                    type__in=['md5', 'sha1', 'sha256', 'url']
+                ).count()
+
+                if vt_indicators_count == 0:
+                    return Response({
+                        'success': True,
+                        'indicators': 0,
+                        'ttps': 0,
+                        'status': 'completed',
+                        'feed_name': feed.name,
+                        'service_type': 'virustotal_api',
+                        'message': 'No indicators available for VirusTotal analysis',
+                        'quota_info': connection_test.get('quota', 'Unknown')
+                    })
+
+                # Start async processing
+                try:
+                    # Create a simple background task simulation
+                    import threading
+                    import time
+
+                    def vt_sync_task():
+                        """Background VirusTotal sync task"""
+                        try:
+                            logger.info(f"Starting VirusTotal background sync for {feed.name}")
+                            result = vt_service.sync_virustotal_feed(feed, limit=min(limit, 10))  # Limit to 10 indicators
+
+                            if result['success'] and result.get('ttps_created', 0) > 0:
+                                activity_title = f"VirusTotal sync: {result['ttps_created']} TTPs extracted from {result['indicators_processed']} indicators"
+                                SystemActivity.log_activity(
+                                    activity_type='virustotal_sync',
+                                    title=activity_title,
+                                    description=f"Successfully analyzed {result['indicators_processed']} indicators and extracted {result['ttps_created']} TTPs from VirusTotal",
+                                    threat_feed=feed,
+                                    metadata=result
+                                )
+
+                            logger.info(f"VirusTotal background sync completed: {result}")
+                        except Exception as e:
+                            logger.error(f"VirusTotal background sync failed: {str(e)}")
+
+                    # Start background thread
+                    thread = threading.Thread(target=vt_sync_task)
+                    thread.daemon = True
+                    thread.start()
+
+                    # Return immediate response
+                    return Response({
+                        'status': 'processing',
+                        'message': f'VirusTotal analysis started for {vt_indicators_count} indicators. This may take several minutes due to API rate limits.',
+                        'feed_name': feed.name,
+                        'service_type': 'virustotal_api',
+                        'estimated_time_minutes': vt_indicators_count * 0.25,  # ~15 seconds per indicator
+                        'indicators_to_analyze': vt_indicators_count,
+                        'quota_info': connection_test.get('quota', 'Unknown'),
+                        'note': 'VirusTotal processing is asynchronous due to API rate limits. Check system activities for completion status.'
+                    })
+
+                except Exception as e:
+                    logger.error(f"Failed to start VirusTotal sync: {str(e)}")
+                    return Response({
+                        'success': False,
+                        'error': 'Failed to start VirusTotal analysis',
+                        'details': str(e),
+                        'feed_name': feed.name
+                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            else:
+                # Use OTXTaxiiService for other feeds
+                service = OTXTaxiiService()
+
+                # Check if async processing is requested
+                if request.query_params.get('async', '').lower() == 'true':
+                    from core.tasks.taxii_tasks import consume_feed_task
+                    task = consume_feed_task.delay(
+                        feed_id=int(pk),
+                        limit=limit,
+                        force_days=force_days,
+                        batch_size=batch_size
+                    )
+                    return Response({
+                        "status": "processing",
+                        "message": "Processing started in background",
+                        "task_id": task.id
+                    })
+
+                stats = service.consume_feed(feed, limit=limit, force_days=force_days, batch_size=batch_size)
             
             # Format response properly for API consumers
             if isinstance(stats, tuple):
@@ -890,10 +984,11 @@ def indicator_update(request, indicator_id):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def indicator_share(request, indicator_id):
-    """Share an indicator with specified institutions."""
+    """Share an indicator with specified organizations using comprehensive sharing service."""
     try:
+        from core.services.ioc_sharing_service import IOCSharingService
         from core.repositories.indicator_repository import IndicatorRepository
-        
+
         # Get the indicator
         indicator = IndicatorRepository.get_by_id(indicator_id)
         if not indicator:
@@ -901,55 +996,140 @@ def indicator_share(request, indicator_id):
                 {"error": "Indicator not found"},
                 status=status.HTTP_404_NOT_FOUND
             )
-        
+
         data = request.data
-        
+
         # Validate required fields
-        if 'institutions' not in data or not isinstance(data['institutions'], list):
+        if 'organizations' not in data or not isinstance(data['organizations'], list):
             return Response(
-                {"error": "Missing or invalid 'institutions' field. Expected a list."},
+                {"error": "Missing or invalid 'organizations' field. Expected a list of organization IDs."},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
-        institutions = data['institutions']
-        anonymization_level = data.get('anonymization_level', 'medium')
+
+        organizations = data['organizations']
+        anonymization_level = data.get('anonymization_level', 'partial')
         share_method = data.get('share_method', 'taxii')
-        
-        # For now, we'll simulate the sharing process
-        # In a real implementation, this would integrate with TAXII publishing
-        shared_count = 0
-        errors = []
-        
-        for institution in institutions:
-            try:
-                # Simulate sharing logic
-                # This would normally:
-                # 1. Apply anonymization based on trust level
-                # 2. Prepare STIX object
-                # 3. Publish to TAXII collection
-                # 4. Log the sharing event
-                
-                shared_count += 1
-                logger.info(f"Shared indicator {indicator_id} with {institution}")
-                
-            except Exception as e:
-                errors.append(f"Failed to share with {institution}: {str(e)}")
-                continue
-        
-        return Response({
-            'success': True,
-            'indicator_id': indicator_id,
-            'shared_with': shared_count,
-            'total_institutions': len(institutions),
-            'anonymization_level': anonymization_level,
-            'share_method': share_method,
-            'errors': errors
-        }, status=status.HTTP_200_OK)
-        
+
+        # Use the IOC sharing service
+        sharing_service = IOCSharingService()
+
+        # Share with organizations
+        result = sharing_service.share_indicators_with_organizations(
+            indicator_ids=[indicator_id],
+            target_organizations=organizations,
+            sharing_user=request.user if hasattr(request, 'user') and request.user.is_authenticated else None,
+            anonymization_level=anonymization_level,
+            share_method=share_method
+        )
+
+        return Response(result, status=status.HTTP_200_OK)
+
     except Exception as e:
         logger.error(f"Error sharing indicator: {str(e)}")
         return Response(
             {"error": "Failed to share indicator", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def indicator_generate_share_url(request, indicator_id):
+    """Generate a secure share URL for an indicator."""
+    try:
+        from core.services.ioc_sharing_service import IOCSharingService
+
+        data = request.data
+        expiry_hours = data.get('expiry_hours', 24)
+        access_type = data.get('access_type', 'view')
+
+        # Use the IOC sharing service
+        sharing_service = IOCSharingService()
+
+        # Generate share URL
+        result = sharing_service.generate_share_url(
+            indicator_id=indicator_id,
+            sharing_user=request.user if hasattr(request, 'user') and request.user.is_authenticated else None,
+            expiry_hours=expiry_hours,
+            access_type=access_type
+        )
+
+        return Response(result, status=status.HTTP_201_CREATED)
+
+    except ValueError as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except PermissionError as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    except Exception as e:
+        logger.error(f"Error generating share URL: {str(e)}")
+        return Response(
+            {"error": "Failed to generate share URL", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def indicator_shared_access(request, share_token):
+    """Access a shared indicator using a share token."""
+    try:
+        from core.services.ioc_sharing_service import IOCSharingService
+
+        # Use the IOC sharing service
+        sharing_service = IOCSharingService()
+
+        # Access shared indicator
+        result = sharing_service.access_shared_indicator(
+            share_token=share_token,
+            accessing_user=request.user if hasattr(request, 'user') and request.user.is_authenticated else None
+        )
+
+        return Response(result, status=status.HTTP_200_OK)
+
+    except ValueError as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        logger.error(f"Error accessing shared indicator: {str(e)}")
+        return Response(
+            {"error": "Failed to access shared indicator", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def sharing_permissions(request):
+    """Get sharing permissions for the current user."""
+    try:
+        from core.services.ioc_sharing_service import IOCSharingService
+
+        if not hasattr(request, 'user') or not request.user.is_authenticated:
+            return Response(
+                {"error": "Authentication required"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        # Use the IOC sharing service
+        sharing_service = IOCSharingService()
+
+        # Get permissions
+        permissions = sharing_service.get_sharing_permissions(request.user)
+
+        return Response(permissions, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        logger.error(f"Error getting sharing permissions: {str(e)}")
+        return Response(
+            {"error": "Failed to get sharing permissions", "details": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
@@ -2698,7 +2878,7 @@ def ttp_trends(request):
 def ttp_export(request):
     """
     GET: Export TTP data in multiple formats (CSV, JSON, STIX).
-    
+
     Query Parameters:
     - format: Export format - 'csv', 'json', 'stix' (default: 'json')
     - tactic: Filter by specific MITRE tactic (optional)
@@ -2710,10 +2890,11 @@ def ttp_export(request):
     - limit: Maximum number of records to export (default: 1000, max: 10000)
     - created_after: Filter TTPs created after this date (YYYY-MM-DD format)
     - created_before: Filter TTPs created before this date (YYYY-MM-DD format)
-    
+
     Returns TTP data in the specified format with proper content headers for download.
     """
     try:
+        logger.info(f"TTP Export request: format={request.GET.get('format', 'json')}, method={request.method}, path={request.path}")
         # Get and validate query parameters
         export_format = request.GET.get('export_format', request.GET.get('format', 'json')).lower()
         tactic = request.GET.get('tactic', '').strip()
@@ -2837,23 +3018,32 @@ def ttp_export(request):
         
         # CSV Export
         if export_format == 'csv':
-            output = StringIO()
-            writer = csv.DictWriter(output, fieldnames=selected_fields, extrasaction='ignore')
-            writer.writeheader()
-            
-            for ttp in ttps:
-                row_data = extract_ttp_data(ttp)
-                # Convert complex data to strings for CSV
-                for key, value in row_data.items():
-                    if isinstance(value, (dict, list)):
-                        row_data[key] = json.dumps(value)
-                    elif value is None:
-                        row_data[key] = ''
-                writer.writerow(row_data)
-            
-            response = HttpResponse(output.getvalue(), content_type='text/csv')
-            response['Content-Disposition'] = f'attachment; filename="ttps_export_{timestamp}.csv"'
-            return response
+            try:
+                logger.info(f"Processing CSV export with {len(ttps)} TTPs and {len(selected_fields)} fields")
+                output = StringIO()
+                writer = csv.DictWriter(output, fieldnames=selected_fields, extrasaction='ignore')
+                writer.writeheader()
+
+                for ttp in ttps:
+                    row_data = extract_ttp_data(ttp)
+                    # Convert complex data to strings for CSV
+                    for key, value in row_data.items():
+                        if isinstance(value, (dict, list)):
+                            row_data[key] = json.dumps(value)
+                        elif value is None:
+                            row_data[key] = ''
+                    writer.writerow(row_data)
+
+                response = HttpResponse(output.getvalue(), content_type='text/csv')
+                response['Content-Disposition'] = f'attachment; filename="ttps_export_{timestamp}.csv"'
+                logger.info("CSV export completed successfully")
+                return response
+            except Exception as csv_error:
+                logger.error(f"CSV export error: {str(csv_error)}")
+                return Response(
+                    {"error": f"CSV export failed: {str(csv_error)}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
         
         # JSON Export
         elif export_format == 'json':
@@ -4241,3 +4431,301 @@ def ttp_technique_details(request, technique_id):
             {"error": "Failed to get technique details", "details": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def ttp_export_csv(request):
+    """
+    Plain Django view for CSV export to bypass DRF content negotiation issues
+    """
+    try:
+        # Get query parameters
+        limit = int(request.GET.get('limit', 1000))
+        tactic = request.GET.get('tactic', '').strip()
+        technique_id = request.GET.get('technique_id', '').strip()
+        feed_id = request.GET.get('feed_id', '').strip()
+
+        # Get TTPs with filters
+        queryset = TTPData.objects.select_related('threat_feed').all()
+
+        if tactic:
+            queryset = queryset.filter(mitre_tactic=tactic)
+        if technique_id:
+            queryset = queryset.filter(mitre_technique_id__icontains=technique_id)
+        if feed_id:
+            try:
+                feed_id_int = int(feed_id)
+                queryset = queryset.filter(threat_feed_id=feed_id_int)
+            except ValueError:
+                pass
+
+        # Apply limit and order
+        queryset = queryset.order_by('-created_at')[:limit]
+        ttps = list(queryset)
+
+        # Create CSV response
+        response = HttpResponse(content_type='text/csv')
+        timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+        response['Content-Disposition'] = f'attachment; filename="ttps_export_{timestamp}.csv"'
+
+        # Define CSV fields
+        fieldnames = [
+            'id', 'name', 'description', 'mitre_technique_id', 'mitre_tactic',
+            'mitre_subtechnique', 'threat_feed_name', 'created_at', 'updated_at'
+        ]
+
+        writer = csv.DictWriter(response, fieldnames=fieldnames, extrasaction='ignore')
+        writer.writeheader()
+
+        for ttp in ttps:
+            # Get tactic display name
+            tactic_display = dict(TTPData.MITRE_TACTIC_CHOICES).get(ttp.mitre_tactic, ttp.mitre_tactic) if ttp.mitre_tactic else ''
+
+            row_data = {
+                'id': ttp.id,
+                'name': ttp.name,
+                'description': ttp.description,
+                'mitre_technique_id': ttp.mitre_technique_id,
+                'mitre_tactic': tactic_display,
+                'mitre_subtechnique': ttp.mitre_subtechnique or '',
+                'threat_feed_name': ttp.threat_feed.name if ttp.threat_feed else '',
+                'created_at': ttp.created_at.isoformat(),
+                'updated_at': ttp.updated_at.isoformat()
+            }
+
+            writer.writerow(row_data)
+
+        return response
+
+    except Exception as e:
+        logger.error(f"CSV export error: {str(e)}")
+        return HttpResponse(f"Error: {str(e)}", status=500, content_type='text/plain')
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def ttp_export_stix(request):
+    """
+    Plain Django view for STIX export to bypass DRF content negotiation issues
+    """
+    try:
+        # Get query parameters
+        limit = int(request.GET.get('limit', 1000))
+        tactic = request.GET.get('tactic', '').strip()
+        technique_id = request.GET.get('technique_id', '').strip()
+        feed_id = request.GET.get('feed_id', '').strip()
+
+        # Get TTPs with filters
+        queryset = TTPData.objects.select_related('threat_feed').all()
+
+        if tactic:
+            queryset = queryset.filter(mitre_tactic=tactic)
+        if technique_id:
+            queryset = queryset.filter(mitre_technique_id__icontains=technique_id)
+        if feed_id:
+            try:
+                feed_id_int = int(feed_id)
+                queryset = queryset.filter(threat_feed_id=feed_id_int)
+            except ValueError:
+                pass
+
+        # Apply limit and order
+        queryset = queryset.order_by('-created_at')[:limit]
+        ttps = list(queryset)
+
+        # Create STIX bundle
+        stix_objects = []
+        bundle_id = f"bundle--{str(uuid.uuid4())}"
+
+        # Add identity object
+        identity_obj = {
+            "type": "identity",
+            "spec_version": "2.1",
+            "id": f"identity--{str(uuid.uuid4())}",
+            "created": timezone.now().isoformat(),
+            "modified": timezone.now().isoformat(),
+            "name": "CRISP Threat Intelligence Platform",
+            "identity_class": "system"
+        }
+        stix_objects.append(identity_obj)
+
+        # Convert TTPs to STIX Attack Pattern objects
+        for ttp in ttps:
+            attack_pattern = {
+                "type": "attack-pattern",
+                "spec_version": "2.1",
+                "id": ttp.stix_id,
+                "created": ttp.created_at.isoformat(),
+                "modified": ttp.updated_at.isoformat(),
+                "name": ttp.name,
+                "description": ttp.description,
+                "created_by_ref": identity_obj["id"]
+            }
+
+            # Add MITRE external references
+            if ttp.mitre_technique_id:
+                attack_pattern["external_references"] = [{
+                    "source_name": "mitre-attack",
+                    "external_id": ttp.mitre_technique_id,
+                    "url": f"https://attack.mitre.org/techniques/{ttp.mitre_technique_id.replace('.', '/')}/"
+                }]
+
+            # Add kill chain phases
+            if ttp.mitre_tactic:
+                attack_pattern["kill_chain_phases"] = [{
+                    "kill_chain_name": "mitre-attack",
+                    "phase_name": ttp.mitre_tactic.replace('_', '-')
+                }]
+
+            stix_objects.append(attack_pattern)
+
+        bundle = {
+            "type": "bundle",
+            "spec_version": "2.1",
+            "id": bundle_id,
+            "objects": stix_objects
+        }
+
+        # Create JSON response
+        response = HttpResponse(content_type='application/json')
+        timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+        response['Content-Disposition'] = f'attachment; filename="ttps_export_{timestamp}.stix"'
+        response.write(json.dumps(bundle, indent=2, ensure_ascii=False))
+        return response
+
+    except Exception as e:
+        logger.error(f"STIX export error: {str(e)}")
+        return HttpResponse(f"Error: {str(e)}", status=500, content_type='text/plain')
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def virustotal_sync(request):
+    """
+    POST: Manually trigger VirusTotal TTP synchronization
+
+    Body Parameters:
+    - feed_id: Specific VirusTotal feed ID to sync (optional)
+    - limit: Number of indicators to process (default: 50, max: 200)
+    - force_sync: Force sync even if recently synced (default: false)
+
+    Triggers the VirusTotal service to analyze existing indicators
+    and extract TTP data from malware analysis results.
+    """
+    try:
+        from core.services.virustotal_service import VirusTotalService
+        from django.db import transaction
+
+        # Get parameters
+        feed_id = request.data.get('feed_id')
+        limit = min(int(request.data.get('limit', 50)), 200)  # Cap at 200 for rate limits
+        force_sync = request.data.get('force_sync', False)
+
+        # Initialize VirusTotal service
+        vt_service = VirusTotalService()
+
+        # Test API connection
+        connection_test = vt_service.test_api_connection()
+        if not connection_test['success']:
+            return Response({
+                'success': False,
+                'error': f"VirusTotal API connection failed: {connection_test['error']}",
+                'quota_info': connection_test.get('quota', 'Unknown')
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        # Get VirusTotal feeds to sync
+        if feed_id:
+            try:
+                feeds = [ThreatFeed.objects.get(id=int(feed_id), is_active=True)]
+                if 'virustotal' not in feeds[0].name.lower():
+                    return Response({
+                        'success': False,
+                        'error': f"Feed '{feeds[0].name}' doesn't appear to be a VirusTotal feed"
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            except (ThreatFeed.DoesNotExist, ValueError):
+                return Response({
+                    'success': False,
+                    'error': f"VirusTotal feed with ID {feed_id} not found or inactive"
+                }, status=status.HTTP_404_NOT_FOUND)
+        else:
+            # Get all active VirusTotal feeds
+            feeds = ThreatFeed.objects.filter(
+                name__icontains='virustotal',
+                is_active=True
+            )
+
+        if not feeds:
+            return Response({
+                'success': False,
+                'error': 'No active VirusTotal feeds found'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # Check if we should skip due to recent sync (unless forced)
+        if not force_sync:
+            for feed in feeds:
+                if feed.last_sync and (timezone.now() - feed.last_sync).total_seconds() < 3600:  # 1 hour
+                    return Response({
+                        'success': False,
+                        'error': f'Feed {feed.name} was synced recently. Use force_sync=true to override.',
+                        'last_sync': feed.last_sync.isoformat() if feed.last_sync else None
+                    }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+        results = []
+        total_ttps_created = 0
+        total_indicators_processed = 0
+
+        # Process each feed
+        for feed in feeds:
+            try:
+                with transaction.atomic():
+                    result = vt_service.sync_virustotal_feed(feed, limit=limit)
+                    results.append({
+                        'feed_id': feed.id,
+                        'feed_name': feed.name,
+                        'success': result['success'],
+                        'ttps_created': result.get('ttps_created', 0),
+                        'indicators_processed': result.get('indicators_processed', 0),
+                        'errors': result.get('errors', [])
+                    })
+
+                    if result['success']:
+                        total_ttps_created += result.get('ttps_created', 0)
+                        total_indicators_processed += result.get('indicators_processed', 0)
+
+            except Exception as e:
+                logger.error(f"VirusTotal sync error for feed {feed.name}: {str(e)}")
+                results.append({
+                    'feed_id': feed.id,
+                    'feed_name': feed.name,
+                    'success': False,
+                    'error': str(e)
+                })
+
+        # Overall success if at least one feed succeeded
+        overall_success = any(result['success'] for result in results)
+
+        response_data = {
+            'success': overall_success,
+            'message': f'VirusTotal sync completed for {len(feeds)} feed(s)',
+            'summary': {
+                'total_feeds_processed': len(feeds),
+                'successful_syncs': sum(1 for result in results if result['success']),
+                'total_ttps_created': total_ttps_created,
+                'total_indicators_processed': total_indicators_processed,
+                'rate_limit_info': 'VirusTotal free tier: 4 requests/minute'
+            },
+            'feed_results': results,
+            'quota_info': connection_test.get('quota', 'Unknown'),
+            'timestamp': timezone.now().isoformat()
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK if overall_success else status.HTTP_207_MULTI_STATUS)
+
+    except Exception as e:
+        logger.error(f"VirusTotal sync endpoint error: {str(e)}")
+        return Response({
+            'success': False,
+            'error': 'Failed to sync VirusTotal feeds',
+            'details': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

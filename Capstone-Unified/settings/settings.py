@@ -235,6 +235,15 @@ OTX_SETTINGS = {
     'MAX_AGE_DAYS': int(os.getenv('OTX_MAX_AGE_DAYS', '30')),  # 30 days for better data retrieval
 }
 
+# VirusTotal Configuration
+VIRUSTOTAL_API_KEY = os.getenv('VIRUSTOTAL_API_KEY', '')
+VIRUSTOTAL_SETTINGS = {
+    'API_KEY': VIRUSTOTAL_API_KEY,
+    'ENABLED': os.getenv('VIRUSTOTAL_ENABLED', 'True').lower() == 'true',
+    'RATE_LIMIT_DELAY': int(os.getenv('VIRUSTOTAL_RATE_LIMIT_DELAY', '15')),  # seconds between requests
+    'MAX_FILE_SIZE': int(os.getenv('VIRUSTOTAL_MAX_FILE_SIZE', '650000000')),  # 650MB limit
+}
+
 # TAXII Server Configuration
 TAXII_SETTINGS = {
     'DISCOVERY_TITLE': os.getenv('TAXII_SERVER_TITLE', 'CRISP Threat Intelligence Platform'),

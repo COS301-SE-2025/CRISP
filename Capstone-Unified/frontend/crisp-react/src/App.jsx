@@ -6339,20 +6339,29 @@ function TTPAnalysis({ active }) {
     try {
       const response = await updateTtp(selectedTTP.id, editFormData);
       if (response && response.success) {
+        // Use the updated data from the backend response
+        const updatedTtpData = response.data;
+
         // Update the TTP in local state
-        setTtpData(prevData => 
-          prevData.map(ttp => 
-            ttp.id === selectedTTP.id 
-              ? { ...ttp, ...editFormData }
+        setTtpData(prevData =>
+          prevData.map(ttp =>
+            ttp.id === selectedTTP.id
+              ? updatedTtpData
               : ttp
           )
         );
-        setSelectedTTP({ ...selectedTTP, ...editFormData });
+        setSelectedTTP(updatedTtpData);
         setIsEditMode(false);
         alert('TTP updated successfully');
-        
-        // Refresh trends data to reflect changes
-        fetchTTPTrendsData();
+
+        // Refresh all TTP-related data to reflect changes immediately
+        await Promise.all([
+          fetchTTPData(), // Main TTP list
+          fetchTTPTrendsData(), // Trends data
+          fetchMatrixData(), // MITRE matrix
+          fetchFeedComparisonData(), // Feed comparison
+          fetchSeasonalPatternsData() // Seasonal patterns
+        ]);
       } else {
         alert('Failed to update TTP');
       }
