@@ -174,7 +174,18 @@ function App({ user, onLogout, isAdmin }) {
 
   // Handle individual parameter changes (switches to custom)
   const handleParamChange = (param, value) => {
-    setConsumptionParams(prev => ({...prev, [param]: value}));
+    // Client-side validation to ensure parameters are within valid ranges
+    let validatedValue = value;
+
+    if (param === 'days_back') {
+      // Ensure days_back is between 1 and 365
+      validatedValue = Math.max(1, Math.min(365, value));
+    } else if (param === 'block_limit') {
+      // Ensure block_limit is between 1 and 100
+      validatedValue = Math.max(1, Math.min(100, value));
+    }
+
+    setConsumptionParams(prev => ({...prev, [param]: validatedValue}));
     setActivePreset('custom');
   };
 
@@ -2393,7 +2404,18 @@ function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptio
 
   // Handle individual filter changes (switches to custom)
   const handleParamChange = (param, value) => {
-    setConsumptionParams(prev => ({...prev, [param]: value}));
+    // Client-side validation to ensure parameters are within valid ranges
+    let validatedValue = value;
+
+    if (param === 'days_back') {
+      // Ensure days_back is between 1 and 365
+      validatedValue = Math.max(1, Math.min(365, value));
+    } else if (param === 'block_limit') {
+      // Ensure block_limit is between 1 and 100
+      validatedValue = Math.max(1, Math.min(100, value));
+    }
+
+    setConsumptionParams(prev => ({...prev, [param]: validatedValue}));
     setActivePreset('custom');
   };
 
@@ -2512,6 +2534,9 @@ function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptio
       const params = new URLSearchParams();
       if (consumptionParams.days_back !== 30) { // Only add if different from default
         params.append('force_days', consumptionParams.days_back);
+      }
+      if (consumptionParams.block_limit !== 10) { // Only add if different from default
+        params.append('limit', consumptionParams.block_limit);
       }
 
       const url = `/api/threat-feeds/${feedId}/consume/${params.toString() ? '?' + params.toString() : ''}`;
@@ -2707,8 +2732,32 @@ function ThreatFeeds({ active, navigationState, setNavigationState, onConsumptio
       }
     } catch (error) {
       console.error('Error consuming feed:', error);
-      alert('Failed to consume feed. Please try again.');
-      
+
+      // Improved error handling for parameter validation
+      let errorMessage = 'Failed to consume feed. Please try again.';
+
+      if (error.response?.status === 400) {
+        const errorData = error.response.data;
+        if (errorData?.error) {
+          // Handle specific parameter validation errors
+          if (errorData.error.includes('limit parameter')) {
+            errorMessage = `Invalid Block Limit: ${errorData.error}`;
+          } else if (errorData.error.includes('force_days parameter')) {
+            errorMessage = `Invalid Days Back: ${errorData.error}`;
+          } else {
+            errorMessage = `Parameter Error: ${errorData.error}`;
+          }
+        }
+      } else if (error.response?.status === 404) {
+        errorMessage = 'Threat feed not found.';
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Authentication required. Please log in again.';
+      } else if (error.response?.status === 403) {
+        errorMessage = 'You do not have permission to consume this feed.';
+      }
+
+      alert(errorMessage);
+
       // Remove feed from consuming array on error
       setConsumingFeeds(prev => prev.filter(id => id !== feedId));
       setFeedProgress(prev => {
