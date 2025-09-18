@@ -8,6 +8,7 @@ from django.dispatch import receiver
 from django.db.models.signals import post_save, post_delete
 from core.models.models import ThreatFeed, Indicator
 from core.services.notification_service import NotificationService
+from core.services.batch_notification_service import batch_notification_service
 from core.patterns.observer.feed_observers import feed_updated, feed_published
 import logging
 
@@ -86,24 +87,22 @@ feed_notification_observer = FeedNotificationObserver()
 # Django signal handlers for automatic feed update detection
 @receiver(post_save, sender=Indicator)
 def indicator_saved_handler(sender, instance, created, **kwargs):
-    """Handle indicator creation/update to trigger feed notifications"""
+    """Handle indicator creation/update to add to batch notifications"""
     try:
         if instance.threat_feed:
             # Determine if this is a new or updated indicator
             new_count = 1 if created else 0
             updated_count = 0 if created else 1
             
-            # Trigger feed update notification
-            feed_updated.send(
-                sender=instance.threat_feed,
-                feed=instance.threat_feed,
-                event_type='feed_updated',
-                new_indicators_count=new_count,
-                updated_indicators_count=updated_count,
-                indicator=instance
+            # Add to batch notification service instead of sending immediately
+            batch_notification_service.add_feed_change(
+                threat_feed=instance.threat_feed,
+                new_indicators=new_count,
+                updated_indicators=updated_count
             )
             
-            logger.debug(f"Triggered feed update notification for {instance.threat_feed.name}")
+            logger.debug(f"Added indicator change to batch for {instance.threat_feed.name} "
+                        f"({'new' if created else 'updated'})")
             
     except Exception as e:
         logger.error(f"Error in indicator saved handler: {e}")
@@ -111,9 +110,25 @@ def indicator_saved_handler(sender, instance, created, **kwargs):
 
 @receiver(feed_updated)
 def feed_updated_handler(sender, **kwargs):
-    """Handle feed_updated signal"""
+    """Handle feed_updated signal - only for manual triggers"""
     try:
-        feed_notification_observer.update(sender, **kwargs)
+        # Check if this is a manual trigger (has force_immediate flag)
+        if kwargs.get('force_immediate', False):
+            feed_notification_observer.update(sender, **kwargs)
+        else:
+            # For automatic triggers, use batch notification
+            feed = kwargs.get('feed')
+            if feed:
+                new_count = kwargs.get('new_indicators_count', 0)
+                updated_count = kwargs.get('updated_indicators_count', 0)
+                
+                batch_notification_service.add_feed_change(
+                    threat_feed=feed,
+                    new_indicators=new_count,
+                    updated_indicators=updated_count
+                )
+                
+                logger.debug(f"Added manual feed update to batch for {feed.name}")
     except Exception as e:
         logger.error(f"Error in feed updated handler: {e}")
 
