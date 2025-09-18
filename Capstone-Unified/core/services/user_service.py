@@ -300,8 +300,8 @@ class UserService:
             reset_token = PasswordResetToken.objects.create(
                 user=user,
                 token=token,
-                ip_address=ip_address,
-                user_agent=user_agent
+                ip_address=ip_address or '127.0.0.1',
+                user_agent=user_agent or 'Unknown'
             )
             
             # Log password reset request

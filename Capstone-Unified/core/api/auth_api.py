@@ -355,24 +355,38 @@ def forgot_password(request):
     }
     """
     try:
+        logger.info(f"🔄 Forgot password request received from {request.META.get('REMOTE_ADDR')}")
+        logger.info(f"📥 Request data: {request.data}")
+        
         email = request.data.get('email')
+        logger.info(f"📧 Processing email: {email}")
+        
         if not email:
+            logger.warning("❌ No email provided in request")
             return Response({
                 'success': False,
                 'message': 'Email address is required'
             }, status=status.HTTP_400_BAD_REQUEST)
         
         auth_service = AuthenticationService()
+        logger.info(f"🔧 Calling auth service for password reset")
+        
         result = auth_service.request_password_reset(
             email=email,
-            ip_address=request.META.get('REMOTE_ADDR')
+            ip_address=request.META.get('REMOTE_ADDR'),
+            user_agent=request.META.get('HTTP_USER_AGENT')
         )
         
+        logger.info(f"📤 Auth service result: {result}")
+        
         # Always return success to prevent email enumeration
-        return Response({
+        response_data = {
             'success': True,
             'message': 'If an account with this email exists, a password reset link has been sent'
-        }, status=status.HTTP_200_OK)
+        }
+        logger.info(f"✅ Returning response: {response_data}")
+        
+        return Response(response_data, status=status.HTTP_200_OK)
         
     except Exception as e:
         logger.error(f"Forgot password error: {str(e)}")

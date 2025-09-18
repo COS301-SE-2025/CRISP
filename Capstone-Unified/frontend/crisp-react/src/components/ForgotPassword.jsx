@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 
+// API configuration
+const API_BASE_URL = 'http://localhost:8000';
+
 function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -9,11 +12,43 @@ function ForgotPassword() {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    console.log('🔄 Starting forgot password request for email:', email);
     
-    setIsSubmitted(true);
-    setIsLoading(false);
+    try {
+      const requestUrl = `${API_BASE_URL}/api/auth/forgot-password/`;
+      const requestBody = { email };
+      
+      console.log('📤 Making request to:', requestUrl);
+      console.log('📤 Request body:', requestBody);
+      
+      const response = await fetch(requestUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log('📥 Response status:', response.status);
+      console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
+
+      const data = await response.json();
+      console.log('📥 Response data:', data);
+
+      if (response.ok && data.success) {
+        console.log('✅ Password reset email sent successfully');
+        setIsSubmitted(true);
+      } else {
+        console.error('❌ Failed to send password reset email:', data.message);
+        alert(data.message || 'Failed to send password reset email. Please try again.');
+      }
+    } catch (error) {
+      console.error('💥 Forgot password error:', error);
+      alert('An error occurred while sending the password reset email. Please try again later.');
+    } finally {
+      setIsLoading(false);
+      console.log('🏁 Forgot password request completed');
+    }
   };
 
   return (

@@ -643,3 +643,81 @@ class AuthenticationService:
         )
         
         logger.warning(f"Failed login attempt for username: {username} from {ip_address}. Reason: {reason}")
+    
+    def request_password_reset(self, email, ip_address=None, user_agent=None):
+        """Request password reset - creates token and sends email"""
+        try:
+            logger.info(f"🔐 Starting password reset for email: {email}")
+            logger.info(f"🌐 IP: {ip_address}, User-Agent: {user_agent}")
+            
+            from .user_service import UserService
+            from .email_service import UnifiedEmailService
+            
+            user_service = UserService()
+            email_service = UnifiedEmailService()
+            
+            logger.info(f"🎫 Creating password reset token")
+            # Create password reset token
+            reset_token = user_service.create_password_reset_token(
+                email=email,
+                ip_address=ip_address,
+                user_agent=user_agent
+            )
+            
+            logger.info(f"🎫 Token creation result: {'Success' if reset_token else 'Failed/User not found'}")
+            
+            if reset_token:
+                logger.info(f"📧 Sending password reset email")
+                # Send password reset email
+                email_result = email_service.send_password_reset_email(
+                    user=reset_token.user,
+                    reset_token=reset_token.token
+                )
+                
+                logger.info(f"📧 Email send result: {email_result}")
+                logger.info(f"✅ Password reset requested for {email}, email sent: {email_result.get('success', False)}")
+                return {
+                    'success': True,
+                    'message': 'Password reset email sent'
+                }
+            else:
+                # Don't reveal if email exists
+                logger.warning(f"⚠️ Password reset requested for non-existent email: {email}")
+                return {
+                    'success': True,
+                    'message': 'If an account with this email exists, a password reset link has been sent'
+                }
+                
+        except Exception as e:
+            logger.error(f"Password reset request error: {e}")
+            return {
+                'success': False,
+                'message': 'Password reset request failed'
+            }
+    
+    def reset_password(self, token, new_password, ip_address=None):
+        """Reset password using token"""
+        try:
+            from .user_service import UserService
+            
+            user_service = UserService()
+            result = user_service.reset_password(token, new_password)
+            
+            if result:
+                logger.info(f"Password reset completed for user: {result.username}")
+                return {
+                    'success': True,
+                    'message': 'Password reset successfully'
+                }
+            else:
+                return {
+                    'success': False,
+                    'message': 'Invalid or expired reset token'
+                }
+                
+        except Exception as e:
+            logger.error(f"Password reset error: {e}")
+            return {
+                'success': False,
+                'message': 'Password reset failed'
+            }
