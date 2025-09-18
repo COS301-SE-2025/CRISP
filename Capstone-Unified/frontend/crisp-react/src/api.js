@@ -4,7 +4,8 @@ const API_BASE_URL = 'http://localhost:8000';
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('crisp_auth_token');
+  // Try both token keys for compatibility
+  const token = localStorage.getItem('access_token') || localStorage.getItem('crisp_auth_token');
   return {
     'Content-Type': 'application/json',
     'Authorization': token ? `Bearer ${token}` : '',

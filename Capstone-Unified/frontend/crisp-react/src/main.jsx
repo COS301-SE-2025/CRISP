@@ -10,8 +10,11 @@ import Construction from "./construction.jsx";
 import ForgotPassword from "./components/ForgotPassword.jsx";
 import ResetPassword from "./components/ResetPassword.jsx";
 import SessionTimeout from "./components/enhanced/SessionTimeout.jsx";
+import { NotificationProvider } from "./components/enhanced/NotificationManager.jsx";
+import NotificationWatcher from "./components/enhanced/NotificationWatcher.jsx";
 import "./assets/index_ut.css";
 import "./assets/trust-management.css";
+import "./assets/enhanced/notifications.css";
 
 // Import Font Awesome
 import "@fortawesome/fontawesome-free/css/all.min.css";
@@ -56,8 +59,9 @@ function AuthRoutes() {
   // Callback for when login is successful
   const handleLoginSuccess = (authData) => {
     try {
-      // Store authentication data
+      // Store authentication data (using both keys for compatibility)
       localStorage.setItem("crisp_auth_token", authData.tokens.access);
+      localStorage.setItem("access_token", authData.tokens.access);
       localStorage.setItem("crisp_refresh_token", authData.tokens.refresh);
       localStorage.setItem("crisp_user", JSON.stringify(authData.user));
 
@@ -76,8 +80,9 @@ function AuthRoutes() {
   // Callback for when registration is successful
   const handleRegisterSuccess = (authData) => {
     try {
-      // Store authentication data
+      // Store authentication data (using both keys for compatibility)
       localStorage.setItem("crisp_auth_token", authData.tokens.access);
+      localStorage.setItem("access_token", authData.tokens.access);
       localStorage.setItem("crisp_refresh_token", authData.tokens.refresh);
       localStorage.setItem("crisp_user", JSON.stringify(authData.user));
 
@@ -93,6 +98,8 @@ function AuthRoutes() {
   // Function to handle logout
   const handleLogout = () => {
     localStorage.removeItem("crisp_auth_token");
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("crisp_refresh_token");
     localStorage.removeItem("crisp_user");
     setIsAuthenticated(false);
     setUserData(null);
@@ -155,13 +162,17 @@ function AuthRoutes() {
 
 
   return (
-    <>
+    <NotificationProvider>
       <SessionTimeout 
         isAuthenticated={isAuthenticated}
         onLogout={handleLogout}
         timeoutMinutes={10}
         warningMinutes={2}
       />
+      {/* Notification watcher only when authenticated */}
+      {isAuthenticated && userData && (
+        <NotificationWatcher user={userData} />
+      )}
       <Routes>
         {/* Landing page route - redirect to dashboard if authenticated */}
         <Route
@@ -287,7 +298,7 @@ function AuthRoutes() {
         {/* Catch all route */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </>
+    </NotificationProvider>
   );
 }
 

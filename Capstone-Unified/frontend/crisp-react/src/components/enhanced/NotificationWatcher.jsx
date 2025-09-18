@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useNotifications } from './NotificationManager';
-import * as api from '../api';
+import * as api from '../../api';
 
 const NotificationWatcher = ({ user }) => {
   const { showSuccess, showError, showWarning, showInfo } = useNotifications();
@@ -10,31 +10,60 @@ const NotificationWatcher = ({ user }) => {
   useEffect(() => {
     if (!user) return;
 
+    // Request browser notification permission
+    const requestNotificationPermission = async () => {
+      if ('Notification' in window && Notification.permission === 'default') {
+        try {
+          const permission = await Notification.requestPermission();
+          console.log('🔔 Browser notification permission:', permission);
+        } catch (error) {
+          console.warn('Failed to request notification permission:', error);
+        }
+      }
+    };
+
+    requestNotificationPermission();
+
     // Function to check for new notifications
     const checkForNewNotifications = async () => {
       try {
-        const alerts = await api.getAlerts();
+        // Get only unread notifications from API
+        const alerts = await api.getAlerts({ unread_only: 'true' });
         
-        if (alerts.data && Array.isArray(alerts.data)) {
+        if (alerts.success && alerts.data && Array.isArray(alerts.data)) {
           // Filter for new alerts since last check
           const newAlerts = alerts.data.filter(alert => {
-            const alertTime = new Date(alert.timestamp || alert.created_at);
-            return alertTime > lastCheckRef.current && !alert.read;
+            const alertTime = new Date(alert.created_at);
+            return alertTime > lastCheckRef.current && !alert.is_read;
           });
 
           // Show notifications for new alerts
           newAlerts.forEach(alert => {
             const title = alert.title || 'New Alert';
-            const message = alert.message || alert.description || 'You have received a new notification';
+            const message = alert.message || 'You have received a new notification';
             
-            switch (alert.type || alert.priority) {
+            // Trigger browser notification if permission granted
+            if (Notification.permission === 'granted') {
+              new Notification(title, {
+                body: message,
+                icon: '/favicon.ico',
+                tag: alert.id // Prevent duplicate notifications
+              });
+            }
+            
+            // Show in-app toast notification
+            switch (alert.priority || alert.type) {
               case 'critical':
+                showError(title, message, { autoCloseDelay: 12000 });
+                break;
               case 'high':
                 showError(title, message, { autoCloseDelay: 10000 });
                 break;
-              case 'warning':
               case 'medium':
-                showWarning(title, message);
+                showWarning(title, message, { autoCloseDelay: 8000 });
+                break;
+              case 'low':
+                showInfo(title, message, { autoCloseDelay: 6000 });
                 break;
               case 'success':
                 showSuccess(title, message);
@@ -45,8 +74,11 @@ const NotificationWatcher = ({ user }) => {
             }
           });
 
-          // Update last check time
-          lastCheckRef.current = new Date();
+          // Update last check time only if we found new alerts
+          if (newAlerts.length > 0) {
+            lastCheckRef.current = new Date();
+            console.log(`🔔 Displayed ${newAlerts.length} new notifications`);
+          }
         }
       } catch (error) {
         // Silently fail - don't spam user with connection errors

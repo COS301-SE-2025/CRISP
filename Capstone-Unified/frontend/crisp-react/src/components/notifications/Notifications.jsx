@@ -6,6 +6,19 @@ const Notifications = () => {
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
 
+  // Helper function to map notification types to source labels
+  const getSourceFromType = (type) => {
+    const typeToSource = {
+      'threat_alert': 'Threat Intelligence',
+      'feed_update': 'Feed Management',
+      'user_invitation': 'User Management',
+      'system_alert': 'System',
+      'trust_relationship': 'Trust Management',
+      'security_alert': 'Security'
+    };
+    return typeToSource[type] || 'System';
+  };
+
   useEffect(() => {
     fetchNotifications();
   }, [filter]);
@@ -13,53 +26,54 @@ const Notifications = () => {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      // Simulated API call - replace with actual endpoint
-      const mockNotifications = [
-        {
-          id: '1',
-          type: 'threat_alert',
-          title: 'New High-Priority Threat Detected',
-          message: 'A new malware strain has been identified in your organization\'s threat feed.',
-          severity: 'high',
-          read: false,
-          created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-          source: 'Threat Intelligence'
-        },
-        {
-          id: '2',
-          type: 'trust_request',
-          title: 'Trust Relationship Request',
-          message: 'Organization "CyberSecure Inc." has requested a bilateral trust relationship.',
-          severity: 'medium',
-          read: false,
-          created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          source: 'Trust Management'
-        },
-        {
-          id: '3',
-          type: 'feed_update',
-          title: 'Threat Feed Updated',
-          message: 'Your subscribed threat feed "MITRE ATT&CK" has been updated with 15 new indicators.',
-          severity: 'low',
-          read: true,
-          created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-          source: 'Feed Management'
-        },
-        {
-          id: '4',
-          type: 'system',
-          title: 'System Maintenance Scheduled',
-          message: 'Scheduled maintenance window on Sunday 2 AM - 4 AM UTC.',
-          severity: 'medium',
-          read: true,
-          created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          source: 'System'
-        }
-      ];
+      
+      // Get auth token
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        setError('Authentication required - please log in');
+        return;
+      }
 
-      let filteredNotifications = mockNotifications;
+      // Fetch real notifications from API
+      const response = await fetch('/api/alerts/list/', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          setError('Authentication failed - please log in again');
+          return;
+        }
+        throw new Error(`Failed to fetch notifications: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to fetch notifications');
+      }
+
+      // Map API response to frontend format
+      const apiNotifications = result.data.map(notification => ({
+        id: notification.id,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        severity: notification.priority, // Map priority to severity
+        read: notification.is_read,
+        created_at: notification.created_at,
+        source: getSourceFromType(notification.type),
+        metadata: notification.metadata
+      }));
+
+      // Apply client-side filtering
+      let filteredNotifications = apiNotifications;
       if (filter !== 'all') {
-        filteredNotifications = mockNotifications.filter(n => {
+        filteredNotifications = apiNotifications.filter(n => {
           if (filter === 'unread') return !n.read;
           if (filter === 'read') return n.read;
           return n.type === filter;
@@ -68,6 +82,7 @@ const Notifications = () => {
 
       setNotifications(filteredNotifications);
     } catch (err) {
+      console.error('Error fetching notifications:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -76,35 +91,110 @@ const Notifications = () => {
 
   const markAsRead = async (notificationId) => {
     try {
-      // Simulated API call
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
+
+      const response = await fetch(`/api/alerts/${notificationId}/mark-read/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to mark notification as read: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to mark notification as read');
+      }
+
+      // Update local state
       setNotifications(prev =>
         prev.map(n =>
           n.id === notificationId ? { ...n, read: true } : n
         )
       );
     } catch (err) {
+      console.error('Error marking notification as read:', err);
       setError('Failed to mark notification as read');
     }
   };
 
   const markAllAsRead = async () => {
     try {
-      // Simulated API call
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
+
+      const response = await fetch('/api/alerts/mark-all-read/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to mark all notifications as read: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to mark all notifications as read');
+      }
+
+      // Update local state
       setNotifications(prev =>
         prev.map(n => ({ ...n, read: true }))
       );
     } catch (err) {
+      console.error('Error marking all notifications as read:', err);
       setError('Failed to mark all notifications as read');
     }
   };
 
   const deleteNotification = async (notificationId) => {
     try {
-      // Simulated API call
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
+
+      const response = await fetch(`/api/alerts/${notificationId}/delete/`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete notification: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to delete notification');
+      }
+
+      // Update local state
       setNotifications(prev =>
         prev.filter(n => n.id !== notificationId)
       );
     } catch (err) {
+      console.error('Error deleting notification:', err);
       setError('Failed to delete notification');
     }
   };
@@ -112,19 +202,21 @@ const Notifications = () => {
   const getNotificationIcon = (type) => {
     const icons = {
       threat_alert: 'fas fa-exclamation-triangle',
-      trust_request: 'fas fa-handshake',
+      trust_relationship: 'fas fa-handshake',
       feed_update: 'fas fa-rss',
-      system: 'fas fa-cog',
-      user_invitation: 'fas fa-user-plus'
+      system_alert: 'fas fa-cog',
+      user_invitation: 'fas fa-user-plus',
+      security_alert: 'fas fa-shield-alt'
     };
     return icons[type] || 'fas fa-bell';
   };
 
   const getSeverityColor = (severity) => {
     const colors = {
-      high: '#dc3545',
-      medium: '#ffc107',
-      low: '#28a745'
+      critical: '#8B0000',  // Dark red
+      high: '#dc3545',      // Red
+      medium: '#ffc107',    // Yellow
+      low: '#28a745'        // Green
     };
     return colors[severity] || '#6c757d';
   };
@@ -208,8 +300,8 @@ const Notifications = () => {
           Threats
         </button>
         <button
-          className={`filter-btn ${filter === 'trust_request' ? 'active' : ''}`}
-          onClick={() => setFilter('trust_request')}
+          className={`filter-btn ${filter === 'trust_relationship' ? 'active' : ''}`}
+          onClick={() => setFilter('trust_relationship')}
         >
           Trust
         </button>

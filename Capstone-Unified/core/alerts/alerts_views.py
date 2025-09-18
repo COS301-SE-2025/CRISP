@@ -23,12 +23,40 @@ def get_alerts_list(request):
     Get list of alerts/notifications for the user
     """
     try:
-        # For now, return empty list - this can be expanded to return actual alerts from database
+        from .models import Notification
+        
+        # Get query parameters
+        unread_only = request.GET.get('unread_only', 'false').lower() == 'true'
+        limit = int(request.GET.get('limit', 50))
+        
+        # Build queryset
+        if unread_only:
+            notifications = Notification.get_unread_for_user(request.user)
+        else:
+            notifications = Notification.get_recent_for_user(request.user)
+        
+        # Limit results
+        notifications = notifications[:limit]
+        
+        # Serialize notifications
         alerts = []
+        for notification in notifications:
+            alerts.append({
+                'id': str(notification.id),
+                'type': notification.notification_type,
+                'title': notification.title,
+                'message': notification.message,
+                'priority': notification.priority,
+                'is_read': notification.is_read,
+                'created_at': notification.created_at.isoformat(),
+                'read_at': notification.read_at.isoformat() if notification.read_at else None,
+                'metadata': notification.metadata,
+            })
         
         return Response({
             'success': True,
-            'data': alerts
+            'data': alerts,
+            'unread_count': Notification.get_unread_for_user(request.user).count()
         }, status=status.HTTP_200_OK)
         
     except Exception as e:
@@ -36,6 +64,68 @@ def get_alerts_list(request):
         return Response({
             'success': False,
             'message': 'Failed to fetch alerts'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mark_notification_read(request, notification_id):
+    """
+    Mark a specific notification as read
+    """
+    try:
+        from .models import Notification
+        
+        notification = Notification.objects.get(
+            id=notification_id,
+            recipient=request.user
+        )
+        
+        notification.mark_as_read()
+        
+        return Response({
+            'success': True,
+            'message': 'Notification marked as read'
+        }, status=status.HTTP_200_OK)
+        
+    except Notification.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'Notification not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error marking notification as read: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to mark notification as read'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mark_all_notifications_read(request):
+    """
+    Mark all notifications as read for the user
+    """
+    try:
+        from .models import Notification
+        
+        unread_notifications = Notification.get_unread_for_user(request.user)
+        count = unread_notifications.count()
+        
+        for notification in unread_notifications:
+            notification.mark_as_read()
+        
+        return Response({
+            'success': True,
+            'message': f'Marked {count} notifications as read'
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error marking all notifications as read: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to mark notifications as read'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -277,26 +367,38 @@ def send_test_email(request):
         )
 
 
-@api_view(['POST'])
+@api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
-def mark_all_notifications_read(request):
+def delete_notification(request, notification_id):
     """
-    Mark all notifications as read for the current user
+    Delete a specific notification
     """
     try:
-        # This would typically update a notification table
-        # For now, return success response
+        from .models import Notification
+        
+        notification = Notification.objects.get(
+            id=notification_id,
+            recipient=request.user
+        )
+        
+        notification.delete()
+        
         return Response({
             'success': True,
-            'message': 'All notifications marked as read'
+            'message': 'Notification deleted successfully'
         }, status=status.HTTP_200_OK)
         
+    except Notification.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'Notification not found'
+        }, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
-        logger.error(f"Error marking all notifications as read: {str(e)}")
-        return Response(
-            {'success': False, 'error': f'Failed to mark notifications as read: {str(e)}'}, 
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+        logger.error(f"Error deleting notification: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to delete notification'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
