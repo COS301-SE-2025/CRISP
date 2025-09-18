@@ -1,3 +1,5 @@
+# Ignore setup scripts
+Capstone-Unified/scripts/setup
 # Python
 __pycache__/
 *.py[cod]

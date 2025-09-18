@@ -133,8 +133,14 @@ const getAuthHeaders = () => {
 
 function App({ user, onLogout, isAdmin }) {
   
+  // Initialize activePage from URL or default to dashboard
+  const getInitialPage = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('page') || 'dashboard';
+  };
+
   // State to manage the active page and navigation parameters
-  const [activePage, setActivePage] = useState('dashboard');
+  const [activePage, setActivePage] = useState(getInitialPage);
   const [isLoading, setIsLoading] = useState(true);
   const [navigationState, setNavigationState] = useState({
     triggerModal: null,
@@ -178,8 +184,28 @@ function App({ user, onLogout, isAdmin }) {
     setActivePreset('custom');
   };
 
-  // Initialize app
+  // Initialize app and restore state from URL
   useEffect(() => {
+    // Restore navigation state from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const modalTrigger = urlParams.get('modal');
+    const modalParams = urlParams.get('params');
+    const pageParam = urlParams.get('page');
+    
+    if (modalTrigger) {
+      setNavigationState({
+        triggerModal: modalTrigger,
+        modalParams: modalParams ? JSON.parse(modalParams) : {}
+      });
+    }
+
+    // Ensure URL has page parameter for current active page
+    if (!pageParam && activePage) {
+      const url = new URL(window.location);
+      url.searchParams.set('page', activePage);
+      window.history.replaceState({}, '', url);
+    }
+
     // Small delay to prevent flash and ensure everything is ready
     const timer = setTimeout(() => {
       setIsLoading(false);
@@ -196,21 +222,23 @@ function App({ user, onLogout, isAdmin }) {
       modalParams: modalParams
     });
     
-    // Update URL with parameters if modal trigger is provided
+    // Always update URL with current page
+    const url = new URL(window.location);
+    url.searchParams.set('page', pageId);
+    
+    // Handle modal parameters
     if (modalTrigger) {
-      const url = new URL(window.location);
       url.searchParams.set('modal', modalTrigger);
       if (Object.keys(modalParams).length > 0) {
         url.searchParams.set('params', JSON.stringify(modalParams));
       }
-      window.history.pushState({}, '', url);
     } else {
-      // Clear URL parameters when no modal trigger
-      const url = new URL(window.location);
+      // Clear modal parameters when no modal trigger
       url.searchParams.delete('modal');
       url.searchParams.delete('params');
-      window.history.pushState({}, '', url);
     }
+    
+    window.history.pushState({}, '', url);
   };
 
   // Function to navigate to register user page/modal
@@ -222,9 +250,16 @@ function App({ user, onLogout, isAdmin }) {
   useEffect(() => {
     const handlePopState = () => {
       const urlParams = new URLSearchParams(window.location.search);
+      const pageParam = urlParams.get('page');
       const modalTrigger = urlParams.get('modal');
       const modalParams = urlParams.get('params');
       
+      // Update active page from URL
+      if (pageParam && pageParam !== activePage) {
+        setActivePage(pageParam);
+      }
+      
+      // Update modal state from URL
       if (modalTrigger) {
         setNavigationState({
           triggerModal: modalTrigger,
@@ -244,7 +279,7 @@ function App({ user, onLogout, isAdmin }) {
     handlePopState();
     
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, [activePage]);
 
 
   // Show loading screen during app initialization
