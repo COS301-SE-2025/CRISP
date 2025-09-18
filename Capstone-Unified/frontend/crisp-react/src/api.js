@@ -1005,7 +1005,20 @@ export const post = async (endpoint, data) => {
       headers: getAuthHeaders(),
       body: JSON.stringify(data)
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    
+    if (!response.ok) {
+      // Try to get detailed error message
+      let errorMessage = `HTTP ${response.status}`;
+      try {
+        const errorData = await response.json();
+        console.error(`API Error Details for ${endpoint}:`, errorData);
+        errorMessage = errorData.detail || errorData.message || JSON.stringify(errorData);
+      } catch (parseError) {
+        console.error(`Could not parse error response for ${endpoint}`);
+      }
+      throw new Error(errorMessage);
+    }
+    
     return await response.json();
   } catch (error) {
     console.error(`API Error: ${endpoint}`, error);

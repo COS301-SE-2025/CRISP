@@ -185,8 +185,11 @@ class NotificationService:
                         update_summary={
                             'description': threat_feed.description or '',
                             'summary': f"Feed updated with {new_indicators_count} new indicators",
-                            'new_indicators_count': new_indicators_count,
-                            'updated_indicators_count': updated_indicators_count
+                            'new_indicators': new_indicators_count,
+                            'new_ttps': 0,  # TTPs are handled separately
+                            'updated_items': updated_indicators_count,
+                            'source': 'External' if threat_feed.is_external else 'Internal',
+                            'last_updated': timezone.now().strftime('%Y-%m-%d %H:%M:%S UTC')
                         },
                         user=notification.recipient
                     )

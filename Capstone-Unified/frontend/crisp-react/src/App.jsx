@@ -2865,7 +2865,21 @@ function ThreatFeeds({
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-    const result = await api.post('/api/threat-feeds/', formData);
+    
+    // Clean up form data - convert empty strings to null for optional fields
+    const cleanedFormData = {
+      ...formData,
+      taxii_server_url: formData.taxii_server_url || null,
+      taxii_api_root: formData.taxii_api_root || null,
+      taxii_collection_id: formData.taxii_collection_id || null,
+      taxii_username: formData.taxii_username || null,
+      taxii_password: formData.taxii_password || null,
+      description: formData.description || null
+    };
+    
+    console.log('Submitting threat feed data:', cleanedFormData);
+    
+    const result = await api.post('/api/threat-feeds/', cleanedFormData);
     if (result) {
       setShowAddModal(false);
       setFormData({
