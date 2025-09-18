@@ -266,6 +266,8 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_RESULT_EXPIRES = 3600  # Keep results for 1 hour
+CELERY_TASK_RESULT_EXPIRES = 3600  # Keep results for 1 hour
 
 # Logging Configuration
 LOGGING = {

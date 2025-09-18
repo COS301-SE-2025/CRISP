@@ -240,11 +240,17 @@ class OTXTaxiiService:
         Consume STIX data from a TAXII collection and convert to CRISP entities
         """
         try:
-            # Use OTX settings if parameters not provided
+            # Use OTX settings if parameters not provided with async optimizations
             if force_days is None:
                 force_days = getattr(settings, 'OTX_SETTINGS', {}).get('MAX_AGE_DAYS', 7)  # Reduced to 7 days
             if batch_size is None:
                 batch_size = getattr(settings, 'OTX_SETTINGS', {}).get('BATCH_SIZE', 5)    # Reduced to 5
+                batch_size = settings.OTX_SETTINGS.get('BATCH_SIZE', 10)
+
+            # Async optimization: reduce batch size for faster processing
+            if batch_size > 10:
+                logger.info(f"Async optimization: reducing batch size from {batch_size} to 5 for faster processing")
+                batch_size = 5
             
             logger.info(f"Starting consumption of feed: {threat_feed.name} (max_age_days: {force_days}, batch_size: {batch_size})")
             
@@ -308,6 +314,7 @@ class OTXTaxiiService:
             
             if not content_blocks:
                 logger.warning("No content blocks returned from poll_collection")
+                # This is actually successful - just no new data
                 return 0, 0
             
             logger.info(f"Retrieved {len(content_blocks)} content blocks")
@@ -371,5 +378,5 @@ class OTXTaxiiService:
             logger.error(f"Error consuming OTX feed: {e}")
             import traceback
             logger.error(traceback.format_exc())
-            # Return zero counts instead of raising for graceful error handling during testing
-            return 0, 0
+            # Re-raise the exception so Celery task fails properly and notifications work
+            raise

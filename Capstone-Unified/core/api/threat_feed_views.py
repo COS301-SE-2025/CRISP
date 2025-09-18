@@ -18,6 +18,7 @@ from django.views.decorators.http import require_http_methods
 from rest_framework.permissions import AllowAny
 from rest_framework.views import exception_handler
 from django.core.cache import cache
+from celery.result import AsyncResult
 
 from core.models.models import ThreatFeed, SystemActivity
 from core.services.otx_taxii_service import OTXTaxiiService
@@ -389,7 +390,40 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
             "ttp_count": ttp_count,
             "latest_indicator_date": latest_date
         })
-    
+
+    @action(detail=False, methods=['get'], url_path='task-status/(?P<task_id>[^/.]+)')
+    def task_status(self, request, task_id=None):
+        """Check the status of a Celery task."""
+        try:
+            result = AsyncResult(task_id)
+
+            if result.state == 'PENDING':
+                response = {
+                    'state': result.state,
+                    'status': 'Pending...'
+                }
+            elif result.state == 'SUCCESS':
+                response = {
+                    'state': result.state,
+                    'result': result.result
+                }
+            elif result.state == 'FAILURE':
+                response = {
+                    'state': result.state,
+                    'error': str(result.info)
+                }
+            else:
+                response = {
+                    'state': result.state,
+                    'info': result.info
+                }
+
+            return Response(response)
+        except Exception as e:
+            return Response({
+                'error': f'Error checking task status: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     @action(detail=True, methods=['get'])
     def test_connection(self, request, pk=None):
         """Test TAXII connection without consuming."""

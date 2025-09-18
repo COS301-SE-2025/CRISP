@@ -75,7 +75,7 @@ def schedule_taxii_feed_consumption():
     
     logger.info(f"Scheduled {feeds_to_update.count()} TAXII feeds for consumption")
 
-@app.task(name='consume_feed_task')
+@app.task(name='consume_feed_task', soft_time_limit=300, time_limit=600)  # 5 min soft, 10 min hard limit
 def consume_feed_task(feed_id, limit=None, force_days=None, batch_size=None):
     """
     Consume a specific TAXII feed with parameters.

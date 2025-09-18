@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as d3 from 'd3';
 import UserProfile from './components/user/UserProfile.jsx';
 import AccountSettings from './components/user/AccountSettings.jsx';
@@ -10,6 +10,7 @@ import ReportDetailModal from './components/reports/ReportDetailModal.jsx';
 import BlueVLogo from './assets/enhanced/BlueV2.png';
 import * as api from './api.js';
 import { getOrganizations, getThreatFeedTtps, getMitreMatrix, getTtpFeedComparison, getTtpSeasonalPatterns, getTtpTechniqueFrequencies, getTtps, getTtpFilterOptions, getTtpTrends, getTtpDetails, updateTtp, getMatrixCellDetails, getTechniqueDetails, exportTtps } from './api.js';
+import { NotificationProvider, useNotifications } from './components/enhanced/NotificationManager.jsx';
 
 // Error Boundary for Chart Component
 class ChartErrorBoundary extends React.Component {
@@ -131,8 +132,10 @@ const getAuthHeaders = () => {
 };
 
 
-function App({ user, onLogout, isAdmin }) {
-  
+function AppWithNotifications({ user, onLogout, isAdmin }) {
+  // Get notification functions
+  const { showSuccess, showInfo, showError, showWarning } = useNotifications();
+
   // Initialize activePage from URL or default to dashboard
   const getInitialPage = () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -147,6 +150,10 @@ function App({ user, onLogout, isAdmin }) {
     modalParams: {}
   });
 
+  // State for tracking async tasks
+  const [activeTasks, setActiveTasks] = useState(new Map());
+  const activeTasksRef = useRef(new Map());
+
   const [lastUpdate, setLastUpdate] = useState(Date.now());
 
   // Consumption parameters state
@@ -157,22 +164,106 @@ function App({ user, onLogout, isAdmin }) {
   const [activePreset, setActivePreset] = useState('custom');
   const [useAsync, setUseAsync] = useState(false);
 
+  // Function to check task status
+  const checkTaskStatus = async (taskId) => {
+    try {
+      const response = await api.get(`/api/threat-feeds/task-status/${taskId}/`);
+      return response;
+    } catch (error) {
+      console.error('Error checking task status:', error);
+      return null;
+    }
+  };
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    activeTasksRef.current = activeTasks;
+  }, [activeTasks]);
+
+  // Function to monitor active tasks
+  const monitorTasks = useCallback(async () => {
+    const currentTasks = activeTasksRef.current;
+    if (currentTasks.size === 0) return;
+
+    const tasksToRemove = [];
+    for (const [taskId, taskInfo] of currentTasks) {
+      const status = await checkTaskStatus(taskId);
+
+      if (status && status.state === 'SUCCESS') {
+        // Task completed successfully
+        const result = status.result || [];
+        const duration = Math.round((new Date() - taskInfo.startTime) / 1000);
+
+        // Handle result format: [indicators_count, ttps_count] or object
+        let indicatorsCount = 0;
+        let ttpsCount = 0;
+
+        if (Array.isArray(result) && result.length >= 2) {
+          indicatorsCount = result[0] || 0;
+          ttpsCount = result[1] || 0;
+        } else if (typeof result === 'object') {
+          indicatorsCount = result.indicators_created || result.indicators || 0;
+          ttpsCount = result.ttp_created || result.ttps || 0;
+        }
+        showSuccess(
+          'Feed Processing Complete',
+          `${taskInfo.feedName} processed successfully!\n` +
+          `${indicatorsCount} indicators processed\n` +
+          `${ttpsCount} TTPs processed\n` +
+          `Completed in ${duration} seconds`,
+          { autoCloseDelay: 12000 }
+        );
+
+        tasksToRemove.push(taskId);
+      } else if (status && status.state === 'FAILURE') {
+        // Task failed
+        showError(
+          'Feed Processing Failed',
+          `${taskInfo.feedName} processing failed: ${status.error || 'Unknown error'}`,
+          { autoCloseDelay: 10000 }
+        );
+
+        tasksToRemove.push(taskId);
+      }
+    }
+
+    // Remove completed/failed tasks
+    if (tasksToRemove.length > 0) {
+      setActiveTasks(prev => {
+        const newMap = new Map(prev);
+        tasksToRemove.forEach(taskId => newMap.delete(taskId));
+        return newMap;
+      });
+    }
+  }, [showSuccess, showError]);
+
+  // Set up task monitoring
+  useEffect(() => {
+    if (activeTasks.size > 0) {
+      const interval = setInterval(monitorTasks, 5000); // Check every 5 seconds
+      return () => clearInterval(interval);
+    }
+  }, [activeTasks.size, monitorTasks]);
+
   // Handle preset selection
   const handlePresetSelect = (preset) => {
     setActivePreset(preset);
 
     switch (preset) {
       case 'last24h':
-        setConsumptionParams({ days_back: 1, block_limit: 10 });
+        setConsumptionParams({ days_back: 1, block_limit: 5 }); // Faster: fewer blocks
         break;
       case 'lastweek':
-        setConsumptionParams({ days_back: 7, block_limit: 25 });
+        setConsumptionParams({ days_back: 7, block_limit: 10 }); // Faster: fewer blocks
         break;
       case 'lastmonth':
-        setConsumptionParams({ days_back: 30, block_limit: 50 });
+        setConsumptionParams({ days_back: 30, block_limit: 15 }); // Faster: fewer blocks
         break;
       case 'allavailable':
-        setConsumptionParams({ days_back: 365, block_limit: 100 });
+        setConsumptionParams({ days_back: 365, block_limit: 25 }); // Faster: fewer blocks
+        break;
+      case 'quick': // New fast preset
+        setConsumptionParams({ days_back: 1, block_limit: 3 });
         break;
       default: // custom
         break;
@@ -353,6 +444,12 @@ function App({ user, onLogout, isAdmin }) {
             handleParamChange={handleParamChange}
             activePreset={activePreset}
             handlePresetSelect={handlePresetSelect}
+            activeTasks={activeTasks}
+            setActiveTasks={setActiveTasks}
+            showSuccess={showSuccess}
+            showError={showError}
+            showWarning={showWarning}
+            showInfo={showInfo}
           />
           <IoCManagement 
             active={activePage === 'ioc-management'}
@@ -2396,7 +2493,13 @@ function ThreatFeeds({
   consumptionParams,
   handleParamChange,
   activePreset,
-  handlePresetSelect
+  handlePresetSelect,
+  activeTasks,
+  setActiveTasks,
+  showSuccess,
+  showError,
+  showWarning,
+  showInfo
 }) {
   const [feeds, setFeeds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -2515,7 +2618,7 @@ function ThreatFeeds({
       window.removeEventListener('error', handleError);
     };
   }, []);
-  
+
   const fetchThreatFeeds = async () => {
     setLoading(true);
     const data = await api.get('/api/threat-feeds/');
@@ -2579,7 +2682,19 @@ function ThreatFeeds({
           }));
 
           // Show success notification
-          alert(`Feed consumption started in background. You can continue using the app and will be notified when complete.`);
+          showSuccess(
+            'Background Processing Started',
+            `Feed consumption started in background. You can continue using the app and will be notified when complete.`,
+            { autoCloseDelay: 8000 }
+          );
+
+          // Add task to tracking system
+          const feedName = threatFeeds.find(f => f.id === feedId)?.name || `Feed ${feedId}`;
+          setActiveTasks(prev => new Map(prev.set(result.task_id, {
+            feedId,
+            feedName,
+            startTime: new Date(),
+          })));
 
           // Remove from consuming feeds immediately since it's async
           setTimeout(() => {
@@ -2609,6 +2724,9 @@ function ThreatFeeds({
               total: result.indicators || 0
             }
           }));
+
+          // Show success notification
+          showSuccess('Feed Consumption Completed', `Successfully processed ${result.indicators || 0} indicators and ${result.ttps || 0} TTPs`);
           
           // Remove from consuming after showing completion
           const completionTimeout = setTimeout(() => {
@@ -2806,7 +2924,7 @@ function ThreatFeeds({
         errorMessage = 'You do not have permission to consume this feed.';
       }
 
-      alert(errorMessage);
+      showError('Feed Consumption Failed', errorMessage);
 
       // Remove feed from consuming array on error
       setConsumingFeeds(prev => prev.filter(id => id !== feedId));
@@ -3127,6 +3245,13 @@ function ThreatFeeds({
 
             {/* Quick Preset Buttons */}
             <div className="preset-buttons">
+              <button
+                className={`preset-btn ${activePreset === 'quick' ? 'active' : ''}`}
+                onClick={() => handlePresetSelect('quick')}
+                style={{ backgroundColor: activePreset === 'quick' ? '#10b981' : '', color: activePreset === 'quick' ? 'white' : '' }}
+              >
+                ⚡ Quick Test
+              </button>
               <button
                 className={`preset-btn ${activePreset === 'last24h' ? 'active' : ''}`}
                 onClick={() => handlePresetSelect('last24h')}
@@ -15769,6 +15894,15 @@ function Notifications({ active }) {
   );
 }
 
+
+// Wrapper component that provides notifications
+function App(props) {
+  return (
+    <NotificationProvider>
+      <AppWithNotifications {...props} />
+    </NotificationProvider>
+  );
+}
 
 // Entry point
 function CRISPApp(props) {
