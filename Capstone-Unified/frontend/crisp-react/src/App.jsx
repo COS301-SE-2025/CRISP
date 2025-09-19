@@ -11880,6 +11880,7 @@ function CSSStyles() {
             width: 240px;
             background-color: white;
             font-size: 14px;
+            color: #2d3748;
             transition: all 0.3s;
         }
         
@@ -11888,6 +11889,7 @@ function CSSStyles() {
             outline: none;
             border-color: var(--secondary-blue);
             background-color: var(--white);
+            color: #2d3748;
         }
         
         .search-icon {
