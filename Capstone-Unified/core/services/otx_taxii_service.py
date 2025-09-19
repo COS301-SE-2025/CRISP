@@ -249,8 +249,7 @@ class OTXTaxiiService:
             if force_days is None:
                 force_days = getattr(settings, 'OTX_SETTINGS', {}).get('MAX_AGE_DAYS', 7)  # Reduced to 7 days
             if batch_size is None:
-                batch_size = getattr(settings, 'OTX_SETTINGS', {}).get('BATCH_SIZE', 5)    # Reduced to 5
-                batch_size = settings.OTX_SETTINGS.get('BATCH_SIZE', 10)
+                batch_size = getattr(settings, 'OTX_SETTINGS', {}).get('BATCH_SIZE', 100)  # Optimized default
 
             # Speed optimization: increase batch size and reduce timeouts for faster processing
             if batch_size < 10:
