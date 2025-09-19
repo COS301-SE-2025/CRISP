@@ -35,6 +35,10 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
   const [selectedOrganizationForActions, setSelectedOrganizationForActions] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmationData, setConfirmationData] = useState(null);
+  // Trust relationship modal state
+  const [showTrustModal, setShowTrustModal] = useState(false);
+  const [selectedOrgForTrust, setSelectedOrgForTrust] = useState(null);
+  const [trustModalMode, setTrustModalMode] = useState('view'); // 'view' or 'manage'
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -752,6 +756,26 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
   const closeActionsPopup = () => {
     setShowActionsPopup(false);
     setSelectedOrganizationForActions(null);
+  };
+
+  const handleViewTrustRelationships = (organization) => {
+    setSelectedOrgForTrust(organization);
+    setTrustModalMode('view');
+    setShowTrustModal(true);
+    closeActionsPopup();
+  };
+
+  const handleManageTrustRelationships = (organization) => {
+    setSelectedOrgForTrust(organization);
+    setTrustModalMode('manage');
+    setShowTrustModal(true);
+    closeActionsPopup();
+  };
+
+  const closeTrustModal = () => {
+    setShowTrustModal(false);
+    setSelectedOrgForTrust(null);
+    setTrustModalMode('view');
   };
 
   if (!active) return null;
@@ -1585,7 +1609,47 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
                   Reactivate Organisation
                 </button>
               )}
-              
+
+              <button
+                onClick={() => handleViewTrustRelationships(selectedOrganizationForActions)}
+                style={{
+                  padding: '0.75rem 1rem',
+                  backgroundColor: '#17a2b8',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  transition: 'all 0.2s ease',
+                  textAlign: 'left'
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#138496'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#17a2b8'}
+              >
+                View Trust Relationships
+              </button>
+
+              <button
+                onClick={() => handleManageTrustRelationships(selectedOrganizationForActions)}
+                style={{
+                  padding: '0.75rem 1rem',
+                  backgroundColor: '#28a745',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  transition: 'all 0.2s ease',
+                  textAlign: 'left'
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#218838'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#28a745'}
+              >
+                Manage Trust Relationships
+              </button>
+
               <button
                 onClick={() => {
                   closeActionsPopup();
@@ -1645,6 +1709,293 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
         isDestructive={confirmationData?.isDestructive}
         actionType={confirmationData?.actionType}
       />
+
+      {/* Trust Relationships Modal */}
+      {showTrustModal && selectedOrgForTrust && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1002
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '2rem',
+            width: '90%',
+            maxWidth: '900px',
+            maxHeight: '80vh',
+            overflowY: 'auto',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '1.5rem'
+            }}>
+              <div>
+                <h2 style={{ margin: '0 0 0.5rem 0', color: '#333' }}>
+                  {trustModalMode === 'view' ? 'Trust Relationships' : 'Manage Trust Relationships'}
+                </h2>
+                <div style={{ color: '#666', fontSize: '1rem' }}>
+                  Organization: <strong>{selectedOrgForTrust.name}</strong>
+                </div>
+              </div>
+              <button
+                onClick={closeTrustModal}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  color: '#666'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Trust Relationships Content */}
+            <div style={{ minHeight: '300px' }}>
+              {trustModalMode === 'view' ? (
+                <div>
+                  <h3 style={{ color: '#5D8AA8', marginBottom: '1rem' }}>
+                    Trust Relationships for {selectedOrgForTrust.name}
+                  </h3>
+
+                  {/* Filter relationships for this organization */}
+                  {(() => {
+                    const orgRelationships = trustRelationships.filter(tr =>
+                      tr.source_organization?.id === selectedOrgForTrust.id ||
+                      tr.target_organization?.id === selectedOrgForTrust.id
+                    );
+
+                    if (orgRelationships.length === 0) {
+                      return (
+                        <div style={{
+                          textAlign: 'center',
+                          padding: '3rem',
+                          color: '#6c757d',
+                          backgroundColor: '#f8f9fa',
+                          borderRadius: '8px'
+                        }}>
+                          <h4 style={{ marginBottom: '0.5rem' }}>No Trust Relationships</h4>
+                          <p style={{ margin: '0' }}>
+                            This organization has no active trust relationships.
+                          </p>
+                          <button
+                            onClick={() => setTrustModalMode('manage')}
+                            style={{
+                              marginTop: '1rem',
+                              padding: '0.5rem 1rem',
+                              backgroundColor: '#28a745',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Create Trust Relationship
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    return orgRelationships.map((relationship) => (
+                      <div
+                        key={relationship.id}
+                        style={{
+                          border: '1px solid #e9ecef',
+                          borderRadius: '8px',
+                          padding: '1.25rem',
+                          marginBottom: '1rem',
+                          backgroundColor: '#f8f9fa'
+                        }}
+                      >
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          marginBottom: '0.75rem'
+                        }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: '600', marginBottom: '0.5rem', fontSize: '1.1rem' }}>
+                              {relationship.source_organization?.name || 'Unknown'}
+                              <span style={{ margin: '0 0.5rem', color: '#6c757d' }}>→</span>
+                              {relationship.target_organization?.name || 'Unknown'}
+                            </div>
+                            <div style={{
+                              display: 'flex',
+                              gap: '0.75rem',
+                              flexWrap: 'wrap',
+                              marginBottom: '0.5rem'
+                            }}>
+                              <span style={{
+                                padding: '0.25rem 0.5rem',
+                                borderRadius: '4px',
+                                fontSize: '0.75rem',
+                                fontWeight: '600',
+                                textTransform: 'uppercase',
+                                backgroundColor: relationship.trust_level === 'HIGH' ? '#d4edda' :
+                                               relationship.trust_level === 'MEDIUM' ? '#fff3cd' : '#f8f9fa',
+                                color: relationship.trust_level === 'HIGH' ? '#155724' :
+                                       relationship.trust_level === 'MEDIUM' ? '#856404' : '#495057'
+                              }}>
+                                {relationship.trust_level}
+                              </span>
+                              <span style={{
+                                padding: '0.25rem 0.5rem',
+                                borderRadius: '4px',
+                                fontSize: '0.75rem',
+                                fontWeight: '600',
+                                textTransform: 'uppercase',
+                                backgroundColor: relationship.status === 'active' ? '#d4edda' :
+                                               relationship.status === 'pending' ? '#fff3cd' : '#f8d7da',
+                                color: relationship.status === 'active' ? '#155724' :
+                                       relationship.status === 'pending' ? '#856404' : '#721c24'
+                              }}>
+                                {relationship.status}
+                              </span>
+                              <span style={{
+                                padding: '0.25rem 0.5rem',
+                                borderRadius: '4px',
+                                fontSize: '0.75rem',
+                                fontWeight: '600',
+                                backgroundColor: '#e3f2fd',
+                                color: '#1565c0'
+                              }}>
+                                {relationship.relationship_type}
+                              </span>
+                            </div>
+                            {relationship.notes && (
+                              <div style={{
+                                fontSize: '0.875rem',
+                                color: '#6c757d',
+                                fontStyle: 'italic'
+                              }}>
+                                Notes: {relationship.notes}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div style={{
+                          fontSize: '0.75rem',
+                          color: '#6c757d',
+                          display: 'flex',
+                          justifyContent: 'space-between'
+                        }}>
+                          <span>
+                            Created: {relationship.created_at ? new Date(relationship.created_at).toLocaleDateString() : 'N/A'}
+                          </span>
+                          {relationship.updated_at && (
+                            <span>
+                              Updated: {new Date(relationship.updated_at).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ));
+                  })()}
+
+                  <div style={{
+                    marginTop: '2rem',
+                    textAlign: 'center'
+                  }}>
+                    <button
+                      onClick={() => setTrustModalMode('manage')}
+                      style={{
+                        padding: '0.75rem 1.5rem',
+                        backgroundColor: '#28a745',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontWeight: '500'
+                      }}
+                    >
+                      Manage Trust Relationships
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '3rem',
+                  color: '#6c757d'
+                }}>
+                  <h4>Trust Relationship Management</h4>
+                  <p>
+                    For full trust relationship management capabilities,
+                    please use the dedicated Trust Management page.
+                  </p>
+                  <div style={{ marginTop: '1.5rem' }}>
+                    <button
+                      onClick={() => setTrustModalMode('view')}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#6c757d',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        marginRight: '1rem'
+                      }}
+                    >
+                      Back to View
+                    </button>
+                    <button
+                      onClick={() => {
+                        closeTrustModal();
+                        // Note: This would need integration with the main app's navigation
+                        console.log('Navigate to Trust Management page');
+                      }}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#007bff',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Open Trust Management
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              marginTop: '2rem',
+              paddingTop: '1rem',
+              borderTop: '1px solid #e9ecef'
+            }}>
+              <button
+                onClick={closeTrustModal}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
