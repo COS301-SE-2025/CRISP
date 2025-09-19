@@ -486,23 +486,25 @@ class CollectionObjectsView(TAXIIBaseView):
             # Process each object
             success_count = 0
             failures = []
-            
+            new_indicators_created = []
+
             for obj in data['objects']:
                 try:
                     # Get or create STIX object
                     stix_id = obj.get('id')
                     stix_type = obj.get('type')
-                    
+
                     if not stix_id or not stix_type:
                         failures.append({
                             'object': obj.get('id', 'Unknown ID'),
                             'message': "Missing required fields 'id' or 'type'"
                         })
                         continue
-                    
+
                     # Check if object already exists
                     existing_obj = STIXObject.objects.filter(stix_id=stix_id).first()
-                    
+                    is_new_object = existing_obj is None
+
                     if existing_obj:
                         # Update existing object
                         existing_obj.raw_data = obj
@@ -522,26 +524,52 @@ class CollectionObjectsView(TAXIIBaseView):
                             created_by=request.user,
                             source_organization=org
                         )
-                    
+
                     # Add to collection if not already present
                     obj_in_collection = CollectionObject.objects.filter(
                         collection=collection,
                         stix_object=stix_obj
                     ).exists()
-                    
+
                     if not obj_in_collection:
                         CollectionObject.objects.create(
                             collection=collection,
                             stix_object=stix_obj
                         )
-                    
+
+                    # Create corresponding Indicator record if this is an indicator object
+                    if stix_type == 'indicator' and is_new_object:
+                        try:
+                            indicator_record = self._create_indicator_from_stix(stix_obj, collection, org)
+                            if indicator_record:
+                                new_indicators_created.append({
+                                    'stix_object': stix_obj,
+                                    'indicator': indicator_record,
+                                    'collection': collection
+                                })
+                        except Exception as indicator_error:
+                            logger.warning(f"Failed to create indicator record for STIX {stix_id}: {indicator_error}")
+
                     success_count += 1
-                    
+
                 except Exception as e:
                     failures.append({
                         'object': obj.get('id', 'Unknown ID'),
                         'message': str(e)
                     })
+
+            # Send notifications for new indicators after successful processing
+            if new_indicators_created:
+                try:
+                    self._send_taxii_reception_notifications(
+                        new_indicators_created,
+                        collection,
+                        org,
+                        request.user
+                    )
+                except Exception as notification_error:
+                    logger.error(f"Failed to send TAXII reception notifications: {notification_error}")
+                    # Don't fail the whole operation due to notification issues
             
             # Build response
             response_data = {
@@ -553,9 +581,221 @@ class CollectionObjectsView(TAXIIBaseView):
             status_code = status.HTTP_207_MULTI_STATUS if failures else status.HTTP_200_OK
             
             return Response(response_data, status=status_code, content_type=self.content_type)
-            
+
         except Collection.DoesNotExist:
             raise NotFound("Collection not found")
+
+    def _create_indicator_from_stix(self, stix_obj, collection, target_org):
+        """
+        Create an Indicator record from a STIX object for dashboard visibility
+
+        Args:
+            stix_obj: STIXObject instance
+            collection: Collection the object belongs to
+            target_org: Target organization receiving the indicator
+
+        Returns:
+            Created Indicator object or None if creation failed
+        """
+        try:
+            from core.models.models import Indicator, ThreatFeed
+            import re
+
+            # Get or create a shared threat feed for TAXII received indicators
+            shared_feed, created = ThreatFeed.objects.get_or_create(
+                name=f"TAXII Shared Intelligence - {target_org.name}",
+                owner=target_org,
+                defaults={
+                    'description': f'Threat intelligence received via TAXII for {target_org.name}',
+                    'is_external': False,
+                    'is_active': True,
+                    'is_public': False,
+                    'sync_interval_hours': 0
+                }
+            )
+
+            # Extract indicator details from STIX pattern
+            raw_data = stix_obj.raw_data
+            stix_pattern = raw_data.get('pattern', '')
+
+            # Parse pattern to extract type and value
+            indicator_type = 'other'
+            indicator_value = None
+
+            # Try to extract from STIX pattern first
+            if stix_pattern:
+                # Common STIX pattern parsing
+                if 'file:hashes.MD5' in stix_pattern or 'file:hashes.SHA256' in stix_pattern or 'file:hashes.SHA1' in stix_pattern:
+                    indicator_type = 'file_hash'
+                    match = re.search(r"= '([^']+)'", stix_pattern)
+                    if match:
+                        indicator_value = match.group(1)
+                elif 'domain-name:value' in stix_pattern:
+                    indicator_type = 'domain'
+                    match = re.search(r"= '([^']+)'", stix_pattern)
+                    if match:
+                        indicator_value = match.group(1)
+                elif 'ipv4-addr:value' in stix_pattern or 'ipv6-addr:value' in stix_pattern:
+                    indicator_type = 'ip'
+                    match = re.search(r"= '([^']+)'", stix_pattern)
+                    if match:
+                        indicator_value = match.group(1)
+                elif 'url:value' in stix_pattern:
+                    indicator_type = 'url'
+                    match = re.search(r"= '([^']+)'", stix_pattern)
+                    if match:
+                        indicator_value = match.group(1)
+                elif 'email-addr:value' in stix_pattern:
+                    indicator_type = 'email'
+                    match = re.search(r"= '([^']+)'", stix_pattern)
+                    if match:
+                        indicator_value = match.group(1)
+                else:
+                    # Try to extract any quoted value from the pattern
+                    match = re.search(r"= '([^']+)'", stix_pattern)
+                    if match:
+                        indicator_value = match.group(1)
+                        # Try to guess type from value
+                        value = indicator_value.lower()
+                        if '.' in value and not '@' in value:
+                            if value.startswith('http'):
+                                indicator_type = 'url'
+                            else:
+                                indicator_type = 'domain'
+                        elif len(value) in [32, 40, 64]:  # MD5, SHA1, SHA256 lengths
+                            indicator_type = 'file_hash'
+                        elif '@' in value:
+                            indicator_type = 'email'
+
+            # If no value extracted from pattern, try other STIX fields
+            if not indicator_value:
+                # Try to get from other STIX fields
+                if 'name' in raw_data and raw_data['name']:
+                    indicator_value = raw_data['name']
+                elif 'value' in raw_data and raw_data['value']:
+                    indicator_value = raw_data['value']
+                elif 'x_crisp_value' in raw_data and raw_data['x_crisp_value']:
+                    indicator_value = raw_data['x_crisp_value']
+                else:
+                    # Last resort: use a descriptive fallback instead of a random ID
+                    indicator_value = f"Unknown indicator from {raw_data.get('x_crisp_source_org', 'external source')}"
+
+            # Create or update indicator
+            indicator, created = Indicator.objects.get_or_create(
+                value=indicator_value,
+                type=indicator_type,
+                threat_feed=shared_feed,
+                defaults={
+                    'description': f"TAXII shared indicator: {raw_data.get('name', 'Unknown')}",
+                    'confidence': raw_data.get('confidence', 50),
+                    'stix_id': stix_obj.stix_id,
+                    'first_seen': timezone.now(),
+                    'last_seen': timezone.now()
+                }
+            )
+
+            if not created:
+                # Update last_seen if indicator already exists
+                indicator.last_seen = timezone.now()
+                indicator.save(update_fields=['last_seen'])
+
+            logger.info(f"Created/updated indicator record {indicator.id} from STIX object {stix_obj.stix_id}")
+            return indicator
+
+        except Exception as e:
+            logger.error(f"Error creating indicator from STIX object {stix_obj.stix_id}: {str(e)}")
+            return None
+
+    def _send_taxii_reception_notifications(self, new_indicators_data, collection, target_org, receiving_user):
+        """
+        Send notifications when new indicators are received via TAXII
+
+        Args:
+            new_indicators_data: List of dicts with 'stix_object', 'indicator', 'collection' keys
+            collection: Collection the indicators were added to
+            target_org: Organization receiving the indicators
+            receiving_user: User who received the indicators
+        """
+        try:
+            from core.services.notification_service import NotificationService
+            from core.user_management.models import CustomUser
+
+            notification_service = NotificationService()
+
+            # Get users in the target organization who should receive notifications
+            # Use broader role matching and include the receiving user's organization if target_org doesn't have users
+            target_users = CustomUser.objects.filter(
+                organization=target_org,
+                is_active=True
+            ).exclude(
+                role__in=['viewer', 'Viewer']  # Exclude basic viewers
+            )
+
+            # If no users in target org, notify users in receiving user's organization
+            if not target_users.exists() and receiving_user and receiving_user.organization:
+                logger.info(f"No users in target org {target_org.name}, using receiving user's org {receiving_user.organization.name}")
+                target_users = CustomUser.objects.filter(
+                    organization=receiving_user.organization,
+                    is_active=True
+                ).exclude(
+                    role__in=['viewer', 'Viewer']
+                )
+
+            if not target_users.exists():
+                logger.warning(f"No active users found for TAXII notifications")
+                return
+
+            # Create notifications for each new indicator
+            for indicator_data in new_indicators_data:
+                stix_obj = indicator_data['stix_object']
+                indicator = indicator_data['indicator']
+
+                # Extract source organization from STIX object
+                source_org_name = stix_obj.raw_data.get('x_crisp_source_org', 'External Source')
+                indicator_type = indicator.type.upper() if indicator.type else 'UNKNOWN'
+                indicator_value = indicator.value[:100] + '...' if len(indicator.value) > 100 else indicator.value
+
+                # Create notification for each target user
+                for user in target_users:
+                    try:
+                        from core.alerts.models import Notification
+
+                        notification = Notification.objects.create(
+                            notification_type='security_alert',
+                            title=f"🚨 New {indicator_type} Threat Intelligence Received",
+                            message=f"Your organization has received new threat intelligence from {source_org_name} via TAXII 2.1.\n\n📍 Indicator: {indicator_value}\n🔍 Type: {indicator_type}\n📂 Collection: {collection.title}",
+                            priority='high',
+                            recipient=user,
+                            organization=user.organization,
+                            related_object_type='indicator',
+                            related_object_id=str(indicator.id),
+                            metadata={
+                                'indicator_id': indicator.id,
+                                'indicator_type': indicator_type,
+                                'indicator_value': indicator_value,
+                                'source_organization': source_org_name,
+                                'collection_name': collection.title,
+                                'collection_id': str(collection.id),
+                                'stix_id': stix_obj.stix_id,
+                                'reception_method': 'TAXII 2.1',
+                                'notification_category': 'threat_intelligence_received',
+                                'feed_name': indicator.threat_feed.name if indicator.threat_feed else 'Unknown Feed'
+                            }
+                        )
+
+                        logger.info(f"✅ Created TAXII reception notification for user {user.username} (ID: {notification.id})")
+
+                    except Exception as user_notification_error:
+                        logger.error(f"❌ Failed to create notification for user {user.username}: {user_notification_error}")
+                        continue
+
+            logger.info(f"🎯 Successfully processed TAXII reception notifications for {len(new_indicators_data)} indicators to {len(target_users)} users")
+
+        except Exception as e:
+            logger.error(f"💥 Error sending TAXII reception notifications: {str(e)}")
+            import traceback
+            logger.error(f"Full traceback: {traceback.format_exc()}")
+            # Don't raise the exception as notifications are not critical for the main TAXII operation
 
 
 class ObjectView(TAXIIBaseView):
