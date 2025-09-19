@@ -536,6 +536,112 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
                 'error': f'Error checking task status: {str(e)}'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @action(detail=False, methods=['get'], url_path='task-status/(?P<task_id>[^/.]+)')
+    def task_status(self, request, task_id=None):
+        """Get the status of a specific Celery task."""
+        try:
+            from django.core.cache import cache
+            
+            # Check cache for task status
+            cache_key = f"task_status_{task_id}"
+            task_status_data = cache.get(cache_key)
+            
+            if task_status_data:
+                return Response({
+                    'success': True,
+                    'task_id': task_id,
+                    'status': task_status_data.get('status', 'unknown'),
+                    'stage': task_status_data.get('stage', ''),
+                    'message': task_status_data.get('message', ''),
+                    'progress': task_status_data.get('progress', {}),
+                    'last_update': task_status_data.get('last_update'),
+                    'feed_id': task_status_data.get('feed_id')
+                })
+            
+            # Fallback to Celery status
+            from celery.result import AsyncResult
+            task_result = AsyncResult(task_id)
+            
+            return Response({
+                'success': True,
+                'task_id': task_id,
+                'status': task_result.status.lower() if task_result.status else 'unknown',
+                'result': task_result.result if task_result.ready() else None,
+                'info': task_result.info if hasattr(task_result, 'info') else None
+            })
+            
+        except Exception as e:
+            logger.error(f"Error getting task status for {task_id}: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e),
+                'task_id': task_id,
+                'status': 'error'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'], url_path='cancel-task/(?P<task_id>[^/.]+)')
+    def cancel_task(self, request, task_id=None):
+        """Cancel a specific Celery task by ID."""
+        try:
+            from django.core.cache import cache
+            from settings.celery import app as celery_app
+            
+            mode = request.data.get('mode', 'stop_now')  # 'stop_now' or 'cancel_job'
+            
+            # Get task details from cache
+            task_key = f"task_status_{task_id}"
+            cached_status = cache.get(task_key)
+            
+            if not cached_status:
+                return Response({
+                    'success': False,
+                    'error': 'Task not found or already completed'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            feed_id = cached_status.get('feed_id')
+            if not feed_id:
+                return Response({
+                    'success': False,
+                    'error': 'Cannot determine feed ID for this task'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Set cancellation flag
+            cancel_key = f"cancel_consumption_{feed_id}"
+            cache.set(cancel_key, {
+                'mode': mode, 
+                'timestamp': timezone.now().isoformat(),
+                'task_id': task_id
+            }, timeout=3600)
+            
+            # Revoke the Celery task
+            try:
+                celery_app.control.revoke(task_id, terminate=True)
+                logger.info(f"Revoked Celery task {task_id}")
+            except Exception as e:
+                logger.warning(f"Could not revoke Celery task {task_id}: {str(e)}")
+            
+            # Update task status in cache
+            cache.set(task_key, {
+                'status': 'cancelling',
+                'feed_id': feed_id,
+                'message': f'Task cancellation requested ({mode})',
+                'cancellation_mode': mode
+            }, timeout=3600)
+            
+            return Response({
+                'success': True,
+                'message': f'Task {task_id} cancellation requested',
+                'mode': mode,
+                'task_id': task_id
+            })
+            
+        except Exception as e:
+            logger.error(f"Error cancelling task {task_id}: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     @action(detail=True, methods=['get'])
     def test_connection(self, request, pk=None):
         """Test TAXII connection without consuming."""

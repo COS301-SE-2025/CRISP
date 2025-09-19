@@ -75,7 +75,7 @@ def schedule_taxii_feed_consumption():
     
     logger.info(f"Scheduled {feeds_to_update.count()} TAXII feeds for consumption")
 
-@app.task(name='consume_feed_task', soft_time_limit=300, time_limit=600, bind=True)  # 5 min soft, 10 min hard limit
+@app.task(name='consume_feed_task', soft_time_limit=300, time_limit=600, bind=True)
 def consume_feed_task(self, feed_id, limit=None, force_days=None, batch_size=None):
     """
     Consume a specific TAXII feed with parameters.
@@ -83,9 +83,19 @@ def consume_feed_task(self, feed_id, limit=None, force_days=None, batch_size=Non
     from django.core.cache import cache
     
     try:
+        # Set task status in cache
+        task_id = self.request.id
+        task_key = f"task_status_{task_id}"
+        cache.set(task_key, {
+            'status': 'running',
+            'feed_id': feed_id,
+            'start_time': timezone.now().isoformat(),
+            'progress': 0
+        }, timeout=3600)
+        
         # Get the feed object
         feed = ThreatFeed.objects.get(id=feed_id)
-        logger.info(f"Starting async consumption of feed: {feed.name}")
+        logger.info(f"Starting async consumption of feed: {feed.name} (Task ID: {task_id})")
 
         # Check for cancellation signal before starting
         cancel_key = f"cancel_consumption_{feed.id}"
@@ -93,7 +103,35 @@ def consume_feed_task(self, feed_id, limit=None, force_days=None, batch_size=Non
         if cancellation_signal:
             logger.info(f"Task cancelled before start for feed {feed.name}")
             cache.delete(cancel_key)  # Clean up
+            cache.set(task_key, {
+                'status': 'cancelled',
+                'feed_id': feed_id,
+                'message': 'Task was cancelled before processing started'
+            }, timeout=3600)
             return {'status': 'cancelled', 'message': 'Task was cancelled before processing started'}
+
+        def check_cancellation():
+            """Check if task should be cancelled"""
+            if cache.get(cancel_key):
+                return True
+            # Also check if Celery task was revoked
+            try:
+                from celery.result import AsyncResult
+                result = AsyncResult(task_id, app=app)
+                if result.state == 'REVOKED':
+                    return True
+            except:
+                pass
+            return False
+
+        # Update task status
+        cache.set(task_key, {
+            'status': 'processing',
+            'feed_id': feed_id,
+            'feed_name': feed.name,
+            'start_time': timezone.now().isoformat(),
+            'progress': 25
+        }, timeout=3600)
 
         # Use OTX service for AlienVault feeds
         if 'otx' in feed.name.lower() or 'alienvault' in feed.name.lower():
@@ -104,23 +142,31 @@ def consume_feed_task(self, feed_id, limit=None, force_days=None, batch_size=Non
             service = StixTaxiiService()
 
         # Consume the feed with parameters, passing task reference for cancellation checks
+        cache.set(task_key, {
+            'status': 'processing',
+            'feed_id': feed_id,
+            'feed_name': feed.name,
+            'start_time': timezone.now().isoformat(),
+            'progress': 50,
+            'message': 'Fetching and processing indicators...'
+        }, timeout=3600)
+        
         stats = service.consume_feed(
             feed, 
             limit=limit, 
             force_days=force_days, 
             batch_size=batch_size,
-            cancel_check_callback=lambda: cache.get(cancel_key) is not None
+            cancel_check_callback=check_cancellation
         )
         
         # Final check for cancellation after completion
-        if cache.get(cancel_key):
+        if check_cancellation():
             cancellation_signal = cache.get(cancel_key)
             cache.delete(cancel_key)  # Clean up
             
-            if cancellation_signal.get('mode') == 'cancel_job':
+            if cancellation_signal and cancellation_signal.get('mode') == 'cancel_job':
                 # Remove recently added indicators
                 from datetime import timedelta
-                from django.utils import timezone
                 one_hour_ago = timezone.now() - timedelta(hours=1)
                 
                 recent_indicators = feed.indicators.filter(created_at__gte=one_hour_ago)
@@ -134,23 +180,58 @@ def consume_feed_task(self, feed_id, limit=None, force_days=None, batch_size=Non
                     ).delete()
                     recent_indicators.delete()
                 
+                cache.set(task_key, {
+                    'status': 'cancelled_with_cleanup',
+                    'feed_id': feed_id,
+                    'message': f'Task cancelled and {deleted_count} recent indicators removed',
+                    'indicators_removed': deleted_count
+                }, timeout=3600)
+                
                 return {
                     'status': 'cancelled_with_cleanup',
                     'message': f'Task cancelled and {deleted_count} recent indicators removed',
                     'indicators_removed': deleted_count
                 }
             else:
+                cache.set(task_key, {
+                    'status': 'cancelled_keep_data',
+                    'feed_id': feed_id,
+                    'message': 'Task cancelled but data kept',
+                    'stats': stats
+                }, timeout=3600)
+                
                 return {
                     'status': 'cancelled_keep_data',
                     'message': 'Task cancelled but data kept',
                     'stats': stats
                 }
         
+        # Task completed successfully
+        cache.set(task_key, {
+            'status': 'completed',
+            'feed_id': feed_id,
+            'feed_name': feed.name,
+            'completion_time': timezone.now().isoformat(),
+            'stats': stats,
+            'progress': 100
+        }, timeout=3600)
+        
         logger.info(f"Feed {feed.name} consumed successfully: {stats}")
         return stats
+        
     except Exception as e:
         logger.error(f"Error consuming feed {feed_id}: {str(e)}")
         # Clean up cancellation signal if task fails
         cancel_key = f"cancel_consumption_{feed_id}"
         cache.delete(cancel_key)
+        
+        # Update task status
+        if 'task_key' in locals():
+            cache.set(task_key, {
+                'status': 'failed',
+                'feed_id': feed_id,
+                'error': str(e),
+                'completion_time': timezone.now().isoformat()
+            }, timeout=3600)
+        
         raise

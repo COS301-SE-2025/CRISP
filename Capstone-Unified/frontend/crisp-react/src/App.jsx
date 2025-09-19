@@ -2631,66 +2631,121 @@ function ThreatFeeds({
       const currentProgress = feedProgress[feedId];
       const taskId = currentProgress?.taskId;
       
-      const requestData = {
-        mode: mode // 'stop_now' or 'cancel_job'
-      };
-      
-      // Include task_id if available
       if (taskId) {
-        requestData.task_id = taskId;
-        console.log(`Cancelling feed ${feedId} with task ID: ${taskId}`);
-      }
-
-      const result = await api.post(`/api/threat-feeds/${feedId}/cancel_consumption/`, requestData);
-
-      if (result.success) {
-        // Update progress to show cancellation
-        setFeedProgress(prev => ({
-          ...prev,
-          [feedId]: {
-            stage: mode === 'stop_now' ? 'Stopped' : 'Cancelled',
-            message: mode === 'stop_now' ?
-              `Stopped consumption. ${result.indicators_kept || 0} indicators kept.` :
-              'Consumption cancelled and data removed.',
-            percentage: mode === 'stop_now' ?
-              (result.indicators_kept || 0) : 0,
-            current: result.indicators_kept || 0,
-            total: result.total_expected || 0
-          }
-        }));
-
-        // Remove from consuming feeds and active tasks
-        setConsumingFeeds(prev => prev.filter(id => id !== feedId));
+        // Use new task-specific cancellation endpoint
+        console.log(`Cancelling task ${taskId} for feed ${feedId} with mode: ${mode}`);
         
-        // Remove from active tasks if task ID was available
-        if (taskId) {
-          setActiveTasks(prev => {
-            const newTasks = new Map(prev);
-            newTasks.delete(taskId);
-            return newTasks;
-          });
-        }
-        setConsumingFeeds(prev => prev.filter(id => id !== feedId));
+        const result = await api.post(`/api/threat-feeds/cancel-task/${taskId}/`, {
+          mode: mode
+        });
 
-        // Clear any active intervals/timeouts for this feed
-        if (activeIntervals.current) {
-          activeIntervals.current.forEach(clearInterval);
-          activeIntervals.current = [];
-        }
-        if (activeTimeouts.current) {
-          activeTimeouts.current.forEach(clearTimeout);
-          activeTimeouts.current = [];
-        }
+        if (result.success) {
+          // Update progress to show cancellation
+          setFeedProgress(prev => ({
+            ...prev,
+            [feedId]: {
+              stage: mode === 'stop_now' ? 'Stopping...' : 'Cancelling...',
+              message: `${mode === 'stop_now' ? 'Stopping' : 'Cancelling'} task ${taskId}`,
+              percentage: currentProgress?.percentage || 0,
+              taskId: taskId,
+              cancelling: true
+            }
+          }));
 
-        showSuccess(
-          'Feed Consumption Cancelled',
-          mode === 'stop_now' ?
-            `Feed consumption stopped. ${result.indicators_kept || 0} indicators were kept.` :
-            'Feed consumption cancelled and all data was removed.'
-        );
+          // Start polling for task completion
+          const pollInterval = setInterval(async () => {
+            try {
+              const statusResult = await api.get(`/api/threat-feeds/task-status/${taskId}/`);
+              
+              if (statusResult.success) {
+                const taskStatus = statusResult.status;
+                
+                if (taskStatus === 'cancelled' || taskStatus === 'cancelled_with_cleanup' || taskStatus === 'cancelled_keep_data') {
+                  clearInterval(pollInterval);
+                  
+                  // Update final status
+                  setFeedProgress(prev => ({
+                    ...prev,
+                    [feedId]: {
+                      stage: mode === 'stop_now' ? 'Stopped' : 'Cancelled',
+                      message: mode === 'stop_now' ?
+                        `Task stopped. Data preserved.` :
+                        'Task cancelled and recent data removed.',
+                      percentage: 100,
+                      taskId: taskId,
+                      completed: true
+                    }
+                  }));
 
-        // Refresh feeds to update counts
-        await fetchThreatFeeds();
+                  // Remove from consuming feeds and active tasks
+                  setConsumingFeeds(prev => prev.filter(id => id !== feedId));
+                  setActiveTasks(prev => {
+                    const newTasks = new Map(prev);
+                    newTasks.delete(taskId);
+                    return newTasks;
+                  });
+
+                  showSuccess(
+                    'Task Cancelled',
+                    mode === 'stop_now' ?
+                      `Task stopped successfully. Data has been preserved.` :
+                      'Task cancelled successfully and recent data was removed.'
+                  );
+
+                  // Clean up progress after a delay
+                  setTimeout(() => {
+                    setFeedProgress(prev => {
+                      const newProgress = { ...prev };
+                      delete newProgress[feedId];
+                      return newProgress;
+                    });
+                  }, 5000);
+                }
+              }
+            } catch (error) {
+              console.error('Error polling task status:', error);
+              clearInterval(pollInterval);
+            }
+          }, 2000); // Poll every 2 seconds
+
+          // Clear polling after 30 seconds max
+          setTimeout(() => clearInterval(pollInterval), 30000);
+        }
+      } else {
+        // Fallback to old cancellation method for non-task feeds
+        const requestData = { mode: mode };
+        
+        const result = await api.post(`/api/threat-feeds/${feedId}/cancel_consumption/`, requestData);
+
+        if (result.success) {
+          // Update progress to show cancellation
+          setFeedProgress(prev => ({
+            ...prev,
+            [feedId]: {
+              stage: mode === 'stop_now' ? 'Stopped' : 'Cancelled',
+              message: mode === 'stop_now' ?
+                `Stopped consumption. ${result.indicators_kept || 0} indicators kept.` :
+                'Consumption cancelled and data removed.',
+              percentage: mode === 'stop_now' ?
+                (result.indicators_kept || 0) : 0,
+              current: result.indicators_kept || 0,
+              total: result.total_expected || 0
+            }
+          }));
+
+          // Remove from consuming feeds
+          setConsumingFeeds(prev => prev.filter(id => id !== feedId));
+          
+          showSuccess(
+            'Feed Consumption Cancelled',
+            mode === 'stop_now' ?
+              `Feed consumption stopped. ${result.indicators_kept || 0} indicators were kept.` :
+              'Feed consumption cancelled and all data was removed.'
+          );
+
+          // Refresh feeds to update counts
+          await fetchThreatFeeds();
+        }
       }
     } catch (error) {
       console.error('Error cancelling feed consumption:', error);
@@ -3183,6 +3238,96 @@ function ThreatFeeds({
         </div>
       </div>
 
+      {/* Active Tasks Monitor */}
+      {activeTasks.size > 0 && (
+        <div className="task-monitor-section" style={{marginBottom: '20px'}}>
+          <div className="card">
+            <div className="card-content">
+              <div style={{display: 'flex', alignItems: 'center', marginBottom: '15px'}}>
+                <i className="fas fa-tasks" style={{marginRight: '8px', color: '#007bff'}}></i>
+                <h3 style={{margin: '0'}}>Active Background Tasks ({activeTasks.size})</h3>
+              </div>
+              <div className="active-tasks-grid" style={{display: 'grid', gap: '10px'}}>
+                {Array.from(activeTasks.entries()).map(([taskId, taskInfo]) => {
+                  const feedInfo = feeds.find(f => f.id === taskInfo.feedId);
+                  const progress = feedProgress[taskInfo.feedId];
+                  
+                  return (
+                    <div key={taskId} className="task-item" style={{
+                      padding: '12px',
+                      border: '1px solid #e0e0e0',
+                      borderRadius: '6px',
+                      backgroundColor: '#f8f9fa'
+                    }}>
+                      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
+                        <div style={{flex: 1}}>
+                          <div style={{fontWeight: 'bold', marginBottom: '4px'}}>
+                            {feedInfo ? feedInfo.name : 'Unknown Feed'}
+                          </div>
+                          <div style={{fontSize: '12px', color: '#666', marginBottom: '8px'}}>
+                            Task ID: {taskId.slice(-12)}
+                          </div>
+                          <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px'}}>
+                            {progress?.cancelling ? (
+                              <i className="fas fa-stop-circle" style={{color: '#dc3545'}}></i>
+                            ) : (
+                              <i className="fas fa-spinner fa-spin" style={{color: '#007bff'}}></i>
+                            )}
+                            <span style={{fontSize: '13px'}}>
+                              {progress?.stage || 'Processing...'}
+                            </span>
+                          </div>
+                          {progress?.percentage > 0 && (
+                            <div style={{width: '100%', backgroundColor: '#e0e0e0', borderRadius: '3px', height: '6px', marginBottom: '6px'}}>
+                              <div
+                                style={{
+                                  width: `${progress.percentage}%`,
+                                  backgroundColor: progress.cancelling ? '#dc3545' : '#28a745',
+                                  height: '100%',
+                                  borderRadius: '3px',
+                                  transition: 'width 0.3s ease'
+                                }}
+                              ></div>
+                            </div>
+                          )}
+                          {progress?.message && (
+                            <div style={{fontSize: '11px', color: '#666'}}>
+                              {progress.message}
+                            </div>
+                          )}
+                        </div>
+                        <div style={{display: 'flex', flexDirection: 'column', gap: '4px', marginLeft: '12px'}}>
+                          <button
+                            className="btn btn-xs btn-warning"
+                            onClick={() => handleCancelFeedConsumption(taskInfo.feedId, 'stop_now')}
+                            title="Stop task but keep data"
+                            style={{fontSize: '10px', padding: '4px 8px'}}
+                            disabled={progress?.cancelling}
+                          >
+                            <i className={progress?.cancelling ? "fas fa-clock" : "fas fa-pause"}></i>
+                            {progress?.cancelling ? 'Stopping...' : 'Stop'}
+                          </button>
+                          <button
+                            className="btn btn-xs btn-danger"
+                            onClick={() => handleCancelFeedConsumption(taskInfo.feedId, 'cancel_job')}
+                            title="Cancel task and remove data"
+                            style={{fontSize: '10px', padding: '4px 8px'}}
+                            disabled={progress?.cancelling}
+                          >
+                            <i className={progress?.cancelling ? "fas fa-clock" : "fas fa-times"}></i>
+                            {progress?.cancelling ? 'Cancelling...' : 'Cancel'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showFilters && (
         <div className="filters-section">
           <div className="filters-grid">
@@ -3383,19 +3528,28 @@ function ThreatFeeds({
                           {feed.is_public ? 'Public' : 'Private'}
                         </span>
                         <span className="badge badge-connected">STIX/TAXII</span>
-                        {consumingFeeds.includes(feed.id) ? (
+                        {consumingFeeds.includes(feed.id) || (feedProgress[feed.id] && activeTasks.has(feedProgress[feed.id].taskId)) ? (
                           <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
                             <div className="progress-container" style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: '140px'}}>
                               <div style={{display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px'}}>
-                                <i className="fas fa-spinner fa-spin"></i>
+                                {feedProgress[feed.id]?.cancelling ? (
+                                  <i className="fas fa-stop-circle" style={{color: '#dc3545'}}></i>
+                                ) : (
+                                  <i className="fas fa-spinner fa-spin"></i>
+                                )}
                                 <span>{feedProgress[feed.id]?.stage || 'Processing'}</span>
+                                {feedProgress[feed.id]?.taskId && (
+                                  <span style={{fontSize: '9px', opacity: 0.6}}>
+                                    ID: {feedProgress[feed.id].taskId.slice(-8)}
+                                  </span>
+                                )}
                               </div>
                               {feedProgress[feed.id]?.percentage > 0 && (
                                 <div style={{width: '100%', backgroundColor: '#e0e0e0', borderRadius: '3px', height: '4px', marginTop: '4px'}}>
                                   <div
                                     style={{
                                       width: `${feedProgress[feed.id].percentage}%`,
-                                      backgroundColor: '#007bff',
+                                      backgroundColor: feedProgress[feed.id]?.cancelling ? '#dc3545' : '#007bff',
                                       height: '100%',
                                       borderRadius: '3px',
                                       transition: 'width 0.3s ease'
@@ -3409,6 +3563,11 @@ function ThreatFeeds({
                                 ) : feedProgress[feed.id]?.percentage > 0 ? (
                                   <span>{feedProgress[feed.id].percentage}%</span>
                                 ) : null}
+                                {feedProgress[feed.id]?.message && (
+                                  <div style={{fontSize: '9px', color: '#666', marginTop: '2px'}}>
+                                    {feedProgress[feed.id].message}
+                                  </div>
+                                )}
                               </div>
                             </div>
                             <div className="cancel-options" style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
@@ -3417,16 +3576,20 @@ function ThreatFeeds({
                                 onClick={() => handleCancelFeedConsumption(feed.id, 'stop_now')}
                                 title="Stop consumption but keep indicators already processed"
                                 style={{fontSize: '10px', padding: '2px 6px'}}
+                                disabled={feedProgress[feed.id]?.cancelling}
                               >
-                                <i className="fas fa-pause"></i> Stop Now
+                                <i className={feedProgress[feed.id]?.cancelling ? "fas fa-clock" : "fas fa-pause"}></i> 
+                                {feedProgress[feed.id]?.cancelling ? 'Stopping...' : 'Stop Now'}
                               </button>
                               <button
                                 className="btn btn-xs btn-danger"
                                 onClick={() => handleCancelFeedConsumption(feed.id, 'cancel_job')}
                                 title="Cancel consumption and remove all indicators from this session"
                                 style={{fontSize: '10px', padding: '2px 6px'}}
+                                disabled={feedProgress[feed.id]?.cancelling}
                               >
-                                <i className="fas fa-times"></i> Cancel Job
+                                <i className={feedProgress[feed.id]?.cancelling ? "fas fa-clock" : "fas fa-times"}></i> 
+                                {feedProgress[feed.id]?.cancelling ? 'Cancelling...' : 'Cancel Job'}
                               </button>
                             </div>
                           </div>
@@ -3442,8 +3605,8 @@ function ThreatFeeds({
                         <button 
                           className="btn btn-sm btn-danger"
                           onClick={() => handleDeleteFeed(feed)}
-                          disabled={consumingFeeds.includes(feed.id)}
-                          title={consumingFeeds.includes(feed.id) ? "Cannot delete while consuming" : "Delete this threat feed"}
+                          disabled={consumingFeeds.includes(feed.id) || (feedProgress[feed.id] && activeTasks.has(feedProgress[feed.id].taskId))}
+                          title={(consumingFeeds.includes(feed.id) || (feedProgress[feed.id] && activeTasks.has(feedProgress[feed.id].taskId))) ? "Cannot delete while consuming" : "Delete this threat feed"}
                         >
                           <i className="fas fa-trash"></i>
                         </button>
