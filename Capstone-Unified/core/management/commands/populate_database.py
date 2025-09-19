@@ -47,14 +47,14 @@ class Command(BaseCommand):
         self.trust_levels = []
         self.trust_groups = []
         
-        # Scale parameters for test data generation
-        self.NUM_ORGANIZATIONS = 50
-        self.USERS_PER_ORG = (10, 30)
-        self.NUM_SYSTEM_ACTIVITIES = 5000
-        self.NUM_TRUST_RELATIONSHIPS = 200
-        self.NUM_TRUST_GROUPS = 20
-        self.NUM_USER_SESSIONS = 1000
-        self.NUM_THREAT_FEEDS = 100
+        # Scale parameters for test data generation - reduced for easier testing
+        self.NUM_ORGANIZATIONS = 10
+        self.USERS_PER_ORG = (5, 15)
+        self.NUM_SYSTEM_ACTIVITIES = 500
+        self.NUM_TRUST_RELATIONSHIPS = 30
+        self.NUM_TRUST_GROUPS = 5
+        self.NUM_USER_SESSIONS = 100
+        self.NUM_THREAT_FEEDS = 5
         
         # Parallel processing configuration
         self.MAX_WORKERS = min(cpu_count(), 8)

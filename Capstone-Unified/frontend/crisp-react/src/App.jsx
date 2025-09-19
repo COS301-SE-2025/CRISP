@@ -3920,43 +3920,10 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
   
   // Threat feeds for Add IoC modal
   const [threatFeeds, setThreatFeeds] = useState([]);
-  
-  // Mock organisations list - in real app, this would come from API
-  const availableOrganisations = [
-    'University of Pretoria',
-    'Cyber Security Hub',
-    'SANReN CSIRT',
-    'SABRIC',
-    'University of Johannesburg',
-    'University of Cape Town',
-    'University of the Witwatersrand',
-    'Stellenbosch University',
-    'Rhodes University',
-    'North-West University',
-    'University of KwaZulu-Natal',
-    'University of the Free State',
-    'Nelson Mandela University',
-    'University of Limpopo',
-    'Walter Sisulu University',
-    'Vaal University of Technology',
-    'Central University of Technology',
-    'Durban University of Technology',
-    'Cape Peninsula University of Technology',
-    'Tshwane University of Technology',
-    'CSIR',
-    'Council for Scientific and Industrial Research',
-    'South African Police Service',
-    'State Security Agency',
-    'Department of Communications',
-    'SITA (State Information Technology Agency)',
-    'Nedbank',
-    'Standard Bank',
-    'First National Bank',
-    'ABSA Bank',
-    'Capitec Bank',
-    'African Bank',
-    'Investec'
-  ];
+
+  // Organizations for sharing - loaded dynamically from API
+  const [availableOrganisations, setAvailableOrganisations] = useState([]);
+  const [organizationMap, setOrganizationMap] = useState({}); // Map organization names to IDs
   
   // Filter state management
   const [filters, setFilters] = useState({
@@ -4041,7 +4008,58 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
   // Initial load
   useEffect(() => {
     fetchIndicators(1, itemsPerPage);
+    fetchOrganizations();
   }, []);
+
+  const fetchOrganizations = async () => {
+    try {
+      console.log('Fetching organizations using getOrganizations API function...');
+
+      const response = await getOrganizations();
+      console.log('Organizations API response data:', response);
+
+      // Use the same parsing logic as OrganisationManagement component
+      let organizationsData = [];
+      if (response.results && response.results.organizations) {
+        // Django REST Framework pagination with custom wrapper
+        organizationsData = response.results.organizations;
+      } else if (response.data && response.data.organizations) {
+        organizationsData = response.data.organizations;
+      } else if (response.organizations) {
+        organizationsData = response.organizations;
+      } else if (response.data && Array.isArray(response.data)) {
+        organizationsData = response.data;
+      } else if (Array.isArray(response)) {
+        organizationsData = response;
+      }
+
+      console.log('Extracted organizations data:', organizationsData);
+      const orgsList = Array.isArray(organizationsData) ? organizationsData : [];
+
+      if (orgsList.length > 0) {
+        const orgNames = orgsList.map(org => org.name);
+        const nameToIdMap = {};
+        orgsList.forEach(org => {
+          nameToIdMap[org.name] = org.id;
+        });
+
+        console.log('Extracted organization names:', orgNames);
+        console.log('Organization name to ID mapping:', nameToIdMap);
+
+        setAvailableOrganisations(orgNames);
+        setOrganizationMap(nameToIdMap);
+      } else {
+        console.warn('No organizations found in parsed data');
+        setAvailableOrganisations([]);
+        setOrganizationMap({});
+      }
+    } catch (error) {
+      console.error('Error fetching organizations:', error);
+      console.error('This might be due to authentication issues or network problems');
+      setAvailableOrganisations([]);
+    }
+  };
+
 
   const fetchIndicators = async (page = 1, pageSize = itemsPerPage, filterParams = {}) => {
     setLoading(true);
@@ -5197,65 +5215,53 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
             </div>
             <div className="modal-body">
               <form onSubmit={handleShareIndicatorSubmit}>
-                {/* Compact IoC Details */}
-                <div className="compact-ioc-details">
-                  <div className="ioc-header">
-                    <i className="fas fa-shield-alt"></i>
-                    <span>IoC Details</span>
-                  </div>
-                  <div className="ioc-info-grid">
-                    <div className="ioc-item">
-                      <span className="ioc-label">Type</span>
-                      <span className="ioc-value">{sharingIndicator?.type}</span>
+                {/* IoC Details */}
+                <div className="share-ioc-details">
+                  <h3><i className="fas fa-shield-alt"></i> Indicator Details</h3>
+                  <div className="details-grid">
+                    <div className="detail-item">
+                      <strong>Type:</strong>
+                      <span className="ioc-type-badge">{sharingIndicator?.type?.toUpperCase()}</span>
                     </div>
-                    <div className="ioc-item">
-                      <span className="ioc-label">Value</span>
-                      <span className="ioc-value">{sharingIndicator?.value}</span>
+                    <div className="detail-item">
+                      <strong>Value:</strong>
+                      <code className="ioc-value">{sharingIndicator?.value}</code>
                     </div>
-                    <div className="ioc-item full-width">
-                      <span className="ioc-label">Source</span>
-                      <span className="ioc-value">{sharingIndicator?.source}</span>
+                    <div className="detail-item">
+                      <strong>Source:</strong>
+                      <span>{sharingIndicator?.source}</span>
                     </div>
                   </div>
                 </div>
                 
                 <div className="form-group">
                   <label className="form-label">
-                    <i className="fas fa-share-nodes form-icon"></i>
+                    <i className="fas fa-building"></i>
                     Target Organizations
                   </label>
                   <p className="form-description">
-                    Select trusted organisations to share this threat intelligence with
+                    Select trusted organizations to share this threat intelligence with
                   </p>
-                  
-                  {/* Improved Organization Selector */}
-                  <div className="improved-org-selector">
-                    {/* Search Input with Show All button */}
-                    <div className="search-field-wrapper">
-                      <div className="search-field">
-                        <input
-                          type="text"
-                          className="sleek-search-input"
-                          value={organisationDropdownSearch}
-                          onChange={(e) => {
-                            setOrganisationDropdownSearch(e.target.value);
-                            setShowOrganisationSelectDropdown(true);
-                          }}
-                          onFocus={() => setShowOrganisationSelectDropdown(true)}
-                          onBlur={(e) => {
-                            setTimeout(() => {
-                              if (!e.relatedTarget || !e.relatedTarget.closest('.results-list')) {
-                                setShowOrganisationSelectDropdown(false);
-                              }
-                            }, 200);
-                          }}
-                          placeholder="Search organizations or click 'Show All'..."
-                        />
-                        <i className="fas fa-search search-icon"></i>
-                      </div>
+
+                  {/* Organization Selector */}
+                  <div className="org-selector">
+                    {/* Search Input */}
+                    <div className="org-search-container">
+                      <input
+                        type="text"
+                        className="form-control org-search-input"
+                        value={organisationDropdownSearch}
+                        onChange={(e) => {
+                          setOrganisationDropdownSearch(e.target.value);
+                          setShowOrganisationSelectDropdown(true);
+                        }}
+                        onFocus={() => setShowOrganisationSelectDropdown(true)}
+                        placeholder="Search organizations..."
+                      />
+                      <i className="fas fa-search search-icon-in-input"></i>
                       <button
                         type="button"
-                        className="show-all-btn"
+                        className="btn btn-outline btn-sm show-all-orgs-btn"
                         onClick={() => {
                           setOrganisationDropdownSearch('');
                           setShowOrganisationSelectDropdown(true);
@@ -5265,9 +5271,9 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
                       </button>
                     </div>
                     
-                    {/* Results List - Show all when no search term, filtered when searching */}
+                    {/* Organization Results List */}
                     {showOrganisationSelectDropdown && (
-                      <div className="results-list enhanced-dropdown">
+                      <div className="org-dropdown-list">
                         {availableOrganisations
                           .filter(organisation => {
                             // If no search term, show all available orgs
@@ -5278,26 +5284,38 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
                             return !shareFormData.organisations.includes(organisation) &&
                                    organisation.toLowerCase().includes(organisationDropdownSearch.toLowerCase());
                           })
-                          .slice(0, 8) // Show more results
+                          .slice(0, 10) // Show more results
                           .map(organisation => (
                             <div
                               key={organisation}
-                              className="result-item enhanced-result-item"
+                              className="org-dropdown-item"
                               onClick={() => {
                                 addOrganisation(organisation);
                                 setOrganisationDropdownSearch('');
                                 setShowOrganisationSelectDropdown(false);
                               }}
                             >
-                              <div className="result-content">
-                                <span className="result-name">{organisation}</span>
-                                <span className="result-subtitle">Trusted Organization</span>
+                              <div className="org-item-content">
+                                <i className="fas fa-building org-icon"></i>
+                                <div className="org-details">
+                                  <span className="org-name">{organisation}</span>
+                                  <span className="org-type">Trusted Organization</span>
+                                </div>
                               </div>
-                              <i className="fas fa-plus add-icon"></i>
+                              <i className="fas fa-plus add-org-icon"></i>
                             </div>
                           ))
                         }
-                        {availableOrganisations
+                        {availableOrganisations.length === 0 && (
+                          <div className="org-no-results">
+                            <i className="fas fa-exclamation-triangle"></i>
+                            <span>
+                              Unable to load organizations. Please check your connection and try again.
+                            </span>
+                          </div>
+                        )}
+                        {availableOrganisations.length > 0 &&
+                          availableOrganisations
                           .filter(organisation => {
                             if (!organisationDropdownSearch.trim()) {
                               return !shareFormData.organisations.includes(organisation);
@@ -5305,8 +5323,11 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
                             return !shareFormData.organisations.includes(organisation) &&
                                    organisation.toLowerCase().includes(organisationDropdownSearch.toLowerCase());
                           }).length === 0 && (
-                            <div className="no-results">
-                              {organisationDropdownSearch ? 'No organizations found matching your search' : 'All organizations have been selected'}
+                            <div className="org-no-results">
+                              <i className="fas fa-search"></i>
+                              <span>
+                                {organisationDropdownSearch ? 'No organizations found matching your search' : 'All organizations have been selected'}
+                              </span>
                             </div>
                           )
                         }
@@ -5338,57 +5359,75 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
                   </div>
                 </div>
                 
-                {/* Compact Settings Row */}
-                <div className="compact-form-row">
-                  <div className="form-group flex-grow">
-                    <label className="form-label compact">
-                      <i className="fas fa-user-secret form-icon"></i>
+                {/* Sharing Settings */}
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label className="form-label">
+                      <i className="fas fa-user-secret"></i>
                       Anonymization Level
                     </label>
-                    <select 
-                      value={shareFormData.anonymizationLevel} 
+                    <select
+                      value={shareFormData.anonymizationLevel}
                       onChange={(e) => setShareFormData({...shareFormData, anonymizationLevel: e.target.value})}
-                      className="form-control compact-select"
+                      className="form-control"
                     >
                       <option value="none">None - Full Details</option>
                       <option value="low">Low - Minor Obfuscation</option>
                       <option value="medium">Medium - Partial Anonymization</option>
                       <option value="high">High - Strong Anonymization</option>
                     </select>
-                    <div className="help-text">
+                    <small className="form-text">
                       {shareFormData.anonymizationLevel === 'none' && 'Complete IoC values and metadata shared'}
                       {shareFormData.anonymizationLevel === 'low' && 'Remove source identifiers and timestamps'}
                       {shareFormData.anonymizationLevel === 'medium' && 'Generalize IPs/domains (evil.com → *.com)'}
                       {shareFormData.anonymizationLevel === 'high' && 'Only patterns and techniques, no indicators'}
-                    </div>
+                    </small>
                   </div>
-                  
+
                   <div className="form-group">
-                    <label className="form-label compact">
-                      <i className="fas fa-share-nodes form-icon"></i>
+                    <label className="form-label">
+                      <i className="fas fa-share-nodes"></i>
                       Share Method
                     </label>
-                    <select 
-                      value={shareFormData.shareMethod} 
+                    <select
+                      value={shareFormData.shareMethod}
                       onChange={(e) => setShareFormData({...shareFormData, shareMethod: e.target.value})}
-                      className="form-control compact-select"
+                      className="form-control"
                     >
                       <option value="taxii">TAXII 2.1</option>
                       <option value="email">Email</option>
                       <option value="api">API Push</option>
                     </select>
+                    <small className="form-text">
+                      How the threat intelligence will be delivered to selected organizations
+                    </small>
                   </div>
                 </div>
                 
                 <div className="modal-actions">
-                  <button type="button" className="btn btn-outline" onClick={closeShareModal} disabled={sharing}>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={closeShareModal}
+                    disabled={sharing}
+                  >
                     Cancel
                   </button>
-                  <button type="submit" className="btn btn-primary" disabled={sharing || shareFormData.organisations.length === 0}>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={sharing || shareFormData.organisations.length === 0}
+                  >
                     {sharing ? (
-                      <><i className="fas fa-spinner fa-spin"></i> Sharing...</>
+                      <>
+                        <i className="fas fa-spinner fa-spin"></i>
+                        Sharing...
+                      </>
                     ) : (
-                      <><i className="fas fa-share-alt"></i> Share with {shareFormData.organisations.length} Organisation(s)</>
+                      <>
+                        <i className="fas fa-share-alt"></i>
+                        Share with {shareFormData.organisations.length} Organization{shareFormData.organisations.length !== 1 ? 's' : ''}
+                      </>
                     )}
                   </button>
                 </div>
@@ -5466,10 +5505,10 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
       };
 
       // Use the new chunked export API
-      const response = await fetch(`${apiUrl}/api/indicators/export/`, {
+      const response = await fetch(`${API_BASE_URL}/api/indicators/export/`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(exportData)
@@ -6270,24 +6309,52 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
     setSharing(true);
     
     try {
+      // Convert organization names to IDs
+      const organizationIds = shareFormData.organisations.map(orgName => {
+        const orgId = organizationMap[orgName];
+        if (!orgId) {
+          console.warn(`Organization ID not found for: ${orgName}`);
+          return null;
+        }
+        return orgId;
+      }).filter(id => id !== null);
+
+      if (organizationIds.length === 0) {
+        alert('Unable to find organization IDs. Please try again.');
+        setSharing(false);
+        return;
+      }
+
+      console.log('Sharing indicator with organization IDs:', organizationIds);
+
       const shareData = {
-        organizations: shareFormData.organisations,
+        organizations: organizationIds,
         anonymization_level: shareFormData.anonymizationLevel,
         share_method: shareFormData.shareMethod
       };
-      
+
       const response = await api.post(`/api/indicators/${sharingIndicator.id}/share/`, shareData);
       
       if (response && response.success) {
         closeShareModal();
-        alert(`Indicator shared with ${response.shared_with} organisation(s) successfully!`);
+        const sharedCount = response.shared_indicators ? response.shared_indicators.length : 'some';
+        const failedCount = response.failed_indicators ? response.failed_indicators.length : 0;
+
+        let message = `Indicator shared with ${sharedCount} organisation(s) successfully!`;
+        if (failedCount > 0) {
+          message += ` (${failedCount} failed)`;
+        }
+
+        alert(message);
       } else {
-        throw new Error('Failed to share indicator');
+        const errorMsg = response?.message || response?.error || 'Failed to share indicator';
+        throw new Error(errorMsg);
       }
-      
+
     } catch (error) {
       console.error('Error sharing indicator:', error);
-      alert('Failed to share indicator. Please try again.');
+      const errorMessage = error.message || 'Failed to share indicator. Please try again.';
+      alert(`Sharing failed: ${errorMessage}`);
     } finally {
       setSharing(false);
     }
@@ -14402,6 +14469,209 @@ function CSSStyles() {
             max-height: 90vh;
             overflow-y: auto;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Share IoC Modal Styles */
+        .share-ioc-details {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .share-ioc-details h3 {
+            margin: 0 0 12px 0;
+            color: #495057;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .details-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .detail-item strong {
+            min-width: 60px;
+            color: #6c757d;
+            font-size: 14px;
+        }
+
+        .ioc-type-badge {
+            background: #007bff;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .ioc-value {
+            background: #212529;
+            color: #28a745;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 13px;
+        }
+
+        .org-selector {
+            position: relative;
+        }
+
+        .org-search-container {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+
+        .org-search-input {
+            flex: 1;
+            padding-right: 35px;
+        }
+
+        .search-icon-in-input {
+            position: absolute;
+            right: 120px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            font-size: 14px;
+        }
+
+        .show-all-orgs-btn {
+            white-space: nowrap;
+        }
+
+        .org-dropdown-list {
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            background: white;
+            max-height: 200px;
+            overflow-y: auto;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .org-dropdown-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid #f8f9fa;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .org-dropdown-item:hover {
+            background: #f8f9fa;
+        }
+
+        .org-dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .org-item-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .org-icon {
+            color: #007bff;
+            font-size: 16px;
+        }
+
+        .org-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .org-name {
+            font-weight: 500;
+            color: #212529;
+            font-size: 14px;
+        }
+
+        .org-type {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .add-org-icon {
+            color: #28a745;
+            font-size: 14px;
+        }
+
+        .org-no-results {
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+        }
+
+        .org-no-results i {
+            margin-right: 8px;
+        }
+
+        .selected-orgs {
+            margin-top: 16px;
+        }
+
+        .selected-label {
+            font-weight: 500;
+            color: #495057;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .org-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .org-tag {
+            background: #e9ecef;
+            padding: 6px 12px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .remove-tag {
+            background: none;
+            border: none;
+            color: #6c757d;
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1;
+            padding: 0;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .remove-tag:hover {
+            color: #dc3545;
         }
 
         /* Matrix Cell Modal specific styles */

@@ -6,7 +6,18 @@ services:
       POSTGRES_DB: crisp
       POSTGRES_USER: crisp_user
       POSTGRES_PASSWORD: crisp_password
-      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_HOST_AUTH_METHOD: md5
+    command: [
+      "postgres",
+      "-c", "fsync=off",
+      "-c", "synchronous_commit=off", 
+      "-c", "full_page_writes=off",
+      "-c", "max_wal_size=1GB",
+      "-c", "checkpoint_completion_target=0.9",
+      "-c", "wal_buffers=16MB",
+      "-c", "shared_buffers=256MB",
+      "-c", "max_connections=100"
+    ]
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -43,27 +54,14 @@ services:
       target: backend
     ports:
       - "8000:8000"
+    env_file:
+      - .env
     environment:
       - DEBUG=True
-      - SECRET_KEY=(2-yp3pr5_y^w1w9@3)k#&gib*+jm*@)8$b6oitfi!(094l+e4
-      - TRUST_MANAGEMENT_SECRET_KEY=your-trust-management-secret-key
-      - OTX_API_KEY=e3c65c53199dbab88329fa84e9336926e94fcb3777beb5a8f7647229b61efa26
-      - VIRUSTOTAL_API_KEY=ea04902bb47510876f6f3cb60ca971a6085cd0f92c8f8212ed4c19ff81a7d916
-      - DB_NAME=crisp
-      - DB_USER=crisp_user
-      - DB_PASSWORD=crisp_password
       - DB_HOST=db
-      - DB_PORT=5432
       - REDIS_URL=redis://redis:6379/0
       - ALLOWED_HOSTS=localhost,127.0.0.1,backend,frontend
       - POPULATE_TEST_DATA=false
-      - EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-      - EMAIL_HOST=smtp.gmail.com
-      - EMAIL_PORT=587
-      - EMAIL_USE_TLS=true
-      - EMAIL_HOST_USER=cos332practical6@gmail.com
-      - EMAIL_HOST_PASSWORD=glrk anea ypnl hruw
-      - DEFAULT_FROM_EMAIL=cos332practical6@gmail.com
     volumes:
       - ./logs:/app/logs
       - ./media:/app/media
@@ -117,27 +115,16 @@ services:
       target: backend
     ports:
       - "8001:8000"
+    env_file:
+      - .env
     environment:
       - DEBUG=True
-      - SECRET_KEY=(2-yp3pr5_y^w1w9@3)k#&gib*+jm*@)8-b6oitfi!(094l+e4-test
-      - TRUST_MANAGEMENT_SECRET_KEY=your-trust-management-secret-key
-      - OTX_API_KEY=e3c65c53199dbab88329fa84e9336926e94fcb3777beb5a8f7647229b61efa26
-      - VIRUSTOTAL_API_KEY=ea04902bb47510876f6f3cb60ca971a6085cd0f92c8f8212ed4c19ff81a7d916
+      - SECRET_KEY=2-yp3pr5_y-w1w9-3k-gib-jm-8-b6oitfi-094l-e4-test
       - DB_NAME=crisp_test
-      - DB_USER=crisp_user
-      - DB_PASSWORD=crisp_password
       - DB_HOST=db-test
-      - DB_PORT=5432
       - REDIS_URL=redis://redis-test:6379/0
       - ALLOWED_HOSTS=localhost,127.0.0.1,backend-test,frontend-test
       - POPULATE_TEST_DATA=false
-      - EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-      - EMAIL_HOST=smtp.gmail.com
-      - EMAIL_PORT=587
-      - EMAIL_USE_TLS=true
-      - EMAIL_HOST_USER=cos332practical6@gmail.com
-      - EMAIL_HOST_PASSWORD=glrk anea ypnl hruw
-      - DEFAULT_FROM_EMAIL=cos332practical6@gmail.com
     volumes:
       - ./logs:/app/logs
       - ./media:/app/media

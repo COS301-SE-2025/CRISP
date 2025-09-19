@@ -27,31 +27,36 @@ class OrganizationService:
     def __init__(self):
         self.trust_service = TrustService()
     
-    def create_organization(self, creating_user: CustomUser = None, org_data: Dict = None, 
-                          primary_user_data: Dict = None, name: str = None, 
-                          organization_type: str = None, **kwargs) -> Tuple[Organization, CustomUser]:
+    def create_organization(self, creating_user: CustomUser = None, org_data: Dict = None,
+                          primary_user_data: Dict = None, name: str = None,
+                          organization_type: str = None, domain: str = None,
+                          description: str = None, contact_email: str = None,
+                          website: str = None, **kwargs) -> Tuple[Organization, CustomUser]:
         """Create a new organization with primary user"""
         
         # Validate required fields
-        contact_email = kwargs.get('contact_email') or (org_data and org_data.get('contact_email'))
+        contact_email = contact_email or kwargs.get('contact_email') or (org_data and org_data.get('contact_email'))
         if not name or not organization_type or not contact_email:
             raise ValidationError("Name, organization type, and contact email are required")
-        
+
         logger.info(f"OrganizationService.create_organization called with primary_user_data: {primary_user_data}")
-        
+
         if not primary_user_data:
             raise ValidationError("Primary user data is required")
-        
+
         # Validate primary user data
         required_user_fields = ['username', 'email', 'password', 'first_name', 'last_name']
         for field in required_user_fields:
             if field not in primary_user_data or not primary_user_data[field]:
                 raise ValidationError(f"Primary user '{field}' is required")
-        
+
         # Check if organization name already exists
         if Organization.objects.filter(name=name).exists():
             raise ValidationError("Organization name already exists")
-        
+
+        # Extract domain from parameters or kwargs or org_data
+        domain = domain or kwargs.get('domain') or (org_data and org_data.get('domain'))
+
         # Generate domain if not provided
         if not domain:
             base_domain = re.sub(r'[^a-zA-Z0-9]', '', name.lower())
@@ -78,14 +83,14 @@ class OrganizationService:
             with transaction.atomic():
                 # Create organization
                 organization = Organization.objects.create(
-                    name=org_data['name'],
-                    description=org_data.get('description', ''),
+                    name=name,
+                    description=description or (org_data and org_data.get('description', '')) or '',
                     domain=domain,
-                    contact_email=org_data.get('contact_email', primary_user_data.get('email', '')),
-                    website=org_data.get('website', ''),
-                    organization_type=org_data.get('organization_type', 'educational'),
-                    is_publisher=org_data.get('is_publisher', True),
-                    is_verified=org_data.get('is_verified', True),
+                    contact_email=contact_email,
+                    website=website or (org_data and org_data.get('website', '')) or '',
+                    organization_type=organization_type,
+                    is_publisher=kwargs.get('is_publisher', True),
+                    is_verified=kwargs.get('is_verified', True),
                     is_active=True,
                     created_by=creating_user  # Pass the user object, not username string
                 )
@@ -105,9 +110,9 @@ class OrganizationService:
                 )
                 
                 # Log organization creation
-                if created_by:
+                if creating_user:
                     AuthenticationLog.log_authentication_event(
-                        user=created_by,
+                        user=creating_user,
                         action='user_created',
                         success=True,
                         additional_data={
