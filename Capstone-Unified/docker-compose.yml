@@ -6,7 +6,7 @@ services:
       POSTGRES_DB: crisp
       POSTGRES_USER: crisp_user
       POSTGRES_PASSWORD: crisp_password
-      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_HOST_AUTH_METHOD: md5
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -17,7 +17,7 @@ services:
       interval: 10s
       timeout: 10s
       retries: 10
-      start_period: 60s
+      start_period: 120s
     networks:
       - crisp-network
 

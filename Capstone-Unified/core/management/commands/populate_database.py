@@ -698,14 +698,18 @@ class Command(BaseCommand):
                     
                     # Create associated Feed if collection exists
                     if collection:
+                        feed_name = f"Feed for {threat_feed.name}"
                         Feed.objects.create(
-                            stix_id=f"feed--{uuid.uuid4()}",
-                            name=f"Feed for {threat_feed.name}",
+                            title=feed_name,
+                            name=feed_name,
+                            alias=f"feed--{uuid.uuid4()}",
                             description=f"TAXII feed for {threat_feed.name}",
+                            status='active',
                             created_by=user,
                             collection=collection,
-                            source_organization=org,
-                            is_active=True
+                            organization=org,
+                            threat_feed=threat_feed,
+                            is_public=threat_feed.is_public
                         )
 
                     created_count += 1

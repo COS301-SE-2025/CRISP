@@ -263,7 +263,7 @@ class VirusTotalService:
 
         return list(set(ttps))  # Remove duplicates
 
-    def sync_virustotal_feed(self, threat_feed: ThreatFeed, limit: int = 100) -> Dict[str, Any]:
+    def sync_virustotal_feed(self, threat_feed: ThreatFeed, limit: int = 100, cancel_check=None) -> Dict[str, Any]:
         """Sync TTP data from VirusTotal feed"""
         results = {
             'feed_name': threat_feed.name,
@@ -275,6 +275,11 @@ class VirusTotalService:
         }
 
         try:
+            # Check for cancellation before starting
+            if cancel_check and cancel_check():
+                results['errors'].append("VirusTotal sync cancelled before starting")
+                return results
+                
             # Test API connection first
             api_test = self.test_api_connection()
             if not api_test['success']:
@@ -290,8 +295,13 @@ class VirusTotalService:
 
                 results['indicators_processed'] = len(indicators)
 
-                for indicator in indicators:
+                for i, indicator in enumerate(indicators):
                     try:
+                        # Check for cancellation periodically during processing
+                        if cancel_check and i % 5 == 0 and cancel_check():
+                            results['errors'].append(f"VirusTotal sync cancelled after processing {i} indicators")
+                            break
+                            
                         if indicator.type in ['md5', 'sha1', 'sha256']:
                             # Analyze file hash
                             analysis = self.get_file_behavior(indicator.value)

@@ -84,7 +84,7 @@ class StixTaxiiService:
             logger.error(f"Error discovering TAXII collections: {str(e)}")
             raise
     
-    def consume_feed(self, threat_feed):
+    def consume_feed(self, threat_feed, limit=None, force_days=None, batch_size=None, cancel_check_callback=None):
         """
         Consume a STIX TAXII feed and process the objects
         """
@@ -97,13 +97,20 @@ class StixTaxiiService:
                 repo = ThreatFeedRepository()
                 feed_obj = repo.get_by_id(threat_feed)
             
+            # Check for cancellation before starting
+            if cancel_check_callback and cancel_check_callback():
+                logger.info(f"Feed consumption cancelled before starting for {feed_obj.name}")
+                return 0, 0
+            
             # Get STIX objects from the TAXII server
             objects = self.get_objects(
                 feed_obj.taxii_server_url,
                 feed_obj.taxii_api_root,
                 feed_obj.taxii_collection_id,
                 username=feed_obj.taxii_username,
-                password=feed_obj.taxii_password
+                password=feed_obj.taxii_password,
+                limit=limit,
+                force_days=force_days
             )
             
             # If objects is None (error condition), return 0 counts
@@ -113,12 +120,20 @@ class StixTaxiiService:
             # Process objects and return counts
             indicator_count = 0
             ttp_count = 0
+            processed_count = 0
             
             for obj in objects:
+                # Check for cancellation periodically during processing
+                if cancel_check_callback and processed_count % 10 == 0 and cancel_check_callback():
+                    logger.info(f"Feed consumption cancelled during processing for {feed_obj.name} after {processed_count} objects")
+                    break
+                    
                 if obj.get('type') == 'indicator':
                     indicator_count += 1
                 elif obj.get('type') == 'attack-pattern':
                     ttp_count += 1
+                
+                processed_count += 1
             
             return indicator_count, ttp_count
             
@@ -127,7 +142,7 @@ class StixTaxiiService:
             # Return zero counts instead of raising during testing
             return 0, 0
 
-    def get_objects(self, server_url, api_root, collection_id, username=None, password=None):
+    def get_objects(self, server_url, api_root, collection_id, username=None, password=None, limit=None, force_days=None):
         """
         Get STIX objects from a TAXII 2.x server
         """
@@ -138,13 +153,17 @@ class StixTaxiiService:
             url = f"{server_url}/{api_root}/collections/{collection_id}/objects/"
             
             # Add date filter to only get objects from last N days
-            filter_days = settings.TAXII_SETTINGS.get('FILTER_LAST_DAYS', 1)
+            filter_days = force_days if force_days else settings.TAXII_SETTINGS.get('FILTER_LAST_DAYS', 1)
             from datetime import timezone as dt_timezone
             cutoff_date = (datetime.now(dt_timezone.utc) - timedelta(days=filter_days)).isoformat()
             
             params = {
                 'added_after': cutoff_date
             }
+            
+            # Add limit if specified
+            if limit:
+                params['limit'] = limit
             
             # Set up authentication
             auth = None

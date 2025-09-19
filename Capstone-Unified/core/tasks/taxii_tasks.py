@@ -75,15 +75,25 @@ def schedule_taxii_feed_consumption():
     
     logger.info(f"Scheduled {feeds_to_update.count()} TAXII feeds for consumption")
 
-@app.task(name='consume_feed_task', soft_time_limit=300, time_limit=600)  # 5 min soft, 10 min hard limit
-def consume_feed_task(feed_id, limit=None, force_days=None, batch_size=None):
+@app.task(name='consume_feed_task', soft_time_limit=300, time_limit=600, bind=True)  # 5 min soft, 10 min hard limit
+def consume_feed_task(self, feed_id, limit=None, force_days=None, batch_size=None):
     """
     Consume a specific TAXII feed with parameters.
     """
+    from django.core.cache import cache
+    
     try:
         # Get the feed object
         feed = ThreatFeed.objects.get(id=feed_id)
         logger.info(f"Starting async consumption of feed: {feed.name}")
+
+        # Check for cancellation signal before starting
+        cancel_key = f"cancel_consumption_{feed.id}"
+        cancellation_signal = cache.get(cancel_key)
+        if cancellation_signal:
+            logger.info(f"Task cancelled before start for feed {feed.name}")
+            cache.delete(cancel_key)  # Clean up
+            return {'status': 'cancelled', 'message': 'Task was cancelled before processing started'}
 
         # Use OTX service for AlienVault feeds
         if 'otx' in feed.name.lower() or 'alienvault' in feed.name.lower():
@@ -93,10 +103,54 @@ def consume_feed_task(feed_id, limit=None, force_days=None, batch_size=None):
             # Use generic STIX service for other feeds
             service = StixTaxiiService()
 
-        # Consume the feed with parameters
-        stats = service.consume_feed(feed, limit=limit, force_days=force_days, batch_size=batch_size)
+        # Consume the feed with parameters, passing task reference for cancellation checks
+        stats = service.consume_feed(
+            feed, 
+            limit=limit, 
+            force_days=force_days, 
+            batch_size=batch_size,
+            cancel_check_callback=lambda: cache.get(cancel_key) is not None
+        )
+        
+        # Final check for cancellation after completion
+        if cache.get(cancel_key):
+            cancellation_signal = cache.get(cancel_key)
+            cache.delete(cancel_key)  # Clean up
+            
+            if cancellation_signal.get('mode') == 'cancel_job':
+                # Remove recently added indicators
+                from datetime import timedelta
+                from django.utils import timezone
+                one_hour_ago = timezone.now() - timedelta(hours=1)
+                
+                recent_indicators = feed.indicators.filter(created_at__gte=one_hour_ago)
+                deleted_count = recent_indicators.count()
+                
+                if deleted_count > 0:
+                    from core.models.models import TTPData
+                    TTPData.objects.filter(
+                        threat_feed=feed,
+                        created_at__gte=one_hour_ago
+                    ).delete()
+                    recent_indicators.delete()
+                
+                return {
+                    'status': 'cancelled_with_cleanup',
+                    'message': f'Task cancelled and {deleted_count} recent indicators removed',
+                    'indicators_removed': deleted_count
+                }
+            else:
+                return {
+                    'status': 'cancelled_keep_data',
+                    'message': 'Task cancelled but data kept',
+                    'stats': stats
+                }
+        
         logger.info(f"Feed {feed.name} consumed successfully: {stats}")
         return stats
     except Exception as e:
         logger.error(f"Error consuming feed {feed_id}: {str(e)}")
+        # Clean up cancellation signal if task fails
+        cancel_key = f"cancel_consumption_{feed_id}"
+        cache.delete(cancel_key)
         raise

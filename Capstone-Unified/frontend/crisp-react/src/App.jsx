@@ -2627,9 +2627,21 @@ function ThreatFeeds({
   
   const handleCancelFeedConsumption = async (feedId, mode = 'stop_now') => {
     try {
-      const result = await api.post(`/api/threat-feeds/${feedId}/cancel_consumption/`, {
+      // Get the task ID from current progress if available
+      const currentProgress = feedProgress[feedId];
+      const taskId = currentProgress?.taskId;
+      
+      const requestData = {
         mode: mode // 'stop_now' or 'cancel_job'
-      });
+      };
+      
+      // Include task_id if available
+      if (taskId) {
+        requestData.task_id = taskId;
+        console.log(`Cancelling feed ${feedId} with task ID: ${taskId}`);
+      }
+
+      const result = await api.post(`/api/threat-feeds/${feedId}/cancel_consumption/`, requestData);
 
       if (result.success) {
         // Update progress to show cancellation
@@ -2647,7 +2659,17 @@ function ThreatFeeds({
           }
         }));
 
-        // Remove from consuming feeds
+        // Remove from consuming feeds and active tasks
+        setConsumingFeeds(prev => prev.filter(id => id !== feedId));
+        
+        // Remove from active tasks if task ID was available
+        if (taskId) {
+          setActiveTasks(prev => {
+            const newTasks = new Map(prev);
+            newTasks.delete(taskId);
+            return newTasks;
+          });
+        }
         setConsumingFeeds(prev => prev.filter(id => id !== feedId));
 
         // Clear any active intervals/timeouts for this feed

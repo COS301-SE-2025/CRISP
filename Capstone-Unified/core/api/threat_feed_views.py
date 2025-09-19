@@ -141,20 +141,52 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
         try:
             feed = self.get_object()
             mode = request.data.get('mode', 'stop_now')  # 'stop_now' or 'cancel_job'
+            task_id = request.data.get('task_id')  # Optional task ID to cancel
+
+            # Set cancellation flag in cache
+            from django.core.cache import cache
+            cancel_key = f"cancel_consumption_{feed.id}"
+            cache.set(cancel_key, {'mode': mode, 'timestamp': timezone.now().isoformat()}, timeout=3600)
+
+            # Try to revoke Celery task if task_id provided
+            if task_id:
+                try:
+                    from settings.celery import app as celery_app
+                    celery_app.control.revoke(task_id, terminate=True)
+                    logger.info(f"Revoked Celery task {task_id} for feed {feed.name}")
+                except Exception as e:
+                    logger.warning(f"Could not revoke Celery task {task_id}: {str(e)}")
 
             if mode == 'cancel_job':
-                # Remove all indicators added from this consumption session
-                # Note: This would require tracking consumption sessions
-                # For now, we'll just mark as cancelled
-                deleted_count = 0
-                logger.info(f"Cancel job mode for feed {feed.name} - would delete {deleted_count} indicators")
+                # Remove indicators added in the last consumption session
+                # Use a time-based approach - indicators added in the last hour
+                from datetime import timedelta
+                one_hour_ago = timezone.now() - timedelta(hours=1)
+                
+                # Find recent indicators that might belong to current session
+                recent_indicators = feed.indicators.filter(created_at__gte=one_hour_ago)
+                deleted_count = recent_indicators.count()
+                
+                if deleted_count > 0:
+                    # Delete recent indicators and their related TTPs
+                    from core.models.models import TTPData
+                    # Delete TTPs that were created from these indicators
+                    TTPData.objects.filter(
+                        threat_feed=feed,
+                        created_at__gte=one_hour_ago
+                    ).delete()
+                    
+                    # Delete the indicators
+                    recent_indicators.delete()
+                    
+                logger.info(f"Cancel job mode for feed {feed.name} - deleted {deleted_count} recent indicators")
 
                 return Response({
                     'success': True,
-                    'message': 'Consumption cancelled and data removed',
-                    'indicators_kept': 0,
+                    'message': 'Consumption cancelled and recent data removed',
+                    'indicators_kept': feed.indicators.count(),
                     'indicators_removed': deleted_count,
-                    'total_expected': 0
+                    'total_expected': deleted_count
                 })
             else:
                 # Stop now mode - keep existing indicators
@@ -286,7 +318,46 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
                         """Background VirusTotal sync task"""
                         try:
                             logger.info(f"Starting VirusTotal background sync for {feed.name}")
-                            result = vt_service.sync_virustotal_feed(feed, limit=min(limit, 10))  # Limit to 10 indicators
+                            
+                            # Check for cancellation before starting
+                            from django.core.cache import cache
+                            cancel_key = f"cancel_consumption_{feed.id}"
+                            
+                            if cache.get(cancel_key):
+                                logger.info(f"VirusTotal sync cancelled before start for {feed.name}")
+                                return
+                            
+                            result = vt_service.sync_virustotal_feed(
+                                feed, 
+                                limit=min(limit, 10),  # Limit to 10 indicators
+                                cancel_check=lambda: cache.get(cancel_key) is not None
+                            )
+
+                            # Check cancellation after completion
+                            cancellation_signal = cache.get(cancel_key)
+                            if cancellation_signal:
+                                cache.delete(cancel_key)  # Clean up
+                                
+                                if cancellation_signal.get('mode') == 'cancel_job':
+                                    # Remove recently added indicators/TTPs
+                                    from datetime import timedelta
+                                    one_hour_ago = timezone.now() - timedelta(hours=1)
+                                    
+                                    recent_indicators = feed.indicators.filter(created_at__gte=one_hour_ago)
+                                    deleted_count = recent_indicators.count()
+                                    
+                                    if deleted_count > 0:
+                                        from core.models.models import TTPData
+                                        TTPData.objects.filter(
+                                            threat_feed=feed,
+                                            created_at__gte=one_hour_ago
+                                        ).delete()
+                                        recent_indicators.delete()
+                                    
+                                    logger.info(f"VirusTotal sync cancelled with cleanup: {deleted_count} items removed")
+                                else:
+                                    logger.info(f"VirusTotal sync cancelled but data kept")
+                                return
 
                             if result['success'] and result.get('ttps_created', 0) > 0:
                                 activity_title = f"VirusTotal sync: {result['ttps_created']} TTPs extracted from {result['indicators_processed']} indicators"
