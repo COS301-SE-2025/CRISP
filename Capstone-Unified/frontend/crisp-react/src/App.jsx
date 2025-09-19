@@ -164,11 +164,24 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
   const [activePreset, setActivePreset] = useState('custom');
   const [useAsync, setUseAsync] = useState(false);
 
-  // Function to check task status
+  // Function to check task status (bypasses cache for real-time updates)
   const checkTaskStatus = async (taskId) => {
     try {
-      const response = await api.get(`/api/threat-feeds/task-status/${taskId}/`);
-      return response;
+      // Bypass cache for task status checks by making direct fetch call
+      const token = localStorage.getItem('access_token') || localStorage.getItem('crisp_auth_token');
+      const response = await fetch(`http://localhost:8000/api/threat-feeds/task-status/${taskId}/`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      return await response.json();
     } catch (error) {
       console.error('Error checking task status:', error);
       return null;

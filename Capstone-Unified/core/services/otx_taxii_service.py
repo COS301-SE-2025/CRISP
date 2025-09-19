@@ -175,15 +175,15 @@ class OTXTaxiiService:
                 logger.info("client.poll returned an iterator")
                 
                 # Convert the iterator to a list with safety limits
-                # Default to a reasonable limit to prevent infinite processing
-                effective_limit = limit if limit is not None else 10  # Default to 10 blocks max
+                # Increased default limit for faster bulk processing
+                effective_limit = limit if limit is not None else 50  # Increased to 50 blocks for speed
                 logger.info(f"Converting iterator to a list (max {effective_limit} blocks)")
                 safe_blocks = []
                 count = 0
 
                 import time
                 start_time = time.time()
-                timeout_seconds = 30  # 30 second timeout for block retrieval
+                timeout_seconds = 120  # Increased to 120 seconds for faster bulk processing
 
                 for block in content_blocks:
                     # Check timeout
@@ -206,8 +206,8 @@ class OTXTaxiiService:
                         if hasattr(block, 'binding'):
                             logger.info(f"Binding: {block.binding}")
 
-                    # Log progress every 10 blocks
-                    if count % 10 == 0:
+                    # Log progress every 25 blocks to reduce logging overhead
+                    if count % 25 == 0:
                         elapsed = time.time() - start_time
                         logger.info(f"Retrieved {count} blocks so far... (elapsed: {elapsed:.1f}s)")
 
@@ -252,10 +252,10 @@ class OTXTaxiiService:
                 batch_size = getattr(settings, 'OTX_SETTINGS', {}).get('BATCH_SIZE', 5)    # Reduced to 5
                 batch_size = settings.OTX_SETTINGS.get('BATCH_SIZE', 10)
 
-            # Async optimization: reduce batch size for faster processing
-            if batch_size > 10:
-                logger.info(f"Async optimization: reducing batch size from {batch_size} to 5 for faster processing")
-                batch_size = 5
+            # Speed optimization: increase batch size and reduce timeouts for faster processing
+            if batch_size < 10:
+                logger.info(f"Speed optimization: increasing batch size from {batch_size} to 10 for faster processing")
+                batch_size = 10
             
             logger.info(f"Starting consumption of feed: {threat_feed.name} (max_age_days: {force_days}, batch_size: {batch_size})")
             
