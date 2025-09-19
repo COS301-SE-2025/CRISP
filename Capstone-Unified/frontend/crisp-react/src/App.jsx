@@ -262,9 +262,6 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
       case 'allavailable':
         setConsumptionParams({ days_back: 365, block_limit: 25 }); // Faster: fewer blocks
         break;
-      case 'quick': // New fast preset
-        setConsumptionParams({ days_back: 1, block_limit: 3 });
-        break;
       default: // custom
         break;
     }
@@ -2628,6 +2625,57 @@ function ThreatFeeds({
     setLoading(false);
   };
   
+  const handleCancelFeedConsumption = async (feedId, mode = 'stop_now') => {
+    try {
+      const result = await api.post(`/api/threat-feeds/${feedId}/cancel_consumption/`, {
+        mode: mode // 'stop_now' or 'cancel_job'
+      });
+
+      if (result.success) {
+        // Update progress to show cancellation
+        setFeedProgress(prev => ({
+          ...prev,
+          [feedId]: {
+            stage: mode === 'stop_now' ? 'Stopped' : 'Cancelled',
+            message: mode === 'stop_now' ?
+              `Stopped consumption. ${result.indicators_kept || 0} indicators kept.` :
+              'Consumption cancelled and data removed.',
+            percentage: mode === 'stop_now' ?
+              (result.indicators_kept || 0) : 0,
+            current: result.indicators_kept || 0,
+            total: result.total_expected || 0
+          }
+        }));
+
+        // Remove from consuming feeds
+        setConsumingFeeds(prev => prev.filter(id => id !== feedId));
+
+        // Clear any active intervals/timeouts for this feed
+        if (activeIntervals.current) {
+          activeIntervals.current.forEach(clearInterval);
+          activeIntervals.current = [];
+        }
+        if (activeTimeouts.current) {
+          activeTimeouts.current.forEach(clearTimeout);
+          activeTimeouts.current = [];
+        }
+
+        showSuccess(
+          'Feed Consumption Cancelled',
+          mode === 'stop_now' ?
+            `Feed consumption stopped. ${result.indicators_kept || 0} indicators were kept.` :
+            'Feed consumption cancelled and all data was removed.'
+        );
+
+        // Refresh feeds to update counts
+        await fetchThreatFeeds();
+      }
+    } catch (error) {
+      console.error('Error cancelling feed consumption:', error);
+      showError('Cancel Failed', 'Failed to cancel feed consumption. Please try again.');
+    }
+  };
+
   const handleConsumeFeed = async (feedId) => {
     // Batch state updates to prevent React reconciliation issues
     setConsumingFeeds(prev => {
@@ -3246,13 +3294,6 @@ function ThreatFeeds({
             {/* Quick Preset Buttons */}
             <div className="preset-buttons">
               <button
-                className={`preset-btn ${activePreset === 'quick' ? 'active' : ''}`}
-                onClick={() => handlePresetSelect('quick')}
-                style={{ backgroundColor: activePreset === 'quick' ? '#10b981' : '', color: activePreset === 'quick' ? 'white' : '' }}
-              >
-                ⚡ Quick Test
-              </button>
-              <button
                 className={`preset-btn ${activePreset === 'last24h' ? 'active' : ''}`}
                 onClick={() => handlePresetSelect('last24h')}
               >
@@ -3320,35 +3361,62 @@ function ThreatFeeds({
                           {feed.is_public ? 'Public' : 'Private'}
                         </span>
                         <span className="badge badge-connected">STIX/TAXII</span>
-                        <button 
-                          className="btn btn-sm btn-primary"
-                          onClick={() => handleConsumeFeed(feed.id)}
-                          disabled={consumingFeeds.includes(feed.id)}
-                          style={{minWidth: '140px'}}
-                        >
-                          {consumingFeeds.includes(feed.id) ? (
-                            <>
-                              <i className="fas fa-spinner fa-spin"></i>
-                              <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-start', fontSize: '11px'}}>
+                        {consumingFeeds.includes(feed.id) ? (
+                          <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                            <div className="progress-container" style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: '140px'}}>
+                              <div style={{display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px'}}>
+                                <i className="fas fa-spinner fa-spin"></i>
                                 <span>{feedProgress[feed.id]?.stage || 'Processing'}</span>
-                                {feedProgress[feed.id]?.current && feedProgress[feed.id]?.total && (
-                                  <span style={{opacity: 0.8}}>
-                                    {feedProgress[feed.id].current}/{feedProgress[feed.id].total}
-                                  </span>
-                                )}
-                                {feedProgress[feed.id]?.percentage > 0 && (
-                                  <span style={{opacity: 0.8}}>
-                                    {feedProgress[feed.id].percentage}%
-                                  </span>
-                                )}
                               </div>
-                            </>
-                          ) : (
-                            <>
-                              <i className="fas fa-download"></i> Consume
-                            </>
-                          )}
-                        </button>
+                              {feedProgress[feed.id]?.percentage > 0 && (
+                                <div style={{width: '100%', backgroundColor: '#e0e0e0', borderRadius: '3px', height: '4px', marginTop: '4px'}}>
+                                  <div
+                                    style={{
+                                      width: `${feedProgress[feed.id].percentage}%`,
+                                      backgroundColor: '#007bff',
+                                      height: '100%',
+                                      borderRadius: '3px',
+                                      transition: 'width 0.3s ease'
+                                    }}
+                                  ></div>
+                                </div>
+                              )}
+                              <div style={{fontSize: '10px', opacity: 0.8}}>
+                                {feedProgress[feed.id]?.current && feedProgress[feed.id]?.total ? (
+                                  <span>{feedProgress[feed.id].current}/{feedProgress[feed.id].total}</span>
+                                ) : feedProgress[feed.id]?.percentage > 0 ? (
+                                  <span>{feedProgress[feed.id].percentage}%</span>
+                                ) : null}
+                              </div>
+                            </div>
+                            <div className="cancel-options" style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
+                              <button
+                                className="btn btn-xs btn-warning"
+                                onClick={() => handleCancelFeedConsumption(feed.id, 'stop_now')}
+                                title="Stop consumption but keep indicators already processed"
+                                style={{fontSize: '10px', padding: '2px 6px'}}
+                              >
+                                <i className="fas fa-pause"></i> Stop Now
+                              </button>
+                              <button
+                                className="btn btn-xs btn-danger"
+                                onClick={() => handleCancelFeedConsumption(feed.id, 'cancel_job')}
+                                title="Cancel consumption and remove all indicators from this session"
+                                style={{fontSize: '10px', padding: '2px 6px'}}
+                              >
+                                <i className="fas fa-times"></i> Cancel Job
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            className="btn btn-sm btn-primary"
+                            onClick={() => handleConsumeFeed(feed.id)}
+                            style={{minWidth: '140px'}}
+                          >
+                            <i className="fas fa-download"></i> Consume
+                          </button>
+                        )}
                         <button 
                           className="btn btn-sm btn-danger"
                           onClick={() => handleDeleteFeed(feed)}
@@ -3610,6 +3678,8 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
   const [submitting, setSubmitting] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState('csv');
+  const [exportScope, setExportScope] = useState('filtered');
+  const [customExportCount, setCustomExportCount] = useState(100);
   const [exporting, setExporting] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importFile, setImportFile] = useState(null);
@@ -3789,6 +3859,9 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
       if (filterParams.type) params.append('type', filterParams.type);
       if (filterParams.source) params.append('source', filterParams.source);
       if (filterParams.search) params.append('search', filterParams.search);
+      if (filterParams.severity) params.append('severity', filterParams.severity);
+      if (filterParams.status) params.append('status', filterParams.status);
+      if (filterParams.dateRange) params.append('dateRange', filterParams.dateRange);
 
       const indicatorsData = await api.get(`/api/indicators/?${params.toString()}`);
 
@@ -3862,8 +3935,18 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
       filterParams.search = filters.searchTerm;
     }
 
-    // Note: severity, status, and dateRange filters would need backend support
-    // For now, the backend only supports type, source, and search filters
+    // Now backend supports these additional filters
+    if (filters.severity) {
+      filterParams.severity = filters.severity;
+    }
+
+    if (filters.status) {
+      filterParams.status = filters.status;
+    }
+
+    if (filters.dateRange) {
+      filterParams.dateRange = filters.dateRange;
+    }
 
     // Reset to first page when filters change and fetch new data
     setCurrentPage(1);
@@ -3964,7 +4047,7 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
             <div className="results-summary">
               {Object.values(filters).some(value => value !== '') ? (
                 <span className="filtered-count">
-                  <strong>{filteredIndicators.length}</strong> of <strong>{totalItems}</strong> indicators match
+                  <strong>{totalItems}</strong> indicators match filters
                 </span>
               ) : (
                 <span className="total-count">
@@ -4088,10 +4171,10 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
                 <div className="stat-icon"><i className="fas fa-search"></i></div>
                 <span>Total IoCs{Object.values(filters).some(f => f !== '') ? ' (Filtered)' : ''}</span>
               </div>
-              <div className="stat-value">{Object.values(filters).some(f => f !== '') ? filteredIndicators.length : totalItems}</div>
+              <div className="stat-value">{totalItems}</div>
               <div className="stat-description">
                 {Object.values(filters).some(f => f !== '') ?
-                  `${filteredIndicators.length} of ${totalItems} match filters` :
+                  `Filtered results` :
                   'All indicators in system'
                 }
               </div>
@@ -4102,8 +4185,7 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
                 <span>High Severity</span>
               </div>
               <div className="stat-value">
-                {(Object.values(filters).some(f => f !== '') ? filteredIndicators : indicators)
-                  .filter(ind => ind.severity.toLowerCase() === 'high').length}
+                {indicators.filter(ind => ind.severity.toLowerCase() === 'high').length}
               </div>
               <div className="stat-description">
                 Critical threat indicators
@@ -4115,8 +4197,7 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
                 <span>Anonymized</span>
               </div>
               <div className="stat-value">
-                {(Object.values(filters).some(f => f !== '') ? filteredIndicators : indicators)
-                  .filter(ind => ind.status.toLowerCase() === 'anonymized').length}
+                {indicators.filter(ind => ind.status.toLowerCase() === 'anonymized').length}
               </div>
               <div className="stat-description">
                 Privacy-protected IoCs
@@ -4128,8 +4209,7 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
                 <span>Active</span>
               </div>
               <div className="stat-value">
-                {(Object.values(filters).some(f => f !== '') ? filteredIndicators : indicators)
-                  .filter(ind => ind.status.toLowerCase() === 'active').length}
+                {indicators.filter(ind => ind.status.toLowerCase() === 'active').length}
               </div>
               <div className="stat-description">
                 Currently monitored IoCs
@@ -4338,7 +4418,7 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
       >
         <div className="pagination-info-detailed">
           <span className="pagination-summary">
-            Showing <strong>{Math.min((currentPage - 1) * itemsPerPage + 1, filteredIndicators.length)}</strong> to <strong>{Math.min(currentPage * itemsPerPage, filteredIndicators.length)}</strong> of <strong>{filteredIndicators.length}</strong> 
+            Showing <strong>{(currentPage - 1) * itemsPerPage + 1}</strong> to <strong>{Math.min(currentPage * itemsPerPage, totalItems)}</strong> of <strong>{totalItems}</strong>
             {Object.values(filters).some(value => value !== '') ? ' filtered' : ''} indicators
           </span>
         </div>
@@ -4594,12 +4674,44 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
                 </select>
               </div>
 
+              <div className="export-options">
+                <div className="form-group">
+                  <label>Export Scope:</label>
+                  <select
+                    value={exportScope}
+                    onChange={(e) => setExportScope(e.target.value)}
+                    className="form-control"
+                  >
+                    <option value="current_page">Current Page ({indicators.length} indicators)</option>
+                    <option value="filtered">{Object.values(filters).some(f => f !== '') ? `Filtered Results (${totalItems} indicators)` : `All Results (${totalItems} indicators)`}</option>
+                    <option value="all">All Indicators ({totalItems} indicators)</option>
+                    <option value="custom">Custom Amount</option>
+                  </select>
+                </div>
+
+                {exportScope === 'custom' && (
+                  <div className="form-group">
+                    <label>Number of Indicators to Export:</label>
+                    <input
+                      type="number"
+                      value={customExportCount}
+                      onChange={(e) => setCustomExportCount(Math.min(Math.max(1, parseInt(e.target.value) || 1), totalItems))}
+                      min="1"
+                      max={totalItems}
+                      className="form-control"
+                      placeholder="Enter number of indicators"
+                    />
+                    <small className="text-muted">Maximum: {totalItems} indicators</small>
+                  </div>
+                )}
+              </div>
+
               <div className="export-info">
                 <div className="info-card">
                   <i className="fas fa-info-circle"></i>
                   <div>
                     <strong>Export Details:</strong>
-                    <p>You are about to export {indicators.length} indicators of compromise.</p>
+                    <p>You are about to export {getExportCount()} indicators of compromise.</p>
                     {exportFormat === 'csv' && (
                       <p><strong>CSV Format:</strong> Suitable for spreadsheet analysis. Includes all indicator fields in tabular format.</p>
                     )}
@@ -4621,7 +4733,7 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
                   {exporting ? (
                     <><i className="fas fa-spinner fa-spin"></i> Exporting...</>
                   ) : (
-                    <><i className="fas fa-download"></i> Export {indicators.length} IoCs</>
+                    <><i className="fas fa-download"></i> Export {getExportCount()} IoCs</>
                   )}
                 </button>
               </div>
@@ -5111,43 +5223,80 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
   function closeExportModal() {
     setShowExportModal(false);
     setExportFormat('csv');
+    setExportScope('filtered');
+    setCustomExportCount(100);
+  }
+
+  function getExportCount() {
+    switch (exportScope) {
+      case 'current_page':
+        return indicators.length;
+      case 'filtered':
+        return totalItems;
+      case 'all':
+        return totalItems;
+      case 'custom':
+        return customExportCount;
+      default:
+        return indicators.length;
+    }
   }
 
   async function handleExport() {
-    if (indicators.length === 0) {
+    const exportCount = getExportCount();
+    if (exportCount === 0) {
       alert('No indicators to export');
       return;
     }
 
     setExporting(true);
-    
-    try {
-      let exportData;
-      let filename;
-      let mimeType;
 
-      switch (exportFormat) {
-        case 'csv':
-          exportData = exportToCSV(indicators);
-          filename = `iocs_export_${new Date().toISOString().split('T')[0]}.csv`;
-          mimeType = 'text/csv';
-          break;
-        case 'json':
-          exportData = exportToJSON(indicators);
-          filename = `iocs_export_${new Date().toISOString().split('T')[0]}.json`;
-          mimeType = 'application/json';
-          break;
-        case 'stix':
-          exportData = exportToSTIX(indicators);
-          filename = `iocs_export_${new Date().toISOString().split('T')[0]}.json`;
-          mimeType = 'application/json';
-          break;
-        default:
-          throw new Error('Unsupported export format');
+    try {
+      // Prepare export request data
+      const exportData = {
+        format: exportFormat,
+        scope: exportScope,
+        custom_count: customExportCount,
+        filters: {
+          type: filters.type || '',
+          source: filters.source || '',
+          searchTerm: filters.searchTerm || '',
+          severity: filters.severity || '',
+          status: filters.status || '',
+          dateRange: filters.dateRange || ''
+        }
+      };
+
+      // Use the new chunked export API
+      const response = await fetch(`${apiUrl}/api/indicators/export/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(exportData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `Export failed with status ${response.status}`);
       }
 
-      // Create and download file
-      const blob = new Blob([exportData], { type: mimeType });
+      // Get the total count from headers
+      const totalCount = response.headers.get('X-Total-Count') || exportCount;
+
+      // Get filename from Content-Disposition header or create default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `iocs_export_${new Date().toISOString().split('T')[0]}.${exportFormat}`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Convert response to blob and download
+      const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -5159,12 +5308,13 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
 
       // Close modal
       closeExportModal();
-      
-      console.log(`Successfully exported ${indicators.length} IoCs as ${exportFormat.toUpperCase()}`);
-      
+
+      console.log(`Successfully exported ${totalCount} IoCs as ${exportFormat.toUpperCase()}`);
+      alert(`Export completed! Downloaded ${totalCount} indicators as ${filename}`);
+
     } catch (error) {
       console.error('Export failed:', error);
-      alert('Export failed. Please try again.');
+      alert(`Export failed: ${error.message}. Please try again or reduce the number of indicators.`);
     } finally {
       setExporting(false);
     }

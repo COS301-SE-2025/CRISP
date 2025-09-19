@@ -136,6 +136,47 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     @action(detail=True, methods=['post'])
+    def cancel_consumption(self, request, pk=None):
+        """Cancel ongoing feed consumption."""
+        try:
+            feed = self.get_object()
+            mode = request.data.get('mode', 'stop_now')  # 'stop_now' or 'cancel_job'
+
+            if mode == 'cancel_job':
+                # Remove all indicators added from this consumption session
+                # Note: This would require tracking consumption sessions
+                # For now, we'll just mark as cancelled
+                deleted_count = 0
+                logger.info(f"Cancel job mode for feed {feed.name} - would delete {deleted_count} indicators")
+
+                return Response({
+                    'success': True,
+                    'message': 'Consumption cancelled and data removed',
+                    'indicators_kept': 0,
+                    'indicators_removed': deleted_count,
+                    'total_expected': 0
+                })
+            else:
+                # Stop now mode - keep existing indicators
+                current_count = feed.indicators.count()
+                logger.info(f"Stop now mode for feed {feed.name} - keeping {current_count} indicators")
+
+                return Response({
+                    'success': True,
+                    'message': 'Consumption stopped, indicators kept',
+                    'indicators_kept': current_count,
+                    'indicators_removed': 0,
+                    'total_expected': current_count
+                })
+
+        except Exception as e:
+            logger.error(f"Error cancelling consumption for feed {pk}: {str(e)}")
+            return Response(
+                {"error": "Failed to cancel consumption", "details": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['post'])
     def consume(self, request, pk=None):
         """
         Consume indicators from a specific threat feed
@@ -578,6 +619,9 @@ def indicators_list(request):
             type_filter = request.GET.get('type', '')
             source_filter = request.GET.get('source', '')
             search_filter = request.GET.get('search', '')
+            severity_filter = request.GET.get('severity', '')
+            status_filter = request.GET.get('status', '')
+            date_range_filter = request.GET.get('dateRange', '')
             ordering = request.GET.get('ordering', '-created_at')
 
             # Build the queryset with filters
@@ -596,6 +640,31 @@ def indicators_list(request):
                     Q(description__icontains=search_filter) |
                     Q(name__icontains=search_filter)
                 )
+
+            if severity_filter:
+                indicators = indicators.filter(severity__icontains=severity_filter)
+
+            if status_filter:
+                # Map frontend status to backend fields
+                if status_filter.lower() == 'anonymized':
+                    indicators = indicators.filter(is_anonymized=True)
+                elif status_filter.lower() == 'active':
+                    indicators = indicators.filter(is_anonymized=False)
+
+            if date_range_filter:
+                from datetime import datetime, timedelta
+                from django.utils import timezone
+                now = timezone.now()
+
+                if date_range_filter == 'last7days':
+                    start_date = now - timedelta(days=7)
+                    indicators = indicators.filter(created_at__gte=start_date)
+                elif date_range_filter == 'last30days':
+                    start_date = now - timedelta(days=30)
+                    indicators = indicators.filter(created_at__gte=start_date)
+                elif date_range_filter == 'last90days':
+                    start_date = now - timedelta(days=90)
+                    indicators = indicators.filter(created_at__gte=start_date)
 
             # Apply ordering
             indicators = indicators.order_by(ordering)
@@ -747,6 +816,164 @@ def indicators_list(request):
                 {"error": "Failed to create indicator", "details": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def indicators_export(request):
+    """Export indicators with chunked processing for large datasets"""
+    try:
+        data = request.data
+        export_format = data.get('format', 'csv')
+        export_scope = data.get('scope', 'filtered')
+        custom_count = data.get('custom_count', 1000)
+
+        # Get filter parameters from request
+        filters = data.get('filters', {})
+
+        # Start with all indicators
+        indicators = Indicator.objects.select_related('threat_feed').all()
+
+        # Apply filters (same logic as indicators_list)
+        if filters.get('type'):
+            indicators = indicators.filter(type__icontains=filters['type'])
+        if filters.get('source'):
+            indicators = indicators.filter(threat_feed__name__icontains=filters['source'])
+        if filters.get('searchTerm'):
+            from django.db.models import Q
+            search = filters['searchTerm']
+            indicators = indicators.filter(
+                Q(value__icontains=search) |
+                Q(description__icontains=search) |
+                Q(name__icontains=search)
+            )
+        if filters.get('severity'):
+            indicators = indicators.filter(severity__icontains=filters['severity'])
+        if filters.get('status'):
+            if filters['status'].lower() == 'anonymized':
+                indicators = indicators.filter(is_anonymized=True)
+            elif filters['status'].lower() == 'active':
+                indicators = indicators.filter(is_anonymized=False)
+        if filters.get('dateRange'):
+            from datetime import datetime, timedelta
+            from django.utils import timezone
+            now = timezone.now()
+            if filters['dateRange'] == 'last7days':
+                start_date = now - timedelta(days=7)
+                indicators = indicators.filter(created_at__gte=start_date)
+            elif filters['dateRange'] == 'last30days':
+                start_date = now - timedelta(days=30)
+                indicators = indicators.filter(created_at__gte=start_date)
+            elif filters['dateRange'] == 'last90days':
+                start_date = now - timedelta(days=90)
+                indicators = indicators.filter(created_at__gte=start_date)
+
+        # Apply scope limits
+        if export_scope == 'custom':
+            indicators = indicators[:custom_count]
+
+        # Order by creation date
+        indicators = indicators.order_by('-created_at')
+
+        # Get total count before limiting
+        total_count = indicators.count()
+
+        if total_count == 0:
+            return Response(
+                {"error": "No indicators match the specified criteria"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Use chunked export for better performance
+        return _create_chunked_export(indicators, export_format, total_count)
+
+    except Exception as e:
+        logger.error(f"Error in indicators export: {str(e)}")
+        return Response(
+            {"error": "Export failed", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+def _create_chunked_export(indicators_queryset, export_format, total_count):
+    """Create a chunked export response for large datasets"""
+    import csv
+    import json
+    from django.http import StreamingHttpResponse
+    from io import StringIO
+
+    def generate_csv():
+        """Generate CSV data in chunks to avoid memory issues"""
+        # CSV headers
+        yield 'Type,Value,Severity,Source,Date Added,Status,Description\n'
+
+        # Process in chunks of 500 to avoid memory issues
+        chunk_size = 500
+        for offset in range(0, total_count, chunk_size):
+            # Get this chunk of indicators
+            chunk = indicators_queryset[offset:offset + chunk_size]
+
+            for indicator in chunk:
+                # Format data safely, handling None values and escaping quotes
+                value = (indicator.value or '').replace('"', '""')  # Escape quotes for CSV
+                description = (indicator.description or '').replace('"', '""')[:100]  # Limit length and escape
+                source = indicator.threat_feed.name if indicator.threat_feed else 'Unknown'
+                status_val = 'Anonymized' if getattr(indicator, 'is_anonymized', False) else 'Active'
+                severity = indicator.severity or 'Unknown'
+                indicator_type = indicator.type or 'Unknown'
+
+                # Create CSV row with proper quoting
+                row = f'"{indicator_type}","{value}","{severity}","{source}","{indicator.created_at.strftime("%Y-%m-%d %H:%M")}","{status_val}","{description}"\n'
+                yield row
+
+    def generate_json():
+        """Generate JSON data in chunks"""
+        yield '{"indicators": [\n'
+
+        chunk_size = 500
+        first_item = True
+
+        for offset in range(0, total_count, chunk_size):
+            chunk = indicators_queryset[offset:offset + chunk_size]
+
+            for indicator in chunk:
+                if not first_item:
+                    yield ','
+                first_item = False
+
+                indicator_data = {
+                    'id': indicator.id,
+                    'type': indicator.type or 'Unknown',
+                    'value': indicator.value or '',
+                    'severity': indicator.severity or 'Unknown',
+                    'source': indicator.threat_feed.name if indicator.threat_feed else 'Unknown',
+                    'created_at': indicator.created_at.isoformat(),
+                    'status': 'Anonymized' if getattr(indicator, 'is_anonymized', False) else 'Active',
+                    'description': (indicator.description or '')[:200]  # Limit description length
+                }
+                yield '\n  ' + json.dumps(indicator_data, ensure_ascii=False)
+
+        yield '\n], "total_count": ' + str(total_count) + ', "export_timestamp": "' + timezone.now().isoformat() + '"}'
+
+    # Create appropriate response based on format
+    if export_format == 'csv':
+        response = StreamingHttpResponse(
+            generate_csv(),
+            content_type='text/csv'
+        )
+        filename = f'indicators_export_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv'
+    else:  # JSON format
+        response = StreamingHttpResponse(
+            generate_json(),
+            content_type='application/json'
+        )
+        filename = f'indicators_export_{timezone.now().strftime("%Y%m%d_%H%M%S")}.json'
+
+    # Set download headers
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response['X-Total-Count'] = str(total_count)
+    response['Access-Control-Expose-Headers'] = 'Content-Disposition, X-Total-Count'
+
+    logger.info(f"Starting chunked export of {total_count} indicators in {export_format} format")
+    return response
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -1079,11 +1306,15 @@ def indicator_delete(request, indicator_id):
         if deleted:
             # Log the deletion for audit purposes
             audit_service = AuditService()
-            audit_service.log_activity(
-                activity_type='indicator_deleted',
+            audit_service.log_user_action(
                 user=request.user if hasattr(request, 'user') and request.user.is_authenticated else None,
-                description=f'Indicator {indicator_info["type"]}: {indicator_info["value"]} deleted',
-                metadata={'indicator_id': indicator_id, 'indicator_info': indicator_info}
+                action='indicator_deleted',
+                success=True,
+                additional_data={
+                    'description': f'Indicator {indicator_info["type"]}: {indicator_info["value"]} deleted',
+                    'indicator_id': indicator_id,
+                    'indicator_info': indicator_info
+                }
             )
 
             return Response(

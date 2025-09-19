@@ -56,7 +56,7 @@ services:
       - DB_PORT=5432
       - REDIS_URL=redis://redis:6379/0
       - ALLOWED_HOSTS=localhost,127.0.0.1,backend,frontend
-      - POPULATE_TEST_DATA=false
+      - POPULATE_TEST_DATA=true
       - EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
       - EMAIL_HOST=smtp.gmail.com
       - EMAIL_PORT=587
@@ -130,7 +130,7 @@ services:
       - DB_PORT=5432
       - REDIS_URL=redis://redis-test:6379/0
       - ALLOWED_HOSTS=localhost,127.0.0.1,backend-test,frontend-test
-      - POPULATE_TEST_DATA=false
+      - POPULATE_TEST_DATA=true
       - EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
       - EMAIL_HOST=smtp.gmail.com
       - EMAIL_PORT=587

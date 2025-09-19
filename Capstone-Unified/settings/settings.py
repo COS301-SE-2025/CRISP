@@ -221,6 +221,9 @@ EMAIL_TIMEOUT = 30
 # Default email settings for CRISP notifications
 DEFAULT_FROM_EMAIL = os.getenv('CRISP_SENDER_EMAIL', 'noreply@crisp-system.org')
 SERVER_EMAIL = os.getenv('CRISP_SENDER_EMAIL', 'noreply@crisp-system.org')
+CRISP_SENDER_NAME = os.getenv('CRISP_SENDER_NAME', 'CRISP Platform')
+DEFAULT_ADMIN_EMAIL = os.getenv('DEFAULT_ADMIN_EMAIL', 'admin@crisp-system.org')
+TEST_EMAIL = os.getenv('TEST_EMAIL', 'test@crisp-system.org')
 
 # TAXII Client Settings
 TAXII_DEFAULT_USERNAME = os.getenv('OTX_API_KEY', '')

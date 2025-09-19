@@ -111,6 +111,21 @@ class Organization(models.Model):
     def __str__(self):
         return self.name
 
+    def get_administrators(self):
+        """Get all administrator users for this organization"""
+        # Import here to avoid circular imports
+        from core.user_management.models.user_models import CustomUser
+
+        return CustomUser.objects.filter(
+            organization=self,
+            role='BlueVisionAdmin',
+            is_active=True
+        )
+
+    def get_admin_emails(self):
+        """Get email addresses of all administrators for this organization"""
+        return [admin.email for admin in self.get_administrators() if admin.email]
+
     class Meta:
         ordering = ['name']
         indexes = [

@@ -346,6 +346,16 @@ class IOCSharingService:
                 }
             )
 
+            # Send notifications to organization administrators
+            self._send_sharing_notifications(
+                indicator=indicator,
+                target_org=target_org,
+                sharing_user=sharing_user,
+                share_method=share_method,
+                anonymization_level=anonymization_level,
+                stix_indicator=stix_indicator
+            )
+
             return {
                 'organization_id': org_id,
                 'organization_name': target_org.name,

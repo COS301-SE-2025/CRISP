@@ -1,8 +1,11 @@
+import logging
 from .stix_indicator_integrated import StixIndicatorCreator as BaseIndicatorCreator
 from .stix_ttp_integrated import StixTTPCreator as BaseTTPCreator
 from core.models.models import Indicator, TTPData
 from django.utils import timezone
 import uuid
+
+logger = logging.getLogger(__name__)
 
 
 class StixObjectDict:
@@ -48,9 +51,23 @@ class StixIndicatorCreator:
                 'last_seen': timezone.now()
             }
             
+            # First check if indicator exists globally to prevent cross-feed duplicates
+            existing_global = Indicator.objects.filter(
+                value=value,
+                type=indicator_type
+            ).first()
+
+            if existing_global and existing_global.threat_feed != threat_feed:
+                # Update the existing indicator's last_seen timestamp
+                existing_global.last_seen = timezone.now()
+                existing_global.save()
+                logger.info(f"Found existing indicator {value} in feed {existing_global.threat_feed.name}, updating timestamp")
+                return existing_global
+
+            # Create or get indicator for this specific feed
             indicator, created = Indicator.objects.get_or_create(
                 value=value,
-                type=indicator_type, 
+                type=indicator_type,
                 threat_feed=threat_feed,
                 defaults=indicator_data
             )

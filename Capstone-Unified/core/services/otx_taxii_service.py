@@ -368,10 +368,29 @@ class OTXTaxiiService:
             # Calculate totals and log summary
             indicator_count = overall_stats['indicators_created'] + overall_stats['indicators_updated']
             ttp_count = overall_stats['ttp_created'] + overall_stats['ttp_updated']
-            
+
+            # If we have indicators but no TTPs, try to extract TTPs from indicators
+            if indicator_count > 0 and ttp_count == 0:
+                logger.info(f"No TTPs found in STIX data, extracting TTPs from {indicator_count} indicators")
+                try:
+                    from core.services.ttp_extraction_service import TTPExtractionService
+                    ttp_extractor = TTPExtractionService()
+                    extraction_result = ttp_extractor.extract_ttps_from_feed(threat_feed, force_reextract=True)
+
+                    if extraction_result.get('success', False):
+                        additional_ttps = len(extraction_result.get('ttps_extracted', []))
+                        ttp_count += additional_ttps
+                        overall_stats['ttp_created'] += additional_ttps
+                        logger.info(f"Successfully extracted {additional_ttps} TTPs from indicators")
+                    else:
+                        logger.warning(f"TTP extraction failed: {extraction_result.get('error', 'Unknown error')}")
+
+                except Exception as e:
+                    logger.error(f"Error during TTP extraction: {str(e)}")
+
             logger.info(f"Feed consumption completed: {indicator_count} indicators, {ttp_count} TTPs")
             logger.info(f"Detailed stats: {overall_stats}")
-            
+
             return indicator_count, ttp_count
             
         except Exception as e:

@@ -13,7 +13,7 @@ from core.user_management.models import CustomUser
 from core.api import auth_api, user_api, trust_api, organization_api
 from core.api.threat_feed_views import (
     ThreatFeedViewSet, # Import ThreatFeedViewSet
-    indicators_list, indicators_bulk_import, indicator_update, indicator_delete, indicator_share, # Import indicator views
+    indicators_list, indicators_export, indicators_bulk_import, indicator_update, indicator_delete, indicator_share, # Import indicator views
     indicator_generate_share_url, indicator_shared_access, sharing_permissions, # New sharing endpoints
     threat_activity_chart_data, system_health, recent_activities, # Import other views
     ttps_list, ttp_detail, mitre_matrix, ttp_trends, ttp_export,
@@ -133,6 +133,7 @@ ttp_urlpatterns = [
 threat_feed_urlpatterns = [
     path('', include(router.urls)), # Include router URLs here
     path('indicators/', indicators_list, name='indicators-list'),
+    path('indicators/export/', indicators_export, name='indicators-export'),
     path('indicators/bulk-import/', indicators_bulk_import, name='indicators-bulk-import'),
     path('indicators/<int:indicator_id>/update/', indicator_update, name='indicator-update'),
     path('indicators/<int:indicator_id>/delete/', indicator_delete, name='indicator-delete'),
