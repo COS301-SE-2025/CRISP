@@ -108,15 +108,22 @@ class STIX1Parser:
         else:
             logger.info(f"Found total of {len(indicators)} unique indicators")
             
-        # Process each indicator
-        for indicator in indicators:
+        # Process indicators in bulk for better performance
+        if indicators:
             try:
-                self._process_single_indicator(indicator, threat_feed, stats)
+                self._process_indicators_bulk(indicators, threat_feed, stats)
             except Exception as e:
-                logger.error(f"Error processing indicator: {str(e)}")
+                logger.error(f"Error processing indicators in bulk: {str(e)}")
                 import traceback
                 logger.error(traceback.format_exc())
-                stats['errors'] += 1
+                # Fallback to individual processing if bulk fails
+                logger.info("Falling back to individual indicator processing")
+                for indicator in indicators:
+                    try:
+                        self._process_single_indicator(indicator, threat_feed, stats)
+                    except Exception as e:
+                        logger.error(f"Error processing indicator: {str(e)}")
+                        stats['errors'] += 1
         
         # Process TTPs - use deduplication approach
         found_ttps = set()
@@ -198,6 +205,142 @@ class STIX1Parser:
         else:
             return 'other'
     
+    def _process_indicators_bulk(self, indicators, threat_feed, stats):
+        """
+        Process multiple indicators in bulk for better performance
+        """
+        if not threat_feed:
+            logger.warning("No threat feed provided for bulk processing")
+            return
+
+        logger.info(f"Processing {len(indicators)} indicators in bulk")
+
+        # Extract all indicator data first
+        indicator_data_list = []
+        stix_ids = []
+
+        for indicator in indicators:
+            # Extract indicator ID
+            indicator_id = indicator.get('{http://stix.mitre.org/common-1}id', '')
+
+            if not indicator_id:
+                for attr_name, attr_value in indicator.attrib.items():
+                    if attr_name.endswith('id') or attr_name.endswith('ID'):
+                        indicator_id = attr_value
+                        break
+
+            if not indicator_id:
+                stats['skipped'] += 1
+                continue
+
+            # Extract indicator value
+            indicator_value = self._extract_observable_value(indicator)
+            if not indicator_value:
+                stats['skipped'] += 1
+                continue
+
+            # Determine indicator type
+            indicator_type = self._detect_indicator_type(indicator_value)
+
+            # Create indicator data
+            indicator_data = {
+                'type': indicator_type,
+                'value': indicator_value,
+                'stix_id': indicator_id,
+                'description': self._get_element_text(indicator, "Description") or "Imported from TAXII feed",
+                'confidence': 50,
+                'is_anonymized': False,
+                'first_seen': timezone.now(),
+                'last_seen': timezone.now(),
+                'threat_feed': threat_feed
+            }
+
+            # Set hash_type for file hashes
+            if indicator_type == 'file_hash':
+                if len(indicator_value) == 32:
+                    indicator_data['hash_type'] = 'md5'
+                elif len(indicator_value) == 40:
+                    indicator_data['hash_type'] = 'sha1'
+                elif len(indicator_value) == 64:
+                    indicator_data['hash_type'] = 'sha256'
+                else:
+                    indicator_data['hash_type'] = 'other'
+
+            indicator_data_list.append(indicator_data)
+            stix_ids.append(indicator_id)
+
+        if not indicator_data_list:
+            logger.info("No valid indicators to process")
+            return
+
+        # Bulk query for existing indicators - single database query
+        existing_indicators = {
+            ind.stix_id: ind
+            for ind in Indicator.objects.filter(
+                stix_id__in=stix_ids,
+                threat_feed=threat_feed
+            )
+        }
+
+        logger.info(f"Found {len(existing_indicators)} existing indicators out of {len(indicator_data_list)}")
+
+        # Separate updates and creates
+        indicators_to_update = []
+        indicators_to_create = []
+
+        for data in indicator_data_list:
+            stix_id = data['stix_id']
+            if stix_id in existing_indicators:
+                # Update existing
+                existing = existing_indicators[stix_id]
+                for key, value in data.items():
+                    if key != 'threat_feed':  # Don't update the foreign key
+                        setattr(existing, key, value)
+                existing.updated_at = timezone.now()
+                indicators_to_update.append(existing)
+                stats['indicators_updated'] += 1
+            else:
+                # Create new
+                indicators_to_create.append(Indicator(**data))
+                stats['indicators_created'] += 1
+
+        # Bulk update existing indicators - single database query
+        if indicators_to_update:
+            try:
+                Indicator.objects.bulk_update(indicators_to_update, [
+                    'type', 'value', 'description', 'confidence',
+                    'is_anonymized', 'first_seen', 'last_seen', 'hash_type', 'updated_at'
+                ])
+                logger.info(f"Bulk updated {len(indicators_to_update)} indicators")
+            except Exception as e:
+                logger.error(f"Bulk update failed: {str(e)}")
+                # Fallback to individual updates
+                for indicator in indicators_to_update:
+                    try:
+                        indicator.save()
+                    except Exception as save_error:
+                        logger.error(f"Failed to save updated indicator {indicator.stix_id}: {str(save_error)}")
+                        stats['indicators_updated'] -= 1
+                        stats['errors'] += 1
+
+        # Bulk create new indicators - single database query
+        if indicators_to_create:
+            try:
+                Indicator.objects.bulk_create(indicators_to_create, ignore_conflicts=True)
+                logger.info(f"Bulk created {len(indicators_to_create)} indicators")
+            except Exception as e:
+                logger.error(f"Bulk create failed: {str(e)}")
+                # Fallback to individual creates
+                for indicator in indicators_to_create:
+                    try:
+                        indicator.save()
+                    except Exception as save_error:
+                        logger.error(f"Failed to create indicator {indicator.stix_id}: {str(save_error)}")
+                        stats['indicators_created'] -= 1
+                        stats['errors'] += 1
+
+        logger.info(f"Bulk processing completed: {stats['indicators_created']} created, {stats['indicators_updated']} updated")
+
     def _process_single_indicator(self, indicator, threat_feed, stats):
         """
         Process a single indicator element and create/update Indicator model
