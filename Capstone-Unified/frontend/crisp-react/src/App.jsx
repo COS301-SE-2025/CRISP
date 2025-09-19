@@ -312,10 +312,12 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
 
     setIsSearching(true);
     try {
-      // Search both organizations and users
-      const [orgResponse, usersResponse] = await Promise.all([
+      // Search organizations, users, threat feeds, and indicators
+      const [orgResponse, usersResponse, threatFeedsResponse, indicatorsResponse] = await Promise.all([
         getOrganizations().catch(() => ({ data: [] })),
-        getUsersList().catch(() => ({ data: [] }))
+        getUsersList().catch(() => ({ data: [] })),
+        api.get('/api/threat-feeds/').catch(() => ({ data: [] })),
+        api.get('/api/indicators/').catch(() => ({ data: [] }))
       ]);
 
       // Extract the actual data arrays from the API response structure
@@ -323,9 +325,15 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
                           (orgResponse.results?.organizations || orgResponse.data || []);
       const users = Array.isArray(usersResponse) ? usersResponse :
                    (usersResponse.results?.users || usersResponse.data || []);
+      const threatFeeds = Array.isArray(threatFeedsResponse) ? threatFeedsResponse :
+                         (threatFeedsResponse.results?.threat_feeds || threatFeedsResponse.results || threatFeedsResponse.data || []);
+      const indicators = Array.isArray(indicatorsResponse) ? indicatorsResponse :
+                        (indicatorsResponse.results?.indicators || indicatorsResponse.results || indicatorsResponse.data || []);
 
       console.log('Organizations response:', organizations); // Debug log
       console.log('Users response:', users); // Debug log
+      console.log('Threat feeds response:', threatFeeds); // Debug log
+      console.log('Indicators response:', indicators); // Debug log
 
       const results = [];
 
@@ -368,6 +376,46 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
         });
       }
 
+      // Filter threat feeds
+      const filteredThreatFeeds = threatFeeds.filter(feed =>
+        feed.name?.toLowerCase().includes(query.toLowerCase()) ||
+        feed.description?.toLowerCase().includes(query.toLowerCase()) ||
+        feed.source?.toLowerCase().includes(query.toLowerCase())
+      );
+
+      if (filteredThreatFeeds.length > 0) {
+        results.push({
+          category: 'Threat Feeds',
+          items: filteredThreatFeeds.slice(0, 5).map(feed => ({
+            id: feed.id,
+            title: feed.name || feed.source,
+            subtitle: feed.description || `Source: ${feed.source || 'Unknown'}`,
+            type: 'threat-feed',
+            feedData: feed // Pass the full feed data for navigation
+          }))
+        });
+      }
+
+      // Filter indicators/IoCs
+      const filteredIndicators = indicators.filter(indicator =>
+        indicator.value?.toLowerCase().includes(query.toLowerCase()) ||
+        indicator.type?.toLowerCase().includes(query.toLowerCase()) ||
+        indicator.description?.toLowerCase().includes(query.toLowerCase())
+      );
+
+      if (filteredIndicators.length > 0) {
+        results.push({
+          category: 'Indicators (IoCs)',
+          items: filteredIndicators.slice(0, 5).map(indicator => ({
+            id: indicator.id,
+            title: indicator.value,
+            subtitle: `${indicator.type} - ${indicator.description || 'No description'}`,
+            type: 'indicator',
+            indicatorData: indicator // Pass the full indicator data for navigation
+          }))
+        });
+      }
+
       setSearchResults(results);
     } catch (error) {
       console.error('Search error:', error);
@@ -404,6 +452,12 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
         modalParams: { user: item.userData }
       });
       showPage('user-management');
+    } else if (item.type === 'threat-feed') {
+      // Navigate to threat feeds page
+      showPage('threat-feeds');
+    } else if (item.type === 'indicator') {
+      // Navigate to indicators page (assuming it's part of threat feeds or reports)
+      showPage('threat-feeds');
     }
   };
 
@@ -646,6 +700,8 @@ function Header({
     switch (type) {
       case 'user': return 'user';
       case 'organization': return 'building';
+      case 'threat-feed': return 'rss';
+      case 'indicator': return 'exclamation-triangle';
       default: return 'search';
     }
   };
