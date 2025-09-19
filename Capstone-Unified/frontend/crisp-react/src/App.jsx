@@ -9,7 +9,7 @@ import Institutions from './components/institutions/Institutions.jsx';
 import ReportDetailModal from './components/reports/ReportDetailModal.jsx';
 import BlueVLogo from './assets/enhanced/BlueV2.png';
 import * as api from './api.js';
-import { getOrganizations, getThreatFeedTtps, getMitreMatrix, getTtpFeedComparison, getTtpSeasonalPatterns, getTtpTechniqueFrequencies, getTtps, getTtpFilterOptions, getTtpTrends, getTtpDetails, updateTtp, getMatrixCellDetails, getTechniqueDetails, exportTtps } from './api.js';
+import { getOrganizations, getThreatFeedTtps, getMitreMatrix, getTtpFeedComparison, getTtpSeasonalPatterns, getTtpTechniqueFrequencies, getTtps, getTtpFilterOptions, getTtpTrends, getTtpDetails, updateTtp, getMatrixCellDetails, getTechniqueDetails, exportTtps, getUsersList } from './api.js';
 import { NotificationProvider, useNotifications } from './components/enhanced/NotificationManager.jsx';
 
 // Error Boundary for Chart Component
@@ -162,6 +162,12 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
     block_limit: 10 // Default to 10 blocks
   });
   const [activePreset, setActivePreset] = useState('custom');
+
+  // Search state variables
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [useAsync, setUseAsync] = useState(false);
 
   // Function to check task status (bypasses cache for real-time updates)
@@ -296,6 +302,125 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
     setConsumptionParams(prev => ({...prev, [param]: validatedValue}));
     setActivePreset('custom');
   };
+
+  // Search functions
+  const performSearch = async (query) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      // Search both organizations and users
+      const [orgResponse, usersResponse] = await Promise.all([
+        getOrganizations().catch(() => ({ data: [] })),
+        getUsersList().catch(() => ({ data: [] }))
+      ]);
+
+      // Extract the actual data arrays from the API response structure
+      const organizations = Array.isArray(orgResponse) ? orgResponse :
+                          (orgResponse.results?.organizations || orgResponse.data || []);
+      const users = Array.isArray(usersResponse) ? usersResponse :
+                   (usersResponse.results?.users || usersResponse.data || []);
+
+      console.log('Organizations response:', organizations); // Debug log
+      console.log('Users response:', users); // Debug log
+
+      const results = [];
+
+      // Filter organizations
+      const filteredOrganizations = organizations.filter(org =>
+        org.name?.toLowerCase().includes(query.toLowerCase())
+      );
+
+      if (filteredOrganizations.length > 0) {
+        results.push({
+          category: 'Organizations',
+          items: filteredOrganizations.slice(0, 5).map(org => ({
+            id: org.id,
+            title: org.name,
+            subtitle: `${org.members_count || 0} members`,
+            type: 'organization',
+            orgData: org // Pass the full org data for navigation
+          }))
+        });
+      }
+
+      // Filter users
+      const filteredUsers = users.filter(user =>
+        user.username?.toLowerCase().includes(query.toLowerCase()) ||
+        user.email?.toLowerCase().includes(query.toLowerCase()) ||
+        user.first_name?.toLowerCase().includes(query.toLowerCase()) ||
+        user.last_name?.toLowerCase().includes(query.toLowerCase())
+      );
+
+      if (filteredUsers.length > 0) {
+        results.push({
+          category: 'Users',
+          items: filteredUsers.slice(0, 5).map(user => ({
+            id: user.id,
+            title: user.username || user.email,
+            subtitle: user.email || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+            type: 'user',
+            userData: user // Pass the full user data for navigation
+          }))
+        });
+      }
+
+      setSearchResults(results);
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      setShowSearchDropdown(false);
+      // You can navigate to a search results page here if needed
+      console.log('Search submitted:', searchQuery);
+    }
+  };
+
+  const handleSearchResultClick = (item) => {
+    setShowSearchDropdown(false);
+    setSearchQuery('');
+
+    if (item.type === 'organization') {
+      // Navigate to organisation management and trigger modal for the specific org
+      setNavigationState({
+        triggerModal: 'viewOrganization',
+        modalParams: { organization: item.orgData }
+      });
+      showPage('organisation-management');
+    } else if (item.type === 'user') {
+      // Navigate to user management and trigger modal for the specific user
+      setNavigationState({
+        triggerModal: 'viewUser',
+        modalParams: { user: item.userData }
+      });
+      showPage('user-management');
+    }
+  };
+
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery) {
+        performSearch(searchQuery);
+        setShowSearchDropdown(true);
+      } else {
+        setSearchResults([]);
+        setShowSearchDropdown(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
 
   // Initialize app and restore state from URL
   useEffect(() => {
@@ -438,7 +563,21 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
 
   return (
     <div className="App" style={{ visibility: isLoading ? 'hidden' : 'visible' }}>
-      <Header showPage={showPage} user={user} onLogout={onLogout} isAdmin={isAdmin} navigateToRegisterUser={navigateToRegisterUser} />
+      <Header
+        showPage={showPage}
+        user={user}
+        onLogout={onLogout}
+        isAdmin={isAdmin}
+        navigateToRegisterUser={navigateToRegisterUser}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        searchResults={searchResults}
+        isSearching={isSearching}
+        showSearchDropdown={showSearchDropdown}
+        setShowSearchDropdown={setShowSearchDropdown}
+        handleSearchSubmit={handleSearchSubmit}
+        handleSearchResultClick={handleSearchResultClick}
+      />
       <MainNav activePage={activePage} showPage={showPage} user={user} onLogout={onLogout} isAdmin={isAdmin} />
       <main className="main-content">
         <div className="container">
@@ -483,11 +622,34 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
 }
 
 // Header Component with Enhanced Profile Dropdown
-function Header({ showPage, user, onLogout, isAdmin, navigateToRegisterUser }) {
+function Header({
+  showPage,
+  user,
+  onLogout,
+  isAdmin,
+  navigateToRegisterUser,
+  searchQuery,
+  setSearchQuery,
+  searchResults,
+  isSearching,
+  showSearchDropdown,
+  setShowSearchDropdown,
+  handleSearchSubmit,
+  handleSearchResultClick
+}) {
   
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showManagementSubmenu, setShowManagementSubmenu] = useState(false);
-  
+
+  // Search icon helper function
+  const getSearchIcon = (type) => {
+    switch (type) {
+      case 'user': return 'user';
+      case 'organization': return 'building';
+      default: return 'search';
+    }
+  };
+
   // User profile data processing
   const userInitial = user && user.username ? user.username.charAt(0).toUpperCase() : 'A';
   const userName = user && user.username ? user.username.split('@')[0] : 'Admin';
@@ -531,7 +693,57 @@ function Header({ showPage, user, onLogout, isAdmin, navigateToRegisterUser }) {
         <div className="nav-actions">
           <div className="search-bar">
             <span className="search-icon"><i className="fas fa-search"></i></span>
-            <input type="text" placeholder="Search platform..." />
+            <form onSubmit={handleSearchSubmit}>
+              <input
+                type="text"
+                placeholder="Search platform..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => searchQuery && setShowSearchDropdown(true)}
+                onBlur={() => setTimeout(() => setShowSearchDropdown(false), 200)}
+              />
+            </form>
+            {showSearchDropdown && (
+              <div className="search-results-dropdown">
+                {isSearching ? (
+                  <div className="search-loading">
+                    <i className="fas fa-spinner fa-spin"></i>
+                    <span>Searching...</span>
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  <div className="search-results">
+                    {searchResults.map((category, index) => (
+                      <div key={index} className="search-category">
+                        <div className="search-category-header">
+                          <strong>{category.category}</strong>
+                        </div>
+                        {category.items.map((item) => (
+                          <div
+                            key={item.id}
+                            className="search-result-item"
+                            onClick={() => handleSearchResultClick(item)}
+                          >
+                            <div className="search-result-content">
+                              <div className="search-result-title">{item.title}</div>
+                              {item.subtitle && (
+                                <div className="search-result-subtitle">{item.subtitle}</div>
+                              )}
+                            </div>
+                            <div className="search-result-type">
+                              <i className={`fas fa-${getSearchIcon(item.type)}`}></i>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="search-no-results">
+                    <span>No results found</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <div className="notifications" onClick={() => showPage('notifications')} style={{cursor: 'pointer'}}>
             <i className="fas fa-bell"></i>
@@ -11899,7 +12111,89 @@ function CSSStyles() {
             transform: translateY(-50%);
             color: var(--text-muted);
         }
-        
+
+        /* Search Dropdown Styles */
+        .search-results-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid var(--medium-gray);
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 2px;
+        }
+
+        .search-loading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .search-no-results {
+            padding: 12px 16px;
+            color: var(--text-muted);
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .search-category-header {
+            padding: 8px 16px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid var(--light-gray);
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .search-result-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--light-gray);
+            transition: background-color 0.2s;
+        }
+
+        .search-result-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+
+        .search-result-content {
+            flex: 1;
+        }
+
+        .search-result-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--dark-gray);
+            margin-bottom: 2px;
+        }
+
+        .search-result-subtitle {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .search-result-type {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-left: 12px;
+        }
+
         .notifications {
             position: relative;
             cursor: pointer;
