@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { getAlerts, markNotificationRead, markAllNotificationsRead } from '../../api.js';
 
-const Notifications = () => {
+const Notifications = ({ active }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,53 +21,39 @@ const Notifications = () => {
   };
 
   useEffect(() => {
-    fetchNotifications();
-  }, [filter]);
+    if (active) {
+      fetchNotifications();
+    }
+  }, [active, filter]);
 
   const fetchNotifications = async () => {
     try {
       setLoading(true);
+      setError(null);
       
-      // Get auth token
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        setError('Authentication required - please log in');
+      // Use API function to fetch notifications
+      const response = await getAlerts();
+      
+      // Extract data array from API response
+      const data = response.data || response || [];
+      
+      // Ensure data is an array
+      if (!Array.isArray(data)) {
+        console.warn('API response data is not an array:', data);
+        setNotifications([]);
         return;
       }
-
-      // Fetch real notifications from API
-      const response = await fetch('/api/alerts/list/', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          setError('Authentication failed - please log in again');
-          return;
-        }
-        throw new Error(`Failed to fetch notifications: ${response.statusText}`);
-      }
-
-      const result = await response.json();
       
-      if (!result.success) {
-        throw new Error(result.message || 'Failed to fetch notifications');
-      }
-
-      // Map API response to frontend format
-      const apiNotifications = result.data.map(notification => ({
+      // Transform API data to match component expectations
+      const apiNotifications = data.map(notification => ({
         id: notification.id,
-        type: notification.type,
         title: notification.title,
         message: notification.message,
-        severity: notification.priority, // Map priority to severity
-        read: notification.is_read,
+        type: notification.notification_type || notification.type,
+        priority: notification.priority || 'medium',
+        read: notification.is_read || notification.read,
         created_at: notification.created_at,
-        source: getSourceFromType(notification.type),
+        source: getSourceFromType(notification.notification_type || notification.type),
         metadata: notification.metadata
       }));
 
@@ -83,7 +70,7 @@ const Notifications = () => {
       setNotifications(filteredNotifications);
     } catch (err) {
       console.error('Error fetching notifications:', err);
-      setError(err.message);
+      setError('Error loading notifications: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -91,30 +78,8 @@ const Notifications = () => {
 
   const markAsRead = async (notificationId) => {
     try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        setError('Authentication required');
-        return;
-      }
-
-      const response = await fetch(`/api/alerts/${notificationId}/mark-read/`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to mark notification as read: ${response.statusText}`);
-      }
-
-      const result = await response.json();
+      await markNotificationRead(notificationId);
       
-      if (!result.success) {
-        throw new Error(result.message || 'Failed to mark notification as read');
-      }
-
       // Update local state
       setNotifications(prev =>
         prev.map(n =>
@@ -123,81 +88,24 @@ const Notifications = () => {
       );
     } catch (err) {
       console.error('Error marking notification as read:', err);
-      setError('Failed to mark notification as read');
+      setError('Failed to mark notification as read: ' + err.message);
     }
   };
 
   const markAllAsRead = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        setError('Authentication required');
-        return;
-      }
-
-      const response = await fetch('/api/alerts/mark-all-read/', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to mark all notifications as read: ${response.statusText}`);
-      }
-
-      const result = await response.json();
+      await markAllNotificationsRead();
       
-      if (!result.success) {
-        throw new Error(result.message || 'Failed to mark all notifications as read');
-      }
-
       // Update local state
       setNotifications(prev =>
         prev.map(n => ({ ...n, read: true }))
       );
     } catch (err) {
       console.error('Error marking all notifications as read:', err);
-      setError('Failed to mark all notifications as read');
+      setError('Failed to mark all notifications as read: ' + err.message);
     }
   };
 
-  const deleteNotification = async (notificationId) => {
-    try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        setError('Authentication required');
-        return;
-      }
-
-      const response = await fetch(`/api/alerts/${notificationId}/delete/`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to delete notification: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      
-      if (!result.success) {
-        throw new Error(result.message || 'Failed to delete notification');
-      }
-
-      // Update local state
-      setNotifications(prev =>
-        prev.filter(n => n.id !== notificationId)
-      );
-    } catch (err) {
-      console.error('Error deleting notification:', err);
-      setError('Failed to delete notification');
-    }
-  };
 
   const getNotificationIcon = (type) => {
     const icons = {
@@ -236,33 +144,40 @@ const Notifications = () => {
 
   if (loading) {
     return (
-      <div className="notifications">
-        <div className="loading-state">
-          <i className="fas fa-spinner fa-spin"></i>
-          <p>Loading notifications...</p>
+      <section id="notifications" className="page-section active">
+        <div className="notifications">
+          <div className="loading-state">
+            <i className="fas fa-spinner fa-spin"></i>
+            <p>Loading notifications...</p>
+          </div>
         </div>
-      </div>
+      </section>
     );
   }
 
   if (error) {
     return (
-      <div className="notifications">
-        <div className="error-state">
-          <i className="fas fa-exclamation-triangle"></i>
-          <p>Error loading notifications: {error}</p>
-          <button onClick={fetchNotifications} className="btn btn-primary">
-            Retry
-          </button>
+      <section id="notifications" className="page-section active">
+        <div className="notifications">
+          <div className="error-state">
+            <i className="fas fa-exclamation-triangle"></i>
+            <p>Error loading notifications: {error}</p>
+            <button onClick={fetchNotifications} className="btn btn-primary">
+              Retry
+            </button>
+          </div>
         </div>
-      </div>
+      </section>
     );
   }
+
+  if (!active) return null;
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
-    <div className="notifications">
+    <section id="notifications" className="page-section active">
+      <div className="notifications">
       <div className="header">
         <div className="title-section">
           <h2>Notifications</h2>
@@ -356,13 +271,6 @@ const Notifications = () => {
                     <i className="fas fa-check"></i>
                   </button>
                 )}
-                <button
-                  onClick={() => deleteNotification(notification.id)}
-                  className="btn btn-sm btn-danger"
-                  title="Delete notification"
-                >
-                  <i className="fas fa-trash"></i>
-                </button>
               </div>
             </div>
           ))
@@ -606,7 +514,8 @@ const Notifications = () => {
           margin-bottom: 15px;
         }
       `}</style>
-    </div>
+      </div>
+    </section>
   );
 };
 
