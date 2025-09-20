@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getAlerts, markNotificationRead, markAllNotificationsRead } from '../../api.js';
+import { getAlerts, markNotificationRead, markAllNotificationsRead, deleteNotification } from '../../api.js';
 
 const Notifications = ({ active }) => {
   const [notifications, setNotifications] = useState([]);
@@ -106,6 +106,19 @@ const Notifications = ({ active }) => {
     }
   };
 
+  const deleteNotificationHandler = async (notificationId) => {
+    try {
+      await deleteNotification(notificationId);
+      
+      // Update local state - remove the deleted notification
+      setNotifications(prev =>
+        prev.filter(n => n.id !== notificationId)
+      );
+    } catch (err) {
+      console.error('Error deleting notification:', err);
+      setError('Failed to delete notification: ' + err.message);
+    }
+  };
 
   const getNotificationIcon = (type) => {
     const icons = {
@@ -265,12 +278,19 @@ const Notifications = ({ active }) => {
                 {!notification.read && (
                   <button
                     onClick={() => markAsRead(notification.id)}
-                    className="btn btn-sm btn-outline"
+                    className="action-btn read-btn"
                     title="Mark as read"
                   >
                     <i className="fas fa-check"></i>
                   </button>
                 )}
+                <button
+                  onClick={() => deleteNotificationHandler(notification.id)}
+                  className="action-btn delete-btn"
+                  title="Delete notification"
+                >
+                  <i className="fas fa-trash"></i>
+                </button>
               </div>
             </div>
           ))
@@ -477,6 +497,53 @@ const Notifications = ({ active }) => {
 
         .btn-danger:hover {
           background: #c82333;
+        }
+
+        .action-btn {
+          padding: 6px 10px;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 12px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 32px;
+          height: 32px;
+          transition: all 0.2s ease;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .action-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+
+        .read-btn {
+          background: linear-gradient(135deg, #28a745, #20c997);
+          color: white;
+          border: 1px solid #28a745;
+        }
+
+        .read-btn:hover {
+          background: linear-gradient(135deg, #218838, #1ba085);
+          border-color: #1e7e34;
+        }
+
+        .delete-btn {
+          background: linear-gradient(135deg, #dc3545, #fd7e14);
+          color: white;
+          border: 1px solid #dc3545;
+          margin-left: 4px;
+        }
+
+        .delete-btn:hover {
+          background: linear-gradient(135deg, #c82333, #e8590c);
+          border-color: #bd2130;
+        }
+
+        .action-btn i {
+          font-size: 11px;
         }
 
         .empty-state {
