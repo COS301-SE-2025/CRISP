@@ -157,7 +157,7 @@ const Notifications = ({ active }) => {
 
   if (loading) {
     return (
-      <section id="notifications" className="page-section active">
+      <section id="notifications" className={`page-section ${active ? 'active' : ''}`}>
         <div className="notifications">
           <div className="loading-state">
             <i className="fas fa-spinner fa-spin"></i>
@@ -170,7 +170,7 @@ const Notifications = ({ active }) => {
 
   if (error) {
     return (
-      <section id="notifications" className="page-section active">
+      <section id="notifications" className={`page-section ${active ? 'active' : ''}`}>
         <div className="notifications">
           <div className="error-state">
             <i className="fas fa-exclamation-triangle"></i>
@@ -189,7 +189,7 @@ const Notifications = ({ active }) => {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
-    <section id="notifications" className="page-section active">
+    <section id="notifications" className={`page-section ${active ? 'active' : ''}`}>
       <div className="notifications">
       <div className="header">
         <div className="title-section">

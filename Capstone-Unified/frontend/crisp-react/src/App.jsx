@@ -2811,6 +2811,8 @@ function ThreatFeeds({
   const [showDeleteFeedModal, setShowDeleteFeedModal] = useState(false);
   const [feedToDelete, setFeedToDelete] = useState(null);
   const [deletingFeed, setDeletingFeed] = useState(false);
+  const [addingFeed, setAddingFeed] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Note: consumptionParams, activePreset, handlePresetSelect, and handleParamChange
   // are now passed as props from the parent App component
@@ -2898,10 +2900,35 @@ function ThreatFeeds({
   }, []);
 
   const fetchThreatFeeds = async () => {
+    console.log('🔄 Fetching threat feeds...');
     setLoading(true);
-    const data = await api.get('/api/threat-feeds/');
-    if (data && data.results) {
-      setThreatFeeds(data.results);
+    try {
+      // Add cache busting timestamp
+      const cacheBuster = Date.now();
+      const data = await api.get(`/api/threat-feeds/?t=${cacheBuster}`);
+      console.log('📡 API response:', data);
+      console.log('📊 API response details:', {
+        count: data.count,
+        results_length: data.results?.length,
+        results: data.results
+      });
+      if (data && data.results) {
+        console.log(`✅ Found ${data.results.length} threat feeds, updating state...`);
+        console.log('📋 Feed names:', data.results.map(f => f.name));
+        console.log('🔄 Current threatFeeds state before update:', threatFeeds.length);
+        setThreatFeeds(data.results);
+        setRefreshTrigger(prev => prev + 1); // Force re-render
+        console.log('✅ Threat feeds state updated');
+        
+        // Force a re-render by updating a dummy state
+        setTimeout(() => {
+          console.log('🔄 Force checking state after update:', threatFeeds.length);
+        }, 100);
+      } else {
+        console.warn('⚠️ No threat feeds data found in response');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching threat feeds:', error);
     }
     setLoading(false);
   };
@@ -3354,17 +3381,29 @@ function ThreatFeeds({
     try {
       const result = await api.delete(`/api/threat-feeds/${feedToDelete.id}/`);
       if (result !== null) {
-        console.log('Feed deleted successfully:', feedToDelete.name);
-        // Refresh feeds list
+        console.log('✅ Feed deleted successfully:', feedToDelete.name);
+        
+        // Show success notification
+        showSuccess('Feed Deleted', `Threat feed "${feedToDelete.name}" has been deleted successfully.`);
+        
+        // Refresh the threat feeds list to remove the deleted feed immediately
+        console.log('🔄 Forcing refresh by clearing state first...');
+        setThreatFeeds([]); // Clear first to force re-render
+        
+        // Small delay to ensure database transaction is committed
+        console.log('⏳ Waiting 2000ms for database commit...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
         await fetchThreatFeeds();
+        console.log('✅ Threat feeds list refreshed after deletion');
         // Close modal
         closeDeleteFeedModal();
       } else {
-        alert('Failed to delete threat feed. Please try again.');
+        showError('Delete Failed', 'Failed to delete threat feed. Please try again.');
       }
     } catch (error) {
       console.error('Error deleting feed:', error);
-      alert('Error deleting threat feed. Please try again.');
+      showError('Error Deleting Feed', 'Error deleting threat feed. Please try again.');
     } finally {
       setDeletingFeed(false);
     }
@@ -3390,33 +3429,64 @@ function ThreatFeeds({
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     
-    // Clean up form data - convert empty strings to null for optional fields
-    const cleanedFormData = {
-      ...formData,
-      taxii_server_url: formData.taxii_server_url || null,
-      taxii_api_root: formData.taxii_api_root || null,
-      taxii_collection_id: formData.taxii_collection_id || null,
-      taxii_username: formData.taxii_username || null,
-      taxii_password: formData.taxii_password || null,
-      description: formData.description || null
-    };
-    
-    console.log('Submitting threat feed data:', cleanedFormData);
-    
-    const result = await api.post('/api/threat-feeds/', cleanedFormData);
-    if (result) {
-      setShowAddModal(false);
-      setFormData({
-        name: '',
-        description: '',
-        is_external: true,
-        taxii_server_url: '',
-        taxii_api_root: '',
-        taxii_collection_id: '',
-        taxii_username: '',
-        taxii_password: ''
-      });
-      fetchThreatFeeds();
+    setAddingFeed(true);
+    try {
+      // Clean up form data - convert empty strings to null for optional fields
+      const cleanedFormData = {
+        ...formData,
+        taxii_server_url: formData.taxii_server_url || null,
+        taxii_api_root: formData.taxii_api_root || null,
+        taxii_collection_id: formData.taxii_collection_id || null,
+        taxii_username: formData.taxii_username || null,
+        taxii_password: formData.taxii_password || null,
+        description: formData.description || null
+      };
+      
+      console.log('Submitting threat feed data:', cleanedFormData);
+      
+      const result = await api.post('/api/threat-feeds/', cleanedFormData);
+      console.log('📤 POST result:', result);
+      if (result) {
+        console.log('✅ Feed added successfully, refreshing list...');
+        console.log('🆔 New feed ID:', result.id);
+        console.log('📋 New feed name:', result.name);
+        console.log('🔍 Result object details:', {
+          id: result.id,
+          name: result.name,
+          is_external: result.is_external,
+          created_at: result.created_at
+        });
+        
+        // Show success notification
+        showSuccess('Feed Added', `Threat feed "${cleanedFormData.name}" has been added successfully.`);
+        
+        setShowAddModal(false);
+        setFormData({
+          name: '',
+          description: '',
+          is_external: true,
+          taxii_server_url: '',
+          taxii_api_root: '',
+          taxii_collection_id: '',
+          taxii_username: '',
+          taxii_password: ''
+        });
+        // Refresh the threat feeds list to show the new feed immediately
+        console.log('🔄 Forcing refresh by clearing state first...');
+        setThreatFeeds([]); // Clear first to force re-render
+        
+        // Small delay to ensure database transaction is committed
+        console.log('⏳ Waiting 2000ms for database commit...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        await fetchThreatFeeds();
+        console.log('✅ Threat feeds list refreshed');
+      }
+    } catch (error) {
+      console.error('Error adding threat feed:', error);
+      showError('Error Adding Feed', 'Failed to add threat feed. Please try again.');
+    } finally {
+      setAddingFeed(false);
     }
   };
 
@@ -3661,7 +3731,7 @@ function ThreatFeeds({
         </div>
       )}
 
-      <div className="tabs">
+      <div className="tabs" key={`tabs-${refreshTrigger}`}>
         <div 
           className={`tab ${activeTab === 'active' ? 'active' : ''}`}
           onClick={() => handleTabChange('active')}
@@ -3783,9 +3853,9 @@ function ThreatFeeds({
               <i className="fas fa-spinner fa-spin"></i> Loading feeds...
             </div>
           ) : (
-            <ul className="feed-items">
+            <ul className="feed-items" key={`feeds-${refreshTrigger}`}>
               {getPaginatedFeeds().map((feed) => (
-                <li key={feed.id} className="feed-item">
+                <li key={`${feed.id}-${refreshTrigger}`} className="feed-item">
                   <div className="feed-icon">
                     <i className={feed.is_external ? "fas fa-globe" : "fas fa-server"}></i>
                   </div>
@@ -4032,11 +4102,28 @@ function ThreatFeeds({
               </div>
               
               <div className="modal-footer">
-                <button type="button" className="btn btn-outline" onClick={closeModal}>
+                <button 
+                  type="button" 
+                  className="btn btn-outline" 
+                  onClick={closeModal}
+                  disabled={addingFeed}
+                >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  <i className="fas fa-plus"></i> Add Feed
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={addingFeed}
+                >
+                  {addingFeed ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin"></i> Adding Feed...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-plus"></i> Add Feed
+                    </>
+                  )}
                 </button>
               </div>
             </form>
