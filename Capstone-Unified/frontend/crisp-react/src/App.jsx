@@ -136,6 +136,20 @@ const getAuthHeaders = () => {
 function AppWithNotifications({ user, onLogout, isAdmin }) {
   // Get notification functions
   const { showSuccess, showInfo, showError, showWarning } = useNotifications();
+  
+  // Unread notifications count state
+  const [unreadCount, setUnreadCount] = useState(0);
+  
+  // Fetch unread notifications count
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await api.getAlerts({ unread_only: 'true' });
+      const count = response.data ? response.data.length : 0;
+      setUnreadCount(count);
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+    }
+  };
 
   // Initialize activePage from URL or default to dashboard
   const getInitialPage = () => {
@@ -507,6 +521,16 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
     return () => clearTimeout(timer);
   }, []);
 
+  // Fetch unread notifications count on component mount and periodically
+  useEffect(() => {
+    fetchUnreadCount(); // Initial fetch
+    
+    // Fetch every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
   // Function to switch between pages with optional modal triggers
   const showPage = (pageId, modalTrigger = null, modalParams = {}) => {
     setActivePage(pageId);
@@ -632,6 +656,8 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
         setShowSearchDropdown={setShowSearchDropdown}
         handleSearchSubmit={handleSearchSubmit}
         handleSearchResultClick={handleSearchResultClick}
+        unreadCount={unreadCount}
+        fetchUnreadCount={fetchUnreadCount}
       />
       <MainNav activePage={activePage} showPage={showPage} user={user} onLogout={onLogout} isAdmin={isAdmin} />
       <main className="main-content">
@@ -690,7 +716,9 @@ function Header({
   showSearchDropdown,
   setShowSearchDropdown,
   handleSearchSubmit,
-  handleSearchResultClick
+  handleSearchResultClick,
+  unreadCount,
+  fetchUnreadCount
 }) {
   
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -802,8 +830,30 @@ function Header({
               </div>
             )}
           </div>
-          <div className="notifications" onClick={() => showPage('notifications')} style={{cursor: 'pointer'}}>
+          <div className="notifications" onClick={() => {showPage('notifications'); fetchUnreadCount();}} style={{cursor: 'pointer', position: 'relative'}}>
             <i className="fas fa-bell"></i>
+            {unreadCount > 0 && (
+              <span className="notification-badge" style={{
+                position: 'absolute',
+                top: '-5px',
+                right: '-5px',
+                background: '#dc3545',
+                color: 'white',
+                borderRadius: '50%',
+                fontSize: '11px',
+                fontWeight: '600',
+                padding: '2px 6px',
+                minWidth: '18px',
+                height: '18px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '2px solid white',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+              }}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
           </div>
           
           {/* Enhanced User Profile Menu */}
