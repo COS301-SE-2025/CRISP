@@ -1667,6 +1667,51 @@ def sharing_permissions(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def shared_indicators(request):
+    """Get indicators shared with the current user's organization."""
+    try:
+        from core.services.ioc_sharing_service import IOCSharingService
+
+        if not hasattr(request, 'user') or not request.user.is_authenticated:
+            return Response(
+                {"error": "Authentication required"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        # Get user's organization
+        user_org = getattr(request.user, 'organization', None)
+        if not user_org:
+            return Response(
+                {"error": "User not associated with an organization"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Use the IOC sharing service
+        sharing_service = IOCSharingService()
+
+        # Get shared indicators
+        shared_indicators = sharing_service.get_shared_indicators_for_organization(user_org)
+
+        return Response({
+            'success': True,
+            'shared_indicators': shared_indicators,
+            'count': len(shared_indicators),
+            'organization': {
+                'id': str(user_org.id),
+                'name': user_org.name
+            }
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        logger.error(f"Error getting shared indicators: {str(e)}")
+        return Response(
+            {"error": "Failed to get shared indicators", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def system_health(request):

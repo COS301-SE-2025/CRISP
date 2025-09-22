@@ -2245,3 +2245,59 @@ class SystemActivity(models.Model):
     class Meta:
         ordering = ['-created_at']
         db_table = 'core_systemactivity'
+
+
+class IndicatorSharingRelationship(models.Model):
+    """
+    Track sharing relationships between indicators and organizations.
+    This allows sharing the original indicator without duplication.
+    """
+    SHARE_METHODS = [
+        ('taxii', 'TAXII'),
+        ('api', 'API'),
+        ('email', 'Email'),
+    ]
+
+    ANONYMIZATION_LEVELS = [
+        ('none', 'None'),
+        ('minimal', 'Minimal'),
+        ('partial', 'Partial'),
+        ('full', 'Full'),
+    ]
+
+    # Core relationship
+    indicator = models.ForeignKey(Indicator, on_delete=models.CASCADE, related_name='sharing_relationships')
+    target_organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='received_indicators')
+    shared_by_user = models.ForeignKey('user_management.CustomUser', on_delete=models.SET_NULL, null=True, blank=True)
+
+    # Sharing metadata
+    share_method = models.CharField(max_length=20, choices=SHARE_METHODS, default='taxii')
+    anonymization_level = models.CharField(max_length=20, choices=ANONYMIZATION_LEVELS, default='partial')
+    is_active = models.BooleanField(default=True)
+
+    # Timestamps
+    shared_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+
+    # Additional metadata
+    metadata = models.JSONField(default=dict, blank=True)
+
+    def __str__(self):
+        return f"Indicator {self.indicator.id} shared with {self.target_organization.name}"
+
+    @property
+    def is_expired(self):
+        """Check if the sharing relationship has expired"""
+        if not self.expires_at:
+            return False
+        return timezone.now() > self.expires_at
+
+    @property
+    def is_valid(self):
+        """Check if the sharing relationship is valid and active"""
+        return self.is_active and not self.is_expired
+
+    class Meta:
+        unique_together = ['indicator', 'target_organization']
+        ordering = ['-shared_at']
+        db_table = 'core_indicator_sharing_relationships'

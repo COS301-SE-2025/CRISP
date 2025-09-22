@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 const IndicatorTable = () => {
   const [indicators, setIndicators] = useState([]);
+  const [sharedIndicators, setSharedIndicators] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
@@ -52,28 +53,44 @@ const IndicatorTable = () => {
     try {
       setLoading(true);
 
-      // Fetch actual indicators from API
-      const response = await fetch('/api/indicators/', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          // Add auth headers if needed
-          ...(localStorage.getItem('token') && {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          })
-        }
-      });
+      // Fetch both regular indicators and shared indicators
+      const [indicatorsResponse, sharedResponse] = await Promise.all([
+        fetch('/api/indicators/', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(localStorage.getItem('token') && {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            })
+          }
+        }),
+        fetch('/api/shared-indicators/', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(localStorage.getItem('token') && {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            })
+          }
+        })
+      ]);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!indicatorsResponse.ok) {
+        throw new Error(`HTTP error! status: ${indicatorsResponse.status}`);
       }
 
-      const data = await response.json();
+      const indicatorsData = await indicatorsResponse.json();
+      let sharedIndicatorsData = { shared_indicators: [] };
 
-      // Handle different response formats
-      let indicatorsList = Array.isArray(data) ? data : data.results || data.indicators || [];
+      // Handle shared indicators response (might fail if user doesn't have permission)
+      if (sharedResponse.ok) {
+        sharedIndicatorsData = await sharedResponse.json();
+      }
 
-      // Transform API response to match component format
+      // Handle different response formats for regular indicators
+      let indicatorsList = Array.isArray(indicatorsData) ? indicatorsData : indicatorsData.results || indicatorsData.indicators || [];
+
+      // Transform regular indicators
       const apiIndicators = indicatorsList.map(indicator => ({
         id: indicator.id,
         type: indicator.indicator_type || indicator.type || 'Unknown',
@@ -88,28 +105,61 @@ const IndicatorTable = () => {
         tags: indicator.tags || [],
         description: indicator.description || '',
         ttps: indicator.ttps || [],
-        false_positive_score: indicator.false_positive_score || 0
+        false_positive_score: indicator.false_positive_score || 0,
+        is_shared: false,
+        sharing_info: null
       }));
 
-      let filteredIndicators = apiIndicators;
-      
+      // Transform shared indicators
+      const sharedIndicatorsList = sharedIndicatorsData.shared_indicators || [];
+      const transformedSharedIndicators = sharedIndicatorsList.map(indicator => ({
+        id: `shared-${indicator.id}`, // Add prefix to avoid ID conflicts
+        type: indicator.type || 'Unknown',
+        value: indicator.value || '',
+        threat_type: indicator.threat_type || 'Unknown',
+        confidence: indicator.confidence || 'medium',
+        severity: indicator.severity || 'medium',
+        source: indicator.sharing_info?.sharing_organization || 'Shared',
+        created_at: indicator.created_at || new Date().toISOString(),
+        first_seen: indicator.first_seen || indicator.created_at || new Date().toISOString(),
+        last_seen: indicator.last_seen || indicator.created_at || new Date().toISOString(),
+        tags: indicator.tags || [],
+        description: indicator.description || '',
+        ttps: indicator.ttps || [],
+        false_positive_score: indicator.false_positive_score || 0,
+        is_shared: true,
+        sharing_info: indicator.sharing_info,
+        original_id: indicator.id // Keep track of original ID
+      }));
+
+      // Store shared indicators separately for stats
+      setSharedIndicators(transformedSharedIndicators);
+
+      // Combine all indicators
+      let allIndicators = [...apiIndicators, ...transformedSharedIndicators];
+
       // Apply type filter
-      if (filter !== 'all') {
-        filteredIndicators = apiIndicators.filter(i =>
+      if (filter === 'shared') {
+        allIndicators = transformedSharedIndicators;
+      } else if (filter === 'own') {
+        allIndicators = apiIndicators;
+      } else if (filter !== 'all') {
+        allIndicators = allIndicators.filter(i =>
           i.type === filter || i.threat_type === filter || i.confidence === filter || i.severity === filter
         );
       }
 
       // Apply search filter
       if (searchTerm) {
-        filteredIndicators = filteredIndicators.filter(i =>
+        allIndicators = allIndicators.filter(i =>
           i.value.toLowerCase().includes(searchTerm.toLowerCase()) ||
           i.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          i.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+          i.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (i.sharing_info && i.sharing_info.sharing_organization.toLowerCase().includes(searchTerm.toLowerCase()))
         );
       }
 
-      setIndicators(filteredIndicators);
+      setIndicators(allIndicators);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -250,7 +300,17 @@ const IndicatorTable = () => {
             <p>Total Indicators</p>
           </div>
         </div>
-        
+
+        <div className="stat-card">
+          <div className="stat-icon">
+            <i className="fas fa-share-alt" style={{color: '#17a2b8'}}></i>
+          </div>
+          <div className="stat-content">
+            <h3>{sharedIndicators.length.toLocaleString()}</h3>
+            <p>Shared with Us</p>
+          </div>
+        </div>
+
         <div className="stat-card">
           <div className="stat-icon">
             <i className="fas fa-exclamation-triangle" style={{color: '#dc3545'}}></i>
@@ -260,17 +320,7 @@ const IndicatorTable = () => {
             <p>Critical Threats</p>
           </div>
         </div>
-        
-        <div className="stat-card">
-          <div className="stat-icon">
-            <i className="fas fa-eye" style={{color: '#28a745'}}></i>
-          </div>
-          <div className="stat-content">
-            <h3>{indicators.filter(i => i.confidence === 'high').length}</h3>
-            <p>High Confidence</p>
-          </div>
-        </div>
-        
+
         <div className="stat-card">
           <div className="stat-icon">
             <i className="fas fa-clock" style={{color: '#ffc107'}}></i>
@@ -291,7 +341,19 @@ const IndicatorTable = () => {
           className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
           onClick={() => setFilter('all')}
         >
-          All Types
+          All Indicators
+        </button>
+        <button
+          className={`filter-btn ${filter === 'own' ? 'active' : ''}`}
+          onClick={() => setFilter('own')}
+        >
+          <i className="fas fa-home"></i> Own Indicators
+        </button>
+        <button
+          className={`filter-btn ${filter === 'shared' ? 'active' : ''}`}
+          onClick={() => setFilter('shared')}
+        >
+          <i className="fas fa-share-alt"></i> Shared with Us
         </button>
         <button
           className={`filter-btn ${filter === 'IP Address' ? 'active' : ''}`}
@@ -316,12 +378,6 @@ const IndicatorTable = () => {
           onClick={() => setFilter('critical')}
         >
           Critical Only
-        </button>
-        <button
-          className={`filter-btn ${filter === 'high' ? 'active' : ''}`}
-          onClick={() => setFilter('high')}
-        >
-          High Confidence
         </button>
       </div>
 
@@ -376,22 +432,32 @@ const IndicatorTable = () => {
           </thead>
           <tbody>
             {currentItems.map(indicator => (
-              <tr key={indicator.id}>
+              <tr key={indicator.id} className={indicator.is_shared ? 'shared-indicator' : ''}>
                 <td>
                   <div className="type-cell">
                     <i className={getTypeIcon(indicator.type)}></i>
                     {indicator.type}
+                    {indicator.is_shared && (
+                      <span className="shared-badge" title={`Shared by ${indicator.sharing_info?.sharing_organization}`}>
+                        <i className="fas fa-share-alt"></i>
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td>
                   <div className="value-cell">
                     <span className="value">{indicator.value}</span>
                     <div className="tags">
-                      {indicator.tags.slice(0, 2).map(tag => (
+                      {indicator.is_shared && (
+                        <span className="tag shared-tag">
+                          <i className="fas fa-share-alt"></i> Shared
+                        </span>
+                      )}
+                      {indicator.tags.slice(0, indicator.is_shared ? 1 : 2).map(tag => (
                         <span key={tag} className="tag">{tag}</span>
                       ))}
-                      {indicator.tags.length > 2 && (
-                        <span className="tag">+{indicator.tags.length - 2}</span>
+                      {indicator.tags.length > (indicator.is_shared ? 1 : 2) && (
+                        <span className="tag">+{indicator.tags.length - (indicator.is_shared ? 1 : 2)}</span>
                       )}
                     </div>
                   </div>
@@ -400,7 +466,7 @@ const IndicatorTable = () => {
                   <span className="threat-type">{indicator.threat_type}</span>
                 </td>
                 <td>
-                  <span 
+                  <span
                     className="severity-badge"
                     style={{ backgroundColor: getSeverityColor(indicator.severity) }}
                   >
@@ -408,7 +474,7 @@ const IndicatorTable = () => {
                   </span>
                 </td>
                 <td>
-                  <span 
+                  <span
                     className="confidence-badge"
                     style={{ backgroundColor: getConfidenceColor(indicator.confidence) }}
                   >
@@ -416,7 +482,14 @@ const IndicatorTable = () => {
                   </span>
                 </td>
                 <td>
-                  <span className="source">{indicator.source}</span>
+                  <div className="source-cell">
+                    <span className="source">{indicator.source}</span>
+                    {indicator.is_shared && indicator.sharing_info && (
+                      <div className="sharing-details">
+                        <small>Shared {new Date(indicator.sharing_info.shared_at).toLocaleDateString()}</small>
+                      </div>
+                    )}
+                  </div>
                 </td>
                 <td>
                   <span className="date">
@@ -431,9 +504,16 @@ const IndicatorTable = () => {
                     <button className="btn-icon" title="View Details">
                       <i className="fas fa-eye"></i>
                     </button>
-                    <button className="btn-icon" title="Block">
-                      <i className="fas fa-ban"></i>
-                    </button>
+                    {!indicator.is_shared && (
+                      <>
+                        <button className="btn-icon" title="Share Indicator">
+                          <i className="fas fa-share"></i>
+                        </button>
+                        <button className="btn-icon" title="Block">
+                          <i className="fas fa-ban"></i>
+                        </button>
+                      </>
+                    )}
                     <button className="btn-icon" title="Export">
                       <i className="fas fa-download"></i>
                     </button>
@@ -829,6 +909,45 @@ const IndicatorTable = () => {
           font-size: 32px;
           color: #dc3545;
           margin-bottom: 15px;
+        }
+
+        /* Shared indicator styles */
+        .shared-indicator {
+          background: #f8fdff;
+          border-left: 3px solid #17a2b8;
+        }
+
+        .shared-badge {
+          margin-left: 8px;
+          padding: 2px 6px;
+          background: #17a2b8;
+          color: white;
+          border-radius: 10px;
+          font-size: 10px;
+        }
+
+        .shared-tag {
+          background: #17a2b8 !important;
+          color: white !important;
+        }
+
+        .sharing-details {
+          margin-top: 2px;
+        }
+
+        .sharing-details small {
+          color: #17a2b8;
+          font-size: 10px;
+          font-style: italic;
+        }
+
+        .source-cell {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .filter-btn i {
+          margin-right: 5px;
         }
       `}</style>
     </div>

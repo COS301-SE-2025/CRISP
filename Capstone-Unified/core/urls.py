@@ -14,7 +14,7 @@ from core.api import auth_api, user_api, trust_api, organization_api
 from core.api.threat_feed_views import (
     ThreatFeedViewSet, # Import ThreatFeedViewSet
     indicators_list, indicators_export, indicators_bulk_import, indicator_update, indicator_delete, indicator_share, # Import indicator views
-    indicator_generate_share_url, indicator_shared_access, sharing_permissions, # New sharing endpoints
+    indicator_generate_share_url, indicator_shared_access, sharing_permissions, shared_indicators, # New sharing endpoints
     threat_activity_chart_data, system_health, recent_activities, # Import other views
     ttps_list, ttp_detail, mitre_matrix, ttp_trends, ttp_export,
     ttp_mitre_mapping, ttp_bulk_mapping, ttp_mapping_validation,
@@ -141,6 +141,7 @@ threat_feed_urlpatterns = [
     path('indicators/<int:indicator_id>/generate-share-url/', indicator_generate_share_url, name='indicator-generate-share-url'),
     path('indicators/shared/<str:share_token>/', indicator_shared_access, name='indicator-shared-access'),
     path('sharing-permissions/', sharing_permissions, name='sharing-permissions'),
+    path('shared-indicators/', shared_indicators, name='shared-indicators'),
     path('threat-activity-chart/', threat_activity_chart_data, name='threat-activity-chart'),
     path('system-health/', system_health, name='system-health'),
     path('recent-activities/', recent_activities, name='recent-activities'),

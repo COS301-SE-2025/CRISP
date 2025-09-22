@@ -11,7 +11,8 @@ from django.core.exceptions import ValidationError
 
 from core.models.models import (
     Indicator, Organization, STIXObject,
-    Collection, CollectionObject, SystemActivity
+    Collection, CollectionObject, SystemActivity,
+    IndicatorSharingRelationship
 )
 from core.trust_management.models.trust_models import TrustRelationship
 from core.services.access_control_service import AccessControlService
@@ -364,11 +365,11 @@ class IOCSharingService:
 
             # Share based on method
             if share_method == 'taxii':
-                share_result = self._share_via_taxii(stix_indicator, target_org)
+                share_result = self._share_via_taxii(stix_indicator, target_org, indicator, sharing_user, anonymization_level, share_method)
             elif share_method == 'api':
-                share_result = self._share_via_api(stix_indicator, target_org)
+                share_result = self._share_via_api(stix_indicator, target_org, indicator, sharing_user, anonymization_level, share_method)
             elif share_method == 'email':
-                share_result = self._share_via_email(stix_indicator, target_org)
+                share_result = self._share_via_email(stix_indicator, target_org, indicator, sharing_user, anonymization_level, share_method)
             else:
                 raise ValueError(f"Unsupported share method: {share_method}")
 
@@ -479,13 +480,19 @@ class IOCSharingService:
 
         return stix_indicator
 
-    def _share_via_taxii(self, stix_indicator: Dict[str, Any], target_org: Organization) -> Dict[str, Any]:
+    def _share_via_taxii(self, stix_indicator: Dict[str, Any], target_org: Organization,
+                        indicator: Indicator, sharing_user, anonymization_level: str,
+                        share_method: str) -> Dict[str, Any]:
         """
         Share indicator via TAXII protocol
 
         Args:
             stix_indicator: STIX indicator object
             target_org: Target organization
+            indicator: Original indicator being shared
+            sharing_user: User performing the share
+            anonymization_level: Level of anonymization applied
+            share_method: Method used for sharing
 
         Returns:
             Share result
@@ -521,15 +528,16 @@ class IOCSharingService:
                 stix_object=stix_object
             )
 
-            # Create an actual Indicator record for the target organization
-            # so it shows up in their IoC Management page
-            shared_indicator = self._create_shared_indicator_record(stix_indicator, target_org)
+            # Create sharing relationship instead of duplicating the indicator
+            sharing_relationship = self._create_sharing_relationship(
+                indicator, target_org, sharing_user, anonymization_level, share_method
+            )
 
             return {
                 'method': 'taxii',
                 'collection_id': str(collection.id),
                 'stix_object_id': str(stix_object.id),
-                'shared_indicator_id': str(shared_indicator.id) if shared_indicator else None,
+                'sharing_relationship_id': str(sharing_relationship.id) if sharing_relationship else None,
                 'success': True
             }
 
@@ -537,47 +545,62 @@ class IOCSharingService:
             logger.error(f"Error sharing via TAXII: {str(e)}")
             raise
 
-    def _share_via_api(self, stix_indicator: Dict[str, Any], target_org: Organization) -> Dict[str, Any]:
+    def _share_via_api(self, stix_indicator: Dict[str, Any], target_org: Organization,
+                      indicator: Indicator, sharing_user, anonymization_level: str,
+                      share_method: str) -> Dict[str, Any]:
         """
         Share indicator via API method
 
         Args:
             stix_indicator: STIX indicator object
             target_org: Target organization
+            indicator: Original indicator being shared
+            sharing_user: User performing the share
+            anonymization_level: Level of anonymization applied
+            share_method: Method used for sharing
 
         Returns:
             Share result
         """
-        # Create an actual Indicator record for the target organization
-        shared_indicator = self._create_shared_indicator_record(stix_indicator, target_org)
+        # Create sharing relationship instead of duplicating the indicator
+        sharing_relationship = self._create_sharing_relationship(
+            indicator, target_org, sharing_user, anonymization_level, share_method
+        )
 
         return {
             'method': 'api',
             'target_endpoint': f'/api/organizations/{target_org.id}/indicators/',
-            'shared_indicator_id': str(shared_indicator.id) if shared_indicator else None,
+            'sharing_relationship_id': str(sharing_relationship.id) if sharing_relationship else None,
             'success': True
         }
 
-    def _share_via_email(self, stix_indicator: Dict[str, Any], target_org: Organization) -> Dict[str, Any]:
+    def _share_via_email(self, stix_indicator: Dict[str, Any], target_org: Organization,
+                        indicator: Indicator, sharing_user, anonymization_level: str,
+                        share_method: str) -> Dict[str, Any]:
         """
         Share indicator via email method
 
         Args:
             stix_indicator: STIX indicator object
             target_org: Target organization
+            indicator: Original indicator being shared
+            sharing_user: User performing the share
+            anonymization_level: Level of anonymization applied
+            share_method: Method used for sharing
 
         Returns:
             Share result
         """
         try:
-            # Create an actual Indicator record for the target organization
-            shared_indicator = self._create_shared_indicator_record(stix_indicator, target_org)
+            # Create sharing relationship instead of duplicating the indicator
+            sharing_relationship = self._create_sharing_relationship(
+                indicator, target_org, sharing_user, anonymization_level, share_method
+            )
 
-            # Email sharing means we only send notifications, the indicator is still created
-            # but the primary delivery method is email notification
+            # Email sharing means we only send notifications, no indicator duplication
             return {
                 'method': 'email',
-                'shared_indicator_id': str(shared_indicator.id) if shared_indicator else None,
+                'sharing_relationship_id': str(sharing_relationship.id) if sharing_relationship else None,
                 'success': True,
                 'note': 'Indicator shared via email notification to organization administrators'
             }
@@ -845,93 +868,109 @@ For support, please contact your system administrator.
             logger.error(f"Error sending sharing notifications: {str(e)}")
             # Don't raise the exception as notifications are not critical for the sharing process
 
-    def _create_shared_indicator_record(self, stix_indicator: Dict[str, Any], target_org: Organization) -> Optional[Indicator]:
+    def _create_sharing_relationship(self, indicator: Indicator, target_org: Organization,
+                                   sharing_user, anonymization_level: str, share_method: str) -> Optional[IndicatorSharingRelationship]:
         """
-        Create an Indicator record in the target organization's database
+        Create a sharing relationship between an indicator and target organization
 
         Args:
-            stix_indicator: STIX indicator object
+            indicator: Original indicator being shared
             target_org: Target organization
+            sharing_user: User performing the share
+            anonymization_level: Level of anonymization applied
+            share_method: Method used for sharing
 
         Returns:
-            Created Indicator object or None if creation failed
+            Created IndicatorSharingRelationship object or None if creation failed
         """
         try:
-            from core.models.models import ThreatFeed
-
-            # Get or create a shared threat feed for the target organization
-            shared_feed, created = ThreatFeed.objects.get_or_create(
-                name=f"Shared Intelligence Feed - {target_org.name}",
-                owner=target_org,
-                defaults={
-                    'description': f'Threat intelligence shared with {target_org.name}',
-                    'is_external': False,
-                    'is_active': True,
-                    'is_public': False,
-                    'sync_interval_hours': 0  # No automatic syncing for shared feeds
-                }
-            )
-
-            # Extract indicator details from STIX object
-            stix_pattern = stix_indicator.get('pattern', '')
-            stix_type = 'other'  # Default to 'other' instead of 'unknown'
-            stix_value = f"shared-indicator-{str(uuid.uuid4())[:8]}"  # Unique value
-
-            # Parse STIX pattern to extract type and value
-            # Example: "[file:hashes.MD5 = 'd41d8cd98f00b204e9800998ecf8427e']"
-            import re
-            if stix_pattern:
-                if 'file:hashes.MD5' in stix_pattern or 'file:hashes.SHA' in stix_pattern:
-                    stix_type = 'file_hash'
-                    match = re.search(r"= '([^']+)'", stix_pattern)
-                    if match:
-                        stix_value = match.group(1)
-                elif 'domain-name:value' in stix_pattern:
-                    stix_type = 'domain'
-                    match = re.search(r"= '([^']+)'", stix_pattern)
-                    if match:
-                        stix_value = match.group(1)
-                elif 'ipv4-addr:value' in stix_pattern or 'ipv6-addr:value' in stix_pattern:
-                    stix_type = 'ip'
-                    match = re.search(r"= '([^']+)'", stix_pattern)
-                    if match:
-                        stix_value = match.group(1)
-                elif 'url:value' in stix_pattern:
-                    stix_type = 'url'
-                    match = re.search(r"= '([^']+)'", stix_pattern)
-                    if match:
-                        stix_value = match.group(1)
-                elif 'email-addr:value' in stix_pattern:
-                    stix_type = 'email'
-                    match = re.search(r"= '([^']+)'", stix_pattern)
-                    if match:
-                        stix_value = match.group(1)
-
             # Use get_or_create to avoid duplicates
-            shared_indicator, created = Indicator.objects.get_or_create(
-                value=stix_value,
-                type=stix_type,
-                threat_feed=shared_feed,
+            sharing_relationship, created = IndicatorSharingRelationship.objects.get_or_create(
+                indicator=indicator,
+                target_organization=target_org,
                 defaults={
-                    'description': f"Shared indicator from STIX: {stix_indicator.get('name', 'Unknown')}",
-                    'confidence': stix_indicator.get('confidence', 50),
-                    'stix_id': stix_indicator.get('id', f'shared-{str(uuid.uuid4())}'),
-                    'first_seen': timezone.now(),
-                    'last_seen': timezone.now()
+                    'shared_by_user': sharing_user,
+                    'share_method': share_method,
+                    'anonymization_level': anonymization_level,
+                    'is_active': True,
+                    'metadata': {
+                        'shared_via': share_method,
+                        'original_anonymization_level': anonymization_level,
+                        'sharing_timestamp': timezone.now().isoformat()
+                    }
                 }
             )
 
             if not created:
-                # Update last_seen if indicator already exists
-                shared_indicator.last_seen = timezone.now()
-                shared_indicator.save(update_fields=['last_seen'])
+                # Update the relationship if it already exists
+                sharing_relationship.is_active = True
+                sharing_relationship.anonymization_level = anonymization_level
+                sharing_relationship.share_method = share_method
+                sharing_relationship.metadata.update({
+                    'last_shared_at': timezone.now().isoformat(),
+                    'updated_anonymization_level': anonymization_level
+                })
+                sharing_relationship.save()
+                logger.info(f"Updated existing sharing relationship {sharing_relationship.id}")
+            else:
+                logger.info(f"Created new sharing relationship {sharing_relationship.id} for indicator {indicator.id} to organization {target_org.name}")
 
-            logger.info(f"Created shared indicator record {shared_indicator.id} for organization {target_org.name}")
-            return shared_indicator
+            return sharing_relationship
 
         except Exception as e:
-            logger.error(f"Error creating shared indicator record: {str(e)}")
+            logger.error(f"Error creating sharing relationship: {str(e)}")
             return None
+
+    def get_shared_indicators_for_organization(self, organization: Organization) -> List[Dict[str, Any]]:
+        """
+        Get all indicators shared with a specific organization
+
+        Args:
+            organization: Target organization
+
+        Returns:
+            List of shared indicators with metadata
+        """
+        try:
+            sharing_relationships = IndicatorSharingRelationship.objects.filter(
+                target_organization=organization,
+                is_active=True
+            ).select_related('indicator', 'indicator__threat_feed', 'shared_by_user')
+
+            shared_indicators = []
+            for relationship in sharing_relationships:
+                indicator = relationship.indicator
+                shared_indicators.append({
+                    'id': indicator.id,
+                    'type': indicator.type,
+                    'value': indicator.value,
+                    'description': indicator.description,
+                    'confidence': indicator.confidence,
+                    'first_seen': indicator.first_seen.isoformat() if indicator.first_seen else None,
+                    'last_seen': indicator.last_seen.isoformat() if indicator.last_seen else None,
+                    'threat_feed': {
+                        'id': indicator.threat_feed.id,
+                        'name': indicator.threat_feed.name,
+                        'owner': indicator.threat_feed.owner.name if indicator.threat_feed.owner else None
+                    },
+                    'created_at': indicator.created_at.isoformat(),
+                    'updated_at': indicator.updated_at.isoformat(),
+                    'sharing_info': {
+                        'shared_at': relationship.shared_at.isoformat(),
+                        'shared_by': relationship.shared_by_user.username if relationship.shared_by_user else 'Unknown',
+                        'sharing_organization': indicator.threat_feed.owner.name if indicator.threat_feed.owner else 'Unknown',
+                        'share_method': relationship.share_method,
+                        'anonymization_level': relationship.anonymization_level,
+                        'is_shared': True,
+                        'relationship_id': relationship.id
+                    }
+                })
+
+            return shared_indicators
+
+        except Exception as e:
+            logger.error(f"Error getting shared indicators for organization {organization.name}: {str(e)}")
+            return []
 
     def _is_valid_email(self, email: str) -> bool:
         """
