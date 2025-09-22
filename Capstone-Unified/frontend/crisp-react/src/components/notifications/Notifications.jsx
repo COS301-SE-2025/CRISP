@@ -6,6 +6,7 @@ const Notifications = ({ active }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
+  const [expandedNotification, setExpandedNotification] = useState(null);
 
   // Helper function to map notification types to source labels
   const getSourceFromType = (type) => {
@@ -155,6 +156,17 @@ const Notifications = ({ active }) => {
     return date.toLocaleDateString();
   };
 
+  const handleNotificationClick = (notification) => {
+    setExpandedNotification(notification);
+    if (!notification.read) {
+      markAsRead(notification.id);
+    }
+  };
+
+  const closeExpandedNotification = () => {
+    setExpandedNotification(null);
+  };
+
   if (loading) {
     return (
       <section id="notifications" className={`page-section ${active ? 'active' : ''}`}>
@@ -253,6 +265,8 @@ const Notifications = ({ active }) => {
             <div
               key={notification.id}
               className={`notification-item ${!notification.read ? 'unread' : ''}`}
+              onClick={() => handleNotificationClick(notification)}
+              style={{ cursor: 'pointer' }}
             >
               <div className="notification-content">
                 <div className="notification-header">
@@ -277,7 +291,10 @@ const Notifications = ({ active }) => {
               <div className="notification-actions">
                 {!notification.read && (
                   <button
-                    onClick={() => markAsRead(notification.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      markAsRead(notification.id);
+                    }}
                     className="action-btn read-btn"
                     title="Mark as read"
                   >
@@ -285,7 +302,10 @@ const Notifications = ({ active }) => {
                   </button>
                 )}
                 <button
-                  onClick={() => deleteNotificationHandler(notification.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteNotificationHandler(notification.id);
+                  }}
                   className="action-btn delete-btn"
                   title="Delete notification"
                 >
@@ -296,6 +316,48 @@ const Notifications = ({ active }) => {
           ))
         )}
       </div>
+
+      {/* Expanded Notification Modal */}
+      {expandedNotification && (
+        <div className="notification-modal-overlay animate-in" onClick={closeExpandedNotification}>
+          <div className="notification-modal animate-modal" onClick={(e) => e.stopPropagation()}>
+            <button onClick={closeExpandedNotification} className="close-btn">×</button>
+
+            <div className="simple-modal-content">
+              <h3>{expandedNotification.title}</h3>
+              <p>{expandedNotification.message}</p>
+
+              <div className="simple-meta">
+                <span>{expandedNotification.source}</span>
+                <span>{new Date(expandedNotification.created_at).toLocaleString()}</span>
+              </div>
+
+              <div className="simple-actions">
+                {!expandedNotification.read && (
+                  <button
+                    onClick={() => {
+                      markAsRead(expandedNotification.id);
+                      setExpandedNotification(prev => ({ ...prev, read: true }));
+                    }}
+                    className="simple-btn primary"
+                  >
+                    Mark Read
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    deleteNotificationHandler(expandedNotification.id);
+                    closeExpandedNotification();
+                  }}
+                  className="simple-btn danger"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         .notifications {
@@ -579,6 +641,136 @@ const Notifications = ({ active }) => {
           font-size: 32px;
           color: #dc3545;
           margin-bottom: 15px;
+        }
+
+        /* Modal Styles */
+        .notification-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.6);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+          padding: 20px;
+          backdrop-filter: blur(4px);
+          min-height: 100vh;
+          min-width: 100vw;
+        }
+
+        .notification-modal {
+          background: white;
+          border-radius: 8px;
+          max-width: 500px;
+          width: 90%;
+          max-height: 80vh;
+          overflow: hidden;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+          position: relative;
+        }
+
+        .close-btn {
+          position: absolute;
+          top: 15px;
+          right: 15px;
+          background: none;
+          border: none;
+          font-size: 24px;
+          cursor: pointer;
+          color: #999;
+          width: 30px;
+          height: 30px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .close-btn:hover {
+          color: #333;
+        }
+
+        .simple-modal-content {
+          padding: 40px 30px 30px 30px;
+          text-align: center;
+        }
+
+        .simple-modal-content h3 {
+          margin: 0 0 20px 0;
+          font-size: 20px;
+          font-weight: 600;
+          color: #333;
+        }
+
+        .simple-modal-content p {
+          margin: 0 0 25px 0;
+          color: #666;
+          line-height: 1.5;
+          font-size: 15px;
+        }
+
+        .simple-meta {
+          display: flex;
+          justify-content: space-between;
+          padding: 15px 0;
+          border-top: 1px solid #eee;
+          border-bottom: 1px solid #eee;
+          margin-bottom: 25px;
+          font-size: 14px;
+          color: #888;
+        }
+
+        .simple-actions {
+          display: flex;
+          gap: 10px;
+          justify-content: center;
+        }
+
+        .simple-btn {
+          padding: 10px 20px;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 500;
+        }
+
+        .simple-btn.primary {
+          background: #007bff;
+          color: white;
+        }
+
+        .simple-btn.primary:hover {
+          background: #0056b3;
+        }
+
+        .simple-btn.danger {
+          background: #dc3545;
+          color: white;
+        }
+
+        .simple-btn.danger:hover {
+          background: #c82333;
+        }
+
+        @media (max-width: 768px) {
+          .notification-modal {
+            width: 95%;
+          }
+
+          .simple-modal-content {
+            padding: 30px 20px 20px 20px;
+          }
+
+          .simple-actions {
+            flex-direction: column;
+          }
+
+          .simple-btn {
+            width: 100%;
+          }
         }
       `}</style>
       </div>

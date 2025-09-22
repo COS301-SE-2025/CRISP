@@ -4312,7 +4312,7 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
   const [sharingIndicator, setSharingIndicator] = useState(null);
   const [shareFormData, setShareFormData] = useState({
     organisations: [],
-    anonymizationLevel: 'medium',
+    anonymizationLevel: 'partial',
     shareMethod: 'taxii'
   });
   const [sharing, setSharing] = useState(false);
@@ -5777,15 +5777,15 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
                       className="form-control"
                     >
                       <option value="none">None - Full Details</option>
-                      <option value="low">Low - Minor Obfuscation</option>
-                      <option value="medium">Medium - Partial Anonymization</option>
-                      <option value="high">High - Strong Anonymization</option>
+                      <option value="minimal">Minimal - Minor Obfuscation</option>
+                      <option value="partial">Partial - Partial Anonymization</option>
+                      <option value="full">Full - Strong Anonymization</option>
                     </select>
                     <small className="form-text">
                       {shareFormData.anonymizationLevel === 'none' && 'Complete IoC values and metadata shared'}
-                      {shareFormData.anonymizationLevel === 'low' && 'Remove source identifiers and timestamps'}
-                      {shareFormData.anonymizationLevel === 'medium' && 'Generalize IPs/domains (evil.com → *.com)'}
-                      {shareFormData.anonymizationLevel === 'high' && 'Only patterns and techniques, no indicators'}
+                      {shareFormData.anonymizationLevel === 'minimal' && 'Remove source identifiers and timestamps'}
+                      {shareFormData.anonymizationLevel === 'partial' && 'Generalize IPs/domains (evil.com → *.com)'}
+                      {shareFormData.anonymizationLevel === 'full' && 'Only patterns and techniques, no indicators'}
                     </small>
                   </div>
 
@@ -5794,17 +5794,19 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
                       <i className="fas fa-share-nodes"></i>
                       Share Method
                     </label>
-                    <select
-                      value={shareFormData.shareMethod}
-                      onChange={(e) => setShareFormData({...shareFormData, shareMethod: e.target.value})}
+                    <input
+                      type="text"
+                      value="TAXII 2.1"
+                      disabled
                       className="form-control"
-                    >
-                      <option value="taxii">TAXII 2.1</option>
-                      <option value="email">Email</option>
-                      <option value="api">API Push</option>
-                    </select>
+                      style={{
+                        backgroundColor: '#f8f9fa',
+                        color: '#6c757d',
+                        cursor: 'not-allowed'
+                      }}
+                    />
                     <small className="form-text">
-                      How the threat intelligence will be delivered to selected organizations
+                      Threat intelligence is delivered via TAXII 2.1 protocol
                     </small>
                   </div>
                 </div>
@@ -6598,7 +6600,7 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
     setSharingIndicator(indicator);
     setShareFormData({
       organisations: [],
-      anonymizationLevel: 'medium',
+      anonymizationLevel: 'partial',
       shareMethod: 'taxii'
     });
     setShowShareModal(true);
@@ -6609,7 +6611,7 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
     setSharingIndicator(null);
     setShareFormData({
       organisations: [],
-      anonymizationLevel: 'medium',
+      anonymizationLevel: 'partial',
       shareMethod: 'taxii'
     });
     setOrganisationSearch('');
