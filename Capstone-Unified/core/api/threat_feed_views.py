@@ -32,10 +32,32 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
     """
     ViewSet for ThreatFeed operations
     """
+    # Default queryset - will be filtered in get_queryset method
     queryset = ThreatFeed.objects.all()
     serializer_class = ThreatFeedSerializer
     permission_classes = [AllowAny]
-    
+
+    def get_queryset(self):
+        """Filter threat feeds based on user's organization and feed type."""
+        from django.db.models import Q
+
+        user_org = getattr(self.request.user, 'organization', None)
+
+        if user_org is None:
+            # User has no organization, only show external feeds
+            return ThreatFeed.objects.filter(is_external=True)
+        elif self.request.user.role == 'BlueVisionAdmin':
+            # BlueVision admins can see all threat feeds
+            return ThreatFeed.objects.all()
+        else:
+            # Regular users can see:
+            # 1. All external/public threat feeds
+            # 2. Their organization's internal threat feeds
+            return ThreatFeed.objects.filter(
+                Q(is_external=True) |  # All external feeds
+                Q(owner=user_org, is_external=False)  # Own organization's internal feeds
+            )
+
     def perform_create(self, serializer):
         """Log activity when a new feed is created"""
         feed = serializer.save()
@@ -814,8 +836,26 @@ def indicators_list(request):
             date_range_filter = request.GET.get('dateRange', '')
             ordering = request.GET.get('ordering', '-created_at')
 
-            # Build the queryset with filters
-            indicators = Indicator.objects.all()
+            # Build the queryset with organization filtering
+            from django.db.models import Q
+
+            # Get user's organization
+            user_org = getattr(request.user, 'organization', None)
+
+            if user_org is None:
+                # User has no organization, return empty queryset
+                indicators = Indicator.objects.none()
+            elif request.user.role == 'BlueVisionAdmin':
+                # BlueVision admins can see all indicators
+                indicators = Indicator.objects.all()
+            else:
+                # Regular users can see:
+                # 1. Indicators from threat feeds owned by their organization (both external and internal)
+                # 2. Indicators that have been shared with their organization
+                indicators = Indicator.objects.filter(
+                    Q(threat_feed__owner=user_org) |  # Feeds consumed by their organization (external or internal)
+                    Q(sharing_relationships__target_organization=user_org)  # Shared indicators
+                ).distinct()
 
             if type_filter:
                 indicators = indicators.filter(type__icontains=type_filter)
@@ -879,7 +919,45 @@ def indicators_list(request):
                         feed_name = feed.name
                     except ThreatFeed.DoesNotExist:
                         pass
-                
+
+                # Check if this indicator was shared with the current user's organization
+                sharing_info = None
+                if user_org:
+                    try:
+                        from core.models.models import IndicatorSharingRelationship
+                        sharing_relationship = IndicatorSharingRelationship.objects.filter(
+                            indicator=indicator,
+                            target_organization=user_org
+                        ).select_related('shared_by_user', 'indicator__threat_feed__owner').first()
+
+                        if sharing_relationship:
+                            # Get source organization from the indicator's threat feed owner
+                            source_org_name = sharing_relationship.indicator.threat_feed.owner.name if sharing_relationship.indicator.threat_feed.owner else 'Unknown'
+                            shared_by_name = sharing_relationship.shared_by_user.username if sharing_relationship.shared_by_user else 'System'
+
+                            sharing_info = {
+                                'is_shared': True,
+                                'shared_from': source_org_name,
+                                'shared_by': shared_by_name,
+                                'shared_at': sharing_relationship.shared_at,
+                                'anonymization_level': sharing_relationship.anonymization_level,
+                                'share_method': sharing_relationship.share_method
+                            }
+                    except Exception as e:
+                        # If there's an error checking sharing, don't break the response
+                        pass
+
+                # If not shared, mark as original
+                if not sharing_info:
+                    sharing_info = {
+                        'is_shared': False,
+                        'shared_from': None,
+                        'shared_by': None,
+                        'shared_at': None,
+                        'anonymization_level': None,
+                        'share_method': None
+                    }
+
                 results.append({
                     'id': indicator.id,
                     'type': indicator.type,
@@ -892,7 +970,8 @@ def indicators_list(request):
                     'last_seen': indicator.last_seen,
                     'created_at': indicator.created_at,
                     'is_anonymized': indicator.is_anonymized,
-                    'source': feed_name
+                    'source': feed_name,
+                    'sharing': sharing_info
                 })
             
             return Response({
@@ -1020,8 +1099,26 @@ def indicators_export(request):
         # Get filter parameters from request
         filters = data.get('filters', {})
 
-        # Start with all indicators
-        indicators = Indicator.objects.select_related('threat_feed').all()
+        # Start with organization-scoped indicators
+        from django.db.models import Q
+
+        # Get user's organization
+        user_org = getattr(request.user, 'organization', None)
+
+        if user_org is None:
+            # User has no organization, return empty queryset
+            indicators = Indicator.objects.none()
+        elif request.user.role == 'BlueVisionAdmin':
+            # BlueVision admins can see all indicators
+            indicators = Indicator.objects.select_related('threat_feed').all()
+        else:
+            # Regular users can see:
+            # 1. Indicators from threat feeds owned by their organization (both external and internal)
+            # 2. Indicators that have been shared with their organization
+            indicators = Indicator.objects.select_related('threat_feed').filter(
+                Q(threat_feed__owner=user_org) |  # Feeds consumed by their organization (external or internal)
+                Q(sharing_relationships__target_organization=user_org)  # Shared indicators
+            ).distinct()
 
         # Apply filters (same logic as indicators_list)
         if filters.get('type'):
@@ -1844,7 +1941,23 @@ def system_health(request):
             
             # Get individual feed details
             feeds_list = []
-            for feed in ThreatFeed.objects.all():
+            # Get user's organization for filtering
+            user_org = getattr(request.user, 'organization', None)
+
+            if user_org is None:
+                # User has no organization, only show external feeds
+                feeds_queryset = ThreatFeed.objects.filter(is_external=True)
+            elif request.user.role == 'BlueVisionAdmin':
+                feeds_queryset = ThreatFeed.objects.all()
+            else:
+                # Regular users can see external feeds + their organization's internal feeds
+                from django.db.models import Q
+                feeds_queryset = ThreatFeed.objects.filter(
+                    Q(is_external=True) |  # All external feeds
+                    Q(owner=user_org, is_external=False)  # Own organization's internal feeds
+                )
+
+            for feed in feeds_queryset:
                 # Get feed sync status
                 sync_status = 'healthy' if feed.is_active else 'inactive'
                 if feed.last_sync:

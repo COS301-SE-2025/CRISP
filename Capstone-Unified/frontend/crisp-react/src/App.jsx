@@ -4489,31 +4489,44 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
       if (indicatorsData && indicatorsData.results) {
 
         // Transform indicators to match IoC Management table format
-        const transformedIndicators = indicatorsData.results.map(indicator => ({
-          id: indicator.id,
-          type: indicator.indicator_type || indicator.type === 'ip' ? 'IP Address' :
-                indicator.type === 'domain' ? 'Domain' :
-                indicator.type === 'url' ? 'URL' :
-                indicator.type === 'file_hash' ? 'File Hash' :
-                indicator.type === 'email' ? 'Email' :
-                indicator.type === 'user_agent' ? 'User Agent' :
-                indicator.type === 'registry' ? 'Registry Key' :
-                indicator.type === 'mutex' ? 'Mutex' :
-                indicator.type === 'process' ? 'Process' : (indicator.type || 'Unknown'),
-          rawType: indicator.type,
-          title: indicator.name || indicator.title || '',
-          value: indicator.value || indicator.indicator_value || '',
-          severity: indicator.severity || (indicator.confidence >= 75 ? 'High' :
-                   indicator.confidence >= 50 ? 'Medium' : 'Low'),
-          confidence: indicator.confidence || 50,
-          source: indicator.source || indicator.feed_name || 'Unknown',
-          description: indicator.description || '',
-          created: indicator.created_at ? new Date(indicator.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-          createdDate: indicator.created_at ? new Date(indicator.created_at) : new Date(),
-          status: indicator.is_anonymized ? 'Anonymized' : 'Active',
-          feedId: indicator.threat_feed_id || indicator.feed_id,
-          feedName: indicator.source || indicator.feed_name || 'Unknown'
-        }));
+        const transformedIndicators = indicatorsData.results.map(indicator => {
+          // Debug: Log sharing data for each indicator
+          console.log(`🔍 Indicator ${indicator.id} sharing data:`, indicator.sharing);
+
+          return {
+            id: indicator.id,
+            type: indicator.indicator_type || indicator.type === 'ip' ? 'IP Address' :
+                  indicator.type === 'domain' ? 'Domain' :
+                  indicator.type === 'url' ? 'URL' :
+                  indicator.type === 'file_hash' ? 'File Hash' :
+                  indicator.type === 'email' ? 'Email' :
+                  indicator.type === 'user_agent' ? 'User Agent' :
+                  indicator.type === 'registry' ? 'Registry Key' :
+                  indicator.type === 'mutex' ? 'Mutex' :
+                  indicator.type === 'process' ? 'Process' : (indicator.type || 'Unknown'),
+            rawType: indicator.type,
+            title: indicator.name || indicator.title || '',
+            value: indicator.value || indicator.indicator_value || '',
+            severity: indicator.severity || (indicator.confidence >= 75 ? 'High' :
+                     indicator.confidence >= 50 ? 'Medium' : 'Low'),
+            confidence: indicator.confidence || 50,
+            source: indicator.source || indicator.feed_name || 'Unknown',
+            description: indicator.description || '',
+            created: indicator.created_at ? new Date(indicator.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            createdDate: indicator.created_at ? new Date(indicator.created_at) : new Date(),
+            status: indicator.is_anonymized ? 'Anonymized' : 'Active',
+            feedId: indicator.threat_feed_id || indicator.feed_id,
+            feedName: indicator.source || indicator.feed_name || 'Unknown',
+            // Add sharing metadata
+            sharing: indicator.sharing || { is_shared: false },
+            isShared: indicator.sharing?.is_shared || false,
+            sharedFrom: indicator.sharing?.shared_from || null,
+            sharedBy: indicator.sharing?.shared_by || null,
+            sharedAt: indicator.sharing?.shared_at || null,
+            shareMethod: indicator.sharing?.share_method || null,
+            anonymizationLevel: indicator.sharing?.anonymization_level || null
+          };
+        });
 
         setIndicators(transformedIndicators);
         setFilteredIndicators(transformedIndicators); // For server-side pagination, filtered = indicators
@@ -4902,19 +4915,23 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
         </div>
         <div className="card-content">
           <div className="table-responsive">
-            <table className="data-table">
+            <table className="data-table" style={{
+              tableLayout: 'fixed',
+              width: '100%',
+              minWidth: '1000px'
+            }}>
             <thead>
               <tr>
-                <th><input type="checkbox" /></th>
-                <th>Type</th>
-                <th>Title</th>
-                <th>Value</th>
-                <th>Description</th>
-                <th>Severity</th>
-                <th>Source</th>
-                <th>Date Added</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th style={{width: '4%', textAlign: 'center'}}><input type="checkbox" /></th>
+                <th style={{width: '8%', textAlign: 'center'}}>Type</th>
+                <th style={{width: '20%'}}>Value</th>
+                <th style={{width: '20%'}}>Description</th>
+                <th style={{width: '7%', textAlign: 'center'}}>Severity</th>
+                <th style={{width: '10%'}}>Source</th>
+                <th style={{width: '20%'}}>Shared Info</th>
+                <th style={{width: '8%', textAlign: 'center'}}>Date Added</th>
+                <th style={{width: '6%', textAlign: 'center'}}>Status</th>
+                <th style={{width: '11%', textAlign: 'center'}}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -4927,49 +4944,82 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
               ) : getPaginatedIndicators().length > 0 ? (
                 getPaginatedIndicators().map((indicator) => (
                   <tr key={indicator.id}>
-                    <td><input type="checkbox" /></td>
-                    <td>
+                    <td style={{width: '4%', textAlign: 'center', padding: '8px 4px', whiteSpace: 'normal', wordWrap: 'break-word'}}><input type="checkbox" /></td>
+                    <td style={{width: '8%', textAlign: 'center', padding: '8px 4px', whiteSpace: 'normal', wordWrap: 'break-word'}}>
                       <span className={`type-badge type-${indicator.rawType}`}>
                         {indicator.type}
                       </span>
                     </td>
-                    <td className="indicator-title" title={indicator.title || ''}>
-                      {indicator.title ? 
-                        (indicator.title.length > 30 ? 
-                          `${indicator.title.substring(0, 30)}...` : 
-                          indicator.title
-                        ) : 
-                        <em className="text-muted">No title</em>
-                      }
+                    <td style={{width: '20%', padding: '8px 6px', whiteSpace: 'normal', wordWrap: 'break-word', fontFamily: 'Monaco, Consolas, monospace', fontSize: '13px'}} title={indicator.value}>
+                      {indicator.value}
                     </td>
-                    <td className="indicator-value" title={indicator.value}>
-                      {indicator.value.length > 50 ? 
-                        `${indicator.value.substring(0, 50)}...` : 
-                        indicator.value
-                      }
+                    <td style={{width: '20%', padding: '8px 6px', whiteSpace: 'normal', wordWrap: 'break-word'}} title={indicator.description || ''}>
+                      {indicator.description || <em className="text-muted">No description</em>}
                     </td>
-                    <td className="indicator-description" title={indicator.description || ''}>
-                      {indicator.description ? 
-                        (indicator.description.length > 40 ? 
-                          `${indicator.description.substring(0, 40)}...` : 
-                          indicator.description
-                        ) : 
-                        <em className="text-muted">No description</em>
-                      }
-                    </td>
-                    <td>
+                    <td style={{width: '7%', textAlign: 'center', padding: '8px 4px', whiteSpace: 'normal', wordWrap: 'break-word'}}>
                       <span className={`badge badge-${indicator.severity.toLowerCase()}`}>
                         {indicator.severity}
                       </span>
                     </td>
-                    <td>{indicator.source}</td>
-                    <td>{indicator.created}</td>
-                    <td>
+                    <td style={{width: '10%', padding: '8px 6px', whiteSpace: 'normal', wordWrap: 'break-word'}}>{indicator.source}</td>
+                    <td style={{width: '20%', padding: '8px 6px', whiteSpace: 'normal', wordWrap: 'break-word'}}>
+                      {indicator.isShared ? (
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px',
+                          fontSize: '12px'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            background: '#e3f2fd',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            border: '1px solid #90caf9'
+                          }}>
+                            <i className="fas fa-building" style={{color: '#1976d2', fontSize: '10px'}}></i>
+                            <span style={{color: '#1976d2', fontWeight: '500'}}>{indicator.sharedFrom}</span>
+                          </div>
+                          <div style={{
+                            color: '#666',
+                            fontSize: '11px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
+                            <i className="fas fa-user" style={{fontSize: '9px'}}></i>
+                            <span>{indicator.sharedBy}</span>
+                            <span>•</span>
+                            <span>{new Date(indicator.sharedAt).toLocaleDateString()}</span>
+                          </div>
+                          {indicator.anonymizationLevel && indicator.anonymizationLevel !== 'none' && (
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              background: '#fff3e0',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              border: '1px solid #ffb74d'
+                            }}>
+                              <i className="fas fa-user-secret" style={{color: '#f57c00', fontSize: '10px'}}></i>
+                              <span style={{color: '#f57c00', fontSize: '11px', textTransform: 'capitalize'}}>{indicator.anonymizationLevel} anonymization</span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted">-</span>
+                      )}
+                    </td>
+                    <td style={{width: '8%', textAlign: 'center', padding: '8px 4px', whiteSpace: 'normal', wordWrap: 'break-word'}}>{indicator.created}</td>
+                    <td style={{width: '6%', textAlign: 'center', padding: '8px 4px', whiteSpace: 'normal', wordWrap: 'break-word'}}>
                       <span className={`badge badge-${indicator.status.toLowerCase()}`}>
                         {indicator.status}
                       </span>
                     </td>
-                    <td style={{whiteSpace: 'nowrap', textAlign: 'center'}}>
+                    <td style={{width: '11%', whiteSpace: 'nowrap', textAlign: 'center', padding: '8px 4px'}}>
                       <button 
                         className="btn btn-outline btn-sm" 
                         title="Edit Indicator"
@@ -5965,14 +6015,16 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
   }
 
   function exportToCSV(data) {
-    const headers = ['Type', 'Value', 'Severity', 'Source', 'Date Added', 'Status'];
+    const headers = ['Type', 'Value', 'Description', 'Severity', 'Source', 'Shared From', 'Date Added', 'Status'];
     const csvHeaders = headers.join(',');
     
     const csvRows = data.map(indicator => [
       `"${indicator.type}"`,
       `"${indicator.value}"`,
+      `"${indicator.description || ''}"`,
       `"${indicator.severity}"`,
       `"${indicator.source}"`,
+      `"${indicator.isShared ? indicator.sharedFrom : ''}"`,
       `"${indicator.created}"`,
       `"${indicator.status}"`
     ].join(','));

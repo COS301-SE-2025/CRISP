@@ -397,7 +397,8 @@ class IOCSharingService:
                     sharing_user=sharing_user,
                     share_method=share_method,
                     anonymization_level=anonymization_level,
-                    stix_indicator=stix_indicator
+                    stix_indicator=stix_indicator,
+                    anonymized_indicator=anonymized_indicator
                 )
             except Exception as notification_error:
                 # Don't let notification failures stop the sharing process
@@ -698,7 +699,7 @@ class IOCSharingService:
 
     def _send_sharing_notifications(self, indicator: Indicator, target_org: Organization,
                                   sharing_user, share_method: str, anonymization_level: str,
-                                  stix_indicator: Dict[str, Any]) -> None:
+                                  stix_indicator: Dict[str, Any], anonymized_indicator: Dict[str, Any] = None) -> None:
         """
         Send notifications about indicator sharing to target organization
 
@@ -726,9 +727,16 @@ class IOCSharingService:
                 logger.warning(f"No active admins/publishers found for organization {target_org.name}")
                 return
 
-            # Prepare notification data
-            indicator_type = indicator.type.upper() if indicator.type else 'UNKNOWN'
-            indicator_value = indicator.value[:50] + '...' if len(indicator.value) > 50 else indicator.value
+            # Prepare notification data - use anonymized indicator if available
+            if anonymized_indicator and anonymized_indicator.get('is_anonymized', False):
+                indicator_type = anonymized_indicator.get('type', indicator.type).upper() if anonymized_indicator.get('type', indicator.type) else 'UNKNOWN'
+                indicator_value = anonymized_indicator.get('value', indicator.value)
+                if len(indicator_value) > 50:
+                    indicator_value = indicator_value[:50] + '...'
+            else:
+                indicator_type = indicator.type.upper() if indicator.type else 'UNKNOWN'
+                indicator_value = indicator.value[:50] + '...' if len(indicator.value) > 50 else indicator.value
+
             sharing_org = sharing_user.organization.name if sharing_user.organization else 'Unknown Organization'
 
             email_service = UnifiedEmailService()

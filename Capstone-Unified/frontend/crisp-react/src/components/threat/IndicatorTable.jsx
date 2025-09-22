@@ -53,45 +53,37 @@ const IndicatorTable = () => {
     try {
       setLoading(true);
 
-      // Fetch both regular indicators and shared indicators
-      const [indicatorsResponse, sharedResponse] = await Promise.all([
-        fetch('/api/indicators/', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(localStorage.getItem('token') && {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            })
-          }
-        }),
-        fetch('/api/shared-indicators/', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(localStorage.getItem('token') && {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            })
-          }
-        })
-      ]);
+      // Fetch indicators (now includes both regular and shared indicators with metadata)
+      const indicatorsResponse = await fetch('/api/indicators/', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(localStorage.getItem('token') && {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          })
+        }
+      });
 
       if (!indicatorsResponse.ok) {
         throw new Error(`HTTP error! status: ${indicatorsResponse.status}`);
       }
 
       const indicatorsData = await indicatorsResponse.json();
-      let sharedIndicatorsData = { shared_indicators: [] };
 
-      // Handle shared indicators response (might fail if user doesn't have permission)
-      if (sharedResponse.ok) {
-        sharedIndicatorsData = await sharedResponse.json();
-      }
+      // Debug: Log the API response to see what we're getting
+      console.log('📡 Indicators API response:', indicatorsData);
 
-      // Handle different response formats for regular indicators
+      // Handle different response formats for indicators
       let indicatorsList = Array.isArray(indicatorsData) ? indicatorsData : indicatorsData.results || indicatorsData.indicators || [];
 
-      // Transform regular indicators
-      const apiIndicators = indicatorsList.map(indicator => ({
+      // Debug: Log the first indicator to see its structure
+      if (indicatorsList.length > 0) {
+        console.log('🔍 First indicator structure:', indicatorsList[0]);
+        console.log('🔗 First indicator sharing data:', indicatorsList[0].sharing);
+      }
+
+      // Transform indicators (now includes both regular and shared with metadata)
+      const allIndicators = indicatorsList.map(indicator => ({
         id: indicator.id,
         type: indicator.indicator_type || indicator.type || 'Unknown',
         value: indicator.value || indicator.indicator_value || '',
@@ -99,6 +91,7 @@ const IndicatorTable = () => {
         confidence: indicator.confidence || 'medium',
         severity: indicator.severity || 'medium',
         source: indicator.source || indicator.feed_name || 'Unknown',
+        sharing: indicator.sharing || { is_shared: false },
         created_at: indicator.created_at || indicator.timestamp || new Date().toISOString(),
         first_seen: indicator.first_seen || indicator.created_at || new Date().toISOString(),
         last_seen: indicator.last_seen || indicator.created_at || new Date().toISOString(),
@@ -106,60 +99,38 @@ const IndicatorTable = () => {
         description: indicator.description || '',
         ttps: indicator.ttps || [],
         false_positive_score: indicator.false_positive_score || 0,
-        is_shared: false,
-        sharing_info: null
+        is_shared: indicator.sharing?.is_shared || false,
+        sharing_info: indicator.sharing || null
       }));
 
-      // Transform shared indicators
-      const sharedIndicatorsList = sharedIndicatorsData.shared_indicators || [];
-      const transformedSharedIndicators = sharedIndicatorsList.map(indicator => ({
-        id: `shared-${indicator.id}`, // Add prefix to avoid ID conflicts
-        type: indicator.type || 'Unknown',
-        value: indicator.value || '',
-        threat_type: indicator.threat_type || 'Unknown',
-        confidence: indicator.confidence || 'medium',
-        severity: indicator.severity || 'medium',
-        source: indicator.sharing_info?.sharing_organization || 'Shared',
-        created_at: indicator.created_at || new Date().toISOString(),
-        first_seen: indicator.first_seen || indicator.created_at || new Date().toISOString(),
-        last_seen: indicator.last_seen || indicator.created_at || new Date().toISOString(),
-        tags: indicator.tags || [],
-        description: indicator.description || '',
-        ttps: indicator.ttps || [],
-        false_positive_score: indicator.false_positive_score || 0,
-        is_shared: true,
-        sharing_info: indicator.sharing_info,
-        original_id: indicator.id // Keep track of original ID
-      }));
+      // Count shared indicators for stats
+      const sharedIndicators = allIndicators.filter(i => i.is_shared);
+      setSharedIndicators(sharedIndicators);
 
-      // Store shared indicators separately for stats
-      setSharedIndicators(transformedSharedIndicators);
-
-      // Combine all indicators
-      let allIndicators = [...apiIndicators, ...transformedSharedIndicators];
+      let filteredIndicators = [...allIndicators];
 
       // Apply type filter
       if (filter === 'shared') {
-        allIndicators = transformedSharedIndicators;
+        filteredIndicators = filteredIndicators.filter(i => i.is_shared);
       } else if (filter === 'own') {
-        allIndicators = apiIndicators;
+        filteredIndicators = filteredIndicators.filter(i => !i.is_shared);
       } else if (filter !== 'all') {
-        allIndicators = allIndicators.filter(i =>
+        filteredIndicators = filteredIndicators.filter(i =>
           i.type === filter || i.threat_type === filter || i.confidence === filter || i.severity === filter
         );
       }
 
       // Apply search filter
       if (searchTerm) {
-        allIndicators = allIndicators.filter(i =>
+        filteredIndicators = filteredIndicators.filter(i =>
           i.value.toLowerCase().includes(searchTerm.toLowerCase()) ||
           i.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
           i.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (i.sharing_info && i.sharing_info.sharing_organization.toLowerCase().includes(searchTerm.toLowerCase()))
+          (i.sharing_info && i.sharing_info.shared_from && i.sharing_info.shared_from.toLowerCase().includes(searchTerm.toLowerCase()))
         );
       }
 
-      setIndicators(allIndicators);
+      setIndicators(filteredIndicators);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -484,9 +455,21 @@ const IndicatorTable = () => {
                 <td>
                   <div className="source-cell">
                     <span className="source">{indicator.source}</span>
-                    {indicator.is_shared && indicator.sharing_info && (
+                    {indicator.sharing && indicator.sharing.is_shared && (
                       <div className="sharing-details">
-                        <small>Shared {new Date(indicator.sharing_info.shared_at).toLocaleDateString()}</small>
+                        <small className="shared-badge">
+                          <i className="fas fa-share"></i>
+                          Shared from {indicator.sharing.shared_from}
+                        </small>
+                        <small className="share-date">
+                          {new Date(indicator.sharing.shared_at).toLocaleDateString()}
+                        </small>
+                        {indicator.sharing.anonymization_level && indicator.sharing.anonymization_level !== 'none' && (
+                          <small className="anonymization-badge">
+                            <i className="fas fa-user-secret"></i>
+                            {indicator.sharing.anonymization_level}
+                          </small>
+                        )}
                       </div>
                     )}
                   </div>
@@ -559,7 +542,7 @@ const IndicatorTable = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .indicator-table {
           padding: 20px;
           max-width: 1400px;
@@ -948,6 +931,37 @@ const IndicatorTable = () => {
 
         .filter-btn i {
           margin-right: 5px;
+        }
+
+        .sharing-details .shared-badge {
+          background: #17a2b8;
+          color: white;
+          padding: 2px 6px;
+          border-radius: 8px;
+          font-size: 10px;
+          margin-right: 4px;
+          display: inline-flex;
+          align-items: center;
+          gap: 3px;
+        }
+
+        .sharing-details .share-date {
+          color: #6c757d;
+          font-size: 10px;
+          display: block;
+          margin-top: 2px;
+        }
+
+        .sharing-details .anonymization-badge {
+          background: #ffc107;
+          color: #212529;
+          padding: 2px 6px;
+          border-radius: 8px;
+          font-size: 10px;
+          margin-top: 2px;
+          display: inline-flex;
+          align-items: center;
+          gap: 3px;
         }
       `}</style>
     </div>
