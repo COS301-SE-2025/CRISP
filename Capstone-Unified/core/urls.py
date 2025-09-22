@@ -10,7 +10,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework import routers # Import routers
 from core.models.models import ThreatFeed, Indicator, TTPData, Organization
 from core.user_management.models import CustomUser
-from core.api import auth_api, user_api, trust_api, organization_api
+from core.api import auth_api, user_api, trust_api, organization_api, asset_api
 from core.api.threat_feed_views import (
     ThreatFeedViewSet, # Import ThreatFeedViewSet
     indicators_list, indicators_export, indicators_bulk_import, indicator_update, indicator_delete, indicator_share, # Import indicator views
@@ -156,6 +156,17 @@ reports_urlpatterns = [
     path('status/', reports_api.report_status, name='reports_status'),
 ]
 
+# Asset Management URLs (WOW Factor #1)
+asset_urlpatterns = [
+    path('inventory/', asset_api.asset_inventory_list, name='asset_inventory_list'),
+    path('inventory/<uuid:asset_id>/', asset_api.asset_inventory_detail, name='asset_inventory_detail'),
+    path('alerts/', asset_api.custom_alerts_list, name='custom_alerts_list'),
+    path('alerts/<uuid:alert_id>/', asset_api.custom_alert_detail, name='custom_alert_detail'),
+    path('correlation/trigger/', asset_api.trigger_asset_correlation, name='trigger_asset_correlation'),
+    path('statistics/', asset_api.asset_alert_statistics, name='asset_alert_statistics'),
+    path('bulk-upload/', asset_api.bulk_asset_upload, name='bulk_asset_upload'),
+]
+
 # Main URL patterns
 urlpatterns = [
     path('', status_view, name='core-status'),
@@ -165,5 +176,6 @@ urlpatterns = [
     path('organizations/', include(organization_urlpatterns)),
     path('ttps/', include(ttp_urlpatterns)), # TTP URLs
     path('reports/', include(reports_urlpatterns)), # Reports URLs
+    path('assets/', include(asset_urlpatterns)), # Asset Management URLs (WOW Factor #1)
     path('', include(threat_feed_urlpatterns)), # Threat Feed URLs (no prefix, as they are already under 'api/' in crisp_unified/urls.py)
 ]

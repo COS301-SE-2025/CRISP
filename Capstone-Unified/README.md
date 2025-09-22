@@ -24,6 +24,11 @@ CRISP (Cyber Risk Intelligence Sharing Platform) is a comprehensive trust manage
 - 👥 Multi-organization support
 - 📈 Analytics and reporting
 - 🔒 Advanced security controls
+- 🎯 **Asset-Based Alert System (WOW Factor #1)**
+  - Custom threat correlation with client infrastructure
+  - Multi-channel alert delivery (email, SMS, Slack, webhooks)
+  - Asset criticality-based prioritization
+  - Real-time IoC correlation
 
 ## 🗂️ Project Structure
 
@@ -62,6 +67,39 @@ Capstone-Unified/
 
 ## 🚀 Quick Start
 
+### 🎯 One-Click Deployment with Asset-Based Alert System
+
+**Want to see the complete Asset-Based Alert System in action?** Use our one-click deployment:
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd CRISP/Capstone-Unified
+
+# One-click deployment with Asset-Based Alert System
+chmod +x run-crisp-with-asset-alerts.sh
+./run-crisp-with-asset-alerts.sh
+```
+
+This will:
+- 🐳 Build and start all Docker containers
+- 🗄️ Set up database with migrations
+- 🎯 Deploy the Asset-Based Alert System (WOW Factor #1)
+- 👤 Create demo user: `demo_security_admin` / `demo123`
+- 🏢 Set up "Demo University" with sample assets
+- 🚨 Generate demo alerts showing threat correlation
+- 🌐 Launch frontend at http://localhost:5173
+
+**Access the Asset-Based Alert System:**
+1. Go to http://localhost:5173
+2. Login with `demo_security_admin` / `demo123`
+3. Navigate to **Management → Asset-Based Alerts**
+4. Explore the asset inventory and custom alerts!
+
+---
+
+### 🛠️ Manual Setup (Alternative)
+
 ### 1. Clone and Navigate
 ```bash
 git clone <repository-url>
@@ -85,6 +123,10 @@ python manage.py migrate
 
 # Create superuser account
 python manage.py createsuperuser
+
+# Set up Asset-Based Alert System
+python manage.py demo_asset_alerts --mode setup
+python manage.py demo_asset_alerts --mode demo
 ```
 
 ### 4. Frontend Setup

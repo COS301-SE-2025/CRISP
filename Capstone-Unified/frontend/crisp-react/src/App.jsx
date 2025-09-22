@@ -5,6 +5,7 @@ import AccountSettings from './components/user/AccountSettings.jsx';
 import UserManagement from './components/enhanced/UserManagement.jsx';
 import OrganisationManagement from './components/enhanced/OrganisationManagement.jsx';
 import TrustManagement from './components/enhanced/TrustManagement.jsx';
+import AssetManagement from './components/AssetManagement.jsx';
 import Institutions from './components/institutions/Institutions.jsx';
 import ReportDetailModal from './components/reports/ReportDetailModal.jsx';
 import BlueVLogo from './assets/enhanced/BlueV2.png';
@@ -690,6 +691,7 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
           <Institutions active={activePage === 'institutions'} api={api} showPage={showPage} user={user} />
           <OrganisationManagement active={activePage === 'organisation-management'} />
           <TrustManagement active={activePage === 'trust-management'} />
+          <AssetManagement active={activePage === 'assets'} />
           <UserManagement active={activePage === 'user-management'} />
           <Reports active={activePage === 'reports'} />
           <Notifications active={activePage === 'notifications'} />
@@ -906,6 +908,10 @@ function Header({
                         <button className="submenu-item" onClick={() => {setShowUserMenu(false); setShowManagementSubmenu(false); showPage('trust-management');}} type="button">
                           <i className="fas fa-handshake"></i>
                           <span>Trust Management</span>
+                        </button>
+                        <button className="submenu-item" onClick={() => {setShowUserMenu(false); setShowManagementSubmenu(false); showPage('assets');}} type="button">
+                          <i className="fas fa-shield-alt"></i>
+                          <span>Asset-Based Alerts</span>
                         </button>
                       </div>
                     )}

@@ -61,7 +61,7 @@ services:
       - DB_HOST=db
       - REDIS_URL=redis://redis:6379/0
       - ALLOWED_HOSTS=localhost,127.0.0.1,backend,frontend
-      - POPULATE_TEST_DATA=false
+      - POPULATE_TEST_DATA=true
     volumes:
       - ./logs:/app/logs
       - ./media:/app/media
@@ -69,6 +69,7 @@ services:
       - ./settings:/app/settings
       - ./manage.py:/app/manage.py
       - ./requirements.txt:/app/requirements.txt
+      - ./docker-init.sh:/app/docker-init.sh
     depends_on:
       db:
         condition: service_healthy
@@ -76,20 +77,7 @@ services:
         condition: service_healthy
     networks:
       - crisp-network
-    command: >
-      sh -c "python manage.py wait_for_db &&
-             python manage.py migrate &&
-             python manage.py setup_base_users &&
-             if [ \"$$POPULATE_TEST_DATA\" = \"true\" ]; then
-               echo 'Populating test data...' &&
-               python manage.py populate_database --no-input;
-             fi &&
-             echo 'Cleaning up invalid feeds...' &&
-             python manage.py cleanup_feeds --force &&
-             echo 'Setting up VirusTotal feed...' &&
-             python manage.py setup_virustotal_feed --with-samples &&
-             python manage.py collectstatic --noinput &&
-             python manage.py runserver 0.0.0.0:8000"
+    command: ["bash", "/app/docker-init.sh"]
 
   # Vite Frontend
   frontend:
@@ -124,7 +112,7 @@ services:
       - DB_HOST=db-test
       - REDIS_URL=redis://redis-test:6379/0
       - ALLOWED_HOSTS=localhost,127.0.0.1,backend-test,frontend-test
-      - POPULATE_TEST_DATA=false
+      - POPULATE_TEST_DATA=true
     volumes:
       - ./logs:/app/logs
       - ./media:/app/media

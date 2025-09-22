@@ -2301,3 +2301,371 @@ class IndicatorSharingRelationship(models.Model):
         unique_together = ['indicator', 'target_organization']
         ordering = ['-shared_at']
         db_table = 'core_indicator_sharing_relationships'
+
+
+class AssetInventory(models.Model):
+    """
+    Model to store client asset inventories for asset-based alert correlation.
+    Each organization can maintain their infrastructure assets for threat matching.
+    """
+
+    ASSET_TYPE_CHOICES = [
+        ('ip_range', 'IP Address Range'),
+        ('domain', 'Domain Name'),
+        ('subdomain', 'Subdomain'),
+        ('email_domain', 'Email Domain'),
+        ('software', 'Software/Application'),
+        ('hardware', 'Hardware/Device'),
+        ('service', 'Network Service'),
+        ('certificate', 'SSL/TLS Certificate'),
+        ('cloud_resource', 'Cloud Resource'),
+        ('network_segment', 'Network Segment'),
+    ]
+
+    CRITICALITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('critical', 'Critical'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Asset identification
+    name = models.CharField(max_length=255, help_text="Human-readable asset name")
+    asset_type = models.CharField(max_length=20, choices=ASSET_TYPE_CHOICES)
+    asset_value = models.TextField(help_text="Asset identifier (IP range, domain, etc.)")
+    description = models.TextField(blank=True, null=True)
+
+    # Asset metadata
+    criticality = models.CharField(
+        max_length=10,
+        choices=CRITICALITY_CHOICES,
+        default='medium',
+        help_text="Business criticality of this asset"
+    )
+    environment = models.CharField(
+        max_length=50,
+        default='production',
+        help_text="Environment (production, staging, development)"
+    )
+
+    # Ownership and access
+    organization = models.ForeignKey(
+        'Organization',
+        on_delete=models.CASCADE,
+        related_name='asset_inventory',
+        help_text="Organization that owns this asset"
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='created_assets'
+    )
+
+    # Asset fingerprinting for matching
+    fingerprints = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Computed fingerprints for threat correlation"
+    )
+
+    # Configuration
+    alert_enabled = models.BooleanField(
+        default=True,
+        help_text="Whether to generate alerts for this asset"
+    )
+    alert_channels = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Preferred alert delivery channels"
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_seen = models.DateTimeField(null=True, blank=True)
+
+    # Metadata
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = 'core_asset_inventory'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['organization', 'asset_type']),
+            models.Index(fields=['asset_type', 'criticality']),
+            models.Index(fields=['alert_enabled', 'criticality']),
+        ]
+        unique_together = ['organization', 'asset_value', 'asset_type']
+
+    def __str__(self):
+        return f"{self.name} ({self.get_asset_type_display()}) - {self.organization.name}"
+
+    def generate_fingerprints(self):
+        """Generate fingerprints for threat correlation"""
+        fingerprints = {}
+
+        if self.asset_type == 'ip_range':
+            # Extract IP patterns for matching
+            fingerprints['ip_patterns'] = self._extract_ip_patterns()
+        elif self.asset_type in ['domain', 'subdomain', 'email_domain']:
+            # Extract domain patterns
+            fingerprints['domain_patterns'] = self._extract_domain_patterns()
+        elif self.asset_type == 'software':
+            # Extract software patterns
+            fingerprints['software_patterns'] = self._extract_software_patterns()
+
+        self.fingerprints = fingerprints
+        self.save(update_fields=['fingerprints'])
+
+    def _extract_ip_patterns(self):
+        """Extract IP patterns from asset value"""
+        patterns = []
+        value = self.asset_value.strip()
+
+        # Handle CIDR notation
+        if '/' in value:
+            patterns.append({'type': 'cidr', 'value': value})
+        # Handle IP ranges
+        elif '-' in value:
+            patterns.append({'type': 'range', 'value': value})
+        # Handle single IPs
+        else:
+            patterns.append({'type': 'single', 'value': value})
+
+        return patterns
+
+    def _extract_domain_patterns(self):
+        """Extract domain patterns from asset value"""
+        patterns = []
+        domain = self.asset_value.strip().lower()
+
+        patterns.append({'type': 'exact', 'value': domain})
+        patterns.append({'type': 'subdomain', 'value': f"*.{domain}"})
+
+        return patterns
+
+    def _extract_software_patterns(self):
+        """Extract software patterns from asset value"""
+        patterns = []
+        software = self.asset_value.strip().lower()
+
+        patterns.append({'type': 'exact', 'value': software})
+
+        # Extract vendor and product if possible
+        if ' ' in software:
+            parts = software.split(' ')
+            patterns.append({'type': 'vendor', 'value': parts[0]})
+            if len(parts) > 1:
+                patterns.append({'type': 'product', 'value': ' '.join(parts[1:])})
+
+        return patterns
+
+
+class CustomAlert(models.Model):
+    """
+    Model to store custom alerts generated from IoC correlation with client assets.
+    These alerts are personalized based on client infrastructure.
+    """
+
+    ALERT_TYPE_CHOICES = [
+        ('threat_detected', 'Threat Detected'),
+        ('asset_compromised', 'Asset Compromised'),
+        ('infrastructure_targeted', 'Infrastructure Targeted'),
+        ('campaign_detected', 'Campaign Detected'),
+        ('ttp_matched', 'TTP Matched'),
+        ('ioc_matched', 'IoC Matched'),
+    ]
+
+    SEVERITY_CHOICES = [
+        ('info', 'Informational'),
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('critical', 'Critical'),
+    ]
+
+    STATUS_CHOICES = [
+        ('new', 'New'),
+        ('acknowledged', 'Acknowledged'),
+        ('investigating', 'Investigating'),
+        ('resolved', 'Resolved'),
+        ('false_positive', 'False Positive'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Alert identification
+    alert_id = models.CharField(max_length=100, unique=True, help_text="Unique alert identifier")
+    title = models.CharField(max_length=500)
+    description = models.TextField()
+    alert_type = models.CharField(max_length=30, choices=ALERT_TYPE_CHOICES)
+    severity = models.CharField(max_length=10, choices=SEVERITY_CHOICES)
+
+    # Correlation information
+    matched_assets = models.ManyToManyField(
+        AssetInventory,
+        related_name='alerts',
+        help_text="Assets that matched this threat"
+    )
+    source_indicators = models.ManyToManyField(
+        Indicator,
+        related_name='generated_alerts',
+        blank=True,
+        help_text="Indicators that triggered this alert"
+    )
+    source_ttps = models.ManyToManyField(
+        'TTPData',
+        related_name='generated_alerts',
+        blank=True,
+        help_text="TTPs that triggered this alert"
+    )
+
+    # Targeting information
+    organization = models.ForeignKey(
+        'Organization',
+        on_delete=models.CASCADE,
+        related_name='custom_alerts',
+        help_text="Organization receiving this alert"
+    )
+    affected_users = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name='received_alerts',
+        blank=True,
+        help_text="Users who should receive this alert"
+    )
+
+    # Alert metadata
+    confidence_score = models.FloatField(
+        default=0.5,
+        help_text="Confidence score for this alert (0.0 to 1.0)"
+    )
+    relevance_score = models.FloatField(
+        default=0.5,
+        help_text="Relevance score based on asset criticality"
+    )
+
+    # Alert lifecycle
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
+    assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_alerts'
+    )
+
+    # Delivery tracking
+    delivery_channels = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Channels used to deliver this alert"
+    )
+    delivery_status = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Delivery status for each channel"
+    )
+
+    # Response information
+    response_actions = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Recommended response actions"
+    )
+
+    # Timestamps
+    detected_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    acknowledged_at = models.DateTimeField(null=True, blank=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    # Additional metadata
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = 'core_custom_alerts'
+        ordering = ['-detected_at']
+        indexes = [
+            models.Index(fields=['organization', 'status', 'severity']),
+            models.Index(fields=['alert_type', 'detected_at']),
+            models.Index(fields=['status', 'severity', 'detected_at']),
+            models.Index(fields=['assigned_to', 'status']),
+        ]
+
+    def __str__(self):
+        return f"Alert {self.alert_id}: {self.title} ({self.get_severity_display()})"
+
+    def acknowledge(self, user=None):
+        """Mark alert as acknowledged"""
+        self.status = 'acknowledged'
+        self.acknowledged_at = timezone.now()
+        if user:
+            self.assigned_to = user
+        self.save(update_fields=['status', 'acknowledged_at', 'assigned_to'])
+
+    def resolve(self, user=None):
+        """Mark alert as resolved"""
+        self.status = 'resolved'
+        self.resolved_at = timezone.now()
+        if user:
+            self.assigned_to = user
+        self.save(update_fields=['status', 'resolved_at', 'assigned_to'])
+
+    def mark_false_positive(self, user=None):
+        """Mark alert as false positive"""
+        self.status = 'false_positive'
+        self.resolved_at = timezone.now()
+        if user:
+            self.assigned_to = user
+        self.save(update_fields=['status', 'resolved_at', 'assigned_to'])
+
+    @property
+    def is_active(self):
+        """Check if alert is still active"""
+        return self.status in ['new', 'acknowledged', 'investigating']
+
+    @property
+    def response_time(self):
+        """Calculate response time if acknowledged"""
+        if self.acknowledged_at:
+            return self.acknowledged_at - self.created_at
+        return None
+
+    @property
+    def resolution_time(self):
+        """Calculate resolution time if resolved"""
+        if self.resolved_at:
+            return self.resolved_at - self.created_at
+        return None
+
+    def get_asset_summary(self):
+        """Get summary of affected assets"""
+        assets = self.matched_assets.all()
+        summary = {
+            'total_count': assets.count(),
+            'by_type': {},
+            'by_criticality': {},
+            'critical_assets': []
+        }
+
+        for asset in assets:
+            # Count by type
+            asset_type = asset.get_asset_type_display()
+            summary['by_type'][asset_type] = summary['by_type'].get(asset_type, 0) + 1
+
+            # Count by criticality
+            criticality = asset.get_criticality_display()
+            summary['by_criticality'][criticality] = summary['by_criticality'].get(criticality, 0) + 1
+
+            # Track critical assets
+            if asset.criticality == 'critical':
+                summary['critical_assets'].append({
+                    'name': asset.name,
+                    'type': asset_type,
+                    'value': asset.asset_value
+                })
+
+        return summary

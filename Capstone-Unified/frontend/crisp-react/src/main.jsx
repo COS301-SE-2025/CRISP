@@ -295,6 +295,38 @@ function AuthRoutes() {
           }
         />
 
+        {/* Asset Management route - Publisher and Admin access (WOW Factor #1) */}
+        <Route
+          path="/assets"
+          element={
+            isAuthenticated ? (
+              (userData?.role === 'publisher' || userData?.role === 'BlueVisionAdmin' || isAdmin) ? (
+                <AppWrapper user={userData} onLogout={handleLogout} isAdmin={isAdmin} />
+              ) : (
+                <Navigate to="/dashboard" replace />
+              )
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+
+        {/* Asset Alerts route - Publisher and Admin access (WOW Factor #1) */}
+        <Route
+          path="/asset-alerts"
+          element={
+            isAuthenticated ? (
+              (userData?.role === 'publisher' || userData?.role === 'BlueVisionAdmin' || isAdmin) ? (
+                <AppWrapper user={userData} onLogout={handleLogout} isAdmin={isAdmin} />
+              ) : (
+                <Navigate to="/dashboard" replace />
+              )
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+
         {/* Catch all route */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
