@@ -11,6 +11,7 @@ import BlueVLogo from './assets/enhanced/BlueV2.png';
 import * as api from './api.js';
 import { getOrganizations, getThreatFeedTtps, getMitreMatrix, getTtpFeedComparison, getTtpSeasonalPatterns, getTtpTechniqueFrequencies, getTtps, getTtpFilterOptions, getTtpTrends, getTtpDetails, updateTtp, getMatrixCellDetails, getTechniqueDetails, exportTtps, getUsersList } from './api.js';
 import { NotificationProvider, useNotifications } from './components/enhanced/NotificationManager.jsx';
+import Notifications from './components/notifications/Notifications.jsx';
 
 // Error Boundary for Chart Component
 class ChartErrorBoundary extends React.Component {
@@ -135,6 +136,20 @@ const getAuthHeaders = () => {
 function AppWithNotifications({ user, onLogout, isAdmin }) {
   // Get notification functions
   const { showSuccess, showInfo, showError, showWarning } = useNotifications();
+  
+  // Unread notifications count state
+  const [unreadCount, setUnreadCount] = useState(0);
+  
+  // Fetch unread notifications count
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await api.getAlerts({ unread_only: 'true' });
+      const count = response.data ? response.data.length : 0;
+      setUnreadCount(count);
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+    }
+  };
 
   // Initialize activePage from URL or default to dashboard
   const getInitialPage = () => {
@@ -506,6 +521,16 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
     return () => clearTimeout(timer);
   }, []);
 
+  // Fetch unread notifications count on component mount and periodically
+  useEffect(() => {
+    fetchUnreadCount(); // Initial fetch
+    
+    // Fetch every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
   // Function to switch between pages with optional modal triggers
   const showPage = (pageId, modalTrigger = null, modalParams = {}) => {
     setActivePage(pageId);
@@ -631,6 +656,8 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
         setShowSearchDropdown={setShowSearchDropdown}
         handleSearchSubmit={handleSearchSubmit}
         handleSearchResultClick={handleSearchResultClick}
+        unreadCount={unreadCount}
+        fetchUnreadCount={fetchUnreadCount}
       />
       <MainNav activePage={activePage} showPage={showPage} user={user} onLogout={onLogout} isAdmin={isAdmin} />
       <main className="main-content">
@@ -689,7 +716,9 @@ function Header({
   showSearchDropdown,
   setShowSearchDropdown,
   handleSearchSubmit,
-  handleSearchResultClick
+  handleSearchResultClick,
+  unreadCount,
+  fetchUnreadCount
 }) {
   
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -801,9 +830,30 @@ function Header({
               </div>
             )}
           </div>
-          <div className="notifications" onClick={() => showPage('notifications')} style={{cursor: 'pointer'}}>
+          <div className="notifications" onClick={() => {showPage('notifications'); fetchUnreadCount();}} style={{cursor: 'pointer', position: 'relative'}}>
             <i className="fas fa-bell"></i>
-            <span className="notification-count">3</span>
+            {unreadCount > 0 && (
+              <span className="notification-badge" style={{
+                position: 'absolute',
+                top: '-5px',
+                right: '-5px',
+                background: '#dc3545',
+                color: 'white',
+                borderRadius: '50%',
+                fontSize: '11px',
+                fontWeight: '600',
+                padding: '2px 6px',
+                minWidth: '18px',
+                height: '18px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '2px solid white',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+              }}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
           </div>
           
           {/* Enhanced User Profile Menu */}
@@ -2811,6 +2861,8 @@ function ThreatFeeds({
   const [showDeleteFeedModal, setShowDeleteFeedModal] = useState(false);
   const [feedToDelete, setFeedToDelete] = useState(null);
   const [deletingFeed, setDeletingFeed] = useState(false);
+  const [addingFeed, setAddingFeed] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Note: consumptionParams, activePreset, handlePresetSelect, and handleParamChange
   // are now passed as props from the parent App component
@@ -2898,10 +2950,35 @@ function ThreatFeeds({
   }, []);
 
   const fetchThreatFeeds = async () => {
+    console.log('🔄 Fetching threat feeds...');
     setLoading(true);
-    const data = await api.get('/api/threat-feeds/');
-    if (data && data.results) {
-      setThreatFeeds(data.results);
+    try {
+      // Add cache busting timestamp
+      const cacheBuster = Date.now();
+      const data = await api.get(`/api/threat-feeds/?t=${cacheBuster}`);
+      console.log('📡 API response:', data);
+      console.log('📊 API response details:', {
+        count: data.count,
+        results_length: data.results?.length,
+        results: data.results
+      });
+      if (data && data.results) {
+        console.log(`✅ Found ${data.results.length} threat feeds, updating state...`);
+        console.log('📋 Feed names:', data.results.map(f => f.name));
+        console.log('🔄 Current threatFeeds state before update:', threatFeeds.length);
+        setThreatFeeds(data.results);
+        setRefreshTrigger(prev => prev + 1); // Force re-render
+        console.log('✅ Threat feeds state updated');
+        
+        // Force a re-render by updating a dummy state
+        setTimeout(() => {
+          console.log('🔄 Force checking state after update:', threatFeeds.length);
+        }, 100);
+      } else {
+        console.warn('⚠️ No threat feeds data found in response');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching threat feeds:', error);
     }
     setLoading(false);
   };
@@ -3354,17 +3431,29 @@ function ThreatFeeds({
     try {
       const result = await api.delete(`/api/threat-feeds/${feedToDelete.id}/`);
       if (result !== null) {
-        console.log('Feed deleted successfully:', feedToDelete.name);
-        // Refresh feeds list
+        console.log('✅ Feed deleted successfully:', feedToDelete.name);
+        
+        // Show success notification
+        showSuccess('Feed Deleted', `Threat feed "${feedToDelete.name}" has been deleted successfully.`);
+        
+        // Refresh the threat feeds list to remove the deleted feed immediately
+        console.log('🔄 Forcing refresh by clearing state first...');
+        setThreatFeeds([]); // Clear first to force re-render
+        
+        // Small delay to ensure database transaction is committed
+        console.log('⏳ Waiting 2000ms for database commit...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
         await fetchThreatFeeds();
+        console.log('✅ Threat feeds list refreshed after deletion');
         // Close modal
         closeDeleteFeedModal();
       } else {
-        alert('Failed to delete threat feed. Please try again.');
+        showError('Delete Failed', 'Failed to delete threat feed. Please try again.');
       }
     } catch (error) {
       console.error('Error deleting feed:', error);
-      alert('Error deleting threat feed. Please try again.');
+      showError('Error Deleting Feed', 'Error deleting threat feed. Please try again.');
     } finally {
       setDeletingFeed(false);
     }
@@ -3390,33 +3479,64 @@ function ThreatFeeds({
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     
-    // Clean up form data - convert empty strings to null for optional fields
-    const cleanedFormData = {
-      ...formData,
-      taxii_server_url: formData.taxii_server_url || null,
-      taxii_api_root: formData.taxii_api_root || null,
-      taxii_collection_id: formData.taxii_collection_id || null,
-      taxii_username: formData.taxii_username || null,
-      taxii_password: formData.taxii_password || null,
-      description: formData.description || null
-    };
-    
-    console.log('Submitting threat feed data:', cleanedFormData);
-    
-    const result = await api.post('/api/threat-feeds/', cleanedFormData);
-    if (result) {
-      setShowAddModal(false);
-      setFormData({
-        name: '',
-        description: '',
-        is_external: true,
-        taxii_server_url: '',
-        taxii_api_root: '',
-        taxii_collection_id: '',
-        taxii_username: '',
-        taxii_password: ''
-      });
-      fetchThreatFeeds();
+    setAddingFeed(true);
+    try {
+      // Clean up form data - convert empty strings to null for optional fields
+      const cleanedFormData = {
+        ...formData,
+        taxii_server_url: formData.taxii_server_url || null,
+        taxii_api_root: formData.taxii_api_root || null,
+        taxii_collection_id: formData.taxii_collection_id || null,
+        taxii_username: formData.taxii_username || null,
+        taxii_password: formData.taxii_password || null,
+        description: formData.description || null
+      };
+      
+      console.log('Submitting threat feed data:', cleanedFormData);
+      
+      const result = await api.post('/api/threat-feeds/', cleanedFormData);
+      console.log('📤 POST result:', result);
+      if (result) {
+        console.log('✅ Feed added successfully, refreshing list...');
+        console.log('🆔 New feed ID:', result.id);
+        console.log('📋 New feed name:', result.name);
+        console.log('🔍 Result object details:', {
+          id: result.id,
+          name: result.name,
+          is_external: result.is_external,
+          created_at: result.created_at
+        });
+        
+        // Show success notification
+        showSuccess('Feed Added', `Threat feed "${cleanedFormData.name}" has been added successfully.`);
+        
+        setShowAddModal(false);
+        setFormData({
+          name: '',
+          description: '',
+          is_external: true,
+          taxii_server_url: '',
+          taxii_api_root: '',
+          taxii_collection_id: '',
+          taxii_username: '',
+          taxii_password: ''
+        });
+        // Refresh the threat feeds list to show the new feed immediately
+        console.log('🔄 Forcing refresh by clearing state first...');
+        setThreatFeeds([]); // Clear first to force re-render
+        
+        // Small delay to ensure database transaction is committed
+        console.log('⏳ Waiting 2000ms for database commit...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        await fetchThreatFeeds();
+        console.log('✅ Threat feeds list refreshed');
+      }
+    } catch (error) {
+      console.error('Error adding threat feed:', error);
+      showError('Error Adding Feed', 'Failed to add threat feed. Please try again.');
+    } finally {
+      setAddingFeed(false);
     }
   };
 
@@ -3661,7 +3781,7 @@ function ThreatFeeds({
         </div>
       )}
 
-      <div className="tabs">
+      <div className="tabs" key={`tabs-${refreshTrigger}`}>
         <div 
           className={`tab ${activeTab === 'active' ? 'active' : ''}`}
           onClick={() => handleTabChange('active')}
@@ -3783,9 +3903,9 @@ function ThreatFeeds({
               <i className="fas fa-spinner fa-spin"></i> Loading feeds...
             </div>
           ) : (
-            <ul className="feed-items">
+            <ul className="feed-items" key={`feeds-${refreshTrigger}`}>
               {getPaginatedFeeds().map((feed) => (
-                <li key={feed.id} className="feed-item">
+                <li key={`${feed.id}-${refreshTrigger}`} className="feed-item">
                   <div className="feed-icon">
                     <i className={feed.is_external ? "fas fa-globe" : "fas fa-server"}></i>
                   </div>
@@ -4032,11 +4152,28 @@ function ThreatFeeds({
               </div>
               
               <div className="modal-footer">
-                <button type="button" className="btn btn-outline" onClick={closeModal}>
+                <button 
+                  type="button" 
+                  className="btn btn-outline" 
+                  onClick={closeModal}
+                  disabled={addingFeed}
+                >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  <i className="fas fa-plus"></i> Add Feed
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={addingFeed}
+                >
+                  {addingFeed ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin"></i> Adding Feed...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-plus"></i> Add Feed
+                    </>
+                  )}
                 </button>
               </div>
             </form>
@@ -16405,465 +16542,7 @@ function CSSStyles() {
   );
 }
 
-// Notifications Component
-function Notifications({ active }) {
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('all');
-
-  useEffect(() => {
-    if (active) {
-      fetchNotifications();
-    }
-  }, [active, filter]);
-
-  const fetchNotifications = () => {
-    // Simulated notifications data
-    setLoading(true);
-    setTimeout(() => {
-      const mockNotifications = [
-        {
-          id: '1',
-          type: 'threat_alert',
-          title: 'New High-Priority Threat Detected',
-          message: 'A new malware strain has been identified in your organization\'s threat feed.',
-          severity: 'high',
-          read: false,
-          created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-          source: 'Threat Intelligence'
-        },
-        {
-          id: '2',
-          type: 'trust_request',
-          title: 'Trust Relationship Request',
-          message: 'Organization "CyberSecure Inc." has requested a bilateral trust relationship.',
-          severity: 'medium',
-          read: false,
-          created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          source: 'Trust Management'
-        },
-        {
-          id: '3',
-          type: 'feed_update',
-          title: 'Threat Feed Updated',
-          message: 'Your subscribed threat feed "MITRE ATT&CK" has been updated with 15 new indicators.',
-          severity: 'low',
-          read: true,
-          created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-          source: 'Feed Management'
-        },
-        {
-          id: '4',
-          type: 'system',
-          title: 'System Maintenance Scheduled',
-          message: 'Scheduled maintenance window on Sunday 2 AM - 4 AM UTC.',
-          severity: 'medium',
-          read: true,
-          created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          source: 'System'
-        }
-      ];
-
-      let filteredNotifications = mockNotifications;
-      if (filter !== 'all') {
-        filteredNotifications = mockNotifications.filter(n => {
-          if (filter === 'unread') return !n.read;
-          if (filter === 'read') return n.read;
-          return n.type === filter;
-        });
-      }
-      
-      setNotifications(filteredNotifications);
-      setLoading(false);
-      setError(null);
-    }, 500);
-  };
-
-  const markAsRead = (notificationId) => {
-    setNotifications(prev =>
-      prev.map(n =>
-        n.id === notificationId ? { ...n, read: true } : n
-      )
-    );
-  };
-
-  const markAllAsRead = () => {
-    setNotifications(prev =>
-      prev.map(n => ({ ...n, read: true }))
-    );
-  };
-
-  const deleteNotification = (notificationId) => {
-    setNotifications(prev =>
-      prev.filter(n => n.id !== notificationId)
-    );
-  };
-
-  const getNotificationIcon = (type) => {
-    const icons = {
-      threat_alert: 'fas fa-exclamation-triangle',
-      trust_request: 'fas fa-handshake',
-      feed_update: 'fas fa-rss',
-      system: 'fas fa-cog',
-      user_invitation: 'fas fa-user-plus'
-    };
-    return icons[type] || 'fas fa-bell';
-  };
-
-  const getSeverityColor = (severity) => {
-    const colors = {
-      high: '#dc3545',
-      medium: '#ffc107',
-      low: '#28a745'
-    };
-    return colors[severity] || '#6c757d';
-  };
-
-  const formatTimeAgo = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInMs = now - date;
-    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
-    const diffInDays = Math.floor(diffInHours / 24);
-
-    if (diffInHours < 1) return 'Just now';
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    if (diffInDays < 7) return `${diffInDays}d ago`;
-    return date.toLocaleDateString();
-  };
-
-  if (!active) return null;
-
-  if (loading) {
-    return (
-      <section id="notifications" className="page-section active">
-        <div className="loading-state">
-          <i className="fas fa-spinner fa-spin"></i>
-          <p>Loading notifications...</p>
-        </div>
-      </section>
-    );
-  }
-
-  if (error) {
-    return (
-      <section id="notifications" className="page-section active">
-        <div className="error-state">
-          <i className="fas fa-exclamation-triangle"></i>
-          <p>Error loading notifications: {error}</p>
-          <button onClick={fetchNotifications} className="btn btn-primary">
-            Retry
-          </button>
-        </div>
-      </section>
-    );
-  }
-
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  return (
-    <section id="notifications" className="page-section active">
-      <div className="notifications-container">
-        <div className="header">
-          <div className="title-section">
-            <h2>Notifications</h2>
-            {unreadCount > 0 && (
-              <span className="unread-badge">{unreadCount}</span>
-            )}
-          </div>
-          <div className="header-actions">
-            {unreadCount > 0 && (
-              <button onClick={markAllAsRead} className="btn btn-outline">
-                <i className="fas fa-check-double"></i>
-                Mark All Read
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="filters">
-          <button
-            className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
-            onClick={() => setFilter('all')}
-          >
-            All
-          </button>
-          <button
-            className={`filter-btn ${filter === 'unread' ? 'active' : ''}`}
-            onClick={() => setFilter('unread')}
-          >
-            Unread
-          </button>
-          <button
-            className={`filter-btn ${filter === 'threat_alert' ? 'active' : ''}`}
-            onClick={() => setFilter('threat_alert')}
-          >
-            Threats
-          </button>
-          <button
-            className={`filter-btn ${filter === 'trust_request' ? 'active' : ''}`}
-            onClick={() => setFilter('trust_request')}
-          >
-            Trust
-          </button>
-          <button
-            className={`filter-btn ${filter === 'feed_update' ? 'active' : ''}`}
-            onClick={() => setFilter('feed_update')}
-          >
-            Feeds
-          </button>
-        </div>
-
-        <div className="notifications-list">
-          {notifications.length === 0 ? (
-            <div className="empty-state">
-              <i className="fas fa-bell-slash"></i>
-              <h3>No notifications</h3>
-              <p>You're all caught up! No notifications to show.</p>
-            </div>
-          ) : (
-            notifications.map(notification => (
-              <div
-                key={notification.id}
-                className={`notification-item ${!notification.read ? 'unread' : ''}`}
-              >
-                <div className="notification-content">
-                  <div className="notification-header">
-                    <div className="notification-icon">
-                      <i
-                        className={getNotificationIcon(notification.type)}
-                        style={{ color: getSeverityColor(notification.severity) }}
-                      ></i>
-                    </div>
-                    <div className="notification-meta">
-                      <h4>{notification.title}</h4>
-                      <div className="meta-info">
-                        <span className="source">{notification.source}</span>
-                        <span className="separator">•</span>
-                        <span className="time">{formatTimeAgo(notification.created_at)}</span>
-                        {!notification.read && <span className="unread-dot"></span>}
-                      </div>
-                    </div>
-                  </div>
-                  <p className="notification-message">{notification.message}</p>
-                </div>
-                <div className="notification-actions">
-                  {!notification.read && (
-                    <button
-                      onClick={() => markAsRead(notification.id)}
-                      className="btn btn-sm btn-outline"
-                      title="Mark as read"
-                    >
-                      <i className="fas fa-check"></i>
-                    </button>
-                  )}
-                  <button
-                    onClick={() => deleteNotification(notification.id)}
-                    className="btn btn-sm btn-danger"
-                    title="Delete notification"
-                  >
-                    <i className="fas fa-trash"></i>
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      <style jsx>{`
-        .notifications-container {
-          padding: 20px;
-          max-width: 900px;
-          margin: 0 auto;
-        }
-        .header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 20px;
-        }
-        .title-section {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-        .header h2 {
-          margin: 0;
-          color: #333;
-        }
-        .unread-badge {
-          background: #dc3545;
-          color: white;
-          padding: 4px 8px;
-          border-radius: 12px;
-          font-size: 12px;
-          font-weight: 600;
-          min-width: 20px;
-          text-align: center;
-        }
-        .filters {
-          display: flex;
-          gap: 8px;
-          margin-bottom: 20px;
-          padding-bottom: 15px;
-          border-bottom: 1px solid #dee2e6;
-        }
-        .filter-btn {
-          padding: 8px 16px;
-          background: none;
-          border: 1px solid #dee2e6;
-          border-radius: 20px;
-          cursor: pointer;
-          font-size: 14px;
-          color: #6c757d;
-          transition: all 0.2s;
-        }
-        .filter-btn:hover {
-          background: #f8f9fa;
-          color: #495057;
-        }
-        .filter-btn.active {
-          background: #0056b3;
-          color: white;
-          border-color: #0056b3;
-        }
-        .notifications-list {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-        .notification-item {
-          background: white;
-          border: 1px solid #dee2e6;
-          border-radius: 8px;
-          padding: 16px;
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          transition: all 0.2s;
-        }
-        .notification-item:hover {
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        .notification-item.unread {
-          border-left: 4px solid #0056b3;
-          background: #f8f9ff;
-        }
-        .notification-content {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          padding-right: 1rem;
-        }
-        .notification-header {
-          display: flex;
-          align-items: flex-start;
-          gap: 12px;
-          margin-bottom: 8px;
-        }
-        .notification-icon {
-          width: 40px;
-          height: 40px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #f8f9fa;
-          border-radius: 50%;
-          font-size: 16px;
-          flex-shrink: 0;
-        }
-        .notification-meta {
-          flex: 1;
-        }
-        .notification-meta h4 {
-          margin: 0 0 4px 0;
-          font-size: 16px;
-          font-weight: 600;
-          color: #333;
-        }
-        .meta-info {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 12px;
-          color: #6c757d;
-        }
-        .separator {
-          opacity: 0.5;
-        }
-        .unread-dot {
-          width: 6px;
-          height: 6px;
-          background: #0056b3;
-          border-radius: 50%;
-        }
-        .notification-message {
-          margin: 0;
-          color: #495057;
-          line-height: 1.4;
-          padding-left: 52px; /* Aligns with title */
-        }
-        .notification-actions {
-          display: flex;
-          gap: 8px;
-          flex-shrink: 0;
-          margin-left: 16px;
-        }
-        .btn {
-          padding: 8px 16px;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 14px;
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          transition: background-color 0.2s;
-        }
-        .btn-primary {
-          background: #0056b3;
-          color: white;
-        }
-        .btn-outline {
-          background: transparent;
-          border: 1px solid #dee2e6;
-          color: #495057;
-        }
-        .btn-outline:hover {
-          background: #f8f9fa;
-        }
-        .btn-sm {
-          padding: 4px 8px;
-          font-size: 12px;
-        }
-        .btn-danger {
-          background: #dc3545;
-          color: white;
-        }
-        .btn-danger:hover {
-          background: #c82333;
-        }
-        .empty-state, .loading-state, .error-state {
-          text-align: center;
-          padding: 60px 20px;
-          color: #6c757d;
-        }
-        .empty-state i, .loading-state i, .error-state i {
-          font-size: 48px;
-          margin-bottom: 20px;
-          opacity: 0.5;
-        }
-        .empty-state h3 {
-          margin: 0 0 10px 0;
-          color: #495057;
-        }
-      `}</style>
-    </section>
-  );
-}
-
+// Notifications Component removed - using standalone component instead
 
 // Wrapper component that provides notifications
 function App(props) {

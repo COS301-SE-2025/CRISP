@@ -742,6 +742,20 @@ export const markAllNotificationsRead = async () => {
   return await response.json();
 };
 
+export const deleteNotification = async (notificationId) => {
+  const response = await fetch(`${API_BASE_URL}/api/alerts/${notificationId}/delete/`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || errorData.message || 'Failed to delete notification');
+  }
+
+  return await response.json();
+};
+
 // TTP Analysis Functions
 export const getThreatFeedTtps = async (feedId, queryParams = {}) => {
   const params = new URLSearchParams(queryParams).toString();

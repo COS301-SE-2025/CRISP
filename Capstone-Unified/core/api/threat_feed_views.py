@@ -454,6 +454,19 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
                             }
                         }
                     )
+                    
+                    # Add to batch notification service to trigger user notifications
+                    try:
+                        from core.services.batch_notification_service import batch_notification_service
+                        batch_notification_service.add_feed_change(
+                            threat_feed=feed,
+                            new_indicators=indicator_count,
+                            updated_indicators=0  # Feed consumption typically adds new indicators
+                        )
+                        logger.info(f"Added feed consumption to batch notification service: {feed.name} (+{indicator_count} indicators)")
+                    except Exception as e:
+                        logger.error(f"Error adding feed consumption to batch notification service: {e}")
+                        # Don't fail the request if notification fails
             else:
                 formatted_stats = stats
 

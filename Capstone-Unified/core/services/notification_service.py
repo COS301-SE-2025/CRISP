@@ -42,8 +42,10 @@ class NotificationService:
             recipients = self._get_feed_update_recipients(threat_feed)
             
             if not recipients:
-                logger.info(f"No recipients found for feed update: {threat_feed.name}")
+                logger.warning(f"No recipients found for feed update: {threat_feed.name}")
                 return []
+            
+            logger.info(f"Found {len(recipients)} recipients for feed update: {threat_feed.name}")
             
             # Create in-app notifications
             notifications = Notification.create_feed_update_notification(
@@ -148,7 +150,7 @@ class NotificationService:
                     if subscription.user not in recipients:
                         recipients.append(subscription.user)
             
-            # If no specific subscriptions, notify all users in the organization with notification preferences
+            # If no specific subscriptions, notify all active users in the organization
             if not recipients and threat_feed.owner:
                 from core.user_management.models import CustomUser
                 org_users = CustomUser.objects.filter(
@@ -157,9 +159,16 @@ class NotificationService:
                 ).select_related('profile')
                 
                 for user in org_users:
-                    # Check user notification preferences
-                    if hasattr(user, 'profile') and user.profile.email_notifications:
+                    # Check user notification preferences (include users without profiles or with notifications enabled)
+                    if not hasattr(user, 'profile') or user.profile.email_notifications:
                         recipients.append(user)
+            
+            # If still no recipients and no organization, notify all active users (fallback for system-wide feeds)
+            if not recipients:
+                from core.user_management.models import CustomUser
+                fallback_users = CustomUser.objects.filter(is_active=True)[:5]  # Limit to 5 users to avoid spam
+                recipients.extend(fallback_users)
+                logger.info(f"No specific recipients found for feed {threat_feed.name}, using fallback recipients: {len(fallback_users)} users")
             
             return list(set(recipients))  # Remove duplicates
             
