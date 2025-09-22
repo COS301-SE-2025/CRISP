@@ -1,212 +1,196 @@
 """
-Trust Serializers - Trust relationship model serialization for API responses
+Trust Serializers - Trust relationship and trust group serialization for API responses
 """
 
 from rest_framework import serializers
 from core.models.models import TrustRelationship, TrustLevel, Organization
-from core.trust_management.models import TrustGroup
-from core.user_management.models import CustomUser
-
-class OrganizationBasicSerializer(serializers.ModelSerializer):
-    """Basic organization serializer for trust relationships"""
-    
-    class Meta:
-        model = Organization
-        fields = ['id', 'name', 'domain', 'organization_type']
-        read_only_fields = ['id']
-
-class UserBasicSerializer(serializers.ModelSerializer):
-    """Basic user serializer for trust relationships"""
-    
-    full_name = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = CustomUser
-        fields = ['id', 'username', 'full_name', 'role']
-        read_only_fields = ['id']
-    
-    def get_full_name(self, obj):
-        return obj.get_full_name()
-
-class TrustRelationshipSerializer(serializers.ModelSerializer):
-    """Serializer for TrustRelationship model"""
-    
-    source_organization = OrganizationBasicSerializer(read_only=True)
-    target_organization = OrganizationBasicSerializer(read_only=True)
-    created_by = UserBasicSerializer(read_only=True)
-    last_modified_by = UserBasicSerializer(read_only=True)
-    revoked_by = UserBasicSerializer(read_only=True)
-    trust_level = serializers.StringRelatedField(read_only=True)
-    
-    class Meta:
-        model = TrustRelationship
-        fields = [
-            'id', 'source_organization', 'target_organization',
-            'relationship_type', 'trust_level', 'status', 'is_bilateral', 'is_active',
-            'valid_from', 'valid_until', 'sharing_preferences',
-            'anonymization_level', 'access_level', 'approved_by_source', 
-            'approved_by_target', 'created_by', 'last_modified_by', 
-            'revoked_by', 'revoked_at', 'notes', 'created_at', 'updated_at'
-        ]
-        read_only_fields = [
-            'id', 'revoked_at', 'created_at', 'updated_at'
-        ]
-
-class TrustRelationshipCreateSerializer(serializers.ModelSerializer):
-    """Serializer for creating trust relationships"""
-    
-    target_organization_id = serializers.UUIDField(write_only=True)
-    trust_level_id = serializers.UUIDField(write_only=True)
-    
-    class Meta:
-        model = TrustRelationship
-        fields = [
-            'target_organization_id', 'trust_level_id', 'relationship_type',
-            'is_bilateral', 'anonymization_level', 'access_level', 'notes'
-        ]
-    
-    def validate_relationship_type(self, value):
-        """Validate relationship type"""
-        valid_types = ['bilateral', 'community', 'hierarchical', 'federation']
-        if value not in valid_types:
-            raise serializers.ValidationError(f"Relationship type must be one of: {', '.join(valid_types)}")
-        return value
-
-class TrustRelationshipResponseSerializer(serializers.Serializer):
-    """Serializer for responding to trust requests"""
-    
-    action = serializers.ChoiceField(choices=['approve', 'deny'])
-    trust_level_id = serializers.UUIDField(required=False)
-    message = serializers.CharField(required=False, max_length=500)
-    
-    def validate(self, attrs):
-        """Validate response data"""
-        if attrs['action'] == 'approve' and not attrs.get('trust_level_id'):
-            raise serializers.ValidationError("Trust level is required when approving trust request")
-        return attrs
-
-class TrustRelationshipUpdateSerializer(serializers.ModelSerializer):
-    """Serializer for updating trust relationships"""
-    
-    trust_level_id = serializers.UUIDField(required=False)
-    
-    class Meta:
-        model = TrustRelationship
-        fields = [
-            'trust_level_id', 'anonymization_level', 'access_level', 
-            'is_bilateral', 'notes', 'sharing_preferences'
-        ]
-
-class TrustGroupSerializer(serializers.ModelSerializer):
-    """Serializer for TrustGroup model"""
-    
-    default_trust_level = serializers.StringRelatedField(read_only=True)
-    member_count = serializers.ReadOnlyField()
-    
-    class Meta:
-        model = TrustGroup
-        fields = [
-            'id', 'name', 'description', 'group_type', 'is_public',
-            'requires_approval', 'default_trust_level', 'group_policies',
-            'is_active', 'created_by', 'administrators', 'member_count',
-            'created_at', 'updated_at'
-        ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'member_count']
+from core.trust_management.models import TrustGroup, TrustGroupMembership
 
 class TrustLevelSerializer(serializers.ModelSerializer):
-    """Serializer for TrustLevel model"""
-    
+    """Serializer for trust levels"""
+
     class Meta:
         model = TrustLevel
         fields = [
             'id', 'name', 'level', 'description', 'numerical_value',
             'default_anonymization_level', 'default_access_level',
-            'sharing_policies', 'is_active', 'is_system_default',
-            'created_by', 'created_at', 'updated_at'
+            'sharing_policies', 'is_system_default', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
-class TrustRelationshipSummarySerializer(serializers.Serializer):
-    """Serializer for trust relationship summary"""
-    
-    organization = OrganizationBasicSerializer(read_only=True)
-    trust_level = serializers.CharField(read_only=True)
-    relationship_type = serializers.CharField(read_only=True)  # 'bilateral' or 'community'
-    status = serializers.CharField(read_only=True)
-    established_at = serializers.DateTimeField(read_only=True)
+class OrganizationSummarySerializer(serializers.ModelSerializer):
+    """Minimal organization serializer for trust relationships"""
 
-class TrustLevelSummarySerializer(serializers.Serializer):
-    """Serializer for trust level summary statistics"""
-    
-    trust_level = serializers.CharField()
-    count = serializers.IntegerField()
-    percentage = serializers.FloatField()
+    class Meta:
+        model = Organization
+        fields = ['id', 'name', 'domain', 'organization_type']
+        read_only_fields = ['id']
 
-class TrustDashboardSerializer(serializers.Serializer):
-    """Serializer for trust dashboard data"""
-    
-    total_relationships = serializers.IntegerField()
-    active_relationships = serializers.IntegerField()
-    pending_requests = serializers.IntegerField()
-    outgoing_requests = serializers.IntegerField()
-    incoming_requests = serializers.IntegerField()
-    trust_level_distribution = TrustLevelSummarySerializer(many=True)
-    recent_activities = serializers.ListField(child=serializers.DictField())
-    trusted_organizations = OrganizationBasicSerializer(many=True)
+class TrustRelationshipSerializer(serializers.ModelSerializer):
+    """Detailed trust relationship serializer"""
 
-class TrustMetricsSerializer(serializers.Serializer):
-    """Serializer for trust metrics"""
-    
-    organization = OrganizationBasicSerializer()
-    trust_score = serializers.FloatField()
-    relationship_count = serializers.IntegerField()
-    average_trust_level = serializers.FloatField()
-    trust_diversity = serializers.FloatField()
-    last_activity = serializers.DateTimeField()
+    source_organization = OrganizationSummarySerializer(read_only=True)
+    target_organization = OrganizationSummarySerializer(read_only=True)
+    trust_level = TrustLevelSerializer(read_only=True)
 
-class TrustHistorySerializer(serializers.Serializer):
-    """Serializer for trust relationship history"""
-    
-    timestamp = serializers.DateTimeField()
-    action = serializers.CharField()
-    old_trust_level = serializers.CharField(allow_null=True)
-    new_trust_level = serializers.CharField(allow_null=True)
-    performed_by = UserBasicSerializer()
-    message = serializers.CharField(allow_null=True)
-    
-class TrustValidationSerializer(serializers.Serializer):
-    """Serializer for trust validation operations"""
-    
-    organization_id = serializers.UUIDField()
-    required_trust_level = serializers.CharField()
-    current_trust_level = serializers.CharField()
-    is_valid = serializers.BooleanField()
-    validation_message = serializers.CharField()
+    class Meta:
+        model = TrustRelationship
+        fields = [
+            'id', 'source_organization', 'target_organization', 'trust_level',
+            'relationship_type', 'status', 'is_bilateral', 'is_active',
+            'anonymization_level', 'access_level', 'sharing_preferences',
+            'notes', 'created_at', 'updated_at', 'expires_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
-class TrustRecommendationSerializer(serializers.Serializer):
-    """Serializer for trust recommendations"""
-    
-    organization = OrganizationBasicSerializer()
-    recommended_trust_level = serializers.CharField()
-    confidence_score = serializers.FloatField()
-    reasoning = serializers.CharField()
-    factors = serializers.ListField(child=serializers.DictField())
-    
-class TrustNetworkSerializer(serializers.Serializer):
-    """Serializer for trust network visualization data"""
-    
-    nodes = serializers.ListField(child=serializers.DictField())
-    edges = serializers.ListField(child=serializers.DictField())
-    metrics = serializers.DictField()
-    
-class TrustAccessLogSerializer(serializers.Serializer):
-    """Serializer for trust access logging"""
-    
-    timestamp = serializers.DateTimeField()
-    accessing_organization = OrganizationBasicSerializer()
-    accessed_organization = OrganizationBasicSerializer()
-    resource_type = serializers.CharField()
-    resource_id = serializers.CharField()
-    access_granted = serializers.BooleanField()
-    trust_level_used = serializers.CharField()
-    anonymization_applied = serializers.CharField()
+class TrustRelationshipSummarySerializer(serializers.ModelSerializer):
+    """Summary trust relationship serializer for lists"""
+
+    source_organization_name = serializers.CharField(source='source_organization.name', read_only=True)
+    target_organization_name = serializers.CharField(source='target_organization.name', read_only=True)
+    trust_level_name = serializers.CharField(source='trust_level.name', read_only=True)
+
+    class Meta:
+        model = TrustRelationship
+        fields = [
+            'id', 'source_organization_name', 'target_organization_name',
+            'trust_level_name', 'relationship_type', 'status', 'is_active',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+class TrustRelationshipCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating trust relationships"""
+
+    source_organization_id = serializers.UUIDField(write_only=True)
+    target_organization_id = serializers.UUIDField(write_only=True)
+    trust_level_id = serializers.UUIDField(write_only=True)
+
+    class Meta:
+        model = TrustRelationship
+        fields = [
+            'source_organization_id', 'target_organization_id', 'trust_level_id',
+            'relationship_type', 'is_bilateral', 'anonymization_level',
+            'access_level', 'sharing_preferences', 'notes'
+        ]
+
+    def validate(self, data):
+        """Validate trust relationship data"""
+        # Check if organizations exist
+        try:
+            source_org = Organization.objects.get(id=data['source_organization_id'])
+            target_org = Organization.objects.get(id=data['target_organization_id'])
+        except Organization.DoesNotExist:
+            raise serializers.ValidationError("One or both organizations do not exist")
+
+        # Check if trust level exists
+        try:
+            trust_level = TrustLevel.objects.get(id=data['trust_level_id'])
+        except TrustLevel.DoesNotExist:
+            raise serializers.ValidationError("Trust level does not exist")
+
+        # Prevent self-trust
+        if source_org.id == target_org.id:
+            raise serializers.ValidationError("Cannot create trust relationship with the same organization")
+
+        # Check for existing relationship
+        existing = TrustRelationship.objects.filter(
+            source_organization=source_org,
+            target_organization=target_org,
+            is_active=True
+        ).exists()
+
+        if existing:
+            raise serializers.ValidationError("Trust relationship already exists between these organizations")
+
+        return data
+
+class TrustGroupMembershipSerializer(serializers.ModelSerializer):
+    """Serializer for trust group membership"""
+
+    organization = OrganizationSummarySerializer(read_only=True)
+
+    class Meta:
+        model = TrustGroupMembership
+        fields = [
+            'id', 'organization', 'role', 'is_active', 'joined_at',
+            'permissions', 'metadata'
+        ]
+        read_only_fields = ['id', 'joined_at']
+
+class TrustGroupSerializer(serializers.ModelSerializer):
+    """Detailed trust group serializer"""
+
+    members = TrustGroupMembershipSerializer(source='trustgroupmembership_set', many=True, read_only=True)
+    member_count = serializers.SerializerMethodField()
+    organization_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TrustGroup
+        fields = [
+            'id', 'name', 'description', 'group_type', 'is_active',
+            'access_policy', 'sharing_policy', 'governance_model',
+            'metadata', 'created_at', 'updated_at', 'members',
+            'member_count', 'organization_count'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_member_count(self, obj):
+        """Get total member count"""
+        return obj.trustgroupmembership_set.filter(is_active=True).count()
+
+    def get_organization_count(self, obj):
+        """Get unique organization count"""
+        return obj.trustgroupmembership_set.filter(
+            is_active=True
+        ).values('organization').distinct().count()
+
+class TrustGroupSummarySerializer(serializers.ModelSerializer):
+    """Summary trust group serializer for lists"""
+
+    member_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TrustGroup
+        fields = [
+            'id', 'name', 'description', 'group_type', 'is_active',
+            'member_count', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_member_count(self, obj):
+        """Get total member count"""
+        return obj.trustgroupmembership_set.filter(is_active=True).count()
+
+class TrustGroupCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating trust groups"""
+
+    initial_members = serializers.ListField(
+        child=serializers.UUIDField(),
+        write_only=True,
+        required=False,
+        help_text="List of organization IDs to add as initial members"
+    )
+
+    class Meta:
+        model = TrustGroup
+        fields = [
+            'name', 'description', 'group_type', 'access_policy',
+            'sharing_policy', 'governance_model', 'metadata', 'initial_members'
+        ]
+
+    def validate_name(self, value):
+        """Validate trust group name uniqueness"""
+        if TrustGroup.objects.filter(name=value, is_active=True).exists():
+            raise serializers.ValidationError("Trust group with this name already exists")
+        return value
+
+    def validate_initial_members(self, value):
+        """Validate initial members exist"""
+        if value:
+            existing_orgs = Organization.objects.filter(
+                id__in=value, is_active=True
+            ).count()
+            if existing_orgs != len(value):
+                raise serializers.ValidationError("Some organizations do not exist or are inactive")
+        return value

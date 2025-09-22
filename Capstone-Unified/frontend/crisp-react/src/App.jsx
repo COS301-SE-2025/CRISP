@@ -4520,7 +4520,7 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
             // Add sharing metadata
             sharing: indicator.sharing || { is_shared: false },
             isShared: indicator.sharing?.is_shared || false,
-            sharedFrom: indicator.sharing?.shared_from || null,
+            sharedFrom: indicator.sharing_info?.sharing_organization || indicator.sharing?.shared_from || null,
             sharedBy: indicator.sharing?.shared_by || null,
             sharedAt: indicator.sharing?.shared_at || null,
             shareMethod: indicator.sharing?.share_method || null,

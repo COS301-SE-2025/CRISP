@@ -31,7 +31,7 @@ class OrganizationService:
                           primary_user_data: Dict = None, name: str = None,
                           organization_type: str = None, domain: str = None,
                           description: str = None, contact_email: str = None,
-                          website: str = None, **kwargs) -> Tuple[Organization, CustomUser]:
+                          website: str = None, **kwargs) -> Dict[str, Any]:
         """Create a new organization with primary user"""
         
         # Validate required fields

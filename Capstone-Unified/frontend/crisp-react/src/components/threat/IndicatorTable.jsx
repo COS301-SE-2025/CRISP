@@ -126,7 +126,7 @@ const IndicatorTable = () => {
           i.value.toLowerCase().includes(searchTerm.toLowerCase()) ||
           i.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
           i.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (i.sharing_info && i.sharing_info.shared_from && i.sharing_info.shared_from.toLowerCase().includes(searchTerm.toLowerCase()))
+          (i.sharing_info && i.sharing_info.sharing_organization && i.sharing_info.sharing_organization.toLowerCase().includes(searchTerm.toLowerCase()))
         );
       }
 
@@ -459,7 +459,7 @@ const IndicatorTable = () => {
                       <div className="sharing-details">
                         <small className="shared-badge">
                           <i className="fas fa-share"></i>
-                          Shared from {indicator.sharing.shared_from}
+                          Shared from {indicator.sharing_info?.sharing_organization || indicator.sharing.shared_from}
                         </small>
                         <small className="share-date">
                           {new Date(indicator.sharing.shared_at).toLocaleDateString()}

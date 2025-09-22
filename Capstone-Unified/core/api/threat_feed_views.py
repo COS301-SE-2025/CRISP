@@ -931,8 +931,8 @@ def indicators_list(request):
                         ).select_related('shared_by_user', 'indicator__threat_feed__owner').first()
 
                         if sharing_relationship:
-                            # Get source organization from the indicator's threat feed owner
-                            source_org_name = sharing_relationship.indicator.threat_feed.owner.name if sharing_relationship.indicator.threat_feed.owner else 'Unknown'
+                            # Get source organization from the sharing user's organization
+                            source_org_name = sharing_relationship.shared_by_user.organization.name if sharing_relationship.shared_by_user and sharing_relationship.shared_by_user.organization else 'Unknown'
                             shared_by_name = sharing_relationship.shared_by_user.username if sharing_relationship.shared_by_user else 'System'
 
                             sharing_info = {

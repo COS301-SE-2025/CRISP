@@ -966,7 +966,7 @@ For support, please contact your system administrator.
                     'sharing_info': {
                         'shared_at': relationship.shared_at.isoformat(),
                         'shared_by': relationship.shared_by_user.username if relationship.shared_by_user else 'Unknown',
-                        'sharing_organization': indicator.threat_feed.owner.name if indicator.threat_feed.owner else 'Unknown',
+                        'sharing_organization': relationship.shared_by_user.organization.name if relationship.shared_by_user and relationship.shared_by_user.organization else 'Unknown',
                         'share_method': relationship.share_method,
                         'anonymization_level': relationship.anonymization_level,
                         'is_shared': True,
