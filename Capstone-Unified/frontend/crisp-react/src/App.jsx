@@ -6892,6 +6892,7 @@ function TTPAnalysis({ active }) {
   const [seasonalPatternsLoading, setSeasonalPatternsLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [trendsLoading, setTrendsLoading] = useState(false);
+  const [chartRendering, setChartRendering] = useState(false);
   const [matrixLoading, setMatrixLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   
@@ -8099,12 +8100,22 @@ function TTPAnalysis({ active }) {
   
   useEffect(() => {
     if (active && trendsData.length > 0) {
-      // Create chart in appropriate container based on active tab
-      if ((activeTab === 'matrix' || activeTab === 'list') && ttpChartRef.current) {
-        createTTPTrendsChart();
-      } else if (activeTab === 'trends' && ttpTrendsChartRef.current) {
-        createTTPTrendsChart();
-      }
+      setChartRendering(true);
+      // Small delay to ensure DOM is fully rendered
+      const timer = setTimeout(() => {
+        // Create chart in appropriate container based on active tab
+        if ((activeTab === 'matrix' || activeTab === 'list') && ttpChartRef.current) {
+          createTTPTrendsChart();
+        } else if (activeTab === 'trends' && ttpTrendsChartRef.current) {
+          createTTPTrendsChart();
+        }
+        setChartRendering(false);
+      }, 100);
+
+      return () => {
+        clearTimeout(timer);
+        setChartRendering(false);
+      };
     }
   }, [active, trendsData, activeTab]);
 
@@ -8344,15 +8355,26 @@ function TTPAnalysis({ active }) {
     });
     } catch (error) {
       console.error('Error creating TTP trends chart:', error);
-      // Display error message in the chart container
-      if (ttpChartRef.current) {
-        d3.select(ttpChartRef.current).selectAll("*").remove();
-        d3.select(ttpChartRef.current)
+      // Display error message in the appropriate chart container
+      const errorContainer = (activeTab === 'trends') ? ttpTrendsChartRef.current : ttpChartRef.current;
+      if (errorContainer) {
+        d3.select(errorContainer).selectAll("*").remove();
+        d3.select(errorContainer)
           .append("div")
+          .style("display", "flex")
+          .style("align-items", "center")
+          .style("justify-content", "center")
+          .style("height", "300px")
           .style("text-align", "center")
           .style("color", "#e53e3e")
           .style("padding", "20px")
-          .text("Error loading chart data. Please try refreshing.");
+          .html(`
+            <div>
+              <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+              <p>Error loading chart data</p>
+              <p style="font-size: 0.9rem; margin-top: 0.5rem;">Please try refreshing the page</p>
+            </div>
+          `);
       }
     }
   };
@@ -9272,15 +9294,28 @@ function TTPAnalysis({ active }) {
                       >
                         {trendsLoading ? (
                           <div style={{
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center', 
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                             height: '300px',
                             color: '#666'
                           }}>
                             <div style={{textAlign: 'center'}}>
                               <i className="fas fa-spinner fa-spin" style={{fontSize: '2rem', marginBottom: '1rem'}}></i>
                               <p>Loading trends data...</p>
+                            </div>
+                          </div>
+                        ) : chartRendering ? (
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            height: '300px',
+                            color: '#666'
+                          }}>
+                            <div style={{textAlign: 'center'}}>
+                              <i className="fas fa-chart-line fa-pulse" style={{fontSize: '2rem', marginBottom: '1rem'}}></i>
+                              <p>Rendering chart...</p>
                             </div>
                           </div>
                         ) : trendsData.length === 0 ? (
@@ -9297,23 +9332,7 @@ function TTPAnalysis({ active }) {
                               <p style={{fontSize: '0.9rem'}}>TTP trends will appear here as data is collected</p>
                             </div>
                           </div>
-                        ) : (
-                          <div style={{
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center', 
-                            height: '300px',
-                            color: '#666'
-                          }}>
-                            <div style={{textAlign: 'center'}}>
-                              <i className="fas fa-check-circle" style={{fontSize: '2rem', marginBottom: '1rem', color: '#28a745'}}></i>
-                              <p>Chart should render here</p>
-                              <p style={{fontSize: '0.8rem'}}>
-                                Debug: {trendsData.length} trend series loaded
-                              </p>
-                            </div>
-                          </div>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                     
