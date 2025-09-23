@@ -1008,7 +1008,7 @@ export const get = async (endpoint) => {
     if (!error.message.includes('401')) {
       console.error(`API Error: ${endpoint}`, error);
     }
-    return null;
+    throw error;
   }
 };
 
