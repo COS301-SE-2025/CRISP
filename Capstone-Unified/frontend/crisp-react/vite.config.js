@@ -13,5 +13,24 @@ export default defineConfig({
       }
     }
   },
-  base: '/'
+  base: '/',
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://backend:8000',
+        changeOrigin: true,
+        secure: false
+      },
+      '/admin': {
+        target: 'http://backend:8000',
+        changeOrigin: true,
+        secure: false
+      },
+      '/taxii2': {
+        target: 'http://backend:8000',
+        changeOrigin: true,
+        secure: false
+      }
+    }
+  }
 })

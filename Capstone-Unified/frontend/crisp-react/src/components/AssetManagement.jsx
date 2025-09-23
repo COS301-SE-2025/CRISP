@@ -6,7 +6,16 @@
 import React, { useState, useEffect } from 'react';
 import './AssetManagement.css';
 
-const AssetManagement = () => {
+// Helper function to get auth headers
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('access_token') || localStorage.getItem('crisp_auth_token');
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': token ? `Bearer ${token}` : '',
+  };
+};
+
+const AssetManagement = ({ active }) => {
   const [activeTab, setActiveTab] = useState('inventory');
   const [assets, setAssets] = useState([]);
   const [alerts, setAlerts] = useState([]);
@@ -25,14 +34,16 @@ const AssetManagement = () => {
 
   // Load data on component mount and tab changes
   useEffect(() => {
-    if (activeTab === 'inventory') {
-      loadAssets();
-    } else if (activeTab === 'alerts') {
-      loadAlerts();
-    } else if (activeTab === 'statistics') {
-      loadStatistics();
+    if (active) {
+      if (activeTab === 'inventory') {
+        loadAssets();
+      } else if (activeTab === 'alerts') {
+        loadAlerts();
+      } else if (activeTab === 'statistics') {
+        loadStatistics();
+      }
     }
-  }, [activeTab, filters]);
+  }, [active, activeTab, filters]);
 
   const loadAssets = async () => {
     setLoading(true);
@@ -42,15 +53,15 @@ const AssetManagement = () => {
       if (filters.criticality) params.append('criticality', filters.criticality);
 
       const response = await fetch(`/api/assets/inventory/?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
+        headers: getAuthHeaders()
       });
 
       if (response.ok) {
         const data = await response.json();
-        setAssets(data.results || data.data || []);
+        console.log('Asset data received:', data);
+        const assetsArray = data.results?.data || data.data || data.results || [];
+        console.log('Parsed assets array:', assetsArray);
+        setAssets(assetsArray);
       } else {
         console.error('Failed to load assets');
       }
@@ -69,15 +80,12 @@ const AssetManagement = () => {
       if (filters.severity) params.append('severity', filters.severity);
 
       const response = await fetch(`/api/assets/alerts/?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
+        headers: getAuthHeaders()
       });
 
       if (response.ok) {
         const data = await response.json();
-        setAlerts(data.results || data.data || []);
+        setAlerts(data.results?.data || data.data || data.results || []);
       } else {
         console.error('Failed to load alerts');
       }
@@ -92,15 +100,12 @@ const AssetManagement = () => {
     setLoading(true);
     try {
       const response = await fetch('/api/assets/statistics/', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
+        headers: getAuthHeaders()
       });
 
       if (response.ok) {
         const data = await response.json();
-        setStatistics(data.data);
+        setStatistics(data.results?.data || data.data || data.results || {});
       } else {
         console.error('Failed to load statistics');
       }
@@ -115,10 +120,7 @@ const AssetManagement = () => {
     try {
       const response = await fetch('/api/assets/correlation/trigger/', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ days: 1 })
       });
 
@@ -141,10 +143,7 @@ const AssetManagement = () => {
     try {
       const response = await fetch(`/api/assets/alerts/${alertId}/`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ action })
       });
 
@@ -183,6 +182,9 @@ const AssetManagement = () => {
 
   const renderInventoryTab = () => (
     <div className="inventory-tab">
+      <div style={{background: 'red', color: 'white', padding: '20px', fontSize: '20px', border: '5px solid yellow'}}>
+        🚨 DEBUG: INVENTORY TAB RENDERING - Active: {active ? 'YES' : 'NO'}, Loading: {loading ? 'YES' : 'NO'}, Assets: {assets.length}
+      </div>
       <div className="tab-header">
         <h3>Asset Inventory</h3>
         <div className="tab-actions">
@@ -223,12 +225,19 @@ const AssetManagement = () => {
         </select>
       </div>
 
+      <div style={{background: 'red', padding: '10px', margin: '10px'}}>
+        DEBUG: Component Active: {active ? 'YES' : 'NO'}, Loading: {loading ? 'YES' : 'NO'}, Assets: {assets.length}
+      </div>
+
       {loading ? (
         <div className="loading">Loading assets...</div>
       ) : (
         <div className="assets-table">
-          <table>
-            <thead>
+          <div style={{background: 'yellow', padding: '5px', margin: '5px'}}>
+            DEBUG: Table container - Assets length: {assets.length}
+          </div>
+          <table style={{border: '2px solid blue', width: '100%'}}>
+            <thead style={{background: 'lightgreen'}}>
               <tr>
                 <th>Name</th>
                 <th>Type</th>
@@ -240,10 +249,20 @@ const AssetManagement = () => {
                 <th>Actions</th>
               </tr>
             </thead>
-            <tbody>
-              {assets.map(asset => (
-                <tr key={asset.id}>
-                  <td>{asset.name}</td>
+            <tbody style={{background: 'lightblue'}}>
+              <tr style={{background: 'orange', border: '2px solid red'}}>
+                <td>HARDCODED TEST ROW</td>
+                <td>Should Always Show</td>
+                <td>No Conditions</td>
+                <td>Test</td>
+                <td>Test</td>
+                <td>Test</td>
+                <td>Test</td>
+                <td>Test</td>
+              </tr>
+              {assets.map((asset, index) => (
+                <tr key={asset.id} style={{background: 'pink', border: '1px solid green'}}>
+                  <td>REAL ROW {index + 1}: {asset.name}</td>
                   <td>{asset.asset_type_display}</td>
                   <td className="asset-value">{asset.asset_value}</td>
                   <td>
@@ -566,8 +585,14 @@ const AssetManagement = () => {
     );
   };
 
+  // FORCE RENDER FOR DEBUGGING - REMOVE LATER
+  // if (!active) return null;
+
   return (
     <div className="asset-management">
+      <div style={{background: 'purple', color: 'yellow', padding: '15px', fontSize: '18px', border: '3px solid orange'}}>
+        🔥 MAIN COMPONENT DEBUG: ActiveTab = "{activeTab}", Active = {active ? 'YES' : 'NO'}
+      </div>
       <div className="asset-header">
         <h2>🎯 Asset-Based Alert System</h2>
         <p>Custom threat intelligence based on your infrastructure</p>
@@ -595,7 +620,21 @@ const AssetManagement = () => {
       </div>
 
       <div className="tab-content">
-        {activeTab === 'inventory' && renderInventoryTab()}
+        <div style={{background: 'cyan', color: 'black', padding: '20px', fontSize: '24px', border: '5px solid red'}}>
+          🚨 ALWAYS VISIBLE DEBUG - activeTab: {activeTab}
+        </div>
+        {activeTab === 'inventory' && (
+          <div>
+            <div style={{background: 'lime', padding: '10px'}}>🟢 TRYING TO RENDER INVENTORY TAB</div>
+            {(() => {
+              try {
+                return renderInventoryTab();
+              } catch (error) {
+                return <div style={{background: 'red', color: 'white', padding: '20px'}}>❌ ERROR IN INVENTORY TAB: {error.toString()}</div>;
+              }
+            })()}
+          </div>
+        )}
         {activeTab === 'alerts' && renderAlertsTab()}
         {activeTab === 'statistics' && renderStatisticsTab()}
       </div>

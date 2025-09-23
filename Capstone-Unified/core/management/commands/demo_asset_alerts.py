@@ -97,7 +97,7 @@ class Command(BaseCommand):
                         'domain': 'demo.university.edu',
                         'is_active': True,
                         'is_verified': True,
-                        'metadata': {
+                        'trust_metadata': {
                             'notification_preferences': {
                                 'email_enabled': True,
                                 'sms_enabled': True,
@@ -260,8 +260,7 @@ class Command(BaseCommand):
                         'description': 'Demo threat feed for asset-based alert testing',
                         'owner': organization,
                         'is_external': False,
-                        'is_active': True,
-                        'feed_type': 'manual'
+                        'is_public': True
                     }
                 )
 
@@ -270,15 +269,14 @@ class Command(BaseCommand):
                     indicator, indicator_created = Indicator.objects.get_or_create(
                         type=indicator_data['type'],
                         value=indicator_data['value'],
+                        threat_feed=demo_feed,
                         defaults={
-                            'pattern': indicator_data['pattern'],
-                            'labels': indicator_data['labels'],
+                            'name': f"Demo {indicator_data['type']} indicator",
+                            'description': f"Demo indicator for {indicator_data['value']}",
                             'confidence': 85,
-                            'feed': demo_feed,
-                            'created': timezone.now(),
-                            'modified': timezone.now(),
-                            'valid_from': timezone.now(),
-                            'valid_until': timezone.now() + timedelta(days=30)
+                            'stix_id': f"indicator--{uuid.uuid4()}",
+                            'first_seen': timezone.now(),
+                            'last_seen': timezone.now()
                         }
                     )
 
@@ -292,7 +290,7 @@ class Command(BaseCommand):
                 )
                 self.stdout.write(f'   Organization: {organization.name}')
                 self.stdout.write(f'   Assets: {AssetInventory.objects.filter(organization=organization).count()}')
-                self.stdout.write(f'   Indicators: {Indicator.objects.filter(feed=demo_feed).count()}')
+                self.stdout.write(f'   Indicators: {Indicator.objects.filter(threat_feed=demo_feed).count()}')
 
         except Exception as e:
             self.stdout.write(
@@ -318,8 +316,8 @@ class Command(BaseCommand):
 
             # Get recent indicators
             recent_indicators = Indicator.objects.filter(
-                created__gte=timezone.now() - timedelta(hours=24)
-            ).order_by('-created')
+                created_at__gte=timezone.now() - timedelta(hours=24)
+            ).order_by('-created_at')
 
             if not recent_indicators.exists():
                 self.stdout.write(
@@ -328,7 +326,7 @@ class Command(BaseCommand):
                 # Create some indicators on the fly for demo
                 self._create_demo_indicators(demo_org)
                 recent_indicators = Indicator.objects.filter(
-                    created__gte=timezone.now() - timedelta(minutes=5)
+                    created_at__gte=timezone.now() - timedelta(minutes=5)
                 )
 
             self.stdout.write(f'📊 Processing {recent_indicators.count()} indicators...')
@@ -396,15 +394,14 @@ class Command(BaseCommand):
         for indicator_data in demo_indicators:
             Indicator.objects.create(
                 type=indicator_data['type'],
-                pattern=indicator_data['pattern'],
                 value=indicator_data['value'],
-                labels=indicator_data['labels'],
+                name=f"Demo {indicator_data['type']} indicator",
+                description=f"Demo indicator for {indicator_data['value']}",
                 confidence=90,
-                feed=demo_feed,
-                created=timezone.now(),
-                modified=timezone.now(),
-                valid_from=timezone.now(),
-                valid_until=timezone.now() + timedelta(days=30)
+                threat_feed=demo_feed,
+                stix_id=f"indicator--{uuid.uuid4()}",
+                first_seen=timezone.now(),
+                last_seen=timezone.now()
             )
 
     def _display_alert_details(self, alert):

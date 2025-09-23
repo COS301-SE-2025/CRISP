@@ -692,6 +692,7 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
           <OrganisationManagement active={activePage === 'organisation-management'} />
           <TrustManagement active={activePage === 'trust-management'} />
           <AssetManagement active={activePage === 'assets'} />
+          {/* FORCE CACHE REFRESH - TIMESTAMP: 2025-09-23-07:47 */}
           <UserManagement active={activePage === 'user-management'} />
           <Reports active={activePage === 'reports'} />
           <Notifications active={activePage === 'notifications'} />
@@ -1009,11 +1010,19 @@ function MainNav({ activePage, showPage, user, onLogout, isAdmin }) {
             </a>
           </li>
           <li>
-            <a 
-              onClick={() => showPage('reports')} 
+            <a
+              onClick={() => showPage('reports')}
               className={activePage === 'reports' ? 'active' : ''}
             >
               <i className="fas fa-file-alt"></i> Reports
+            </a>
+          </li>
+          <li>
+            <a
+              onClick={() => showPage('assets')}
+              className={activePage === 'assets' ? 'active' : ''}
+            >
+              <i className="fas fa-shield-alt"></i> 🎯 Asset-Based Alert System
             </a>
           </li>
         </ul>
