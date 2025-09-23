@@ -61,7 +61,7 @@ services:
       - DB_HOST=db
       - REDIS_URL=redis://redis:6379/0
       - ALLOWED_HOSTS=localhost,127.0.0.1,backend,frontend
-      - POPULATE_TEST_DATA=false
+      - POPULATE_TEST_DATA=true
     volumes:
       - ./logs:/app/logs
       - ./media:/app/media
@@ -89,8 +89,10 @@ services:
     environment:
       - VITE_API_URL=http://localhost:8000
     volumes:
-      - ./frontend/crisp-react:/app
-      - /app/node_modules
+      - ./frontend/crisp-react/src:/app/src
+      - ./frontend/crisp-react/public:/app/public
+      - ./frontend/crisp-react/index.html:/app/index.html
+      - ./frontend/crisp-react/vite.config.js:/app/vite.config.js
     depends_on:
       - backend
     networks:
@@ -112,7 +114,7 @@ services:
       - DB_HOST=db-test
       - REDIS_URL=redis://redis-test:6379/0
       - ALLOWED_HOSTS=localhost,127.0.0.1,backend-test,frontend-test
-      - POPULATE_TEST_DATA=false
+      - POPULATE_TEST_DATA=true
     volumes:
       - ./logs:/app/logs
       - ./media:/app/media
@@ -189,8 +191,10 @@ services:
     environment:
       - VITE_API_URL=http://localhost:8001
     volumes:
-      - ./frontend/crisp-react:/app
-      - /app/node_modules
+      - ./frontend/crisp-react/src:/app/src
+      - ./frontend/crisp-react/public:/app/public
+      - ./frontend/crisp-react/index.html:/app/index.html
+      - ./frontend/crisp-react/vite.config.js:/app/vite.config.js
     depends_on:
       - backend-test
     networks:

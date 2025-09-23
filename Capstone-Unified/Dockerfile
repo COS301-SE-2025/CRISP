@@ -2,9 +2,9 @@
 FROM node:18-slim AS frontend-dev
 WORKDIR /app
 COPY frontend/crisp-react/package*.json ./
-RUN npm install
+RUN npm ci --only=production=false
 COPY frontend/crisp-react/ ./
-RUN npm install -D tailwindcss postcss autoprefixer
+RUN npm list tailwindcss && ls -la node_modules/.bin/tailwind*
 EXPOSE 5173
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 
@@ -12,7 +12,7 @@ CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 FROM node:18-slim AS frontend-builder
 WORKDIR /app/frontend
 COPY frontend/crisp-react/package*.json ./
-RUN rm -rf node_modules package-lock.json && npm install
+RUN npm ci --only=production=false
 COPY frontend/crisp-react/ ./
 RUN npm run build
 
