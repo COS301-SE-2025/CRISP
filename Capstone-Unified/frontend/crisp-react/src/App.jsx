@@ -8115,6 +8115,17 @@ function TTPAnalysis({ active }) {
       return () => {
         clearTimeout(timer);
         setChartRendering(false);
+        // Clean up D3 charts when component unmounts or deps change
+        const cleanupChart = (container) => {
+          if (container) {
+            const d3Container = d3.select(container);
+            d3Container.selectAll("svg").remove();
+            d3Container.selectAll(".chart-placeholder").remove();
+            d3Container.selectAll(".error-message").remove();
+          }
+        };
+        cleanupChart(ttpTrendsChartRef.current);
+        cleanupChart(ttpChartRef.current);
       };
     }
   }, [active, trendsData, activeTab]);
@@ -8127,12 +8138,11 @@ function TTPAnalysis({ active }) {
       
       // Clear previous chart and placeholder if any
       if (chartContainer) {
-        d3.select(chartContainer).selectAll("*").remove();
-        // Also remove the placeholder overlay by directly removing the element
-        const placeholder = chartContainer.querySelector('.chart-placeholder');
-        if (placeholder) {
-          placeholder.remove();
-        }
+        // More careful cleanup to avoid React conflicts
+        const d3Container = d3.select(chartContainer);
+        d3Container.selectAll("svg").remove();
+        d3Container.selectAll(".chart-placeholder").remove();
+        d3Container.selectAll(".error-message").remove();
       }
       
       // Return early if no trends data or ref not available
@@ -8358,9 +8368,13 @@ function TTPAnalysis({ active }) {
       // Display error message in the appropriate chart container
       const errorContainer = (activeTab === 'trends') ? ttpTrendsChartRef.current : ttpChartRef.current;
       if (errorContainer) {
-        d3.select(errorContainer).selectAll("*").remove();
-        d3.select(errorContainer)
+        const d3Container = d3.select(errorContainer);
+        d3Container.selectAll("svg").remove();
+        d3Container.selectAll(".chart-placeholder").remove();
+        d3Container.selectAll(".error-message").remove();
+        d3Container
           .append("div")
+          .attr("class", "error-message")
           .style("display", "flex")
           .style("align-items", "center")
           .style("justify-content", "center")
@@ -9287,11 +9301,12 @@ function TTPAnalysis({ active }) {
                   <div className="trend-charts-grid">
                     <div className="chart-container">
                       <h3>Technique Frequency Over Time</h3>
-                      <div 
-                        className="trend-chart" 
-                        ref={ttpTrendsChartRef}
-                        style={{minHeight: '300px', width: '100%', backgroundColor: '#f8f9fa', border: '1px solid #dee2e6', borderRadius: '4px'}}
-                      >
+                      <ChartErrorBoundary>
+                        <div
+                          className="trend-chart"
+                          ref={ttpTrendsChartRef}
+                          style={{minHeight: '300px', width: '100%', backgroundColor: '#f8f9fa', border: '1px solid #dee2e6', borderRadius: '4px'}}
+                        >
                         {trendsLoading ? (
                           <div style={{
                             display: 'flex',
@@ -9333,7 +9348,8 @@ function TTPAnalysis({ active }) {
                             </div>
                           </div>
                         ) : null}
-                      </div>
+                        </div>
+                      </ChartErrorBoundary>
                     </div>
                     
                     <div className="tactic-distribution">
