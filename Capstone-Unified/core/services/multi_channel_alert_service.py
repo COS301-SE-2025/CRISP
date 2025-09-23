@@ -89,11 +89,12 @@ class MultiChannelAlertService:
         try:
             email_addresses = []
             for user in users:
-                if hasattr(user, 'profile') and getattr(user.profile, 'email_notifications', True):
+                # Include all users for now, since profile model might not exist
+                if user.email:
                     email_addresses.append(user.email)
 
             if not email_addresses:
-                return {'success': False, 'message': 'No users with email notifications enabled'}
+                return {'success': False, 'message': 'No users with email addresses found'}
 
             # Generate email content
             subject = f"🚨 CRISP Alert: {alert.title}"
@@ -140,16 +141,12 @@ class MultiChannelAlertService:
             if not all([twilio_sid, twilio_token, twilio_from]):
                 return {'success': False, 'message': 'SMS service not configured'}
 
-            # Get users with SMS enabled and phone numbers
+            # Get users with phone numbers (SMS profile not available yet)
             sms_recipients = []
             for user in users:
-                if (hasattr(user, 'profile') and
-                    getattr(user.profile, 'sms_notifications', False) and
-                    getattr(user.profile, 'phone_number', None)):
-                    sms_recipients.append({
-                        'user': user,
-                        'phone': user.profile.phone_number
-                    })
+                # For now, SMS is disabled since profile model doesn't exist
+                # TODO: Enable when user profile model is available
+                pass
 
             if not sms_recipients:
                 return {'success': False, 'message': 'No users with SMS enabled'}
@@ -203,7 +200,14 @@ class MultiChannelAlertService:
             webhook_urls = getattr(settings, 'ALERT_WEBHOOK_URLS', [])
             if not webhook_urls:
                 # Check organization-specific webhooks
-                webhook_urls = alert.organization.metadata.get('webhook_urls', [])
+                org_metadata = getattr(alert.organization, 'metadata', {}) or {}
+                if isinstance(org_metadata, str):
+                    try:
+                        import json
+                        org_metadata = json.loads(org_metadata)
+                    except:
+                        org_metadata = {}
+                webhook_urls = org_metadata.get('webhook_urls', [])
 
             if not webhook_urls:
                 return {'success': False, 'message': 'No webhook URLs configured'}
@@ -277,7 +281,14 @@ class MultiChannelAlertService:
             slack_webhook_url = getattr(settings, 'SLACK_WEBHOOK_URL', None)
             if not slack_webhook_url:
                 # Check organization-specific Slack webhooks
-                slack_webhook_url = alert.organization.metadata.get('slack_webhook_url')
+                org_metadata = getattr(alert.organization, 'metadata', {}) or {}
+                if isinstance(org_metadata, str):
+                    try:
+                        import json
+                        org_metadata = json.loads(org_metadata)
+                    except:
+                        org_metadata = {}
+                slack_webhook_url = org_metadata.get('slack_webhook_url')
 
             if not slack_webhook_url:
                 return {'success': False, 'message': 'Slack webhook not configured'}

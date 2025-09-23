@@ -5,9 +5,9 @@ import AccountSettings from './components/user/AccountSettings.jsx';
 import UserManagement from './components/enhanced/UserManagement.jsx';
 import OrganisationManagement from './components/enhanced/OrganisationManagement.jsx';
 import TrustManagement from './components/enhanced/TrustManagement.jsx';
-import AssetManagement from './components/AssetManagement.jsx';
 import Institutions from './components/institutions/Institutions.jsx';
 import ReportDetailModal from './components/reports/ReportDetailModal.jsx';
+import AssetManagement from './components/assets/AssetManagement.jsx';
 import BlueVLogo from './assets/enhanced/BlueV2.png';
 import * as api from './api.js';
 import { getOrganizations, getThreatFeedTtps, getMitreMatrix, getTtpFeedComparison, getTtpSeasonalPatterns, getTtpTechniqueFrequencies, getTtps, getTtpFilterOptions, getTtpTrends, getTtpDetails, updateTtp, getMatrixCellDetails, getTechniqueDetails, exportTtps, getUsersList } from './api.js';
@@ -691,11 +691,10 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
           <Institutions active={activePage === 'institutions'} api={api} showPage={showPage} user={user} />
           <OrganisationManagement active={activePage === 'organisation-management'} />
           <TrustManagement active={activePage === 'trust-management'} />
-          <AssetManagement active={activePage === 'assets'} />
-          {/* FORCE CACHE REFRESH - TIMESTAMP: 2025-09-23-07:47 */}
           <UserManagement active={activePage === 'user-management'} />
           <Reports active={activePage === 'reports'} />
           <Notifications active={activePage === 'notifications'} />
+          <AssetManagement active={activePage === 'asset-management'} />
           <UserProfile active={activePage === 'profile'} />
           <AccountSettings active={activePage === 'account-settings'} />
         </div>
@@ -910,10 +909,6 @@ function Header({
                           <i className="fas fa-handshake"></i>
                           <span>Trust Management</span>
                         </button>
-                        <button className="submenu-item" onClick={() => {setShowUserMenu(false); setShowManagementSubmenu(false); showPage('assets');}} type="button">
-                          <i className="fas fa-shield-alt"></i>
-                          <span>Asset-Based Alerts</span>
-                        </button>
                       </div>
                     )}
                   </div>
@@ -1019,10 +1014,10 @@ function MainNav({ activePage, showPage, user, onLogout, isAdmin }) {
           </li>
           <li>
             <a
-              onClick={() => showPage('assets')}
-              className={activePage === 'assets' ? 'active' : ''}
+              onClick={() => showPage('asset-management')}
+              className={activePage === 'asset-management' ? 'active' : ''}
             >
-              <i className="fas fa-shield-alt"></i> 🎯 Asset-Based Alert System
+              <i className="fas fa-shield-alt"></i> Asset Alerts
             </a>
           </li>
         </ul>

@@ -124,7 +124,7 @@ def test_asset_alert_system():
 
         # Test 8: Check frontend component exists
         print("\n8. Testing frontend component...")
-        frontend_path = "/mnt/c/Users/jadyn/CRISP/Capstone-Unified/frontend/crisp-react/src/components/AssetManagement.jsx"
+        frontend_path = "/mnt/c/Users/jadyn/CRISP/Capstone-Unified/frontend/crisp-react/src/components/assets/AssetManagement.jsx"
         if os.path.exists(frontend_path):
             print("   ✅ Frontend component exists")
         else:

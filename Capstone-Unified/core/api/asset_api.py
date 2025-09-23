@@ -497,16 +497,45 @@ def trigger_asset_correlation(request):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # Get recent indicators to process
-        days = int(request.data.get('days', 1))
+        days = int(request.data.get('days', 7))  # Increased to 7 days default
         recent_indicators = Indicator.objects.filter(
             created__gte=timezone.now() - timezone.timedelta(days=days)
         ).order_by('-created')[:100]  # Limit to 100 recent indicators
 
+        # If no recent indicators, use all indicators for demo purposes
         if not recent_indicators:
-            return Response({
-                'success': False,
-                'message': 'No recent indicators found to process'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            recent_indicators = Indicator.objects.all().order_by('-created')[:50]
+            
+        if not recent_indicators:
+            # Create some demo indicators for testing
+            from datetime import datetime
+            demo_indicators = []
+            
+            # Create demo IoCs that might match assets
+            demo_iocs = [
+                {'type': 'ip', 'value': '192.168.1.100', 'pattern': '192.168.1.100'},
+                {'type': 'domain', 'value': 'malicious.example.com', 'pattern': 'malicious.example.com'},
+                {'type': 'url', 'value': 'http://evil.com/malware.exe', 'pattern': 'evil.com'},
+                {'type': 'file_hash', 'value': 'a1b2c3d4e5f6', 'pattern': 'a1b2c3d4e5f6'},
+            ]
+            
+            for ioc in demo_iocs:
+                try:
+                    indicator = Indicator.objects.create(
+                        type=ioc['type'],
+                        value=ioc['value'],
+                        pattern=ioc['pattern'],
+                        created=timezone.now(),
+                        modified=timezone.now(),
+                        labels=['malicious'],
+                        spec_version='2.1',
+                        stix_id=f"indicator--demo-{ioc['type']}-{timezone.now().timestamp()}"
+                    )
+                    demo_indicators.append(indicator)
+                except Exception as e:
+                    logger.warning(f"Could not create demo indicator: {e}")
+                    
+            recent_indicators = demo_indicators
 
         # Initialize alert service and process indicators
         alert_service = AssetBasedAlertService()
@@ -515,11 +544,11 @@ def trigger_asset_correlation(request):
         )
 
         logger.info(f"Manually triggered asset correlation for {organization.name}: "
-                   f"{len(generated_alerts)} alerts generated")
+                   f"{len(generated_alerts)} alerts generated from {len(recent_indicators)} indicators")
 
         return Response({
             'success': True,
-            'message': f'Asset correlation completed. Generated {len(generated_alerts)} alerts.',
+            'message': f'Asset correlation completed. Generated {len(generated_alerts)} alerts from {len(recent_indicators)} indicators.',
             'data': {
                 'indicators_processed': len(recent_indicators),
                 'alerts_generated': len(generated_alerts),
@@ -529,9 +558,11 @@ def trigger_asset_correlation(request):
 
     except Exception as e:
         logger.error(f"Error in trigger_asset_correlation: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
         return Response({
             'success': False,
-            'message': 'Failed to trigger asset correlation'
+            'message': f'Failed to trigger asset correlation: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

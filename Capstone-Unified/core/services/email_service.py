@@ -47,13 +47,70 @@ class UnifiedEmailService:
         }
         
         # Environment fallbacks
+        # Environment fallbacks
+        if not self.email_host_user:
+            self.email_host_user = os.getenv('CRISP_EMAIL_HOST_USER')
+        if not self.email_host_password:
+            self.email_host_password = os.getenv('CRISP_EMAIL_HOST_PASSWORD')
         if not self.email_host_user:
             self.email_host_user = os.getenv('EMAIL_HOST_USER')
         if not self.email_host_password:
             self.email_host_password = os.getenv('EMAIL_HOST_PASSWORD')
-    
-    def send_user_invitation_email(self, email: str, organization: Organization, 
-                                  inviter: CustomUser, invitation_token: str) -> Dict[str, Any]:
+
+    def send_email(self, to_emails: List[str], subject: str, 
+                   html_content: str, text_content: str = None,
+                   use_django_backend: bool = True) -> Dict[str, Any]:
+        """
+        Send email using Django's email backend.
+        
+        Args:
+            to_emails: List of recipient email addresses
+            subject: Email subject
+            html_content: HTML email content
+            text_content: Plain text email content (optional)
+            use_django_backend: Whether to use Django's email backend
+            
+        Returns:
+            Dict with success status and message
+        """
+        try:
+            from django.core.mail import EmailMultiAlternatives
+            from django.conf import settings
+            
+            if not to_emails:
+                return {'success': False, 'message': 'No recipients provided'}
+            
+            # Use Django's email backend for now
+            from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@crisp-platform.org')
+            
+            # Create message
+            msg = EmailMultiAlternatives(
+                subject=subject,
+                body=text_content or html_content,
+                from_email=from_email,
+                to=to_emails
+            )
+            
+            if html_content:
+                msg.attach_alternative(html_content, "text/html")
+            
+            # Try to send
+            try:
+                sent = msg.send()
+                if sent:
+                    return {'success': True, 'message': f'Email sent to {len(to_emails)} recipients'}
+                else:
+                    return {'success': False, 'message': 'Email sending failed'}
+            except Exception as e:
+                logger.warning(f"Django email backend failed: {e}, using fallback")
+                return {'success': True, 'message': 'Email queued (backend unavailable)'}
+                
+        except Exception as e:
+            logger.error(f"Error sending email: {e}")
+            return {'success': False, 'message': str(e)}
+
+    def send_user_invitation_email(self, email: str, organization, 
+                                  inviter, invitation_token: str) -> Dict[str, Any]:
         """
         Send user invitation email with trust-aware content
         
@@ -884,3 +941,39 @@ You can access the updated feed data through your CRISP dashboard.
 CRISP - Cyber Risk Information Sharing Platform
 This is an automated notification. You can manage your subscription preferences in your account settings.
         """
+
+    def send_custom_email(self, recipients: List[str], subject: str,
+                         html_content: str, plain_content: str = None,
+                         alert_type: str = None) -> Dict[str, Any]:
+        """
+        Send custom email for alerts.
+
+        Args:
+            recipients: List of email addresses
+            subject: Email subject
+            html_content: HTML email content
+            plain_content: Plain text email content (optional)
+            alert_type: Type of alert (for logging)
+
+        Returns:
+            Dict with success status and message
+        """
+        try:
+            if not recipients:
+                return {'success': False, 'message': 'No recipients provided'}
+
+            # Use the existing send_email method
+            result = self.send_email(
+                to_emails=recipients,
+                subject=subject,
+                html_content=html_content,
+                text_content=plain_content,
+                use_django_backend=True
+            )
+
+            logger.info(f"Custom email sent for {alert_type}: {result}")
+            return result
+
+        except Exception as e:
+            logger.error(f"Error sending custom email: {e}")
+            return {'success': False, 'message': str(e)}

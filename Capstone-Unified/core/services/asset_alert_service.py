@@ -644,7 +644,7 @@ class AssetBasedAlertService:
             org_users = User.objects.filter(
                 organization=organization,
                 is_active=True
-            ).select_related('profile')
+            )
 
             # Include users based on roles and preferences
             for user in org_users:
@@ -659,15 +659,19 @@ class AssetBasedAlertService:
                     affected_users.append(user)
                     continue
 
-                # Include users with threat alert preferences enabled
-                if hasattr(user, 'profile') and getattr(user.profile, 'threat_alerts', True):
-                    affected_users.append(user)
+                # For now, include all organization users in alerts
+                # TODO: Add user profile preferences when available
+                affected_users.append(user)
 
             return list(set(affected_users))  # Remove duplicates
 
         except Exception as e:
             logger.warning(f"Error getting affected users: {e}")
-            return []
+            # Return organization users as fallback
+            try:
+                return list(User.objects.filter(organization=organization, is_active=True))
+            except:
+                return []
 
     def _send_alert_notifications(self, alert: CustomAlert):
         """Send notifications for the generated alert."""
@@ -710,7 +714,14 @@ class AssetBasedAlertService:
             channels = ['email']  # Default channel
 
             # Get organization preferences
-            org_prefs = alert.organization.metadata.get('notification_preferences', {})
+            org_metadata = getattr(alert.organization, 'metadata', {}) or {}
+            if isinstance(org_metadata, str):
+                try:
+                    import json
+                    org_metadata = json.loads(org_metadata)
+                except:
+                    org_metadata = {}
+            org_prefs = org_metadata.get('notification_preferences', {})
 
             # Always include email
             if org_prefs.get('email_enabled', True):
