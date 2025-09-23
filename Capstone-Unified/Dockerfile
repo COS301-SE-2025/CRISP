@@ -4,6 +4,7 @@ WORKDIR /app
 COPY frontend/crisp-react/package*.json ./
 RUN npm install
 COPY frontend/crisp-react/ ./
+RUN npm install -D tailwindcss postcss autoprefixer
 EXPOSE 5173
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 

@@ -706,3 +706,222 @@ def bulk_asset_upload(request):
             'success': False,
             'message': 'Failed to upload assets'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def custom_alert_detail(request, alert_id):
+    """
+    Get detailed information about a specific custom alert.
+    """
+    try:
+        organization = request.user.organization
+        if not organization:
+            return Response({
+                'success': False,
+                'message': 'User must belong to an organization'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        alert_service = AssetBasedAlertService()
+        alert_details = alert_service.get_alert_details(alert_id, organization)
+
+        if not alert_details:
+            return Response({
+                'success': False,
+                'message': 'Alert not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({
+            'success': True,
+            'data': alert_details
+        })
+
+    except Exception as e:
+        logger.error(f"Error in custom_alert_detail: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to get alert details'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def custom_alert_action(request, alert_id):
+    """
+    Perform actions on custom alerts (acknowledge, resolve, dismiss, escalate).
+    """
+    try:
+        organization = request.user.organization
+        if not organization:
+            return Response({
+                'success': False,
+                'message': 'User must belong to an organization'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        action = request.data.get('action')
+        if not action:
+            return Response({
+                'success': False,
+                'message': 'Action is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        alert_service = AssetBasedAlertService()
+        result = alert_service.update_alert_status(alert_id, action, organization, request.user)
+
+        if result['success']:
+            return Response({
+                'success': True,
+                'message': result['message'],
+                'data': {
+                    'old_status': result['old_status'],
+                    'new_status': result['new_status']
+                }
+            })
+        else:
+            return Response({
+                'success': False,
+                'message': result['message']
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception as e:
+        logger.error(f"Error in custom_alert_action: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to update alert'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def trigger_asset_correlation(request):
+    """
+    Manually trigger asset correlation for the organization.
+    """
+    try:
+        organization = request.user.organization
+        if not organization:
+            return Response({
+                'success': False,
+                'message': 'User must belong to an organization'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        days = request.data.get('days', 1)
+        if not isinstance(days, int) or days < 1 or days > 30:
+            days = 1
+
+        alert_service = AssetBasedAlertService()
+        result = alert_service.trigger_correlation_for_organization(organization, days)
+
+        if result['success']:
+            return Response({
+                'success': True,
+                'message': result['message'],
+                'data': {
+                    'alerts_generated': result['alerts_generated'],
+                    'indicators_processed': result['indicators_processed'],
+                    'organization': result['organization'],
+                    'time_range_days': result['time_range_days']
+                }
+            })
+        else:
+            return Response({
+                'success': False,
+                'message': result['message']
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception as e:
+        logger.error(f"Error in trigger_asset_correlation: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to trigger correlation'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def asset_alert_feed(request):
+    """
+    Real-time feed of asset alerts for the organization.
+    """
+    try:
+        organization = request.user.organization
+        if not organization:
+            return Response({
+                'success': False,
+                'message': 'User must belong to an organization'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get parameters
+        limit = min(int(request.GET.get('limit', 50)), 100)
+        since = request.GET.get('since')  # ISO timestamp
+        severity = request.GET.get('severity')
+        status_filter = request.GET.get('status')
+
+        # Build queryset
+        queryset = CustomAlert.objects.filter(organization=organization)
+
+        if since:
+            try:
+                from datetime import datetime
+                since_dt = datetime.fromisoformat(since.replace('Z', '+00:00'))
+                queryset = queryset.filter(created_at__gt=since_dt)
+            except:
+                pass
+
+        if severity:
+            queryset = queryset.filter(severity=severity)
+
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+
+        # Get alerts with related data
+        alerts = queryset.select_related('organization').prefetch_related(
+            'matched_assets', 'source_indicators'
+        ).order_by('-created_at')[:limit]
+
+        # Serialize alerts
+        alerts_data = []
+        for alert in alerts:
+            alerts_data.append({
+                'id': str(alert.id),
+                'alert_id': alert.alert_id,
+                'title': alert.title,
+                'description': alert.description[:200] + '...' if len(alert.description) > 200 else alert.description,
+                'alert_type': alert.alert_type,
+                'severity': alert.severity,
+                'severity_display': alert.get_severity_display(),
+                'status': alert.status,
+                'status_display': alert.get_status_display(),
+                'confidence_score': alert.confidence_score,
+                'relevance_score': alert.relevance_score,
+                'detected_at': alert.detected_at.isoformat(),
+                'created_at': alert.created_at.isoformat(),
+                'matched_assets': [
+                    {
+                        'id': str(asset.id),
+                        'name': asset.name,
+                        'asset_type': asset.asset_type,
+                        'criticality': asset.criticality
+                    }
+                    for asset in alert.matched_assets.all()[:3]  # Limit for performance
+                ],
+                'matched_asset_count': alert.matched_assets.count(),
+                'source_indicator_count': alert.source_indicators.count()
+            })
+
+        return Response({
+            'success': True,
+            'data': {
+                'alerts': alerts_data,
+                'count': len(alerts_data),
+                'has_more': len(alerts_data) == limit,
+                'last_updated': timezone.now().isoformat()
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error in asset_alert_feed: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to get alert feed'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

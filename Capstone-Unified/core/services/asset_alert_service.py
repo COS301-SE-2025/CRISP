@@ -783,37 +783,86 @@ class AssetBasedAlertService:
             return []
 
     def get_alert_statistics(self, organization: Organization = None) -> Dict[str, Any]:
-        """Get alert generation statistics."""
+        """Get comprehensive alert generation statistics."""
         try:
             queryset = CustomAlert.objects.all()
+            asset_queryset = AssetInventory.objects.all()
+
             if organization:
                 queryset = queryset.filter(organization=organization)
+                asset_queryset = asset_queryset.filter(organization=organization)
 
             # Last 30 days
             recent_queryset = queryset.filter(
                 created_at__gte=timezone.now() - timedelta(days=30)
             )
 
+            # Last 7 days for trends
+            week_queryset = queryset.filter(
+                created_at__gte=timezone.now() - timedelta(days=7)
+            )
+
+            # Asset statistics
+            total_assets = asset_queryset.count()
+            alert_enabled_assets = asset_queryset.filter(alert_enabled=True).count()
+            critical_assets = asset_queryset.filter(criticality='critical').count()
+
             stats = {
-                'total_alerts': queryset.count(),
-                'recent_alerts': recent_queryset.count(),
-                'by_severity': {},
-                'by_status': {},
-                'avg_confidence': 0.0,
-                'avg_relevance': 0.0
+                'alert_statistics': {
+                    'total_alerts': queryset.count(),
+                    'recent_alerts': recent_queryset.count(),
+                    'weekly_alerts': week_queryset.count(),
+                    'by_severity': {},
+                    'by_status': {},
+                    'avg_confidence': 0.0,
+                    'avg_relevance': 0.0,
+                    'critical_alerts_today': recent_queryset.filter(
+                        severity='critical',
+                        created_at__gte=timezone.now() - timedelta(days=1)
+                    ).count()
+                },
+                'asset_statistics': {
+                    'total_assets': total_assets,
+                    'alert_enabled_assets': alert_enabled_assets,
+                    'critical_assets': critical_assets,
+                    'alert_coverage_percentage': round(
+                        (alert_enabled_assets / total_assets * 100) if total_assets > 0 else 0, 1
+                    ),
+                    'by_type': {},
+                    'by_criticality': {}
+                },
+                'threat_correlation': {
+                    'last_correlation_run': self._get_last_correlation_timestamp(organization),
+                    'active_threats': self._get_active_threat_count(organization),
+                    'correlation_accuracy': self._calculate_correlation_accuracy(organization)
+                }
             }
 
-            # Count by severity
+            # Count alerts by severity
             for severity_choice in CustomAlert.SEVERITY_CHOICES:
                 severity = severity_choice[0]
                 count = recent_queryset.filter(severity=severity).count()
-                stats['by_severity'][severity] = count
+                stats['alert_statistics']['by_severity'][severity] = count
 
-            # Count by status
+            # Count alerts by status
             for status_choice in CustomAlert.STATUS_CHOICES:
-                status = status_choice[0]
-                count = recent_queryset.filter(status=status).count()
-                stats['by_status'][status] = count
+                status_val = status_choice[0]
+                count = recent_queryset.filter(status=status_val).count()
+                stats['alert_statistics']['by_status'][status_val] = count
+
+            # Asset counts by type
+            for type_choice in AssetInventory.ASSET_TYPE_CHOICES:
+                asset_type = type_choice[0]
+                count = asset_queryset.filter(asset_type=asset_type).count()
+                if count > 0:
+                    stats['asset_statistics']['by_type'][asset_type] = count
+
+            # Asset counts by criticality
+            for crit_choice in AssetInventory.CRITICALITY_CHOICES:
+                criticality = crit_choice[0]
+                count = asset_queryset.filter(criticality=criticality).count()
+                if count > 0:
+                    stats['asset_statistics']['by_criticality'][criticality] = count
 
             # Calculate averages
             if recent_queryset.exists():
@@ -821,11 +870,223 @@ class AssetBasedAlertService:
                     avg_confidence=models.Avg('confidence_score'),
                     avg_relevance=models.Avg('relevance_score')
                 )
-                stats['avg_confidence'] = round(avg_scores['avg_confidence'] or 0.0, 2)
-                stats['avg_relevance'] = round(avg_scores['avg_relevance'] or 0.0, 2)
+                stats['alert_statistics']['avg_confidence'] = round(avg_scores['avg_confidence'] or 0.0, 2)
+                stats['alert_statistics']['avg_relevance'] = round(avg_scores['avg_relevance'] or 0.0, 2)
 
             return stats
 
         except Exception as e:
             logger.error(f"Error getting alert statistics: {e}")
             return {}
+
+    def _get_last_correlation_timestamp(self, organization: Organization = None) -> str:
+        """Get timestamp of last correlation run."""
+        try:
+            queryset = CustomAlert.objects.all()
+            if organization:
+                queryset = queryset.filter(organization=organization)
+
+            last_alert = queryset.order_by('-created_at').first()
+            if last_alert:
+                return last_alert.created_at.isoformat()
+            return None
+        except:
+            return None
+
+    def _get_active_threat_count(self, organization: Organization = None) -> int:
+        """Get count of active threats."""
+        try:
+            # Count unique threat indicators in last 24 hours
+            recent_alerts = CustomAlert.objects.filter(
+                created_at__gte=timezone.now() - timedelta(days=1)
+            )
+            if organization:
+                recent_alerts = recent_alerts.filter(organization=organization)
+
+            return recent_alerts.values('source_indicators').distinct().count()
+        except:
+            return 0
+
+    def _calculate_correlation_accuracy(self, organization: Organization = None) -> float:
+        """Calculate correlation accuracy based on alert feedback."""
+        try:
+            # Simple accuracy based on alert status progression
+            alerts = CustomAlert.objects.all()
+            if organization:
+                alerts = alerts.filter(organization=organization)
+
+            total_alerts = alerts.count()
+            if total_alerts == 0:
+                return 0.0
+
+            # Consider resolved alerts as accurate correlations
+            accurate_alerts = alerts.filter(status__in=['resolved', 'investigating']).count()
+            return round((accurate_alerts / total_alerts) * 100, 1)
+        except:
+            return 0.0
+
+    def trigger_correlation_for_organization(self, organization: Organization, days: int = 1) -> Dict[str, Any]:
+        """Manually trigger correlation for a specific organization."""
+        try:
+            # Get recent indicators
+            cutoff_date = timezone.now() - timedelta(days=days)
+            recent_indicators = Indicator.objects.filter(
+                created_at__gte=cutoff_date,
+                is_active=True
+            ).order_by('-created_at')[:100]  # Limit for performance
+
+            if not recent_indicators.exists():
+                return {
+                    'success': False,
+                    'message': 'No recent indicators found for correlation',
+                    'alerts_generated': 0
+                }
+
+            # Process indicators for this organization
+            alerts = self._process_indicators_for_organization(
+                list(recent_indicators), organization
+            )
+
+            logger.info(f"Manual correlation triggered for {organization.name}: {len(alerts)} alerts generated")
+
+            return {
+                'success': True,
+                'message': f'Correlation completed successfully',
+                'alerts_generated': len(alerts),
+                'indicators_processed': recent_indicators.count(),
+                'organization': organization.name,
+                'time_range_days': days
+            }
+
+        except Exception as e:
+            logger.error(f"Error triggering correlation for {organization.name}: {e}")
+            return {
+                'success': False,
+                'message': f'Correlation failed: {str(e)}',
+                'alerts_generated': 0
+            }
+
+    def get_alert_details(self, alert_id: str, organization: Organization) -> Optional[Dict[str, Any]]:
+        """Get detailed information about a specific alert."""
+        try:
+            alert = CustomAlert.objects.select_related('organization').prefetch_related(
+                'matched_assets', 'source_indicators', 'affected_users'
+            ).get(id=alert_id, organization=organization)
+
+            return {
+                'id': str(alert.id),
+                'alert_id': alert.alert_id,
+                'title': alert.title,
+                'description': alert.description,
+                'alert_type': alert.alert_type,
+                'alert_type_display': alert.get_alert_type_display(),
+                'severity': alert.severity,
+                'severity_display': alert.get_severity_display(),
+                'status': alert.status,
+                'status_display': alert.get_status_display(),
+                'confidence_score': alert.confidence_score,
+                'relevance_score': alert.relevance_score,
+                'detected_at': alert.detected_at.isoformat(),
+                'created_at': alert.created_at.isoformat(),
+                'updated_at': alert.updated_at.isoformat(),
+                'delivery_channels': alert.delivery_channels,
+                'response_actions': alert.response_actions,
+                'metadata': alert.metadata,
+                'matched_assets': [
+                    {
+                        'id': str(asset.id),
+                        'name': asset.name,
+                        'asset_type': asset.asset_type,
+                        'asset_type_display': asset.get_asset_type_display(),
+                        'asset_value': asset.asset_value,
+                        'criticality': asset.criticality,
+                        'criticality_display': asset.get_criticality_display()
+                    }
+                    for asset in alert.matched_assets.all()
+                ],
+                'source_indicators': [
+                    {
+                        'id': str(indicator.id),
+                        'type': indicator.type,
+                        'value': indicator.value,
+                        'pattern': getattr(indicator, 'pattern', ''),
+                        'confidence': getattr(indicator, 'confidence', 0)
+                    }
+                    for indicator in alert.source_indicators.all()
+                ],
+                'affected_users': [
+                    {
+                        'id': str(user.id),
+                        'username': user.username,
+                        'email': user.email,
+                        'role': user.role
+                    }
+                    for user in alert.affected_users.all()
+                ]
+            }
+
+        except CustomAlert.DoesNotExist:
+            logger.warning(f"Alert {alert_id} not found for organization {organization.name}")
+            return None
+        except Exception as e:
+            logger.error(f"Error getting alert details for {alert_id}: {e}")
+            return None
+
+    def update_alert_status(self, alert_id: str, action: str, organization: Organization, user) -> Dict[str, Any]:
+        """Update alert status based on user action."""
+        try:
+            alert = CustomAlert.objects.get(id=alert_id, organization=organization)
+
+            status_mapping = {
+                'acknowledge': 'investigating',
+                'resolve': 'resolved',
+                'dismiss': 'dismissed',
+                'escalate': 'escalated'
+            }
+
+            if action not in status_mapping:
+                return {
+                    'success': False,
+                    'message': f'Invalid action: {action}'
+                }
+
+            old_status = alert.status
+            alert.status = status_mapping[action]
+            alert.save(update_fields=['status', 'updated_at'])
+
+            # Log the status change
+            logger.info(f"Alert {alert.alert_id} status changed from {old_status} to {alert.status} by {user.username}")
+
+            # Add to metadata for audit trail
+            if not alert.metadata:
+                alert.metadata = {}
+            if 'status_history' not in alert.metadata:
+                alert.metadata['status_history'] = []
+
+            alert.metadata['status_history'].append({
+                'timestamp': timezone.now().isoformat(),
+                'user': user.username,
+                'action': action,
+                'old_status': old_status,
+                'new_status': alert.status
+            })
+            alert.save(update_fields=['metadata'])
+
+            return {
+                'success': True,
+                'message': f'Alert {action}d successfully',
+                'old_status': old_status,
+                'new_status': alert.status
+            }
+
+        except CustomAlert.DoesNotExist:
+            return {
+                'success': False,
+                'message': 'Alert not found'
+            }
+        except Exception as e:
+            logger.error(f"Error updating alert status: {e}")
+            return {
+                'success': False,
+                'message': f'Failed to update alert: {str(e)}'
+            }

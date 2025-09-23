@@ -162,9 +162,11 @@ asset_urlpatterns = [
     path('inventory/<uuid:asset_id>/', asset_api.asset_inventory_detail, name='asset_inventory_detail'),
     path('alerts/', asset_api.custom_alerts_list, name='custom_alerts_list'),
     path('alerts/<uuid:alert_id>/', asset_api.custom_alert_detail, name='custom_alert_detail'),
+    path('alerts/<uuid:alert_id>/action/', asset_api.custom_alert_action, name='custom_alert_action'),
     path('correlation/trigger/', asset_api.trigger_asset_correlation, name='trigger_asset_correlation'),
     path('statistics/', asset_api.asset_alert_statistics, name='asset_alert_statistics'),
     path('bulk-upload/', asset_api.bulk_asset_upload, name='bulk_asset_upload'),
+    path('alerts/feed/', asset_api.asset_alert_feed, name='asset_alert_feed'),
 ]
 
 # Main URL patterns

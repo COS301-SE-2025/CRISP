@@ -40,7 +40,7 @@ export const getCustomAlertDetails = (alertId) => {
 };
 
 export const updateAlertStatus = (alertId, action) => {
-  return post(`${BASE_URL}/assets/alerts/${alertId}/`, { action });
+  return post(`${BASE_URL}/assets/alerts/${alertId}/action/`, { action });
 };
 
 // Statistics and Correlation API
@@ -51,4 +51,26 @@ export const getAssetAlertStatistics = () => {
 
 export const triggerAssetCorrelation = (days = 1) => {
   return post(`${BASE_URL}/assets/correlation/trigger/`, { days });
+};
+
+// Real-time alert feed
+export const getAssetAlertFeed = (params) => {
+  return get(`${BASE_URL}/assets/alerts/feed/`, params);
+};
+
+// Alert actions
+export const acknowledgeAlert = (alertId) => {
+  return updateAlertStatus(alertId, 'acknowledge');
+};
+
+export const resolveAlert = (alertId) => {
+  return updateAlertStatus(alertId, 'resolve');
+};
+
+export const dismissAlert = (alertId) => {
+  return updateAlertStatus(alertId, 'dismiss');
+};
+
+export const escalateAlert = (alertId) => {
+  return updateAlertStatus(alertId, 'escalate');
 };

@@ -24,12 +24,6 @@ python manage.py cleanup_feeds --force
 echo "🦠 Setting up VirusTotal feed..."
 python manage.py setup_virustotal_feed --with-samples
 
-echo "🎯 Setting up Asset-Based Alert System (WOW Factor #1)..."
-python manage.py demo_asset_alerts --mode setup --organization "Demo University"
-
-echo "🚨 Generating demo alerts..."
-python manage.py demo_asset_alerts --mode demo
-
 echo "📁 Collecting static files..."
 python manage.py collectstatic --noinput
 
