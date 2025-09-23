@@ -13456,25 +13456,9 @@ function CSSStyles() {
             position: relative;
         }
 
-        /* Custom Scrollbar Styling */
+        /* Hide custom scrollbar for activity stream */
         .activity-stream::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .activity-stream::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-
-        .activity-stream::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
-            border-radius: 10px;
-            transition: all 0.3s ease;
-        }
-
-        .activity-stream::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(180deg, var(--secondary-blue) 0%, var(--primary-blue) 100%);
-            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+            display: none;
         }
 
         /* Apply same blue scrollbar styling to organization list */
