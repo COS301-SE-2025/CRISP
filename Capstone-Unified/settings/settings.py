@@ -234,7 +234,7 @@ OTX_SETTINGS = {
     'API_KEY': os.getenv('OTX_API_KEY', ''),
     'ENABLED': os.getenv('OTX_ENABLED', 'True').lower() == 'true',
     'FETCH_INTERVAL': int(os.getenv('OTX_FETCH_INTERVAL', '3600')),
-    'BATCH_SIZE': int(os.getenv('OTX_BATCH_SIZE', '50')),  # Increased to 50 for better performance
+    'BATCH_SIZE': int(os.getenv('OTX_BATCH_SIZE', '100')),  # Optimized to 100 for performance
     'MAX_AGE_DAYS': int(os.getenv('OTX_MAX_AGE_DAYS', '30')),  # 30 days for better data retrieval
 }
 

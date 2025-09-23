@@ -220,16 +220,31 @@ class OTXTaxiiService:
                 
             except Exception as e:
                 last_error = e
-                logger.error(f"Error polling OTX collection (attempt {retry_count + 1}): {str(e)}")
-                import traceback
-                logger.error(traceback.format_exc())
+                error_str = str(e)
+
+                # Check for specific service unavailability errors
+                if "504" in error_str or "Gateway Timeout" in error_str:
+                    logger.warning(f"OTX service appears to be temporarily unavailable (504 Gateway Timeout) - attempt {retry_count + 1}")
+                elif "502" in error_str or "Bad Gateway" in error_str:
+                    logger.warning(f"OTX service experiencing gateway issues (502 Bad Gateway) - attempt {retry_count + 1}")
+                elif "503" in error_str or "Service Unavailable" in error_str:
+                    logger.warning(f"OTX service temporarily unavailable (503 Service Unavailable) - attempt {retry_count + 1}")
+                else:
+                    logger.error(f"Error polling OTX collection (attempt {retry_count + 1}): {error_str}")
+                    import traceback
+                    logger.error(traceback.format_exc())
+
                 retry_count += 1
-                
+
                 if retry_count < max_retries:
                     import time
-                    # Wait with shorter backoff for faster recovery
-                    sleep_time = 1  # Just 1 second between retries
-                    logger.info(f"Retrying in {sleep_time} seconds...")
+                    # Progressive backoff for server errors
+                    if any(code in error_str for code in ["504", "502", "503"]):
+                        sleep_time = min(30, 5 * retry_count)  # 5s, 10s, 15s, up to 30s
+                        logger.info(f"Service unavailable - waiting {sleep_time}s before retry...")
+                    else:
+                        sleep_time = 1  # Just 1 second for other errors
+                        logger.info(f"Retrying in {sleep_time} seconds...")
                     time.sleep(sleep_time)
         
         logger.error(f"All {max_retries} polling attempts failed")
@@ -311,9 +326,16 @@ class OTXTaxiiService:
                     limit=limit
                 )
             except Exception as e:
-                logger.error(f"Poll collection failed: {str(e)}")
-                # Log error but continue with empty result for graceful handling
-                logger.warning(f"Collection not found or poll failed: {str(e)}")
+                error_str = str(e)
+                # Handle service unavailability gracefully
+                if any(code in error_str for code in ["504", "502", "503", "Gateway Timeout", "Service Unavailable"]):
+                    logger.warning(f"OTX service is currently offline or unavailable: {error_str}")
+                    logger.info("This is likely temporary - the service will be retried on the next scheduled run")
+                    # Return 0, 0 to indicate no processing occurred due to service unavailability
+                    return 0, 0
+                else:
+                    logger.error(f"Poll collection failed: {error_str}")
+                    logger.warning(f"Collection not found or poll failed: {error_str}")
                 content_blocks = []
             
             if not content_blocks:

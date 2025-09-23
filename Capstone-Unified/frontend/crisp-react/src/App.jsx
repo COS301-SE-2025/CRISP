@@ -311,8 +311,8 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
       // Ensure days_back is between 1 and 365
       validatedValue = Math.max(1, Math.min(365, value));
     } else if (param === 'block_limit') {
-      // Ensure block_limit is between 1 and 100
-      validatedValue = Math.max(1, Math.min(100, value));
+      // Ensure block_limit is between 1 and 200 (optimized for performance)
+      validatedValue = Math.max(1, Math.min(200, value));
     }
 
     setConsumptionParams(prev => ({...prev, [param]: validatedValue}));
@@ -6902,6 +6902,7 @@ function TTPAnalysis({ active }) {
   const [seasonalPatternsLoading, setSeasonalPatternsLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [trendsLoading, setTrendsLoading] = useState(false);
+  const [chartRendering, setChartRendering] = useState(false);
   const [matrixLoading, setMatrixLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   
@@ -8109,12 +8110,33 @@ function TTPAnalysis({ active }) {
   
   useEffect(() => {
     if (active && trendsData.length > 0) {
-      // Create chart in appropriate container based on active tab
-      if ((activeTab === 'matrix' || activeTab === 'list') && ttpChartRef.current) {
-        createTTPTrendsChart();
-      } else if (activeTab === 'trends' && ttpTrendsChartRef.current) {
-        createTTPTrendsChart();
-      }
+      setChartRendering(true);
+      // Small delay to ensure DOM is fully rendered
+      const timer = setTimeout(() => {
+        // Create chart in appropriate container based on active tab
+        if ((activeTab === 'matrix' || activeTab === 'list') && ttpChartRef.current) {
+          createTTPTrendsChart();
+        } else if (activeTab === 'trends' && ttpTrendsChartRef.current) {
+          createTTPTrendsChart();
+        }
+        setChartRendering(false);
+      }, 100);
+
+      return () => {
+        clearTimeout(timer);
+        setChartRendering(false);
+        // Clean up D3 charts when component unmounts or deps change
+        const cleanupChart = (container) => {
+          if (container) {
+            const d3Container = d3.select(container);
+            d3Container.selectAll("svg").remove();
+            d3Container.selectAll(".chart-placeholder").remove();
+            d3Container.selectAll(".error-message").remove();
+          }
+        };
+        cleanupChart(ttpTrendsChartRef.current);
+        cleanupChart(ttpChartRef.current);
+      };
     }
   }, [active, trendsData, activeTab]);
 
@@ -8126,12 +8148,11 @@ function TTPAnalysis({ active }) {
       
       // Clear previous chart and placeholder if any
       if (chartContainer) {
-        d3.select(chartContainer).selectAll("*").remove();
-        // Also remove the placeholder overlay by directly removing the element
-        const placeholder = chartContainer.querySelector('.chart-placeholder');
-        if (placeholder) {
-          placeholder.remove();
-        }
+        // More careful cleanup to avoid React conflicts
+        const d3Container = d3.select(chartContainer);
+        d3Container.selectAll("svg").remove();
+        d3Container.selectAll(".chart-placeholder").remove();
+        d3Container.selectAll(".error-message").remove();
       }
       
       // Return early if no trends data or ref not available
@@ -8354,15 +8375,30 @@ function TTPAnalysis({ active }) {
     });
     } catch (error) {
       console.error('Error creating TTP trends chart:', error);
-      // Display error message in the chart container
-      if (ttpChartRef.current) {
-        d3.select(ttpChartRef.current).selectAll("*").remove();
-        d3.select(ttpChartRef.current)
+      // Display error message in the appropriate chart container
+      const errorContainer = (activeTab === 'trends') ? ttpTrendsChartRef.current : ttpChartRef.current;
+      if (errorContainer) {
+        const d3Container = d3.select(errorContainer);
+        d3Container.selectAll("svg").remove();
+        d3Container.selectAll(".chart-placeholder").remove();
+        d3Container.selectAll(".error-message").remove();
+        d3Container
           .append("div")
+          .attr("class", "error-message")
+          .style("display", "flex")
+          .style("align-items", "center")
+          .style("justify-content", "center")
+          .style("height", "300px")
           .style("text-align", "center")
           .style("color", "#e53e3e")
           .style("padding", "20px")
-          .text("Error loading chart data. Please try refreshing.");
+          .html(`
+            <div>
+              <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+              <p>Error loading chart data</p>
+              <p style="font-size: 0.9rem; margin-top: 0.5rem;">Please try refreshing the page</p>
+            </div>
+          `);
       }
     }
   };
@@ -9275,22 +9311,36 @@ function TTPAnalysis({ active }) {
                   <div className="trend-charts-grid">
                     <div className="chart-container">
                       <h3>Technique Frequency Over Time</h3>
-                      <div 
-                        className="trend-chart" 
-                        ref={ttpTrendsChartRef}
-                        style={{minHeight: '300px', width: '100%', backgroundColor: '#f8f9fa', border: '1px solid #dee2e6', borderRadius: '4px'}}
-                      >
+                      <ChartErrorBoundary>
+                        <div
+                          className="trend-chart"
+                          ref={ttpTrendsChartRef}
+                          style={{minHeight: '300px', width: '100%', backgroundColor: '#f8f9fa', border: '1px solid #dee2e6', borderRadius: '4px'}}
+                        >
                         {trendsLoading ? (
                           <div style={{
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center', 
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                             height: '300px',
                             color: '#666'
                           }}>
                             <div style={{textAlign: 'center'}}>
                               <i className="fas fa-spinner fa-spin" style={{fontSize: '2rem', marginBottom: '1rem'}}></i>
                               <p>Loading trends data...</p>
+                            </div>
+                          </div>
+                        ) : chartRendering ? (
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            height: '300px',
+                            color: '#666'
+                          }}>
+                            <div style={{textAlign: 'center'}}>
+                              <i className="fas fa-chart-line fa-pulse" style={{fontSize: '2rem', marginBottom: '1rem'}}></i>
+                              <p>Rendering chart...</p>
                             </div>
                           </div>
                         ) : trendsData.length === 0 ? (
@@ -9307,24 +9357,9 @@ function TTPAnalysis({ active }) {
                               <p style={{fontSize: '0.9rem'}}>TTP trends will appear here as data is collected</p>
                             </div>
                           </div>
-                        ) : (
-                          <div style={{
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center', 
-                            height: '300px',
-                            color: '#666'
-                          }}>
-                            <div style={{textAlign: 'center'}}>
-                              <i className="fas fa-check-circle" style={{fontSize: '2rem', marginBottom: '1rem', color: '#28a745'}}></i>
-                              <p>Chart should render here</p>
-                              <p style={{fontSize: '0.8rem'}}>
-                                Debug: {trendsData.length} trend series loaded
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                        ) : null}
+                        </div>
+                      </ChartErrorBoundary>
                     </div>
                     
                     <div className="tactic-distribution">
@@ -13431,25 +13466,9 @@ function CSSStyles() {
             position: relative;
         }
 
-        /* Custom Scrollbar Styling */
+        /* Hide custom scrollbar for activity stream */
         .activity-stream::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .activity-stream::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-
-        .activity-stream::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
-            border-radius: 10px;
-            transition: all 0.3s ease;
-        }
-
-        .activity-stream::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(180deg, var(--secondary-blue) 0%, var(--primary-blue) 100%);
-            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+            display: none;
         }
 
         /* Apply same blue scrollbar styling to organization list */
