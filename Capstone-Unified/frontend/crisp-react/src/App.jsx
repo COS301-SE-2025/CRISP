@@ -310,8 +310,8 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
       // Ensure days_back is between 1 and 365
       validatedValue = Math.max(1, Math.min(365, value));
     } else if (param === 'block_limit') {
-      // Ensure block_limit is between 1 and 100
-      validatedValue = Math.max(1, Math.min(100, value));
+      // Ensure block_limit is between 1 and 200 (optimized for performance)
+      validatedValue = Math.max(1, Math.min(200, value));
     }
 
     setConsumptionParams(prev => ({...prev, [param]: validatedValue}));
