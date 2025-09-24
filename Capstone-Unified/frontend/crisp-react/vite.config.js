@@ -15,6 +15,9 @@ export default defineConfig({
   },
   base: '/',
   server: {
+    headers: {
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:8000 ws://localhost:5173 ws://localhost:3000; img-src 'self' data: blob:; font-src 'self' data:;"
+    },
     proxy: {
       '/api': {
         target: 'http://backend:8000',

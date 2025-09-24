@@ -2018,10 +2018,10 @@ def recent_activities(request):
         if limit > 100:  # Cap the limit
             limit = 100
         
-        # Fetch recent activities
+        # Fetch recent activities - remove user relation to avoid DB errors
         activities = SystemActivity.objects.select_related(
-            'threat_feed', 'indicator', 'organization', 'user'
-        ).all()[:limit]
+            'threat_feed', 'indicator', 'organization'
+        ).order_by('-created_at')[:limit]
         
         # Format activities for frontend
         activities_data = []
@@ -2045,25 +2045,23 @@ def recent_activities(request):
                 'type': activity.activity_type,
                 'category': activity.category,
                 'title': activity.title,
-                'description': activity.description,
-                'icon': activity.icon,
-                'badge_type': activity.badge_type,
+                'description': activity.description or '',
                 'badge_text': activity.get_activity_type_display(),
                 'time_ago': time_ago,
                 'timestamp': activity.created_at.isoformat(),
-                'metadata': activity.metadata,
+                'metadata': activity.metadata or {},
                 'related_objects': {
                     'threat_feed': {
-                        'id': activity.threat_feed.id,
+                        'id': str(activity.threat_feed.id),
                         'name': activity.threat_feed.name
                     } if activity.threat_feed else None,
                     'indicator': {
-                        'id': activity.indicator.id,
+                        'id': str(activity.indicator.id),
                         'value': activity.indicator.value,
                         'type': activity.indicator.type
                     } if activity.indicator else None,
                     'organization': {
-                        'id': activity.organization.id,
+                        'id': str(activity.organization.id),
                         'name': activity.organization.name
                     } if activity.organization else None,
                 }

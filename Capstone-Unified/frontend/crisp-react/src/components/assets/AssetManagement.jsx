@@ -387,33 +387,30 @@ const AssetManagement = ({ active }) => {
   const fetchData = async () => {
     setLoading(true);
     setError(null);
-    
-    // Quietly handle API failures and use mock data
-    const safeApiCall = async (apiCall, fallback) => {
-      try {
-        const result = await apiCall();
-        return result;
-      } catch (error) {
-        // Suppress error logging for expected 400s (API not implemented)
-        return fallback;
-      }
-    };
 
     try {
       const [assetsRes, alertsRes, statsRes] = await Promise.all([
-        safeApiCall(() => getAssetInventory(), { data: { results: mockAssets } }),
-        safeApiCall(() => getCustomAlerts(), { data: { results: mockAlerts } }),
-        safeApiCall(() => getAssetAlertStatistics(), { data: mockStats })
+        getAssetInventory(),
+        getCustomAlerts(),
+        getAssetAlertStatistics()
       ]);
 
-      setAssets(assetsRes?.data?.results || mockAssets);
-      setAlerts(alertsRes?.data?.results || mockAlerts);
-      setStats(statsRes?.data || mockStats);
+      setAssets(assetsRes?.data?.results || assetsRes?.data || []);
+      setAlerts(alertsRes?.data?.results || alertsRes?.data || []);
+      setStats(statsRes?.data || {
+        asset_statistics: { total_assets: 0, alert_coverage_percentage: 0 },
+        alert_statistics: { recent_alerts: 0 }
+      });
     } catch (err) {
-      // Final fallback to mock data
-      setAssets(mockAssets);
-      setAlerts(mockAlerts);
-      setStats(mockStats);
+      console.error('Failed to fetch asset data:', err);
+      setError(`Failed to load asset data: ${err.message}`);
+      // Initialize with empty data instead of mock data
+      setAssets([]);
+      setAlerts([]);
+      setStats({
+        asset_statistics: { total_assets: 0, alert_coverage_percentage: 0 },
+        alert_statistics: { recent_alerts: 0 }
+      });
     } finally {
       setLoading(false);
     }
@@ -431,8 +428,8 @@ const AssetManagement = ({ active }) => {
       showNotification('Asset correlation triggered successfully! New alerts will be generated based on your asset inventory.', 'success');
       fetchData();
     } catch (err) {
-      showNotification('Asset correlation feature is not available yet. This is a demo interface.', 'info');
-      console.warn('API not available:', err);
+      console.error('Correlation error:', err);
+      showNotification('Failed to trigger asset correlation. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -460,8 +457,8 @@ const AssetManagement = ({ active }) => {
       fetchData();
       handleCloseAssetModal();
     } catch (err) {
-      showNotification('Asset management is not available yet. This is a demo interface.', 'info');
-      console.warn('API not available:', err);
+      console.error('Asset save error:', err);
+      showNotification(`Failed to ${editingAsset ? 'update' : 'create'} asset: ${err.message}`, 'error');
       handleCloseAssetModal();
     }
   };
@@ -478,8 +475,8 @@ const AssetManagement = ({ active }) => {
           showNotification(`Asset "${asset.name}" deleted successfully.`, 'success');
           fetchData();
         } catch (err) {
-          showNotification('Asset management is not available yet. This is a demo interface.', 'info');
-          console.warn('API not available:', err);
+          console.error('Asset delete error:', err);
+          showNotification(`Failed to delete asset: ${err.message}`, 'error');
         }
         setConfirmModal(null);
       },
@@ -493,15 +490,8 @@ const AssetManagement = ({ active }) => {
       setSelectedAlert(res.data);
       setShowAlertModal(true);
     } catch (err) {
-      console.warn('API not available, using mock alert details:', err);
-      // Find the alert in mock data
-      const alert = mockAlerts.find(a => a.id == alertId);
-      if (alert) {
-        setSelectedAlert(alert);
-        setShowAlertModal(true);
-      } else {
-        showNotification('Alert details not available in demo mode.', 'info');
-      }
+      console.error('Alert details error:', err);
+      showNotification(`Failed to load alert details: ${err.message}`, 'error');
     }
   };
 
@@ -534,10 +524,10 @@ const AssetManagement = ({ active }) => {
           if (parseErr.message && parseErr.message.includes('JSON')) {
             showNotification('Invalid JSON file. Please check the file format.', 'error');
           } else {
-            showNotification('Bulk upload is not available yet. This is a demo interface.', 'info');
+            console.error('Upload error:', parseErr);
+            showNotification(`Upload failed: ${parseErr.message}`, 'error');
             handleCloseBulkUploadModal();
           }
-          console.warn('Upload failed:', parseErr);
         } finally {
           setLoading(false);
         }
@@ -591,17 +581,6 @@ const AssetManagement = ({ active }) => {
 
   return (
     <div className="asset-management">
-      {/* Demo Mode Indicator */}
-      <div className="demo-indicator">
-        <div className="flex">
-          <svg fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-          </svg>
-          <span>
-            <strong>Demo Mode:</strong> This interface shows sample data. Asset APIs are not yet implemented in the backend.
-          </span>
-        </div>
-      </div>
 
       {/* Enhanced Stats Dashboard */}
       <div className="stats-dashboard">

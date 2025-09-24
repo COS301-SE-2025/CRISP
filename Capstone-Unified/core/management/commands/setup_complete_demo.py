@@ -184,8 +184,9 @@ class Command(BaseCommand):
 
         from core.models.models import (
             Organization, AssetInventory, CustomAlert,
-            Indicator, User
+            Indicator
         )
+        from user_management.models.user_models import CustomUser as User
 
         # Check organizations
         orgs = Organization.objects.filter(trust_metadata__contains={'demo': True})

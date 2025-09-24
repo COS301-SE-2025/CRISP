@@ -16,30 +16,8 @@ function CrispLogin({ onLoginSuccess, switchView }) {
   const [showConstruction, setShowConstruction] = useState(false); // State for construction page
   const [showChangePassword, setShowChangePassword] = useState(false); // State for change password modal
 
-  // Initialize Feather icons when component mounts
-  useEffect(() => {
-    // Load Feather icons script if not already loaded
-    if (!window.feather) {
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.29.0/feather.min.js';
-      script.onload = () => {
-        if (window.feather) {
-          window.feather.replace();
-        }
-      };
-      document.head.appendChild(script);
-    } else {
-      // If already loaded, just replace the icons
-      window.feather.replace();
-    }
-  }, []);
-
-  // Re-run feather.replace() when error state changes to ensure new icons are rendered
-  useEffect(() => {
-    if (window.feather) {
-      setTimeout(() => window.feather.replace(), 100);
-    }
-  }, [error, isLoading, isHelpOpen]);
+  // Removed Feather icons loading to fix CSP violations
+  // Icons are now handled using inline SVG or CSS classes
 
   const handleSubmit = async (e) => {
     e.preventDefault();

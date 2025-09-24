@@ -347,17 +347,16 @@ class Command(BaseCommand):
             name='Demo Threat Feed',
             defaults={
                 'description': 'Demo threat intelligence feed for asset alert testing',
-                'feed_url': 'https://demo.threats.local/feed',
-                'collection_id': 'demo-feed-collection',
+                'taxii_server_url': 'https://demo.threats.local/feed',
+                'taxii_collection_id': 'demo-feed-collection',
                 'is_active': True,
-                'discovery_url': 'https://demo.threats.local/discovery',
-                'taxii_version': '2.1',
-                'organization': Organization.objects.first()
+                'owner': Organization.objects.first()
             }
         )
 
         # Create domain indicators
         for i, domain in enumerate(malicious_domains[:count//3]):
+            first_seen_date = timezone.now() - timedelta(days=random.randint(1, 60))
             indicator = Indicator.objects.create(
                 type='domain',
                 value=domain,
@@ -366,17 +365,14 @@ class Command(BaseCommand):
                 confidence=random.randint(70, 95),
                 threat_feed=demo_feed,
                 stix_id=f'indicator--{uuid.uuid4()}',
-                original_data={
-                    'demo': True,
-                    'threat_type': random.choice(['phishing', 'malware', 'c2']),
-                    'first_seen': (timezone.now() - timedelta(days=random.randint(1, 60))).isoformat(),
-                    'severity': random.choice(['high', 'medium', 'critical'])
-                }
+                first_seen=first_seen_date,
+                last_seen=first_seen_date + timedelta(hours=random.randint(1, 48))
             )
             indicators.append(indicator)
 
         # Create IP indicators
         for i, ip in enumerate(malicious_ips[:count//3]):
+            first_seen_date = timezone.now() - timedelta(days=random.randint(1, 60))
             indicator = Indicator.objects.create(
                 type='ip',
                 value=ip,
@@ -385,32 +381,25 @@ class Command(BaseCommand):
                 confidence=random.randint(60, 90),
                 threat_feed=demo_feed,
                 stix_id=f'indicator--{uuid.uuid4()}',
-                original_data={
-                    'demo': True,
-                    'threat_type': random.choice(['scanning', 'brute-force', 'c2']),
-                    'geolocation': random.choice(['Unknown', 'US', 'RU', 'CN', 'KP']),
-                    'asn': random.randint(10000, 99999)
-                }
+                first_seen=first_seen_date,
+                last_seen=first_seen_date + timedelta(hours=random.randint(1, 48))
             )
             indicators.append(indicator)
 
         # Create file hash indicators
         for i, hash_val in enumerate(malicious_hashes[:count//3]):
+            first_seen_date = timezone.now() - timedelta(days=random.randint(1, 60))
             indicator = Indicator.objects.create(
                 type='file_hash',
                 value=hash_val,
-                hash_type='SHA1',
+                hash_type='sha1',
                 name=f'Malicious File Hash: {hash_val[:16]}...',
                 description=f'Malware sample {hash_val} analyzed by demo security team',
                 confidence=random.randint(80, 98),
                 threat_feed=demo_feed,
                 stix_id=f'indicator--{uuid.uuid4()}',
-                original_data={
-                    'demo': True,
-                    'malware_family': random.choice(['Emotet', 'TrickBot', 'Ryuk', 'Cobalt Strike']),
-                    'file_size': random.randint(1024, 10485760),
-                    'detection_ratio': f"{random.randint(20, 55)}/70"
-                }
+                first_seen=first_seen_date,
+                last_seen=first_seen_date + timedelta(hours=random.randint(1, 48))
             )
             indicators.append(indicator)
 

@@ -931,8 +931,7 @@ class AssetBasedAlertService:
             # Get recent indicators
             cutoff_date = timezone.now() - timedelta(days=days)
             recent_indicators = Indicator.objects.filter(
-                created_at__gte=cutoff_date,
-                is_active=True
+                created_at__gte=cutoff_date
             ).order_by('-created_at')[:100]  # Limit for performance
 
             if not recent_indicators.exists():

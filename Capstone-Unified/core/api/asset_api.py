@@ -46,10 +46,13 @@ def asset_inventory_list(request):
             criticality = request.GET.get('criticality')
             alert_enabled = request.GET.get('alert_enabled')
 
-            # Build queryset
-            queryset = AssetInventory.objects.filter(
-                organization=organization
-            ).select_related('organization', 'created_by').order_by('-created_at')
+            # Build queryset - superusers can see all assets, regular users see only their org's assets
+            if request.user.is_superuser or request.user.role == 'BlueVisionAdmin':
+                queryset = AssetInventory.objects.all().select_related('organization', 'created_by').order_by('-created_at')
+            else:
+                queryset = AssetInventory.objects.filter(
+                    organization=organization
+                ).select_related('organization', 'created_by').order_by('-created_at')
 
             # Apply filters
             if asset_type:
@@ -303,13 +306,20 @@ def custom_alerts_list(request):
         severity = request.GET.get('severity')
         days = int(request.GET.get('days', 30))
 
-        # Build queryset
-        queryset = CustomAlert.objects.filter(
-            organization=organization,
-            created_at__gte=timezone.now() - timezone.timedelta(days=days)
-        ).select_related('organization', 'assigned_to').prefetch_related(
-            'matched_assets', 'source_indicators', 'affected_users'
-        ).order_by('-detected_at')
+        # Build queryset - superusers can see all alerts, regular users see only their org's alerts
+        if request.user.is_superuser or request.user.role == 'BlueVisionAdmin':
+            queryset = CustomAlert.objects.filter(
+                created_at__gte=timezone.now() - timezone.timedelta(days=days)
+            ).select_related('organization', 'assigned_to').prefetch_related(
+                'matched_assets', 'source_indicators', 'affected_users'
+            ).order_by('-detected_at')
+        else:
+            queryset = CustomAlert.objects.filter(
+                organization=organization,
+                created_at__gte=timezone.now() - timezone.timedelta(days=days)
+            ).select_related('organization', 'assigned_to').prefetch_related(
+                'matched_assets', 'source_indicators', 'affected_users'
+            ).order_by('-detected_at')
 
         # Apply filters
         if alert_status:
