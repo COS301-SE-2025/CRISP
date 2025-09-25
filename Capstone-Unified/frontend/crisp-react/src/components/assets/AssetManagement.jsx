@@ -1,139 +1,11 @@
 import React, { useState, useEffect, Fragment } from 'react';
+import { get } from '../../api';
 import { getAssetInventory, createAsset, updateAsset, deleteAsset, bulkUploadAssets, getCustomAlerts, getAssetAlertStatistics, triggerAssetCorrelation, getCustomAlertDetails, updateAlertStatus } from '../../api/assets';
 import LoadingSpinner from '../enhanced/LoadingSpinner';
 import NotificationToast from '../enhanced/NotificationToast';
 import ConfirmationModal from '../enhanced/ConfirmationModal';
 
-// Mock data for development/fallback
-const mockAssets = [
-  {
-    id: 1,
-    name: "Corporate Website",
-    asset_type: "domain",
-    asset_type_display: "Domain",
-    asset_value: "company.example.com",
-    description: "Main corporate website hosting business information",
-    criticality: "high",
-    alert_enabled: true
-  },
-  {
-    id: 2,
-    name: "Internal Network Range",
-    asset_type: "ip_range",
-    asset_type_display: "IP Range",
-    asset_value: "192.168.1.0/24",
-    description: "Internal office network infrastructure",
-    criticality: "medium",
-    alert_enabled: true
-  },
-  {
-    id: 3,
-    name: "Database Server",
-    asset_type: "software",
-    asset_type_display: "Software",
-    asset_value: "PostgreSQL v13.4",
-    description: "Primary customer database server",
-    criticality: "critical",
-    alert_enabled: true
-  }
-];
 
-const mockAlerts = [
-  {
-    id: 1,
-    alert_id: "ALERT-001",
-    title: "Suspicious Domain Activity Detected",
-    description: "Unusual traffic patterns detected on corporate website domain. Multiple IoCs correlate with known threat indicators.",
-    severity: "high",
-    severity_display: "High",
-    status: "new",
-    status_display: "New",
-    confidence_score: 0.85,
-    relevance_score: 0.92,
-    detected_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-    matched_assets: [
-      {
-        id: 1,
-        name: "Corporate Website",
-        asset_type: "domain",
-        asset_value: "company.example.com",
-        criticality: "high"
-      }
-    ],
-    source_indicators: [
-      {
-        id: 1,
-        value: "malicious-domain.com",
-        type: "domain"
-      },
-      {
-        id: 2,
-        value: "192.168.1.100",
-        type: "ip"
-      }
-    ],
-    response_actions: [
-      {
-        title: "Block suspicious IP ranges",
-        description: "Implement firewall rules to block traffic from identified malicious IP addresses",
-        priority: "high"
-      },
-      {
-        title: "Monitor domain traffic",
-        description: "Increase monitoring on affected domain for unusual patterns",
-        priority: "medium"
-      }
-    ]
-  },
-  {
-    id: 2,
-    alert_id: "ALERT-002",
-    title: "Database Connection Anomaly",
-    description: "Abnormal connection patterns detected on database server matching threat intelligence indicators.",
-    severity: "critical",
-    severity_display: "Critical",
-    status: "investigating",
-    status_display: "Investigating",
-    confidence_score: 0.78,
-    relevance_score: 0.88,
-    detected_at: new Date(Date.now() - 3600000).toISOString(),
-    created_at: new Date(Date.now() - 3600000).toISOString(),
-    matched_assets: [
-      {
-        id: 3,
-        name: "Database Server",
-        asset_type: "software",
-        asset_value: "PostgreSQL v13.4",
-        criticality: "critical"
-      }
-    ],
-    source_indicators: [
-      {
-        id: 3,
-        value: "attack-tool.exe",
-        type: "file_hash"
-      }
-    ],
-    response_actions: [
-      {
-        title: "Isolate database server",
-        description: "Temporarily isolate the database server to prevent potential data exfiltration",
-        priority: "high"
-      }
-    ]
-  }
-];
-
-const mockStats = {
-  asset_statistics: {
-    total_assets: 3,
-    alert_coverage_percentage: 87
-  },
-  alert_statistics: {
-    recent_alerts: 2
-  }
-};
 
 const AssetInventoryTab = ({ assets, onAdd, onEdit, onDelete, onBulkUpload, loading }) => {
   return (
@@ -403,7 +275,7 @@ const CustomAlertsTab = ({ alerts, onView, loading, refreshInterval }) => {
           {alerts && alerts.length > 0 ? alerts.map((alert, index) => (
             <div
               key={alert.id || index}
-              onClick={() => onView(alert.id)}
+              onClick={() => onView(alert)}
               style={{
                 backgroundColor: 'white',
                 border: '1px solid #e0e0e0',
@@ -535,7 +407,7 @@ const AssetManagement = ({ active }) => {
   const [activeTab, setActiveTab] = useState('inventory');
   const [assets, setAssets] = useState([]);
   const [alerts, setAlerts] = useState([]);
-  const [stats, setStats] = useState(mockStats);
+  const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showAssetModal, setShowAssetModal] = useState(false);
@@ -557,48 +429,36 @@ const AssetManagement = ({ active }) => {
     }
   }, [active]);
 
+  const fetchAllAssets = async () => {
+    let assets = [];
+    let nextPage = '/api/assets/inventory/';
+    while (nextPage) {
+      const res = await get(nextPage);
+      if (res?.results?.data) {
+        assets = assets.concat(res.results.data);
+      }
+      nextPage = res.next ? new URL(res.next).pathname + new URL(res.next).search : null;
+    }
+    return assets;
+  };
+
   const fetchData = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const [assetsRes, alertsRes, statsRes] = await Promise.all([
-        getAssetInventory(),
+      const [assetsData, alertsRes, statsRes] = await Promise.all([
+        fetchAllAssets(),
         getCustomAlerts(),
         getAssetAlertStatistics()
       ]);
 
-      // More robust data extraction
-      let assetsData = [];
-      if (assetsRes) {
-        if (assetsRes.results && Array.isArray(assetsRes.results)) {
-          assetsData = assetsRes.results;
-        } else if (assetsRes.data && Array.isArray(assetsRes.data.results)) {
-          assetsData = assetsRes.data.results;
-        } else if (assetsRes.data && Array.isArray(assetsRes.data)) {
-          assetsData = assetsRes.data;
-        } else if (Array.isArray(assetsRes)) {
-          assetsData = assetsRes;
-        }
-      }
-
-      let alertsData = [];
-      if (alertsRes) {
-        if (alertsRes.results && Array.isArray(alertsRes.results)) {
-          alertsData = alertsRes.results;
-        } else if (alertsRes.data && Array.isArray(alertsRes.data.results)) {
-          alertsData = alertsRes.data.results;
-        } else if (alertsRes.data && Array.isArray(alertsRes.data)) {
-          alertsData = alertsRes.data;
-        } else if (Array.isArray(alertsRes)) {
-          alertsData = alertsRes;
-        }
-      }
+      const alertsData = alertsRes?.data?.results || alertsRes?.data || [];
 
       // Force state updates with new arrays to ensure re-render
       setAssets([...assetsData]);
       setAlerts([...alertsData]);
-      setStats({...(statsRes?.data || statsRes || mockStats)});
+      setStats({...(statsRes?.data || statsRes || {})});
     } catch (err) {
       setError(`Failed to load asset data: ${err.message}`);
       setAssets([]);
@@ -696,32 +556,9 @@ const AssetManagement = ({ active }) => {
     });
   };
 
-  const handleOpenAlertModal = async (alertId) => {
-    try {
-      // Validate that we have a valid alert ID
-      if (!alertId) {
-        showNotification('Invalid alert ID', 'error');
-        return;
-      }
-
-      // Check if the alert ID looks like a valid UUID
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(alertId)) {
-        showNotification('Alert details are not available for this alert', 'warning');
-        return;
-      }
-
-      const res = await getCustomAlertDetails(alertId);
-      if (res && res.success && res.data) {
-        setSelectedAlert(res.data);
-        setShowAlertModal(true);
-      } else {
-        showNotification('Alert details not found', 'warning');
-      }
-    } catch (err) {
-      console.error('Alert details error:', err);
-      showNotification(`Failed to load alert details: ${err.message}`, 'error');
-    }
+  const handleOpenAlertModal = (alert) => {
+    setSelectedAlert(alert);
+    setShowAlertModal(true);
   };
 
   const handleCloseAlertModal = () => {
