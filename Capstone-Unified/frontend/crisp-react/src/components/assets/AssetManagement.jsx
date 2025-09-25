@@ -533,8 +533,8 @@ const AssetManagement = ({ active }) => {
   }
 
   const [activeTab, setActiveTab] = useState('inventory');
-  const [assets, setAssets] = useState(mockAssets);
-  const [alerts, setAlerts] = useState(mockAlerts);
+  const [assets, setAssets] = useState([]);
+  const [alerts, setAlerts] = useState([]);
   const [stats, setStats] = useState(mockStats);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -549,6 +549,7 @@ const AssetManagement = ({ active }) => {
   const [filterType, setFilterType] = useState('all');
   const [filterSeverity, setFilterSeverity] = useState('all');
   const [refreshInterval, setRefreshInterval] = useState(null);
+  const [assetModalError, setAssetModalError] = useState(null);
 
   useEffect(() => {
     if (active) {
@@ -594,25 +595,15 @@ const AssetManagement = ({ active }) => {
         }
       }
 
-      // Fallback to mock data to ensure UI always displays content
-      if (assetsData.length === 0) {
-        assetsData = [...mockAssets];
-      }
-
-      if (alertsData.length === 0) {
-        alertsData = [...mockAlerts];
-      }
-
       // Force state updates with new arrays to ensure re-render
       setAssets([...assetsData]);
       setAlerts([...alertsData]);
       setStats({...(statsRes?.data || statsRes || mockStats)});
     } catch (err) {
       setError(`Failed to load asset data: ${err.message}`);
-      // Use mock data to ensure UI displays even on error
-      setAssets([...mockAssets]);
-      setAlerts([...mockAlerts]);
-      setStats({...mockStats});
+      setAssets([]);
+      setAlerts([]);
+      setStats({});
     } finally {
       setLoading(false);
     }
@@ -640,28 +631,43 @@ const AssetManagement = ({ active }) => {
   const handleOpenAssetModal = (asset = null) => {
     setEditingAsset(asset);
     setShowAssetModal(true);
+    setAssetModalError(null);
   };
 
   const handleCloseAssetModal = () => {
     setEditingAsset(null);
     setShowAssetModal(false);
+    setAssetModalError(null);
   };
 
   const handleSaveAsset = async (assetData) => {
     try {
+      let result;
       if (editingAsset) {
-        await updateAsset(editingAsset.id, assetData);
-        showNotification(`Asset "${assetData.name}" updated successfully.`, 'success');
+        result = await updateAsset(editingAsset.id, assetData);
+        if (result && result.success !== false) {
+          showNotification(`Asset "${assetData.name}" updated successfully.`, 'success');
+          fetchData();
+          handleCloseAssetModal();
+        } else {
+          throw new Error(result?.message || 'Failed to update asset');
+        }
       } else {
-        await createAsset(assetData);
-        showNotification(`Asset "${assetData.name}" created successfully.`, 'success');
+        result = await createAsset(assetData);
+        if (result && result.data) {
+          showNotification(`Asset "${assetData.name}" created successfully.`, 'success');
+          setAssets(prevAssets => [result.data, ...prevAssets]);
+          handleCloseAssetModal();
+        } else {
+          throw new Error(result?.message || 'Failed to create asset');
+        }
       }
-      fetchData();
-      handleCloseAssetModal();
     } catch (err) {
       console.error('Asset save error:', err);
-      showNotification(`Failed to ${editingAsset ? 'update' : 'create'} asset: ${err.message}`, 'error');
-      handleCloseAssetModal();
+      const errorMessage = err.message || `Failed to ${editingAsset ? 'update' : 'create'} asset`;
+      setAssetModalError(errorMessage);
+      // showNotification(errorMessage, 'error');
+      // Don't close the modal on error so user can fix issues
     }
   };
 
@@ -673,9 +679,13 @@ const AssetManagement = ({ active }) => {
       cancelText: 'Cancel',
       onConfirm: async () => {
         try {
-          await deleteAsset(asset.id);
-          showNotification(`Asset "${asset.name}" deleted successfully.`, 'success');
-          fetchData();
+          const result = await deleteAsset(asset.id);
+          if (result && result.success !== false) {
+            showNotification(`Asset "${asset.name}" deleted successfully.`, 'success');
+            fetchData();
+          } else {
+            throw new Error(result?.message || 'Failed to delete asset');
+          }
         } catch (err) {
           console.error('Asset delete error:', err);
           showNotification(`Failed to delete asset: ${err.message}`, 'error');
@@ -688,9 +698,26 @@ const AssetManagement = ({ active }) => {
 
   const handleOpenAlertModal = async (alertId) => {
     try {
+      // Validate that we have a valid alert ID
+      if (!alertId) {
+        showNotification('Invalid alert ID', 'error');
+        return;
+      }
+
+      // Check if the alert ID looks like a valid UUID
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(alertId)) {
+        showNotification('Alert details are not available for this alert', 'warning');
+        return;
+      }
+
       const res = await getCustomAlertDetails(alertId);
-      setSelectedAlert(res.data);
-      setShowAlertModal(true);
+      if (res && res.success && res.data) {
+        setSelectedAlert(res.data);
+        setShowAlertModal(true);
+      } else {
+        showNotification('Alert details not found', 'warning');
+      }
     } catch (err) {
       console.error('Alert details error:', err);
       showNotification(`Failed to load alert details: ${err.message}`, 'error');
@@ -717,12 +744,24 @@ const AssetManagement = ({ active }) => {
         try {
           const content = e.target.result;
           const assets = JSON.parse(content);
+          
+          if (!Array.isArray(assets) || assets.length === 0) {
+            showNotification('Invalid file format. Expected an array of assets.', 'error');
+            return;
+          }
+          
           setLoading(true);
-          await bulkUploadAssets(assets);
-          fetchData();
-          handleCloseBulkUploadModal();
-          showNotification(`Successfully uploaded ${assets.length} assets!`, 'success');
+          const result = await bulkUploadAssets(assets);
+          
+          if (result && result.success !== false) {
+            fetchData();
+            handleCloseBulkUploadModal();
+            showNotification(`Successfully uploaded ${assets.length} assets!`, 'success');
+          } else {
+            throw new Error(result?.message || 'Bulk upload failed');
+          }
         } catch (parseErr) {
+          setLoading(false);
           if (parseErr.message && parseErr.message.includes('JSON')) {
             showNotification('Invalid JSON file. Please check the file format.', 'error');
           } else {
@@ -1015,7 +1054,7 @@ const AssetManagement = ({ active }) => {
       </div>
 
       {/* Modals and Notifications */}
-      {showAssetModal && <AssetModal asset={editingAsset} onSave={handleSaveAsset} onClose={handleCloseAssetModal} />}
+      {showAssetModal && <AssetModal asset={editingAsset} onSave={handleSaveAsset} onClose={handleCloseAssetModal} errorMessage={assetModalError} />}
       {showAlertModal && <AlertModal alert={selectedAlert} onClose={handleCloseAlertModal} />}
       {showBulkUploadModal && <BulkUploadModal onUpload={handleBulkUpload} onClose={handleCloseBulkUploadModal} />}
       {notification && <NotificationToast message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
@@ -1024,7 +1063,7 @@ const AssetManagement = ({ active }) => {
   );
 };
 
-const AssetModal = ({ asset, onSave, onClose }) => {
+const AssetModal = ({ asset, onSave, onClose, errorMessage }) => {
   const [formData, setFormData] = useState({
     name: '',
     asset_type: 'domain',
@@ -1035,9 +1074,23 @@ const AssetModal = ({ asset, onSave, onClose }) => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Initialize form data with asset data if provided
   useEffect(() => {
     if (asset) {
-      setFormData(asset);
+      setFormData(prev => ({
+        ...prev,
+        ...asset
+      }));
+    } else {
+      // Reset to defaults when no asset is provided
+      setFormData({
+        name: '',
+        asset_type: 'domain',
+        asset_value: '',
+        description: '',
+        criticality: 'medium',
+        alert_enabled: true,
+      });
     }
   }, [asset]);
 
@@ -1048,6 +1101,17 @@ const AssetModal = ({ asset, onSave, onClose }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Basic validation
+    if (!formData.name?.trim()) {
+      alert('Please enter an asset name');
+      return;
+    }
+    if (!formData.asset_value?.trim()) {
+      alert('Please enter an asset value');
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
       await onSave(formData);
@@ -1077,11 +1141,32 @@ const AssetModal = ({ asset, onSave, onClose }) => {
         width: '90%',
         maxHeight: '80vh',
         overflow: 'auto',
-        fontFamily: 'Arial, sans-serif'
+        fontFamily: 'Arial, sans-serif',
+        position: 'relative'
       }}>
+          <button
+            onClick={onClose}
+            style={{
+              position: 'absolute',
+              top: '1rem',
+              right: '1rem',
+              background: 'none',
+              border: 'none',
+              fontSize: '1.5rem',
+              cursor: 'pointer',
+              color: '#666'
+            }}
+          >
+            &times;
+          </button>
           <form onSubmit={handleSubmit}>
             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
               <h3 className="text-lg leading-6 font-medium text-gray-900">{asset ? 'Edit' : 'Add'} Asset</h3>
+              {errorMessage && (
+                <div style={{ color: 'red', marginTop: '1rem', padding: '0.5rem', backgroundColor: '#ffebee', border: '1px solid #e57373', borderRadius: '4px' }}>
+                  {errorMessage}
+                </div>
+              )}
               <div className="mt-2">
                 <div className="mb-4">
                   <label className="block text-gray-700 text-sm font-bold mb-2">Name</label>
@@ -1137,6 +1222,13 @@ const AssetModal = ({ asset, onSave, onClose }) => {
                 ) : (
                   'Save Asset'
                 )}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+              >
+                Cancel
               </button>
           </div>
         </form>

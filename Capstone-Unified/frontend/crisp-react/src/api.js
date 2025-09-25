@@ -1037,7 +1037,7 @@ export const post = async (endpoint, data) => {
     return await response.json();
   } catch (error) {
     console.error(`API Error: ${endpoint}`, error);
-    return null;
+    throw error;
   }
 };
 
@@ -1052,7 +1052,7 @@ export const put = async (endpoint, data) => {
     return await response.json();
   } catch (error) {
     console.error(`API Error: ${endpoint}`, error);
-    return null;
+    throw error;
   }
 };
 
@@ -1074,7 +1074,7 @@ export const deleteRequest = async (endpoint) => {
     return text ? JSON.parse(text) : { success: true };
   } catch (error) {
     console.error(`API Error: ${endpoint}`, error);
-    return null;
+    throw error;
   }
 };
 

@@ -146,14 +146,11 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
   // Fetch unread notifications count
   const fetchUnreadCount = async () => {
     try {
-      console.log('🔔 Fetching unread count...');
       const response = await api.getAlerts({ unread_only: 'true' });
-      console.log('📊 Unread count response:', response);
       const count = response.data ? response.data.length : 0;
-      console.log('🔢 Setting unread count to:', count);
       setUnreadCount(count);
     } catch (error) {
-      console.error('❌ Error fetching unread count:', error);
+      console.error('Error fetching unread count:', error);
     }
   };
 
@@ -4291,7 +4288,6 @@ function ThreatFeeds({
 
 // IoC Management Component
 function IoCManagement({ active, lastUpdate, onRefresh }) {
-  console.log('🔄 IoCManagement: Component rendered, active:', active, 'lastUpdate:', lastUpdate);
   if (!active) return null;
   
   const [indicators, setIndicators] = useState([]);
@@ -4382,23 +4378,26 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   
   // Fetch indicators from backend
+  const fetchIndicatorsCallback = useCallback(() => {
+    fetchIndicators();
+    fetchThreatFeeds();
+  }, []);
+
   useEffect(() => {
     if (active) {
-      fetchIndicators();
-      fetchThreatFeeds();
+      fetchIndicatorsCallback();
     }
-  }, [active, lastUpdate]);
+  }, [active, lastUpdate, fetchIndicatorsCallback]);
 
   // Listen for feed consumption completion events for real-time updates
+  const handleFeedUpdate = useCallback((event) => {
+    // Refresh indicators when feed consumption completes
+    fetchIndicators();
+    if (onRefresh) onRefresh();
+  }, [onRefresh]);
+
   useEffect(() => {
     if (!active) return;
-
-    const handleFeedUpdate = (event) => {
-      console.log('IoCManagement: Feed consumption completed, refreshing indicators...', event.detail);
-      // Refresh indicators when feed consumption completes
-      fetchIndicators();
-      if (onRefresh) onRefresh();
-    };
 
     // Listen for custom events from feed consumption
     window.addEventListener('feedConsumptionComplete', handleFeedUpdate);
@@ -4408,7 +4407,7 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
       window.removeEventListener('feedConsumptionComplete', handleFeedUpdate);
       window.removeEventListener('indicatorsUpdated', handleFeedUpdate);
     };
-  }, [active]);
+  }, [active, handleFeedUpdate]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -4442,13 +4441,17 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
       setCurrentPage(1);
       fetchIndicators(1, itemsPerPage);
     }
-  }, [filters]);
+  }, [filters, itemsPerPage]);
 
   // Initial load
-  useEffect(() => {
+  const initialLoad = useCallback(() => {
     fetchIndicators(1, itemsPerPage);
     fetchOrganizations();
-  }, []);
+  }, [itemsPerPage]);
+
+  useEffect(() => {
+    initialLoad();
+  }, [initialLoad]);
 
   const fetchOrganizations = async () => {
     try {

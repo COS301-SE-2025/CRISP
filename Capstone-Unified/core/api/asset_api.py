@@ -10,7 +10,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.utils import timezone
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.core.exceptions import ValidationError
 
 from core.models.models import AssetInventory, CustomAlert, Organization, Indicator
@@ -148,6 +148,17 @@ def asset_inventory_list(request):
                     'success': False,
                     'message': f'Validation error: {str(e)}'
                 }, status=status.HTTP_400_BAD_REQUEST)
+            except IntegrityError as e:
+                if 'duplicate key value violates unique constraint' in str(e):
+                    return Response({
+                        'success': False,
+                        'message': f'An asset with the same value and type already exists in your organization'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    return Response({
+                        'success': False,
+                        'message': f'Database integrity error: {str(e)}'
+                    }, status=status.HTTP_400_BAD_REQUEST)
 
     except Exception as e:
         logger.error(f"Error in asset_inventory_list: {str(e)}")
@@ -266,6 +277,17 @@ def asset_inventory_detail(request, asset_id):
                     'success': False,
                     'message': f'Validation error: {str(e)}'
                 }, status=status.HTTP_400_BAD_REQUEST)
+            except IntegrityError as e:
+                if 'duplicate key value violates unique constraint' in str(e):
+                    return Response({
+                        'success': False,
+                        'message': f'An asset with the same value and type already exists in your organization'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    return Response({
+                        'success': False,
+                        'message': f'Database integrity error: {str(e)}'
+                    }, status=status.HTTP_400_BAD_REQUEST)
 
         elif request.method == 'DELETE':
             # Delete asset
@@ -373,123 +395,6 @@ def custom_alerts_list(request):
             'message': 'Failed to get custom alerts'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-@api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
-def custom_alert_detail(request, alert_id):
-    """
-    Get alert details or update alert status.
-    """
-    try:
-        organization = request.user.organization
-        if not organization:
-            return Response({
-                'success': False,
-                'message': 'User must belong to an organization'
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        # Get alert
-        try:
-            alert = CustomAlert.objects.get(
-                id=alert_id,
-                organization=organization
-            )
-        except CustomAlert.DoesNotExist:
-            return Response({
-                'success': False,
-                'message': 'Alert not found'
-            }, status=status.HTTP_404_NOT_FOUND)
-
-        if request.method == 'GET':
-            # Get detailed alert information
-            matched_assets = []
-            for asset in alert.matched_assets.all():
-                matched_assets.append({
-                    'id': str(asset.id),
-                    'name': asset.name,
-                    'asset_type': asset.get_asset_type_display(),
-                    'asset_value': asset.asset_value,
-                    'criticality': asset.get_criticality_display(),
-                    'environment': asset.environment
-                })
-
-            source_indicators = []
-            for indicator in alert.source_indicators.all():
-                source_indicators.append({
-                    'id': str(indicator.id),
-                    'type': indicator.type,
-                    'pattern': getattr(indicator, 'pattern', ''),
-                    'value': getattr(indicator, 'value', ''),
-                    'created': indicator.created.isoformat() if hasattr(indicator, 'created') else None
-                })
-
-            alert_data = {
-                'id': str(alert.id),
-                'alert_id': alert.alert_id,
-                'title': alert.title,
-                'description': alert.description,
-                'alert_type': alert.alert_type,
-                'alert_type_display': alert.get_alert_type_display(),
-                'severity': alert.severity,
-                'severity_display': alert.get_severity_display(),
-                'status': alert.status,
-                'status_display': alert.get_status_display(),
-                'confidence_score': alert.confidence_score,
-                'relevance_score': alert.relevance_score,
-                'assigned_to': alert.assigned_to.username if alert.assigned_to else None,
-                'detected_at': alert.detected_at.isoformat(),
-                'created_at': alert.created_at.isoformat(),
-                'acknowledged_at': alert.acknowledged_at.isoformat() if alert.acknowledged_at else None,
-                'resolved_at': alert.resolved_at.isoformat() if alert.resolved_at else None,
-                'matched_assets': matched_assets,
-                'source_indicators': source_indicators,
-                'affected_users': [user.username for user in alert.affected_users.all()],
-                'delivery_channels': alert.delivery_channels,
-                'delivery_status': alert.delivery_status,
-                'response_actions': alert.response_actions,
-                'metadata': alert.metadata,
-                'response_time': str(alert.response_time) if alert.response_time else None,
-                'resolution_time': str(alert.resolution_time) if alert.resolution_time else None,
-                'is_active': alert.is_active
-            }
-
-            return Response({
-                'success': True,
-                'data': alert_data
-            })
-
-        elif request.method == 'POST':
-            # Update alert status
-            action = request.data.get('action')
-
-            if action == 'acknowledge':
-                alert.acknowledge(request.user)
-                message = 'Alert acknowledged successfully'
-            elif action == 'resolve':
-                alert.resolve(request.user)
-                message = 'Alert resolved successfully'
-            elif action == 'false_positive':
-                alert.mark_false_positive(request.user)
-                message = 'Alert marked as false positive'
-            else:
-                return Response({
-                    'success': False,
-                    'message': 'Invalid action. Use: acknowledge, resolve, or false_positive'
-                }, status=status.HTTP_400_BAD_REQUEST)
-
-            logger.info(f"Alert {alert.alert_id} {action} by {request.user.username}")
-
-            return Response({
-                'success': True,
-                'message': message
-            })
-
-    except Exception as e:
-        logger.error(f"Error in custom_alert_detail: {str(e)}")
-        return Response({
-            'success': False,
-            'message': 'Failed to process alert request'
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['POST'])
