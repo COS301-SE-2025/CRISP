@@ -386,6 +386,12 @@ class EmailNotificationObserver:
         indicator = event_data.get('indicator')
         if not indicator:
             return
+        
+        # Skip notifications for internal manual indicators feed
+        if (hasattr(subject, 'name') and subject.name == "Internal Manual Indicators" and
+            hasattr(subject, 'is_active') and not subject.is_active):
+            logger.debug(f"Skipping email notification for internal manual indicator: {indicator.get('value', 'Unknown')}")
+            return
             
         # Check if this is a high-priority indicator requiring immediate alert
         if indicator.get('severity') in ['HIGH', 'CRITICAL']:
