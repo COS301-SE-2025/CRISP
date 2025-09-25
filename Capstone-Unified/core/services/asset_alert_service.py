@@ -663,6 +663,19 @@ class AssetBasedAlertService:
                 # TODO: Add user profile preferences when available
                 affected_users.append(user)
 
+            # Also include global BlueVisionAdmin users who should see all alerts
+            global_admins = User.objects.filter(
+                role='BlueVisionAdmin',
+                is_active=True
+            ).exclude(
+                id__in=[user.id for user in affected_users]  # Avoid duplicates
+            )
+
+            for admin in global_admins:
+                affected_users.append(admin)
+
+            logger.info(f"Alert recipients for {organization.name}: {len(affected_users)} users (including global admins)")
+
             return list(set(affected_users))  # Remove duplicates
 
         except Exception as e:
