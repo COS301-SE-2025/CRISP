@@ -93,11 +93,17 @@ def education_sector_analysis(request):
         
         # Generate report
         logger.info(f"Generating education sector analysis for user {request.user.username}")
-        
+
+        # Get user's organization (directly from user model)
+        organization = getattr(request.user, 'organization', None)
+
         report_data = reports_service.generate_education_sector_analysis(
             start_date=start_date,
             end_date=end_date,
-            organization_ids=organization_ids
+            organization_ids=organization_ids,
+            generated_by=request.user,
+            organization=organization,
+            persist=True
         )
         
         # Format response based on requested format
@@ -204,11 +210,17 @@ def financial_sector_analysis(request):
         
         # Generate report
         logger.info(f"Generating financial sector analysis for user {request.user.username}")
-        
+
+        # Get user's organization (directly from user model)
+        organization = getattr(request.user, 'organization', None)
+
         report_data = reports_service.generate_financial_sector_analysis(
             start_date=start_date,
             end_date=end_date,
-            organization_ids=organization_ids
+            organization_ids=organization_ids,
+            generated_by=request.user,
+            organization=organization,
+            persist=True
         )
         
         # Format response based on requested format
@@ -314,11 +326,17 @@ def government_sector_analysis(request):
         
         # Generate report
         logger.info(f"Generating government sector analysis for user {request.user.username}")
-        
+
+        # Get user's organization (directly from user model)
+        organization = getattr(request.user, 'organization', None)
+
         report_data = reports_service.generate_government_sector_analysis(
             start_date=start_date,
             end_date=end_date,
-            organization_ids=organization_ids
+            organization_ids=organization_ids,
+            generated_by=request.user,
+            organization=organization,
+            persist=True
         )
         
         # Format response based on requested format
@@ -500,4 +518,228 @@ def report_status(request):
         return Response({
             'success': False,
             'message': 'Failed to get report status'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_reports(request):
+    """
+    List all reports accessible to the user's organization.
+
+    GET /api/reports/
+    Query Parameters:
+        - report_type: Filter by report type (optional)
+        - limit: Limit number of results (optional)
+        - include_shared: Include reports shared with organization (default: true)
+    """
+    try:
+        access_control = AccessControlService()
+        reports_service = ReportsService()
+
+        # Check permissions
+        if not access_control.can_view_reports(request.user):
+            return Response({
+                'success': False,
+                'message': 'Insufficient permissions to view reports'
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        # Get user's organization (directly from user model)
+        organization = getattr(request.user, 'organization', None)
+
+        if not organization:
+            return Response({
+                'success': False,
+                'message': 'User organization not found'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Parse query parameters
+        report_type = request.GET.get('report_type')
+        limit = request.GET.get('limit')
+        include_shared = request.GET.get('include_shared', 'true').lower() == 'true'
+
+        # Convert limit to int if provided
+        if limit:
+            try:
+                limit = int(limit)
+            except ValueError:
+                return Response({
+                    'success': False,
+                    'message': 'Invalid limit parameter. Must be an integer.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get reports
+        reports = reports_service.get_reports_for_organization(
+            organization=organization,
+            user=request.user,
+            report_type=report_type,
+            limit=limit,
+            include_shared=include_shared
+        )
+
+        # Format response
+        reports_data = []
+        for report in reports:
+            report_data = {
+                'id': str(report.id),
+                'title': report.title,
+                'report_type': report.report_type,
+                'description': report.description,
+                'status': report.status,
+                'created_at': report.created_at.isoformat(),
+                'updated_at': report.updated_at.isoformat(),
+                'generated_by': report.generated_by.username if report.generated_by else None,
+                'organization': report.organization.name if report.organization else None,
+                'view_count': report.view_count,
+                'export_count': report.export_count,
+                'available_formats': report.available_formats,
+                'tags': report.tags,
+                'analysis_period': {
+                    'start_date': report.analysis_start_date.isoformat() if report.analysis_start_date else None,
+                    'end_date': report.analysis_end_date.isoformat() if report.analysis_end_date else None
+                },
+                'data_summary': report.data_counts,
+                'age_days': report.get_age_in_days(),
+                'is_expired': report.is_expired()
+            }
+            reports_data.append(report_data)
+
+        return Response({
+            'success': True,
+            'reports': reports_data,
+            'total_count': len(reports_data),
+            'meta': {
+                'organization': organization.name,
+                'report_type_filter': report_type,
+                'limit': limit,
+                'include_shared': include_shared
+            }
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        logger.error(f"Error listing reports: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to list reports'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_report_detail(request, report_id):
+    """
+    Get detailed information about a specific report.
+
+    GET /api/reports/{report_id}/
+    """
+    try:
+        access_control = AccessControlService()
+        reports_service = ReportsService()
+
+        # Check permissions
+        if not access_control.can_view_reports(request.user):
+            return Response({
+                'success': False,
+                'message': 'Insufficient permissions to view reports'
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        # Get report
+        report = reports_service.get_report_by_id(report_id, request.user)
+
+        if not report:
+            return Response({
+                'success': False,
+                'message': 'Report not found or access denied'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # Format detailed response
+        report_data = {
+            'id': str(report.id),
+            'title': report.title,
+            'report_type': report.report_type,
+            'description': report.description,
+            'status': report.status,
+            'error_message': report.error_message,
+            'created_at': report.created_at.isoformat(),
+            'updated_at': report.updated_at.isoformat(),
+            'last_accessed': report.last_accessed.isoformat() if report.last_accessed else None,
+            'generated_by': report.generated_by.username if report.generated_by else None,
+            'organization': report.organization.name if report.organization else None,
+            'view_count': report.view_count,
+            'export_count': report.export_count,
+            'available_formats': report.available_formats,
+            'is_public': report.is_public,
+            'tags': report.tags,
+            'metadata': report.metadata,
+            'parameters': report.parameters,
+            'analysis_period': {
+                'start_date': report.analysis_start_date.isoformat() if report.analysis_start_date else None,
+                'end_date': report.analysis_end_date.isoformat() if report.analysis_end_date else None
+            },
+            'data_sources': report.data_sources,
+            'data_counts': report.data_counts,
+            'age_days': report.get_age_in_days(),
+            'is_expired': report.is_expired(),
+            'expires_at': report.expires_at.isoformat() if report.expires_at else None,
+            'generation_duration': str(report.generation_duration) if report.generation_duration else None,
+            # Include the actual report data
+            'report_data': report.report_data
+        }
+
+        return Response({
+            'success': True,
+            'report': report_data
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        logger.error(f"Error getting report detail {report_id}: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to get report details'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_report(request, report_id):
+    """
+    Delete a specific report (only by owner or admin).
+
+    DELETE /api/reports/{report_id}/
+    """
+    try:
+        from core.models.models import Report
+
+        # Get report
+        try:
+            report = Report.objects.get(id=report_id)
+        except Report.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Report not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # Check permissions (only owner or superuser can delete)
+        if report.generated_by != request.user and not request.user.is_superuser:
+            return Response({
+                'success': False,
+                'message': 'Insufficient permissions to delete this report'
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        # Delete report
+        report_title = report.title
+        report.delete()
+
+        logger.info(f"Report '{report_title}' deleted by user {request.user.username}")
+
+        return Response({
+            'success': True,
+            'message': f'Report "{report_title}" deleted successfully'
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        logger.error(f"Error deleting report {report_id}: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to delete report'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
