@@ -3,9 +3,24 @@ import * as api from '../../api.js';
 
 const SOCDashboard = ({ active, showPage }) => {
   if (!active) return null;
+  
+  // Check if user is BlueVisionAdmin
+  const currentUser = api.getCurrentUser();
+  if (!currentUser || currentUser.role !== 'BlueVisionAdmin') {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <div className="alert alert-warning" role="alert">
+          <i className="fas fa-lock mr-2"></i>
+          <strong>Access Restricted</strong>
+          <p className="mb-0 mt-2">SOC features are only available to BlueVision administrators.</p>
+        </div>
+      </div>
+    );
+  }
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
@@ -48,6 +63,47 @@ const SOCDashboard = ({ active, showPage }) => {
       case 'resolved': return '#28a745';
       case 'closed': return '#6c757d';
       default: return '#6c757d';
+    }
+  };
+
+  const handleDownload = async (format) => {
+    try {
+      setDownloading(true);
+      
+      // Use the API function for SOC incidents export
+      const response = await api.exportSOCIncidents(format, { days: 30 });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        
+        // Create a temporary link element to trigger download
+        const link = document.createElement('a');
+        link.href = url;
+        
+        // Get filename from Content-Disposition header or generate one
+        const contentDisposition = response.headers.get('content-disposition');
+        let filename = `soc_incidents_export.${format}`;
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+          if (filenameMatch) {
+            filename = filenameMatch[1];
+          }
+        }
+        
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } else {
+        throw new Error('Failed to download file');
+      }
+    } catch (err) {
+      console.error('Download error:', err);
+      alert('Failed to download incidents: ' + err.message);
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -263,12 +319,65 @@ const SOCDashboard = ({ active, showPage }) => {
             <i className="fas fa-list mr-2"></i>
             Recent Incidents
           </h5>
-          <button 
-            className="btn btn-primary btn-sm"
-            onClick={() => showPage('soc-incidents')}
-          >
-            View All
-          </button>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <button 
+                className="btn btn-secondary btn-sm"
+                onClick={() => handleDownload('csv')}
+                disabled={downloading}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem',
+                  minWidth: '120px',
+                  justifyContent: 'center'
+                }}
+              >
+                {downloading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm"></span>
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-file-csv"></i>
+                    Download as CSV
+                  </>
+                )}
+              </button>
+              <button 
+                className="btn btn-secondary btn-sm"
+                onClick={() => handleDownload('json')}
+                disabled={downloading}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem',
+                  minWidth: '120px',
+                  justifyContent: 'center'
+                }}
+              >
+                {downloading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm"></span>
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-file-code"></i>
+                    Download as JSON
+                  </>
+                )}
+              </button>
+            </div>
+            <button 
+              className="btn btn-primary btn-sm"
+              onClick={() => showPage('soc-incidents')}
+              style={{ minWidth: '100px' }}
+            >
+              View All
+            </button>
+          </div>
         </div>
         <div className="card-body p-0">
           {recent_incidents.length === 0 ? (

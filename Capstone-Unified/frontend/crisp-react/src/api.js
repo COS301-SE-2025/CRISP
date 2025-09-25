@@ -1161,3 +1161,99 @@ export const getIndicators = async (queryParams = {}) => {
 
   return await response.json();
 };
+
+// SOC API functions
+export const getSOCDashboard = async () => {
+  const response = await fetch(`${API_BASE_URL}/api/soc/dashboard/`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch SOC dashboard data');
+  }
+
+  return await response.json();
+};
+
+export const getSOCIncidents = async (queryParams = {}) => {
+  const params = new URLSearchParams();
+  
+  // Add pagination and filtering parameters
+  Object.entries(queryParams).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && value !== '') {
+      params.append(key, value.toString());
+    }
+  });
+
+  const url = `${API_BASE_URL}/api/soc/incidents/${params.toString() ? `?${params.toString()}` : ''}`;
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch SOC incidents');
+  }
+
+  return await response.json();
+};
+
+export const createSOCIncident = async (incidentData) => {
+  const response = await fetch(`${API_BASE_URL}/api/soc/incidents/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(incidentData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to create SOC incident');
+  }
+
+  return await response.json();
+};
+
+export const exportSOCIncidents = async (format = 'csv', queryParams = {}) => {
+  const params = new URLSearchParams();
+  
+  // Add format parameter
+  params.append('format', format);
+  
+  // Add other query parameters
+  Object.entries(queryParams).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && value !== '') {
+      params.append(key, value.toString());
+    }
+  });
+
+  const response = await fetch(`${API_BASE_URL}/api/soc/incidents/export/?${params.toString()}`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to export SOC incidents');
+  }
+
+  return response; // Return the response object so caller can handle blob/filename
+};
+
+export const assignSOCIncident = async (incidentId, username) => {
+  const response = await fetch(`${API_BASE_URL}/api/soc/incidents/${incidentId}/assign/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ username }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to assign incident');
+  }
+
+  return await response.json();
+};

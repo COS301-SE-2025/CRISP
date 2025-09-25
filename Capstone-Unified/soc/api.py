@@ -4,6 +4,8 @@ REST API endpoints for SOC incident and case management
 """
 
 import logging
+import csv
+import json
 from datetime import datetime, timedelta
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -14,6 +16,7 @@ from django.utils import timezone
 from django.db import transaction
 from django.db.models import Q, Count
 from django.core.exceptions import ValidationError
+from django.http import HttpResponse
 
 from soc.models import SOCIncident, SOCCase, SOCPlaybook, SOCIncidentActivity, SOCEvidence, SOCMetrics
 from core.models.models import Organization, Indicator, AssetInventory
@@ -607,4 +610,132 @@ def incident_add_comment(request, incident_id):
         return Response({
             'success': False,
             'message': 'Failed to add comment'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def incidents_export(request):
+    """
+    Export incidents to CSV or JSON format
+    """
+    try:
+        organization = request.user.organization
+        if not organization and request.user.role != 'BlueVisionAdmin':
+            return Response({
+                'success': False,
+                'message': 'User must belong to an organization'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get export parameters
+        export_format = request.GET.get('format', 'csv').lower()
+        days = int(request.GET.get('days', 30))
+        status_filter = request.GET.get('status')
+        priority_filter = request.GET.get('priority')
+        
+        # Build queryset - superusers/BlueVisionAdmin can export all incidents
+        if request.user.is_superuser or request.user.role == 'BlueVisionAdmin':
+            queryset = SOCIncident.objects.all()
+        else:
+            queryset = SOCIncident.objects.filter(organization=organization)
+            
+        # Filter by date range
+        start_date = timezone.now() - timedelta(days=days)
+        queryset = queryset.filter(created_at__gte=start_date)
+        
+        # Apply additional filters
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        if priority_filter:
+            queryset = queryset.filter(priority=priority_filter)
+            
+        # Order by created date (newest first)
+        queryset = queryset.select_related('organization', 'assigned_to', 'created_by').order_by('-created_at')
+        
+        # Prepare incident data
+        incidents_data = []
+        for incident in queryset:
+            incidents_data.append({
+                'incident_id': incident.incident_id,
+                'title': incident.title,
+                'description': incident.description,
+                'category': incident.get_category_display(),
+                'priority': incident.get_priority_display(),
+                'severity': incident.get_severity_display(),
+                'status': incident.get_status_display(),
+                'organization': incident.organization.name,
+                'assigned_to': incident.assigned_to.username if incident.assigned_to else 'Unassigned',
+                'created_by': incident.created_by.username,
+                'detected_at': incident.detected_at.isoformat(),
+                'created_at': incident.created_at.isoformat(),
+                'updated_at': incident.updated_at.isoformat(),
+                'resolved_at': incident.resolved_at.isoformat() if incident.resolved_at else '',
+                'closed_at': incident.closed_at.isoformat() if incident.closed_at else '',
+                'is_overdue': 'Yes' if incident.is_overdue else 'No',
+                'sla_deadline': incident.sla_deadline.isoformat() if incident.sla_deadline else '',
+                'source': incident.source,
+                'external_ticket_id': incident.external_ticket_id or '',
+                'tags': ', '.join(incident.tags) if incident.tags else '',
+                'related_indicators_count': incident.related_indicators.count(),
+                'related_assets_count': incident.related_assets.count()
+            })
+        
+        # Generate filename
+        org_name = organization.name.replace(' ', '_') if organization else 'All_Organizations'
+        timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'soc_incidents_{org_name}_{timestamp}'
+        
+        if export_format == 'csv':
+            # Create CSV response
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = f'attachment; filename="{filename}.csv"'
+            
+            if incidents_data:
+                writer = csv.DictWriter(response, fieldnames=incidents_data[0].keys())
+                writer.writeheader()
+                writer.writerows(incidents_data)
+            else:
+                writer = csv.writer(response)
+                writer.writerow(['No incidents found for the specified criteria'])
+                
+            return response
+            
+        elif export_format == 'json':
+            # Create JSON response
+            response = HttpResponse(content_type='application/json')
+            response['Content-Disposition'] = f'attachment; filename="{filename}.json"'
+            
+            export_data = {
+                'export_metadata': {
+                    'export_date': timezone.now().isoformat(),
+                    'organization': organization.name if organization else 'All Organizations',
+                    'days_range': days,
+                    'total_incidents': len(incidents_data),
+                    'filters_applied': {
+                        'status': status_filter,
+                        'priority': priority_filter
+                    }
+                },
+                'incidents': incidents_data
+            }
+            
+            response.write(json.dumps(export_data, indent=2))
+            return response
+        
+        else:
+            return Response({
+                'success': False,
+                'message': 'Unsupported export format. Use "csv" or "json".'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+    except ValueError:
+        return Response({
+            'success': False,
+            'message': 'Invalid days parameter. Must be a number.'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        logger.error(f"Error in incidents_export: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to export incidents'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

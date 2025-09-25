@@ -1032,22 +1032,27 @@ function MainNav({ activePage, showPage, user, onLogout, isAdmin }) {
               <i className="fas fa-shield-alt"></i> Asset Alerts
             </a>
           </li>
-          <li>
-            <a
-              onClick={() => showPage('soc-dashboard')}
-              className={activePage === 'soc-dashboard' ? 'active' : ''}
-            >
-              <i className="fas fa-eye"></i> SOC Dashboard
-            </a>
-          </li>
-          <li>
-            <a
-              onClick={() => showPage('soc-incidents')}
-              className={activePage === 'soc-incidents' ? 'active' : ''}
-            >
-              <i className="fas fa-exclamation-circle"></i> Incidents
-            </a>
-          </li>
+          {/* SOC Features - Only for BlueVisionAdmin */}
+          {user?.role === 'BlueVisionAdmin' && (
+            <>
+              <li>
+                <a
+                  onClick={() => showPage('soc-dashboard')}
+                  className={activePage === 'soc-dashboard' ? 'active' : ''}
+                >
+                  <i className="fas fa-eye"></i> SOC Dashboard
+                </a>
+              </li>
+              <li>
+                <a
+                  onClick={() => showPage('soc-incidents')}
+                  className={activePage === 'soc-incidents' ? 'active' : ''}
+                >
+                  <i className="fas fa-exclamation-circle"></i> Incidents
+                </a>
+              </li>
+            </>
+          )}
         </ul>
         <div className="nav-right">
           <div className="status-indicator">

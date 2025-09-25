@@ -3,6 +3,20 @@ import * as api from '../../api.js';
 
 const IncidentsList = ({ active, showPage }) => {
   if (!active) return null;
+  
+  // Check if user is BlueVisionAdmin
+  const currentUser = api.getCurrentUser();
+  if (!currentUser || currentUser.role !== 'BlueVisionAdmin') {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <div className="alert alert-warning" role="alert">
+          <i className="fas fa-lock mr-2"></i>
+          <strong>Access Restricted</strong>
+          <p className="mb-0 mt-2">SOC features are only available to BlueVision administrators.</p>
+        </div>
+      </div>
+    );
+  }
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -13,6 +27,9 @@ const IncidentsList = ({ active, showPage }) => {
     search: ''
   });
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedIncident, setSelectedIncident] = useState(null);
+  const [availableUsers, setAvailableUsers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
@@ -20,20 +37,121 @@ const IncidentsList = ({ active, showPage }) => {
     fetchIncidents();
   }, [filters, currentPage]);
 
+  useEffect(() => {
+    fetchAvailableUsers();
+  }, []); // Only fetch users once on component mount
+
+  const fetchAvailableUsers = async () => {
+    try {
+      console.log('=== FETCHING USERS ===');
+      console.log('Calling api.getUsersList()...');
+      
+      const response = await api.getUsersList();
+      console.log('Raw API Response:', response);
+      console.log('Response structure check:');
+      console.log('  - response.results:', response?.results);
+      console.log('  - response.results.users:', response?.results?.users);
+      console.log('  - Is response.results.users an array?', Array.isArray(response?.results?.users));
+      
+      // Handle the specific response format: {count, next, previous, results: {success, users}}
+      let users = [];
+      
+      if (response?.results?.users && Array.isArray(response.results.users)) {
+        console.log('✓ Using response.results.users (paginated format)');
+        users = response.results.users;
+      } else if (response?.success && response?.users && Array.isArray(response.users)) {
+        console.log('✓ Using response.users (direct success format)');
+        users = response.users;
+      } else if (response?.success && response?.data && Array.isArray(response.data)) {
+        console.log('✓ Using response.data (success format)');
+        users = response.data;
+      } else if (response?.data && Array.isArray(response.data)) {
+        console.log('✓ Using response.data (array format)');
+        users = response.data;
+      } else if (response?.results && Array.isArray(response.results)) {
+        console.log('✓ Using response.results (array format)');
+        users = response.results;
+      } else if (Array.isArray(response)) {
+        console.log('✓ Using response as direct array');
+        users = response;
+      } else {
+        console.warn('❌ Unknown response format, trying to extract from nested structures');
+        console.log('Full response:', JSON.stringify(response, null, 2));
+        
+        // More specific extraction attempts
+        if (response?.data?.users) {
+          console.log('✓ Found response.data.users');
+          users = response.data.users;
+        } else if (response?.results?.data?.users) {
+          console.log('✓ Found response.results.data.users');
+          users = response.results.data.users;
+        } else {
+          console.error('❌ Could not find users array in response');
+        }
+      }
+      
+      console.log('Extracted users:', users);
+      console.log('Users array length:', users ? users.length : 'undefined');
+      console.log('Users type:', typeof users);
+      console.log('Is users array?', Array.isArray(users));
+      
+      // DIRECT FIX: If users is still an object with a users property, extract it
+      if (!Array.isArray(users) && users?.users && Array.isArray(users.users)) {
+        console.log('🔧 DIRECT FIX: Extracting users from object format');
+        users = users.users;
+        console.log('After direct fix - users:', users);
+        console.log('After direct fix - length:', users.length);
+      }
+      
+      // Check the structure of the first user
+      if (users && users.length > 0) {
+        console.log('First user structure:', users[0]);
+        console.log('User keys:', Object.keys(users[0]));
+      } else {
+        console.warn('No users found or users is not an array');
+      }
+      
+      setAvailableUsers(users || []);
+    } catch (err) {
+      console.error('=== USER FETCH ERROR ===');
+      console.error('Error details:', err);
+      console.error('Error message:', err.message);
+      setAvailableUsers([]);
+    }
+  };
+
   const fetchIncidents = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({
+      const queryParams = {
         page: currentPage,
         page_size: 20,
         ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v))
-      });
+      };
       
-      const response = await api.get(`/api/soc/incidents/?${params.toString()}`);
-      if (response?.data) {
-        setIncidents(response.data);
+      console.log('Fetching incidents with params:', queryParams);
+      const response = await api.getSOCIncidents(queryParams);
+      console.log('SOC Incidents API Response:', response);
+      
+      // Handle Django REST framework paginated response
+      if (response?.results?.success && response?.results?.data) {
+        // Paginated response format: { count, next, previous, results: { success, data: [...] } }
+        setIncidents(response.results.data);
         setTotalPages(Math.ceil(response.count / 20));
         setError(null);
+      } else if (response?.success && response?.data) {
+        // Direct response format: { success, data: [...] }
+        setIncidents(response.data);
+        setTotalPages(1); // No pagination info available
+        setError(null);
+      } else if (response?.data && Array.isArray(response.data)) {
+        // Simple array response
+        setIncidents(response.data);
+        setTotalPages(1);
+        setError(null);
+      } else {
+        console.warn('Unexpected response structure:', response);
+        setError('No incidents data received');
       }
     } catch (err) {
       setError('Failed to load incidents');
@@ -46,6 +164,29 @@ const IncidentsList = ({ active, showPage }) => {
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
     setCurrentPage(1); // Reset to first page when filtering
+  };
+
+  const handleAssignIncident = (incident) => {
+    setSelectedIncident(incident);
+    setShowAssignModal(true);
+  };
+
+  const assignIncident = async (username) => {
+    try {
+      console.log('Assigning incident:', selectedIncident.id, 'to user:', username);
+      const response = await api.assignSOCIncident(selectedIncident.id, username);
+      console.log('Assignment response:', response);
+      
+      if (response?.success) {
+        setShowAssignModal(false);
+        setSelectedIncident(null);
+        fetchIncidents(); // Refresh the list
+        alert(`Incident assigned to ${username} successfully`);
+      }
+    } catch (err) {
+      console.error('Assignment error:', err);
+      alert('Failed to assign incident: ' + err.message);
+    }
   };
 
   const getPriorityColor = (priority) => {
@@ -86,7 +227,10 @@ const IncidentsList = ({ active, showPage }) => {
       e.preventDefault();
       try {
         setCreating(true);
-        await api.post('/api/soc/incidents/', formData);
+        console.log('Creating incident with data:', formData);
+        const response = await api.createSOCIncident(formData);
+        console.log('Create incident response:', response);
+        
         setShowCreateModal(false);
         setFormData({
           title: '',
@@ -99,6 +243,7 @@ const IncidentsList = ({ active, showPage }) => {
         });
         fetchIncidents(); // Refresh the list
       } catch (err) {
+        console.error('Create incident error:', err);
         alert('Failed to create incident: ' + err.message);
       } finally {
         setCreating(false);
@@ -224,6 +369,150 @@ const IncidentsList = ({ active, showPage }) => {
                     </>
                   ) : (
                     'Create Incident'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const AssignIncidentModal = () => {
+    const [selectedUser, setSelectedUser] = useState('');
+    const [assigning, setAssigning] = useState(false);
+
+    const handleAssign = async (e) => {
+      e.preventDefault();
+      if (!selectedUser) {
+        alert('Please select a user to assign the incident to.');
+        return;
+      }
+      
+      try {
+        setAssigning(true);
+        await assignIncident(selectedUser);
+      } finally {
+        setAssigning(false);
+      }
+    };
+
+    if (!showAssignModal || !selectedIncident) return null;
+
+    console.log('Rendering assignment modal. Available users:', availableUsers);
+
+    return (
+      <div className="modal" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <div className="modal-dialog">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title">Assign Incident</h5>
+              <button 
+                type="button" 
+                className="close" 
+                onClick={() => setShowAssignModal(false)}
+              >
+                <span>&times;</span>
+              </button>
+            </div>
+            <form onSubmit={handleAssign}>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <strong>Incident:</strong> {selectedIncident.incident_id} - {selectedIncident.title}
+                </div>
+                <div className="mb-3">
+                  <strong>Current Assignment:</strong> {selectedIncident.assigned_to || 'Unassigned'}
+                </div>
+                <div className="form-group">
+                  <label>Assign to User *</label>
+                  <div className="d-flex">
+                    <select
+                      className="form-control"
+                      value={selectedUser}
+                      onChange={(e) => setSelectedUser(e.target.value)}
+                      required
+                    >
+                      <option value="">Select a user...</option>
+                      {(() => {
+                        // Handle both array format and object format
+                        let userList = [];
+                        if (Array.isArray(availableUsers)) {
+                          userList = availableUsers;
+                        } else if (availableUsers?.users && Array.isArray(availableUsers.users)) {
+                          userList = availableUsers.users;
+                        }
+                        
+                        console.log('Dropdown rendering - userList:', userList);
+                        console.log('Dropdown rendering - userList length:', userList.length);
+                        
+                        if (userList && userList.length > 0) {
+                          return userList.map((user) => {
+                            console.log('Rendering user option:', user);
+                            return (
+                              <option key={user.id || user.username} value={user.username}>
+                                {user.first_name && user.last_name ? 
+                                  `${user.first_name} ${user.last_name} (${user.username})` : 
+                                  user.username}
+                              </option>
+                            );
+                          });
+                        } else {
+                          return (
+                            <option value="" disabled>
+                              {availableUsers ? `Found structure: ${JSON.stringify(availableUsers).substring(0, 100)}...` : 'Loading users...'}
+                            </option>
+                          );
+                        }
+                      })()}
+                    </select>
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary ml-2"
+                      onClick={fetchAvailableUsers}
+                      title="Refresh user list"
+                    >
+                      <i className="fas fa-sync-alt"></i>
+                    </button>
+                  </div>
+                  {(() => {
+                    const hasUsers = Array.isArray(availableUsers) ? availableUsers.length > 0 : 
+                                   availableUsers?.users ? availableUsers.users.length > 0 : false;
+                    
+                    if (!hasUsers) {
+                      return (
+                        <small className="text-muted mt-2 d-block">
+                          No users loaded. Click the refresh button to try again or check console for errors.
+                          <br />
+                          <strong>Debug:</strong> availableUsers = {JSON.stringify(availableUsers)}
+                        </small>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+              </div>
+              
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowAssignModal(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={assigning}
+                >
+                  {assigning ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm mr-2"></span>
+                      Assigning...
+                    </>
+                  ) : (
+                    'Assign Incident'
                   )}
                 </button>
               </div>
@@ -453,12 +742,21 @@ const IncidentsList = ({ active, showPage }) => {
                         )}
                       </td>
                       <td>
-                        <button 
-                          className="btn btn-sm btn-outline-primary"
-                          onClick={() => alert(`Incident Detail: ${incident.incident_id}`)}
-                        >
-                          View
-                        </button>
+                        <div style={{ display: 'flex', gap: '5px' }}>
+                          <button 
+                            className="btn btn-sm btn-outline-primary"
+                            onClick={() => alert(`Incident Detail: ${incident.incident_id}`)}
+                          >
+                            View
+                          </button>
+                          <button 
+                            className="btn btn-sm btn-outline-secondary"
+                            onClick={() => handleAssignIncident(incident)}
+                            title="Assign incident to user"
+                          >
+                            <i className="fas fa-user-plus"></i>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -516,6 +814,7 @@ const IncidentsList = ({ active, showPage }) => {
       </div>
 
       <CreateIncidentModal />
+      <AssignIncidentModal />
     </div>
   );
 };
