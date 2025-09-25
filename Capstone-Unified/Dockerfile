@@ -41,6 +41,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy Django application
 COPY core/ ./core/
 COPY settings/ ./settings/
+COPY soc/ ./soc/
 COPY manage.py .
 
 # Create necessary directories
