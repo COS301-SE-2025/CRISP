@@ -150,9 +150,17 @@ threat_feed_urlpatterns = [
 
 # Reports URLs
 reports_urlpatterns = [
+    # Report generation endpoints
     path('education-sector-analysis/', reports_api.education_sector_analysis, name='reports_education_sector'),
     path('financial-sector-analysis/', reports_api.financial_sector_analysis, name='reports_financial_sector'),
     path('government-sector-analysis/', reports_api.government_sector_analysis, name='reports_government_sector'),
+
+    # Report management endpoints
+    path('', reports_api.list_reports, name='reports_list'),
+    path('<uuid:report_id>/', reports_api.get_report_detail, name='reports_detail'),
+    path('<uuid:report_id>/delete/', reports_api.delete_report, name='reports_delete'),
+
+    # System endpoints
     path('status/', reports_api.report_status, name='reports_status'),
 ]
 

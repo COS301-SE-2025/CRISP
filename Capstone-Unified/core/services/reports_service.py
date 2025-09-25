@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 from django.db.models import Q, Count, Avg, Max, Min
 from django.utils import timezone
-from core.models.models import Organization, Indicator, TTPData, TrustRelationship, ThreatFeed
+from core.models.models import Organization, Indicator, TTPData, TrustRelationship, ThreatFeed, Report
 from .access_control_service import AccessControlService
 from .trust_service import TrustService
 
@@ -23,20 +23,185 @@ class ReportsService:
     def __init__(self):
         self.access_control = AccessControlService()
         self.trust_service = TrustService()
+
+    def _persist_report(self, report_type: str, report_data: Dict[str, Any],
+                       generated_by, organization, parameters: Dict[str, Any] = None,
+                       start_date: datetime = None, end_date: datetime = None) -> Report:
+        """
+        Persist a generated report to the database.
+
+        Args:
+            report_type: Type of report (education_sector, financial_sector, etc.)
+            report_data: Complete report data dictionary
+            generated_by: User who generated the report
+            organization: Organization the report belongs to
+            parameters: Parameters used to generate the report
+            start_date: Analysis start date
+            end_date: Analysis end date
+
+        Returns:
+            Saved Report instance
+        """
+        try:
+            # Check for recent duplicate reports to prevent multiple submissions
+            from django.utils import timezone
+            cutoff_time = timezone.now() - timezone.timedelta(seconds=30)  # 30 second window
+
+            recent_report = Report.objects.filter(
+                report_type=report_type,
+                generated_by=generated_by,
+                organization=organization,
+                created_at__gte=cutoff_time
+            ).first()
+
+            if recent_report:
+                logger.info(f"Returning existing recent report {recent_report.id} to prevent duplicate")
+                return recent_report
+
+            # Extract basic information
+            title = report_data.get('title', f'{report_type.replace("_", " ").title()} Report')
+            description = report_data.get('description', '')
+
+            # Prepare data sources and counts
+            data_sources = report_data.get('meta', {}).get('data_sources', [])
+            data_counts = report_data.get('data_summary', {})
+
+            # Create report instance
+            report = Report.objects.create(
+                title=title,
+                report_type=report_type,
+                description=description,
+                report_data=report_data,
+                parameters=parameters or {},
+                generated_by=generated_by,
+                organization=organization,
+                status='completed',
+                analysis_start_date=start_date,
+                analysis_end_date=end_date,
+                data_sources=data_sources,
+                data_counts=data_counts,
+                available_formats=['json', 'pdf', 'csv'],
+                tags=[report_type.split('_')[0], 'threat_intelligence', 'analysis'],
+                metadata={
+                    'generated_at': datetime.now().isoformat(),
+                    'generation_method': 'automated',
+                    'version': '1.0'
+                }
+            )
+
+            logger.info(f"Successfully persisted report {report.id} of type {report_type}")
+            return report
+
+        except Exception as e:
+            logger.error(f"Error persisting report: {str(e)}")
+            # Create report with error status
+            report = Report.objects.create(
+                title=f"Failed {report_type.replace('_', ' ').title()} Report",
+                report_type=report_type,
+                description=f"Report generation failed: {str(e)}",
+                report_data={},
+                parameters=parameters or {},
+                generated_by=generated_by,
+                organization=organization,
+                status='error',
+                error_message=str(e),
+                analysis_start_date=start_date,
+                analysis_end_date=end_date
+            )
+            return report
+
+    def get_reports_for_organization(self, organization, user=None, report_type: str = None,
+                                   limit: int = None, include_shared: bool = True) -> List[Report]:
+        """
+        Get reports for an organization with optional filtering.
+
+        Args:
+            organization: Organization to get reports for
+            user: User making the request (for access control)
+            report_type: Filter by specific report type
+            limit: Limit number of results
+            include_shared: Include reports shared with this organization
+
+        Returns:
+            List of Report objects
+        """
+        try:
+            # Base query for organization's own reports
+            queryset = Report.objects.filter(organization=organization)
+
+            # Add shared reports if requested
+            if include_shared:
+                shared_reports = Report.objects.filter(
+                    shared_with_organizations=organization
+                ).exclude(organization=organization)
+                queryset = queryset.union(shared_reports)
+
+            # Filter by report type
+            if report_type:
+                queryset = queryset.filter(report_type=report_type)
+
+            # Order by creation date
+            queryset = queryset.order_by('-created_at')
+
+            # Apply limit
+            if limit:
+                queryset = queryset[:limit]
+
+            return list(queryset)
+
+        except Exception as e:
+            logger.error(f"Error fetching reports for organization {organization.id}: {str(e)}")
+            return []
+
+    def get_report_by_id(self, report_id: str, user=None) -> Optional[Report]:
+        """
+        Get a specific report by ID with access control.
+
+        Args:
+            report_id: UUID of the report
+            user: User making the request
+
+        Returns:
+            Report instance or None
+        """
+        try:
+            report = Report.objects.get(id=report_id)
+
+            # Check access permissions
+            if user and not report.can_be_accessed_by(user):
+                logger.warning(f"User {user.username} attempted to access unauthorized report {report_id}")
+                return None
+
+            # Increment view count
+            report.increment_view_count()
+
+            return report
+
+        except Report.DoesNotExist:
+            logger.warning(f"Report {report_id} not found")
+            return None
+        except Exception as e:
+            logger.error(f"Error fetching report {report_id}: {str(e)}")
+            return None
     
-    def generate_education_sector_analysis(self, start_date: Optional[datetime] = None, 
+    def generate_education_sector_analysis(self, start_date: Optional[datetime] = None,
                                          end_date: Optional[datetime] = None,
-                                         organization_ids: Optional[List[str]] = None) -> Dict[str, Any]:
+                                         organization_ids: Optional[List[str]] = None,
+                                         generated_by=None, organization=None,
+                                         persist: bool = True) -> Dict[str, Any]:
         """
         Generate comprehensive education sector threat analysis report.
-        
+
         Args:
             start_date: Analysis start date (default: 30 days ago)
             end_date: Analysis end date (default: today)
             organization_ids: Specific organizations to analyze (optional)
-            
+            generated_by: User who generated the report (for persistence)
+            organization: Organization the report belongs to (for persistence)
+            persist: Whether to persist the report to database (default: True)
+
         Returns:
-            Dict containing complete report data
+            Dict containing complete report data with persistent report info if persisted
         """
         try:
             # Set default date range if not provided
@@ -93,7 +258,42 @@ class ReportsService:
                     'trust_relationships': len(trust_data.get('relationships', []))
                 }
             }
-            
+
+            # Persist report if requested and parameters provided
+            if persist and generated_by and organization:
+                try:
+                    parameters = {
+                        'start_date': start_date.isoformat() if start_date else None,
+                        'end_date': end_date.isoformat() if end_date else None,
+                        'organization_ids': organization_ids,
+                        'report_type': 'education_sector'
+                    }
+
+                    persistent_report = self._persist_report(
+                        report_type='education_sector',
+                        report_data=report,
+                        generated_by=generated_by,
+                        organization=organization,
+                        parameters=parameters,
+                        start_date=start_date,
+                        end_date=end_date
+                    )
+
+                    # Add persistence information to report
+                    report['persistent_report_id'] = str(persistent_report.id)
+                    report['persistent_report_url'] = f"/api/reports/{persistent_report.id}/"
+                    report['persistent'] = True
+                    report['view_count'] = persistent_report.view_count
+
+                    logger.info(f"Successfully persisted education sector report {persistent_report.id}")
+
+                except Exception as persist_error:
+                    logger.error(f"Error persisting report: {str(persist_error)}")
+                    report['persistent'] = False
+                    report['persistence_error'] = str(persist_error)
+            else:
+                report['persistent'] = False
+
             logger.info(f"Successfully generated education sector report with {len(indicators)} indicators and {len(ttps)} TTPs")
             return report
             
@@ -332,9 +532,11 @@ class ReportsService:
         import random
         return random.randint(50, 300)
     
-    def generate_financial_sector_analysis(self, start_date: Optional[datetime] = None, 
+    def generate_financial_sector_analysis(self, start_date: Optional[datetime] = None,
                                           end_date: Optional[datetime] = None,
-                                          organization_ids: Optional[List[str]] = None) -> Dict[str, Any]:
+                                          organization_ids: Optional[List[str]] = None,
+                                          generated_by=None, organization=None,
+                                          persist: bool = True) -> Dict[str, Any]:
         """
         Generate comprehensive financial sector threat analysis report.
         """
@@ -393,7 +595,42 @@ class ReportsService:
                     'trust_relationships': len(trust_data.get('relationships', []))
                 }
             }
-            
+
+            # Persist report if requested and parameters provided
+            if persist and generated_by and organization:
+                try:
+                    parameters = {
+                        'start_date': start_date.isoformat() if start_date else None,
+                        'end_date': end_date.isoformat() if end_date else None,
+                        'organization_ids': organization_ids,
+                        'report_type': 'financial_sector'
+                    }
+
+                    persistent_report = self._persist_report(
+                        report_type='financial_sector',
+                        report_data=report,
+                        generated_by=generated_by,
+                        organization=organization,
+                        parameters=parameters,
+                        start_date=start_date,
+                        end_date=end_date
+                    )
+
+                    # Add persistence information to report
+                    report['persistent_report_id'] = str(persistent_report.id)
+                    report['persistent_report_url'] = f"/api/reports/{persistent_report.id}/"
+                    report['persistent'] = True
+                    report['view_count'] = persistent_report.view_count
+
+                    logger.info(f"Successfully persisted financial sector report {persistent_report.id}")
+
+                except Exception as persist_error:
+                    logger.error(f"Error persisting report: {str(persist_error)}")
+                    report['persistent'] = False
+                    report['persistence_error'] = str(persist_error)
+            else:
+                report['persistent'] = False
+
             logger.info(f"Successfully generated financial sector report with {len(indicators)} indicators and {len(ttps)} TTPs")
             return report
             
@@ -401,9 +638,11 @@ class ReportsService:
             logger.error(f"Error generating financial sector analysis: {str(e)}")
             raise
     
-    def generate_government_sector_analysis(self, start_date: Optional[datetime] = None, 
+    def generate_government_sector_analysis(self, start_date: Optional[datetime] = None,
                                            end_date: Optional[datetime] = None,
-                                           organization_ids: Optional[List[str]] = None) -> Dict[str, Any]:
+                                           organization_ids: Optional[List[str]] = None,
+                                           generated_by=None, organization=None,
+                                           persist: bool = True) -> Dict[str, Any]:
         """
         Generate comprehensive government sector threat analysis report.
         """
@@ -462,7 +701,42 @@ class ReportsService:
                     'trust_relationships': len(trust_data.get('relationships', []))
                 }
             }
-            
+
+            # Persist report if requested and parameters provided
+            if persist and generated_by and organization:
+                try:
+                    parameters = {
+                        'start_date': start_date.isoformat() if start_date else None,
+                        'end_date': end_date.isoformat() if end_date else None,
+                        'organization_ids': organization_ids,
+                        'report_type': 'government_sector'
+                    }
+
+                    persistent_report = self._persist_report(
+                        report_type='government_sector',
+                        report_data=report,
+                        generated_by=generated_by,
+                        organization=organization,
+                        parameters=parameters,
+                        start_date=start_date,
+                        end_date=end_date
+                    )
+
+                    # Add persistence information to report
+                    report['persistent_report_id'] = str(persistent_report.id)
+                    report['persistent_report_url'] = f"/api/reports/{persistent_report.id}/"
+                    report['persistent'] = True
+                    report['view_count'] = persistent_report.view_count
+
+                    logger.info(f"Successfully persisted government sector report {persistent_report.id}")
+
+                except Exception as persist_error:
+                    logger.error(f"Error persisting report: {str(persist_error)}")
+                    report['persistent'] = False
+                    report['persistence_error'] = str(persist_error)
+            else:
+                report['persistent'] = False
+
             logger.info(f"Successfully generated government sector report with {len(indicators)} indicators and {len(ttps)} TTPs")
             return report
             

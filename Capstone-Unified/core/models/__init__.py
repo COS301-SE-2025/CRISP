@@ -1,7 +1,7 @@
 # Import all models from models.py to make them available
 from .models import (
     Organization,
-    STIXObject, 
+    STIXObject,
     Collection,
     CollectionObject,
     Feed,
@@ -13,22 +13,26 @@ from .models import (
     TTPData,
     Institution,
     TrustLevel,
-    TrustRelationship
+    TrustRelationship,
+    Report,
+    ReportShare
 )
 
 __all__ = [
     'Organization',
-    'STIXObject', 
+    'STIXObject',
     'Collection',
     'CollectionObject',
     'Feed',
     'Identity',
     'TrustNetwork',
-    'NetworkMembership', 
+    'NetworkMembership',
     'ThreatFeed',
     'Indicator',
     'TTPData',
     'Institution',
     'TrustLevel',
-    'TrustRelationship'
+    'TrustRelationship',
+    'Report',
+    'ReportShare'
 ]

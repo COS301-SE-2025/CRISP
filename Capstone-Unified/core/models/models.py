@@ -2669,3 +2669,247 @@ class CustomAlert(models.Model):
                 })
 
         return summary
+
+
+class Report(models.Model):
+    """
+    Model to store generated threat intelligence reports with persistence.
+    Supports multiple report types and formats for comprehensive analytics.
+    """
+
+    REPORT_TYPE_CHOICES = [
+        ('education_sector', 'Education Sector Analysis'),
+        ('financial_sector', 'Financial Sector Analysis'),
+        ('government_sector', 'Government Sector Analysis'),
+        ('healthcare_sector', 'Healthcare Sector Analysis'),
+        ('critical_infrastructure', 'Critical Infrastructure Analysis'),
+        ('cross_sector', 'Cross-Sector Comparison'),
+        ('asset_vulnerability', 'Asset Vulnerability Assessment'),
+        ('asset_criticality', 'Asset Criticality Analysis'),
+        ('infrastructure_coverage', 'Infrastructure Coverage Report'),
+        ('ioc_trend', 'IoC Trend Analysis'),
+        ('ttp_evolution', 'TTP Evolution Report'),
+        ('threat_campaign', 'Threat Campaign Tracking'),
+        ('feed_performance', 'Feed Performance Analysis'),
+        ('trust_relationship', 'Trust Relationship Analysis'),
+        ('trust_group', 'Trust Group Effectiveness'),
+        ('information_sharing', 'Information Sharing Metrics'),
+        ('alert_analysis', 'Alert Analysis Dashboard'),
+        ('incident_response', 'Incident Response Metrics'),
+        ('user_activity', 'User Activity Analysis'),
+        ('system_performance', 'System Performance Report'),
+    ]
+
+    STATUS_CHOICES = [
+        ('generating', 'Generating'),
+        ('completed', 'Completed'),
+        ('error', 'Error'),
+        ('archived', 'Archived'),
+    ]
+
+    FORMAT_CHOICES = [
+        ('json', 'JSON'),
+        ('pdf', 'PDF'),
+        ('csv', 'CSV'),
+        ('html', 'HTML'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Report identification
+    title = models.CharField(max_length=500)
+    report_type = models.CharField(max_length=30, choices=REPORT_TYPE_CHOICES)
+    description = models.TextField(blank=True, null=True)
+
+    # Report parameters and data
+    parameters = models.JSONField(
+        default=dict,
+        help_text="Parameters used to generate this report (date ranges, filters, etc.)"
+    )
+    report_data = models.JSONField(
+        default=dict,
+        help_text="Complete report data including statistics, charts, and analysis"
+    )
+
+    # Metadata
+    generated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='generated_reports'
+    )
+    organization = models.ForeignKey(
+        'Organization',
+        on_delete=models.CASCADE,
+        related_name='reports',
+        help_text="Organization this report belongs to"
+    )
+
+    # Status and processing
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='generating')
+    error_message = models.TextField(blank=True, null=True)
+    generation_duration = models.DurationField(null=True, blank=True)
+
+    # Access and sharing
+    is_public = models.BooleanField(
+        default=False,
+        help_text="Whether this report can be shared outside the organization"
+    )
+    shared_with_organizations = models.ManyToManyField(
+        'Organization',
+        through='ReportShare',
+        related_name='shared_reports',
+        blank=True
+    )
+
+    # Export formats
+    available_formats = models.JSONField(
+        default=list,
+        help_text="List of formats this report can be exported to"
+    )
+
+    # Statistics and metrics
+    view_count = models.PositiveIntegerField(default=0)
+    export_count = models.PositiveIntegerField(default=0)
+    last_accessed = models.DateTimeField(null=True, blank=True)
+
+    # Time range analysis
+    analysis_start_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Start date of data analyzed in this report"
+    )
+    analysis_end_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="End date of data analyzed in this report"
+    )
+
+    # Data source tracking
+    data_sources = models.JSONField(
+        default=list,
+        help_text="List of data sources used (indicators, ttps, trust_relationships, etc.)"
+    )
+    data_counts = models.JSONField(
+        default=dict,
+        help_text="Counts of data analyzed (indicators_count, ttps_count, etc.)"
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Optional expiration date for report data"
+    )
+
+    # Additional metadata
+    tags = models.JSONField(default=list, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = 'core_reports'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['organization', 'report_type', 'status']),
+            models.Index(fields=['report_type', 'created_at']),
+            models.Index(fields=['generated_by', 'status']),
+            models.Index(fields=['status', 'created_at']),
+            models.Index(fields=['analysis_start_date', 'analysis_end_date']),
+        ]
+
+    def __str__(self):
+        return f"{self.title} - {self.organization.name} ({self.created_at.strftime('%Y-%m-%d')})"
+
+    def increment_view_count(self):
+        """Increment view count and update last accessed timestamp"""
+        self.view_count += 1
+        self.last_accessed = timezone.now()
+        self.save(update_fields=['view_count', 'last_accessed'])
+
+    def increment_export_count(self):
+        """Increment export count"""
+        self.export_count += 1
+        self.save(update_fields=['export_count'])
+
+    def is_expired(self):
+        """Check if report has expired"""
+        if self.expires_at:
+            return timezone.now() > self.expires_at
+        return False
+
+    def get_age_in_days(self):
+        """Get report age in days"""
+        return (timezone.now() - self.created_at).days
+
+    def can_be_accessed_by(self, user):
+        """Check if user can access this report"""
+        # Owner organization members can always access
+        if user.userprofile.organization == self.organization:
+            return True
+
+        # Check if shared with user's organization
+        if self.shared_with_organizations.filter(id=user.userprofile.organization.id).exists():
+            return True
+
+        # Public reports can be accessed by anyone
+        if self.is_public:
+            return True
+
+        return False
+
+
+class ReportShare(models.Model):
+    """
+    Through model for sharing reports between organizations with permissions.
+    """
+
+    PERMISSION_CHOICES = [
+        ('view', 'View Only'),
+        ('export', 'View and Export'),
+        ('copy', 'View, Export, and Copy'),
+    ]
+
+    report = models.ForeignKey(Report, on_delete=models.CASCADE)
+    organization = models.ForeignKey('Organization', on_delete=models.CASCADE)
+    shared_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='shared_reports_by'
+    )
+
+    permission_level = models.CharField(max_length=10, choices=PERMISSION_CHOICES, default='view')
+
+    # Optional expiration
+    expires_at = models.DateTimeField(null=True, blank=True)
+
+    # Access tracking
+    access_count = models.PositiveIntegerField(default=0)
+    last_accessed = models.DateTimeField(null=True, blank=True)
+
+    # Timestamps
+    shared_at = models.DateTimeField(default=timezone.now)
+
+    # Metadata
+    share_message = models.TextField(blank=True, null=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = 'core_report_shares'
+        unique_together = ['report', 'organization']
+        ordering = ['-shared_at']
+
+    def __str__(self):
+        return f"{self.report.title} shared with {self.organization.name}"
+
+    def is_expired(self):
+        """Check if share has expired"""
+        if self.expires_at:
+            return timezone.now() > self.expires_at
+        return False
+
+    def increment_access_count(self):
+        """Increment access count and update last accessed"""
+        self.access_count += 1
+        self.last_accessed = timezone.now()
+        self.save(update_fields=['access_count', 'last_accessed'])

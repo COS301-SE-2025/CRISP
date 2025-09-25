@@ -5,7 +5,8 @@ import json
 
 from core.models.models import (
     Organization, STIXObject, Collection, CollectionObject, Feed, Identity,
-    TrustLevel, TrustRelationship, TrustGroup, TrustGroupMembership
+    TrustLevel, TrustRelationship, TrustGroup, TrustGroupMembership,
+    Report, ReportShare
 )
 from core.user_management.models import CustomUser
 
@@ -334,3 +335,118 @@ if EXTENDED_MODELS_AVAILABLE:
         list_display = ['name', 'mitre_technique_id', 'mitre_tactic', 'threat_feed']
         list_filter = ['mitre_tactic', 'threat_feed', 'is_anonymized']
         search_fields = ['name', 'description', 'mitre_technique_id']
+
+
+@admin.register(Report)
+class ReportAdmin(admin.ModelAdmin):
+    list_display = [
+        'title',
+        'report_type',
+        'organization',
+        'generated_by',
+        'status',
+        'view_count',
+        'created_at'
+    ]
+    list_filter = [
+        'report_type',
+        'status',
+        'organization',
+        'created_at',
+        'is_public'
+    ]
+    search_fields = [
+        'title',
+        'description',
+        'generated_by__username',
+        'organization__name'
+    ]
+    readonly_fields = [
+        'id',
+        'created_at',
+        'updated_at',
+        'last_accessed',
+        'view_count',
+        'export_count',
+        'get_age_days',
+        'is_expired'
+    ]
+
+    fieldsets = (
+        ('Basic Information', {
+            'fields': (
+                'title', 'report_type', 'description', 'status', 'error_message'
+            )
+        }),
+        ('Ownership & Access', {
+            'fields': (
+                'generated_by', 'organization', 'is_public'
+            )
+        }),
+        ('Analysis Period', {
+            'fields': (
+                'analysis_start_date', 'analysis_end_date'
+            )
+        }),
+        ('Usage Statistics', {
+            'fields': (
+                'view_count', 'export_count', 'last_accessed', 'get_age_days', 'is_expired'
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Technical Details', {
+            'fields': (
+                'parameters', 'data_sources', 'data_counts', 'available_formats',
+                'tags', 'metadata', 'generation_duration'
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': (
+                'id', 'created_at', 'updated_at', 'expires_at'
+            ),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def get_age_days(self, obj):
+        return f"{obj.get_age_in_days()} days"
+    get_age_days.short_description = 'Age'
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            'generated_by', 'organization'
+        )
+
+
+@admin.register(ReportShare)
+class ReportShareAdmin(admin.ModelAdmin):
+    list_display = [
+        'report',
+        'organization',
+        'shared_by',
+        'permission_level',
+        'access_count',
+        'shared_at'
+    ]
+    list_filter = [
+        'permission_level',
+        'shared_at',
+        'expires_at'
+    ]
+    search_fields = [
+        'report__title',
+        'organization__name',
+        'shared_by__username'
+    ]
+    readonly_fields = [
+        'shared_at',
+        'last_accessed',
+        'access_count',
+        'is_expired'
+    ]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            'report', 'organization', 'shared_by'
+        )
