@@ -46,41 +46,9 @@ const Reports = ({ active = true }) => {
   };
 
   const fetchRecentActivity = async () => {
-    try {
-      const token = localStorage.getItem('crisp_auth_token');
-      if (!token) return;
-
-      // Mock recent activity for now - could be replaced with real API
-      const mockActivity = [
-        {
-          id: 1,
-          action: 'Report Generated',
-          report: 'Education Sector Analysis',
-          timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-          user: 'System',
-          severity: 'info'
-        },
-        {
-          id: 2,
-          action: 'Threat Detected',
-          report: 'Financial Sector Monitor',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-          user: 'Auto-Scanner',
-          severity: 'warning'
-        },
-        {
-          id: 3,
-          action: 'Report Exported',
-          report: 'Government Infrastructure',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
-          user: 'Admin',
-          severity: 'success'
-        }
-      ];
-      setRecentActivity(mockActivity);
-    } catch (error) {
-      console.warn('Failed to fetch recent activity:', error);
-    }
+    // Recent activity functionality removed for production
+    // Can be implemented later with real API endpoint
+    setRecentActivity([]);
   };
 
   const fetchReports = async () => {
@@ -117,13 +85,8 @@ const Reports = ({ active = true }) => {
             const iocCount = parseInt(statistics.find(s => s.label.includes('IoC'))?.value || '0');
             const orgCount = parseInt(statistics.find(s => s.label.includes('Organizations') || s.label.includes('Institutions'))?.value || '0');
 
-            // Create fallback stats if none exist
-            const fallbackStats = statistics.length > 0 ? statistics : [
-              { label: 'IoCs Analyzed', value: (iocCount || Math.floor(Math.random() * 50) + 20).toString() },
-              { label: 'TTPs Identified', value: (Math.floor(Math.random() * 15) + 5).toString() },
-              { label: 'Organizations', value: (orgCount || Math.floor(Math.random() * 10) + 3).toString() },
-              { label: 'Severity', value: severity }
-            ];
+            // Use real statistics from database, no fallback mock data
+            const reportStats = statistics.length > 0 ? statistics : [];
 
             return {
               id: report.id,
@@ -135,8 +98,8 @@ const Reports = ({ active = true }) => {
                 day: 'numeric'
               }),
               views: report.view_count,
-              description: report.description || 'Comprehensive threat intelligence analysis',
-              stats: fallbackStats,
+              description: report.description || `Analysis report for ${report.report_type.replace('_', ' ')} sector`,
+              stats: reportStats,
               severity: severity,
               threatLevel: iocCount > 40 ? 'High' : iocCount > 20 ? 'Medium' : 'Low',
               organizationsAnalyzed: orgCount,
