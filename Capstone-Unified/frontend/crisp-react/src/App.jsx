@@ -16,6 +16,7 @@ import * as api from './api.js';
 import { getOrganizations, getThreatFeedTtps, getMitreMatrix, getTtpFeedComparison, getTtpSeasonalPatterns, getTtpTechniqueFrequencies, getTtps, getTtpFilterOptions, getTtpTrends, getTtpDetails, updateTtp, getMatrixCellDetails, getTechniqueDetails, exportTtps, getUsersList, getIndicators } from './api.js';
 import { NotificationProvider, useNotifications } from './components/enhanced/NotificationManager.jsx';
 import Notifications from './components/notifications/Notifications.jsx';
+import refreshManager from './utils/RefreshManager.js';
 
 // Error Boundary for Chart Component
 class ChartErrorBoundary extends React.Component {
@@ -547,6 +548,20 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
       triggerModal: modalTrigger,
       modalParams: modalParams
     });
+
+    // Trigger refresh for the new page to ensure fresh data
+    const pageRefreshMap = {
+      'ioc-management': ['indicators'],
+      'threat-feeds': ['threat-feeds', 'indicators'],
+      'asset-management': ['assets', 'alerts'],
+      'dashboard': ['dashboard', 'chart-data'],
+      'notifications': ['notifications']
+    };
+
+    const refreshKeys = pageRefreshMap[pageId];
+    if (refreshKeys) {
+      refreshManager.triggerRefresh(refreshKeys, 'page_change');
+    }
     
     // Always update URL with current page
     const url = new URL(window.location);
@@ -1155,6 +1170,20 @@ function Dashboard({ active, showPage, user }) {
         fetchRecentActivities().catch(error => console.error('Recent activities error:', error));
         fetchConnectedOrganizations().catch(error => console.error('Connected organizations error:', error));
       }
+
+      // Subscribe to RefreshManager for dashboard
+      refreshManager.subscribe('dashboard', () => {
+        console.log('🔄 RefreshManager: Refreshing dashboard data');
+        fetchChartData();
+        fetchDashboardData();
+      }, {
+        backgroundRefresh: true,
+        isVisible: () => active && activePage === 'dashboard'
+      });
+
+      return () => {
+        refreshManager.unsubscribe('dashboard');
+      };
     }
   }, [active]);
 
@@ -3513,7 +3542,11 @@ function ThreatFeeds({
         await new Promise(resolve => setTimeout(resolve, 2000));
         
         await fetchThreatFeeds();
-        console.log('✅ Threat feeds list refreshed after deletion');
+
+        // Trigger refresh of related components after feed deletion
+        refreshManager.triggerRelated('threat-feeds', 'feed_deleted');
+        console.log('✅ Threat feeds list refreshed after deletion and related components updated');
+
         // Close modal
         closeDeleteFeedModal();
       } else {
@@ -3577,6 +3610,9 @@ function ThreatFeeds({
         
         // Show success notification
         showSuccess('Feed Added', `Threat feed "${cleanedFormData.name}" has been added successfully.`);
+
+        // Trigger refresh after successful feed addition
+        refreshManager.triggerRelated('threat-feeds', 'feed_added');
         
         setShowAddModal(false);
         setFormData({
@@ -4424,6 +4460,19 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
   useEffect(() => {
     if (active) {
       fetchIndicatorsCallback();
+
+      // Subscribe to RefreshManager for indicators
+      refreshManager.subscribe('indicators', () => {
+        console.log('🔄 RefreshManager: Refreshing indicators data');
+        fetchIndicators();
+      }, {
+        backgroundRefresh: true,
+        isVisible: () => active
+      });
+
+      return () => {
+        refreshManager.unsubscribe('indicators');
+      };
     }
   }, [active, lastUpdate, fetchIndicatorsCallback]);
 
@@ -6767,6 +6816,9 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
         
         closeEditModal();
         alert('Indicator updated successfully!');
+
+        // Trigger refresh after successful indicator update
+        refreshManager.triggerRefresh(['indicators', 'dashboard'], 'indicator_updated');
       } else {
         throw new Error('Failed to update indicator');
       }
@@ -6833,6 +6885,9 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
         await fetchIndicators();
 
         alert('Indicator deleted successfully');
+
+        // Trigger refresh after successful indicator deletion
+        refreshManager.triggerRefresh(['indicators', 'dashboard'], 'indicator_deleted');
       } else {
         alert('Failed to delete indicator. Please try again.');
       }
@@ -6998,6 +7053,9 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
         // Show success message
         console.log('IoC added successfully:', response);
         alert('IoC added successfully!');
+
+        // Trigger refresh after successful IoC addition
+        refreshManager.triggerRefresh(['indicators', 'dashboard'], 'indicator_added');
       } else {
         throw new Error('Failed to create indicator');
       }
