@@ -7,7 +7,7 @@ import Pagination from './Pagination.jsx';
 // Import alias for the API to avoid conflicts
 import * as api from '../../api.js';
 
-const UserManagement = ({ active = true, initialSection = null }) => {
+const UserManagement = ({ active = true, initialSection = null, navigationState, setNavigationState }) => {
   const [users, setUsers] = useState([]); // This will be filtered/paginated users
   const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -126,6 +126,24 @@ const UserManagement = ({ active = true, initialSection = null }) => {
       window.removeEventListener('popstate', handleUrlChange);
     };
   }, []);
+
+  // Handle navigation state for search functionality
+  useEffect(() => {
+    if (navigationState && navigationState.triggerModal === 'viewUser') {
+      console.log('👤 UserManagement: Handling search navigation:', navigationState);
+      const userData = navigationState.modalParams?.user;
+      if (userData) {
+        console.log('👤 UserManagement: Opening user modal for:', userData);
+        // Use handleViewUser to properly populate form data
+        handleViewUser(userData.id);
+
+        // Clear navigation state
+        if (setNavigationState) {
+          setNavigationState({ triggerModal: null, modalParams: {} });
+        }
+      }
+    }
+  }, [navigationState, setNavigationState]);
 
   const loadUsers = async () => {
     try {

@@ -7,6 +7,7 @@ import OrganisationManagement from './components/enhanced/OrganisationManagement
 import TrustManagement from './components/enhanced/TrustManagement.jsx';
 import Institutions from './components/institutions/Institutions.jsx';
 import ReportDetailModal from './components/reports/ReportDetailModal.jsx';
+import Reports from './components/reports/Reports.jsx';
 import AssetManagement from './components/assets/AssetManagement.jsx';
 import SOCDashboard from './components/soc/SOCDashboard.jsx';
 import IncidentsList from './components/soc/IncidentsList.jsx';
@@ -453,29 +454,34 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
   };
 
   const handleSearchResultClick = (item) => {
+    console.log('🔍 Search Result Clicked:', item);
     setShowSearchDropdown(false);
     setSearchQuery('');
 
     if (item.type === 'organization') {
+      console.log('🏢 Navigating to organization:', item.orgData);
       // Navigate to organisation management and trigger modal for the specific org
-      setNavigationState({
-        triggerModal: 'viewOrganization',
-        modalParams: { organization: item.orgData }
-      });
-      showPage('organisation-management');
+      showPage('organisation-management', 'viewOrganization', { organization: item.orgData });
     } else if (item.type === 'user') {
+      console.log('👤 Navigating to user:', item.userData);
       // Navigate to user management and trigger modal for the specific user
-      setNavigationState({
-        triggerModal: 'viewUser',
-        modalParams: { user: item.userData }
-      });
-      showPage('user-management');
+      showPage('user-management', 'viewUser', { user: item.userData });
     } else if (item.type === 'threat-feed') {
-      // Navigate to threat feeds page
-      showPage('threat-feeds');
+      console.log('🛡️ Navigating to threat feed:', item.feedData);
+      // Navigate to threat feeds page and highlight the specific feed
+      showPage('threat-feeds', 'highlightFeed', {
+        feedId: item.id,
+        feedName: item.title,
+        feedData: item.feedData
+      });
     } else if (item.type === 'indicator') {
-      // Navigate to indicators page (assuming it's part of threat feeds or reports)
-      showPage('threat-feeds');
+      console.log('⚠️ Navigating to indicator:', item.indicatorData);
+      // Navigate to IoC management page and highlight the specific indicator
+      showPage('ioc-management', 'highlightIndicator', {
+        indicatorId: item.id,
+        indicatorValue: item.title,
+        indicatorData: item.indicatorData
+      });
     }
   };
 
@@ -684,16 +690,18 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
             showWarning={showWarning}
             showInfo={showInfo}
           />
-          <IoCManagement 
+          <IoCManagement
             active={activePage === 'ioc-management'}
             lastUpdate={lastUpdate}
             onRefresh={() => setLastUpdate(Date.now())}
+            navigationState={navigationState}
+            setNavigationState={setNavigationState}
           />
           <TTPAnalysis active={activePage === 'ttp-analysis'} />
           <Institutions active={activePage === 'institutions'} api={api} showPage={showPage} user={user} />
-          <OrganisationManagement active={activePage === 'organisation-management'} />
+          <OrganisationManagement active={activePage === 'organisation-management'} navigationState={navigationState} setNavigationState={setNavigationState} />
           <TrustManagement active={activePage === 'trust-management'} />
-          <UserManagement active={activePage === 'user-management'} />
+          <UserManagement active={activePage === 'user-management'} navigationState={navigationState} setNavigationState={setNavigationState} />
           <Reports active={activePage === 'reports'} />
           <Notifications active={activePage === 'notifications'} />
           <AssetManagement active={activePage === 'asset-management'} />
@@ -2917,6 +2925,31 @@ function ThreatFeeds({
         triggerModal: null,
         modalParams: {}
       });
+    } else if (active && navigationState?.triggerModal === 'highlightFeed') {
+      console.log('🛡️ ThreatFeeds: Handling highlightFeed navigation state:', navigationState.modalParams);
+      // Handle highlighting a specific feed from search
+      const { feedId, feedName } = navigationState.modalParams;
+
+      // Set filter to search for the specific feed
+      setFilters(prev => ({ ...prev, search: feedName }));
+      console.log('🔍 ThreatFeeds: Set search filter to:', feedName);
+
+      // Show a notification about the highlighted feed
+      setTimeout(() => {
+        const feedElement = document.querySelector(`[data-feed-id="${feedId}"]`);
+        console.log('🎯 ThreatFeeds: Looking for feed element with ID:', feedId, 'Found:', !!feedElement);
+        if (feedElement) {
+          feedElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          feedElement.style.animation = 'highlight 2s ease-in-out';
+          console.log('✅ ThreatFeeds: Highlighted feed element');
+        }
+      }, 500);
+
+      // Clear navigation state after handling
+      setNavigationState({
+        triggerModal: null,
+        modalParams: {}
+      });
     }
   }, [active, navigationState, setNavigationState]);
 
@@ -3935,7 +3968,7 @@ function ThreatFeeds({
           ) : (
             <ul className="feed-items" key={`feeds-${refreshTrigger}`}>
               {getPaginatedFeeds().map((feed) => (
-                <li key={`${feed.id}-${refreshTrigger}`} className="feed-item">
+                <li key={`${feed.id}-${refreshTrigger}`} className="feed-item" data-feed-id={feed.id}>
                   <div className="feed-icon">
                     <i className={feed.is_external ? "fas fa-globe" : "fas fa-server"}></i>
                   </div>
@@ -4287,7 +4320,7 @@ function ThreatFeeds({
 }
 
 // IoC Management Component
-function IoCManagement({ active, lastUpdate, onRefresh }) {
+function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavigationState }) {
   if (!active) return null;
   
   const [indicators, setIndicators] = useState([]);
@@ -4388,6 +4421,35 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
       fetchIndicatorsCallback();
     }
   }, [active, lastUpdate, fetchIndicatorsCallback]);
+
+  // Handle navigation state for highlighting specific indicators from search
+  useEffect(() => {
+    if (active && navigationState?.triggerModal === 'highlightIndicator') {
+      console.log('⚠️ IoCManagement: Handling highlightIndicator navigation state:', navigationState.modalParams);
+      const { indicatorId, indicatorValue } = navigationState.modalParams;
+
+      // Set search filter to find the specific indicator
+      setFilters(prev => ({ ...prev, searchTerm: indicatorValue }));
+      console.log('🔍 IoCManagement: Set search filter to:', indicatorValue);
+
+      // Scroll to the indicator if it exists in the DOM
+      setTimeout(() => {
+        const indicatorElement = document.querySelector(`[data-indicator-id="${indicatorId}"]`);
+        console.log('🎯 IoCManagement: Looking for indicator element with ID:', indicatorId, 'Found:', !!indicatorElement);
+        if (indicatorElement) {
+          indicatorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          indicatorElement.style.animation = 'highlight-indicator 2s ease-in-out';
+          console.log('✅ IoCManagement: Highlighted indicator element');
+        }
+      }, 500);
+
+      // Clear navigation state after handling
+      setNavigationState({
+        triggerModal: null,
+        modalParams: {}
+      });
+    }
+  }, [active, navigationState, setNavigationState]);
 
   // Listen for feed consumption completion events for real-time updates
   const handleFeedUpdate = useCallback((event) => {
@@ -5008,7 +5070,7 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
                 </tr>
               ) : getPaginatedIndicators().length > 0 ? (
                 getPaginatedIndicators().map((indicator) => (
-                  <tr key={indicator.id}>
+                  <tr key={indicator.id} data-indicator-id={indicator.id}>
                     <td style={{width: '4%', textAlign: 'center', padding: '8px 4px', whiteSpace: 'normal', wordWrap: 'break-word'}}><input type="checkbox" /></td>
                     <td style={{width: '8%', textAlign: 'center', padding: '8px 4px', whiteSpace: 'normal', wordWrap: 'break-word'}}>
                       <span className={`type-badge type-${indicator.rawType}`}>
@@ -11890,391 +11952,6 @@ function CreateReportModal({ isOpen, onClose, onGenerate, isGenerating }) {
   );
 }
 
-// Reports Component  
-function Reports({ active }) {
-  const [reports, setReports] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [filter, setFilter] = useState('all');
-  const [selectedReport, setSelectedReport] = useState(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-
-  const mockReports = [
-    {
-      id: '1',
-      title: 'Education Sector Ransomware Campaign',
-      type: 'Campaign Analysis',
-      date: 'May 19, 2025',
-      views: 148,
-      description: 'Analysis of ongoing ransomware campaign targeting education institutions in South Africa and neighboring countries.',
-      stats: [
-        { label: 'Institutions Targeted', value: '18' },
-        { label: 'Related IoCs', value: '42' },
-        { label: 'TTPs Identified', value: '8' },
-        { label: 'Severity', value: 'High' }
-      ]
-    },
-    {
-      id: '2',
-      title: 'Threat Intelligence Digest: Week 20',
-      type: 'Weekly Summary',
-      date: 'May 17, 2025',
-      views: 127,
-      description: 'Weekly summary of significant threat intelligence findings and trends for the week ending May 17, 2025.',
-      stats: [
-        { label: 'New IoCs', value: '86' },
-        { label: 'TTPs Observed', value: '12' },
-        { label: 'Critical Alerts', value: '4' },
-        { label: 'Threat Actors', value: '3' }
-      ]
-    },
-    {
-      id: '3',
-      title: 'University Data Breach Investigation',
-      type: 'Incident Analysis',
-      date: 'May 15, 2025',
-      views: 215,
-      description: 'Detailed analysis of recent data breach affecting a major university, including timeline, attack vectors, and remediation steps.',
-      stats: [
-        { label: 'IoCs Discovered', value: '28' },
-        { label: 'TTPs Identified', value: '6' },
-        { label: 'Threat Actor', value: 'APT-EDU-01' },
-        { label: 'Severity', value: 'Medium' }
-      ]
-    },
-    {
-      id: '4',
-      title: 'Emerging Phishing Techniques in 2025',
-      type: 'Trend Analysis',
-      date: 'May 10, 2025',
-      views: 342,
-      description: 'Analysis of evolving phishing techniques observed across multiple sectors, with focus on AI-generated content and deep fakes.',
-      stats: [
-        { label: 'IoCs Analyzed', value: '53' },
-        { label: 'New Techniques', value: '7' },
-        { label: 'Organizations', value: '14' },
-        { label: 'Relevance', value: 'High' }
-      ]
-    },
-    {
-      id: '5',
-      title: 'Financial Sector Threat Landscape',
-      type: 'Sector Analysis',
-      date: 'May 5, 2025',
-      views: 198,
-      description: 'Comprehensive overview of current threats targeting financial institutions in Southern Africa, with focus on banking trojans and ATM malware.',
-      stats: [
-        { label: 'IoCs Analyzed', value: '94' },
-        { label: 'TTPs Identified', value: '16' },
-        { label: 'Threat Actors', value: '5' },
-        { label: 'Severity', value: 'High' }
-      ]
-    },
-    {
-      id: '6',
-      title: 'EDU-Ransom Malware Analysis',
-      type: 'Technical Analysis',
-      date: 'May 2, 2025',
-      views: 276,
-      description: 'Technical deep-dive into the EDU-Ransom malware strain targeting educational institutions, including code analysis and IOC extraction.',
-      stats: [
-        { label: 'IoCs Generated', value: '37' },
-        { label: 'TTPs Mapped', value: '9' },
-        { label: 'Attribution', value: 'RansomGroup-X' },
-        { label: 'Severity', value: 'Critical' }
-      ]
-    }
-  ];
-
-  useEffect(() => {
-    if (active) {
-      setLoading(true);
-      // Simulate API call
-      setTimeout(() => {
-        let filteredReports = mockReports;
-        if (filter !== 'all') {
-          filteredReports = mockReports.filter(r => {
-            return r.type.toLowerCase().replace(' ', '_') === filter;
-          });
-        }
-        setReports(filteredReports);
-        setLoading(false);
-      }, 500);
-    }
-  }, [active, filter]);
-
-  const viewReport = (report) => {
-    setSelectedReport(report);
-    setShowDetailModal(true);
-  };
-
-  const closeDetailModal = () => {
-    setShowDetailModal(false);
-    setSelectedReport(null);
-  };
-
-  const openCreateModal = () => {
-    setShowCreateModal(true);
-  };
-
-  const closeCreateModal = () => {
-    setShowCreateModal(false);
-    setIsGenerating(false);
-  };
-
-  const generateReport = async (reportConfig) => {
-    try {
-      setIsGenerating(true);
-      
-      const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-      const token = localStorage.getItem('crisp_auth_token');
-      
-      if (!token) {
-        throw new Error('Authentication required');
-      }
-
-      // Map report type to API endpoint
-      const endpointMap = {
-        'education': '/api/reports/education-sector-analysis/',
-        'financial': '/api/reports/financial-sector-analysis/',
-        'government': '/api/reports/government-sector-analysis/'
-      };
-
-      const endpoint = endpointMap[reportConfig.sector] || endpointMap['education'];
-      
-      // Build query parameters
-      const params = new URLSearchParams({
-        format: 'json',
-        ...reportConfig.dateRange && {
-          start_date: reportConfig.dateRange.start,
-          end_date: reportConfig.dateRange.end
-        },
-        ...reportConfig.organizations && reportConfig.organizations.length > 0 && {
-          organization_ids: reportConfig.organizations.join(',')
-        }
-      });
-
-      const response = await fetch(`${baseURL}${endpoint}?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to generate report: ${response.status}`);
-      }
-
-      const result = await response.json();
-      
-      if (result.success && result.report) {
-        // Create a new report entry for the list
-        const newReport = {
-          id: Date.now().toString(),
-          title: reportConfig.title || `${reportConfig.sector.charAt(0).toUpperCase() + reportConfig.sector.slice(1)} Sector Analysis`,
-          type: 'Sector Analysis',
-          date: new Date().toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-          }),
-          views: 0,
-          description: reportConfig.description || `Generated analysis for ${reportConfig.sector} sector`,
-          stats: result.report.statistics || [],
-          sector_focus: reportConfig.sector
-        };
-
-        // Add to reports list
-        setReports(prevReports => [newReport, ...prevReports]);
-        
-        // Close modal and show success
-        closeCreateModal();
-        
-        // Optionally open the new report immediately
-        setTimeout(() => {
-          viewReport(newReport);
-        }, 500);
-        
-      } else {
-        throw new Error('Invalid response from server');
-      }
-      
-    } catch (error) {
-      console.error('Error generating report:', error);
-      alert(`Failed to generate report: ${error.message}`);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  // Create API helper for the modal
-  const apiHelper = {
-    get: async (endpoint) => {
-      const token = localStorage.getItem('crisp_auth_token');
-      if (!token) {
-        throw new Error('Authentication required');
-      }
-
-      const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-      const response = await fetch(`${baseURL}${endpoint}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    }
-  };
-
-  if (!active) return null;
-
-  return (
-    <section id="reports" className={`page-section ${active ? 'active' : ''}`}>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Threat Intelligence Reports</h1>
-          <p className="page-subtitle">Access and manage comprehensive threat reports</p>
-        </div>
-        <div className="action-buttons">
-          <button className="btn btn-outline">
-            <i className="fas fa-filter"></i> Filter
-          </button>
-          <button className="btn btn-primary" onClick={openCreateModal}>
-            <i className="fas fa-plus"></i> Create New Report
-          </button>
-        </div>
-      </div>
-
-      <div className="filters-section">
-        <div className="filters-grid">
-          <div className="filter-group">
-            <label className="filter-label">Report Type</label>
-            <div className="filter-control">
-              <select value={filter} onChange={(e) => setFilter(e.target.value)}>
-                <option value="all">All Types</option>
-                <option value="incident">Incident</option>
-                <option value="campaign">Campaign</option>
-                <option value="trend">Trend Analysis</option>
-                <option value="summary">Weekly Summary</option>
-              </select>
-            </div>
-          </div>
-          <div className="filter-group">
-            <label className="filter-label">Sector Focus</label>
-            <div className="filter-control">
-              <select>
-                <option value="">All Sectors</option>
-                <option value="education">Education</option>
-                <option value="financial">Financial</option>
-                <option value="government">Government</option>
-                <option value="healthcare">Healthcare</option>
-              </select>
-            </div>
-          </div>
-          <div className="filter-group">
-            <label className="filter-label">Date Range</label>
-            <div className="filter-control">
-              <select>
-                <option value="">All Time</option>
-                <option value="week">Last Week</option>
-                <option value="month">Last Month</option>
-                <option value="quarter">Last Quarter</option>
-                <option value="year">Last Year</option>
-              </select>
-            </div>
-          </div>
-          <div className="filter-group">
-            <label className="filter-label">Search</label>
-            <div className="filter-control">
-              <input type="text" placeholder="Search reports..." />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="loading-state">
-          <i className="fas fa-spinner fa-spin"></i>
-          <p>Loading reports...</p>
-        </div>
-      ) : (
-        <div className="report-grid">
-          {reports.length === 0 ? (
-            <div className="empty-state">
-              <i className="fas fa-file-alt"></i>
-              <h3>No reports found</h3>
-              <p>Generate your first report to see analytics and insights.</p>
-              <button className="btn btn-primary" onClick={openCreateModal}>
-                <i className="fas fa-plus"></i> Generate Report
-              </button>
-            </div>
-          ) : (
-            reports.map(report => (
-              <div key={report.id} className="report-card">
-                <div className="report-header">
-                  <div className="report-type">{report.type}</div>
-                  <h3 className="report-title">{report.title}</h3>
-                  <div className="report-meta">
-                    <span>{report.date}</span>
-                    <span><i className="fas fa-eye"></i> {report.views}</span>
-                  </div>
-                </div>
-                <div className="report-content">
-                  <div className="report-stats">
-                    {report.stats.map((stat, index) => (
-                      <div key={index} className="report-stat">
-                        <div className="stat-number">{stat.value}</div>
-                        <div className="stat-label">{stat.label}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <p>{report.description}</p>
-                  <div className="report-actions">
-                    <button className="btn btn-outline btn-sm">
-                      <i className="fas fa-share-alt"></i> Share
-                    </button>
-                    <button 
-                      className="btn btn-primary btn-sm"
-                      onClick={() => viewReport(report)}
-                    >
-                      <i className="fas fa-eye"></i> View Report
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-
-      {/* Report Detail Modal */}
-      {selectedReport && (
-        <ReportDetailModal
-          report={selectedReport}
-          isOpen={showDetailModal}
-          onClose={closeDetailModal}
-          api={apiHelper}
-        />
-      )}
-
-      {/* Create Report Modal */}
-      {showCreateModal && (
-        <CreateReportModal
-          isOpen={showCreateModal}
-          onClose={closeCreateModal}
-          onGenerate={generateReport}
-          isGenerating={isGenerating}
-        />
-      )}
-    </section>
-  );
-}
 
 // CSS Styles
 function CSSStyles() {
@@ -13194,6 +12871,13 @@ function CSSStyles() {
         @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
+        }
+
+        /* Indicator highlight animation for search navigation */
+        @keyframes highlight-indicator {
+            0% { background-color: transparent; }
+            20% { background-color: rgba(0, 86, 179, 0.15); }
+            100% { background-color: transparent; }
         }
         
         .btn.loading {
@@ -14725,6 +14409,12 @@ function CSSStyles() {
         
         .feed-item:last-child {
             border-bottom: none;
+        }
+
+        @keyframes highlight {
+            0% { background-color: transparent; }
+            20% { background-color: rgba(0, 86, 179, 0.1); border-radius: 8px; }
+            100% { background-color: transparent; }
         }
 
         /* Consumption Parameters */
