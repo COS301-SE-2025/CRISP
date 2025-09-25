@@ -8,9 +8,11 @@ import TrustManagement from './components/enhanced/TrustManagement.jsx';
 import Institutions from './components/institutions/Institutions.jsx';
 import ReportDetailModal from './components/reports/ReportDetailModal.jsx';
 import AssetManagement from './components/assets/AssetManagement.jsx';
+import SOCDashboard from './components/soc/SOCDashboard.jsx';
+import IncidentsList from './components/soc/IncidentsList.jsx';
 import BlueVLogo from './assets/enhanced/BlueV2.png';
 import * as api from './api.js';
-import { getOrganizations, getThreatFeedTtps, getMitreMatrix, getTtpFeedComparison, getTtpSeasonalPatterns, getTtpTechniqueFrequencies, getTtps, getTtpFilterOptions, getTtpTrends, getTtpDetails, updateTtp, getMatrixCellDetails, getTechniqueDetails, exportTtps, getUsersList } from './api.js';
+import { getOrganizations, getThreatFeedTtps, getMitreMatrix, getTtpFeedComparison, getTtpSeasonalPatterns, getTtpTechniqueFrequencies, getTtps, getTtpFilterOptions, getTtpTrends, getTtpDetails, updateTtp, getMatrixCellDetails, getTechniqueDetails, exportTtps, getUsersList, getIndicators } from './api.js';
 import { NotificationProvider, useNotifications } from './components/enhanced/NotificationManager.jsx';
 import Notifications from './components/notifications/Notifications.jsx';
 
@@ -695,6 +697,8 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
           <Reports active={activePage === 'reports'} />
           <Notifications active={activePage === 'notifications'} />
           <AssetManagement active={activePage === 'asset-management'} />
+          <SOCDashboard active={activePage === 'soc-dashboard'} />
+          <IncidentsList active={activePage === 'soc-incidents'} />
           <UserProfile active={activePage === 'profile'} />
           <AccountSettings active={activePage === 'account-settings'} />
         </div>
@@ -1018,6 +1022,22 @@ function MainNav({ activePage, showPage, user, onLogout, isAdmin }) {
               className={activePage === 'asset-management' ? 'active' : ''}
             >
               <i className="fas fa-shield-alt"></i> Asset Alerts
+            </a>
+          </li>
+          <li>
+            <a
+              onClick={() => showPage('soc-dashboard')}
+              className={activePage === 'soc-dashboard' ? 'active' : ''}
+            >
+              <i className="fas fa-eye"></i> SOC Dashboard
+            </a>
+          </li>
+          <li>
+            <a
+              onClick={() => showPage('soc-incidents')}
+              className={activePage === 'soc-incidents' ? 'active' : ''}
+            >
+              <i className="fas fa-exclamation-circle"></i> Incidents
             </a>
           </li>
         </ul>
@@ -4268,6 +4288,7 @@ function ThreatFeeds({
 
 // IoC Management Component
 function IoCManagement({ active, lastUpdate, onRefresh }) {
+  console.log('🔄 IoCManagement: Component rendered, active:', active, 'lastUpdate:', lastUpdate);
   if (!active) return null;
   
   const [indicators, setIndicators] = useState([]);
@@ -4477,7 +4498,9 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
 
 
   const fetchIndicators = async (page = 1, pageSize = itemsPerPage, filterParams = {}) => {
+    console.log('🔍 IoCManagement: fetchIndicators called', { page, pageSize, filterParams });
     setLoading(true);
+    setError(null);
     try {
       // Build query parameters for server-side pagination and filtering
       const params = new URLSearchParams({
@@ -4494,7 +4517,25 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
       if (filterParams.status) params.append('status', filterParams.status);
       if (filterParams.dateRange) params.append('dateRange', filterParams.dateRange);
 
-      const indicatorsData = await api.get(`/api/indicators/?${params.toString()}`);
+      // Check authentication before making API call  
+      const accessToken = localStorage.getItem('access_token');
+      const crispToken = localStorage.getItem('crisp_auth_token');
+      const userInStorage = localStorage.getItem('crisp_user');
+      
+      console.log('🔑 IoCManagement: access_token exists?', !!accessToken);
+      console.log('🔑 IoCManagement: crisp_auth_token exists?', !!crispToken);
+      console.log('🔑 IoCManagement: User in localStorage?', !!userInStorage);
+      
+      if (!accessToken && !crispToken) {
+        throw new Error('No authentication token found. Please login again.');
+      }
+
+      // Use the dedicated getIndicators function with parameters
+      const queryParams = Object.fromEntries(params);
+      console.log('🌐 IoCManagement: Making API call with params:', queryParams);
+      
+      const indicatorsData = await getIndicators(queryParams);
+      console.log('📊 IoCManagement: API response received:', indicatorsData);
 
       if (indicatorsData && indicatorsData.results) {
 
@@ -4538,11 +4579,14 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
           };
         });
 
+        console.log('✅ IoCManagement: Transformed indicators count:', transformedIndicators.length);
         setIndicators(transformedIndicators);
         setFilteredIndicators(transformedIndicators); // For server-side pagination, filtered = indicators
         setTotalItems(indicatorsData.count || 0);
         setTotalPages(Math.ceil((indicatorsData.count || 0) / itemsPerPage));
+        console.log('📈 IoCManagement: Set state - indicators:', transformedIndicators.length, 'total:', indicatorsData.count);
       } else {
+        console.warn('⚠️ IoCManagement: No results in API response or empty response', indicatorsData);
         setIndicators([]);
         setFilteredIndicators([]);
         setTotalItems(0);
@@ -4550,14 +4594,16 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
       }
 
     } catch (error) {
-      console.error('IoCManagement: Error fetching indicators:', error);
-      setError('Failed to load indicators. Please try again.');
+      console.error('❌ IoCManagement: Error fetching indicators:', error);
+      console.error('❌ IoCManagement: Error details:', error.message, error.stack);
+      setError(`Failed to load indicators: ${error.message}`);
       setIndicators([]);
       setFilteredIndicators([]);
       setTotalItems(0);
       setTotalPages(0);
     } finally {
       setLoading(false);
+      console.log('🔄 IoCManagement: Finished fetchIndicators');
     }
   };
 
@@ -4621,6 +4667,9 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
 
   // Get current page indicators (server-side pagination, so just return filtered indicators)
   const getPaginatedIndicators = () => {
+    console.log('🔍 IoCManagement: getPaginatedIndicators called, filteredIndicators.length:', filteredIndicators.length);
+    console.log('🔍 IoCManagement: indicators.length:', indicators.length);
+    console.log('🔍 IoCManagement: loading:', loading);
     return filteredIndicators;
   };
 

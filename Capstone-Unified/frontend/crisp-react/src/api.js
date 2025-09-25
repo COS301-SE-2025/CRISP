@@ -969,10 +969,11 @@ export const get = async (endpoint) => {
       return cached.data;
     }
 
-    const token = localStorage.getItem('crisp_auth_token');
+    const token = localStorage.getItem('access_token') || localStorage.getItem('crisp_auth_token');
     
     // Don't make API calls if we don't have a token (except for auth endpoints)
     if (!token && !endpoint.includes('/auth/')) {
+      console.warn('🚨 No auth token found for API call:', endpoint);
       return null;
     }
     
@@ -1117,4 +1118,30 @@ export const exportTtps = async (format, filters = {}) => {
   }
 
   return response; // Return the response object so caller can handle blob/filename
+};
+
+// Indicators API functions
+export const getIndicators = async (queryParams = {}) => {
+  const params = new URLSearchParams();
+  
+  // Add pagination and filtering parameters
+  Object.entries(queryParams).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && value !== '') {
+      params.append(key, value.toString());
+    }
+  });
+
+  const url = `${API_BASE_URL}/api/indicators/${params.toString() ? `?${params.toString()}` : ''}`;
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch indicators');
+  }
+
+  return await response.json();
 };

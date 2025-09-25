@@ -841,12 +841,16 @@ def indicators_list(request):
 
             # Get user's organization
             user_org = getattr(request.user, 'organization', None)
+            
+            logger.info(f"User {request.user.username} role: {request.user.role}, org: {user_org}")
 
-            if user_org is None:
-                # User has no organization, return empty queryset
+            if user_org is None and request.user.role != 'BlueVisionAdmin':
+                # User has no organization and is not BlueVisionAdmin, return empty queryset
+                logger.info(f"User has no organization and is not BlueVisionAdmin, returning empty queryset")
                 indicators = Indicator.objects.none()
             elif request.user.role == 'BlueVisionAdmin':
                 # BlueVision admins can see all indicators
+                logger.info(f"BlueVisionAdmin user, returning all indicators")
                 indicators = Indicator.objects.all()
             else:
                 # Regular users can see:
@@ -903,6 +907,8 @@ def indicators_list(request):
             start = (page - 1) * page_size
             end = start + page_size
             total_count = indicators.count()
+            
+            logger.info(f"After filtering, total indicators: {total_count}, page: {page}, page_size: {page_size}")
             
             indicators_page = indicators[start:end]
             
