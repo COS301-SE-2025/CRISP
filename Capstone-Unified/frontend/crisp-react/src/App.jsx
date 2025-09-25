@@ -4453,9 +4453,9 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
   
   // Fetch indicators from backend
   const fetchIndicatorsCallback = useCallback(() => {
-    fetchIndicators();
+    fetchIndicators(1, itemsPerPage);
     fetchThreatFeeds();
-  }, []);
+  }, [itemsPerPage]);
 
   useEffect(() => {
     if (active) {
@@ -4464,7 +4464,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
       // Subscribe to RefreshManager for indicators
       refreshManager.subscribe('indicators', () => {
         console.log('🔄 RefreshManager: Refreshing indicators data');
-        fetchIndicators();
+        fetchIndicators(currentPage, itemsPerPage);
       }, {
         backgroundRefresh: true,
         isVisible: () => active
@@ -4508,9 +4508,9 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
   // Listen for feed consumption completion events for real-time updates
   const handleFeedUpdate = useCallback((event) => {
     // Refresh indicators when feed consumption completes
-    fetchIndicators();
+    fetchIndicators(currentPage, itemsPerPage);
     if (onRefresh) onRefresh();
-  }, [onRefresh]);
+  }, [onRefresh, currentPage, itemsPerPage]);
 
   useEffect(() => {
     if (!active) return;
@@ -4559,15 +4559,10 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
     }
   }, [filters, itemsPerPage]);
 
-  // Initial load
-  const initialLoad = useCallback(() => {
-    fetchIndicators(1, itemsPerPage);
-    fetchOrganizations();
-  }, [itemsPerPage]);
-
+  // Initialize organizations data (but not indicators - handled by active effect)
   useEffect(() => {
-    initialLoad();
-  }, [initialLoad]);
+    fetchOrganizations();
+  }, []);
 
   const fetchOrganizations = async () => {
     try {
