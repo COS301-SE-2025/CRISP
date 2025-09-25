@@ -538,10 +538,12 @@ def list_reports(request):
         reports_service = ReportsService()
 
         # Check permissions
-        if not access_control.can_view_reports(request.user):
+        can_view = access_control.can_view_reports(request.user)
+
+        if not can_view:
             return Response({
                 'success': False,
-                'message': 'Insufficient permissions to view reports'
+                'message': f'Insufficient permissions to view reports. User role: {getattr(request.user, "role", "NO_ROLE")}'
             }, status=status.HTTP_403_FORBIDDEN)
 
         # Get user's organization (directly from user model)
@@ -576,6 +578,7 @@ def list_reports(request):
             limit=limit,
             include_shared=include_shared
         )
+
 
         # Format response
         reports_data = []
