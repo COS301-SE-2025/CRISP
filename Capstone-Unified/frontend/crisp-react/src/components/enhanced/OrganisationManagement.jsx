@@ -6,7 +6,7 @@ import Pagination from './Pagination.jsx';
 
 import * as api from '../../api.js';
 
-const OrganisationManagement = ({ active = true, initialSection = null }) => {
+const OrganisationManagement = ({ active = true, initialSection = null, navigationState, setNavigationState }) => {
   const [organizations, setOrganizations] = useState([]); // This will be filtered/paginated organizations
   const [organizationTypes, setOrganizationTypes] = useState(['educational', 'government', 'private']);
   const [trustRelationships, setTrustRelationships] = useState([]);
@@ -167,6 +167,24 @@ const OrganisationManagement = ({ active = true, initialSection = null }) => {
       window.removeEventListener('popstate', handleUrlChange);
     };
   }, []);
+
+  // Handle navigation state for search functionality
+  useEffect(() => {
+    if (navigationState && navigationState.triggerModal === 'viewOrganization') {
+      console.log('🏢 OrganisationManagement: Handling search navigation:', navigationState);
+      const orgData = navigationState.modalParams?.organization;
+      if (orgData) {
+        console.log('🏢 OrganisationManagement: Opening organization modal for:', orgData);
+        // Use handleViewOrganization to properly populate form data
+        handleViewOrganization(orgData.id);
+
+        // Clear navigation state
+        if (setNavigationState) {
+          setNavigationState({ triggerModal: null, modalParams: {} });
+        }
+      }
+    }
+  }, [navigationState, setNavigationState]);
 
   const loadOrganizations = async () => {
     try {

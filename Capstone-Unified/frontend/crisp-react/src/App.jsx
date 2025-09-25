@@ -454,29 +454,34 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
   };
 
   const handleSearchResultClick = (item) => {
+    console.log('🔍 Search Result Clicked:', item);
     setShowSearchDropdown(false);
     setSearchQuery('');
 
     if (item.type === 'organization') {
+      console.log('🏢 Navigating to organization:', item.orgData);
       // Navigate to organisation management and trigger modal for the specific org
-      setNavigationState({
-        triggerModal: 'viewOrganization',
-        modalParams: { organization: item.orgData }
-      });
-      showPage('organisation-management');
+      showPage('organisation-management', 'viewOrganization', { organization: item.orgData });
     } else if (item.type === 'user') {
+      console.log('👤 Navigating to user:', item.userData);
       // Navigate to user management and trigger modal for the specific user
-      setNavigationState({
-        triggerModal: 'viewUser',
-        modalParams: { user: item.userData }
-      });
-      showPage('user-management');
+      showPage('user-management', 'viewUser', { user: item.userData });
     } else if (item.type === 'threat-feed') {
-      // Navigate to threat feeds page
-      showPage('threat-feeds');
+      console.log('🛡️ Navigating to threat feed:', item.feedData);
+      // Navigate to threat feeds page and highlight the specific feed
+      showPage('threat-feeds', 'highlightFeed', {
+        feedId: item.id,
+        feedName: item.title,
+        feedData: item.feedData
+      });
     } else if (item.type === 'indicator') {
-      // Navigate to indicators page (assuming it's part of threat feeds or reports)
-      showPage('threat-feeds');
+      console.log('⚠️ Navigating to indicator:', item.indicatorData);
+      // Navigate to IoC management page and highlight the specific indicator
+      showPage('ioc-management', 'highlightIndicator', {
+        indicatorId: item.id,
+        indicatorValue: item.title,
+        indicatorData: item.indicatorData
+      });
     }
   };
 
@@ -685,16 +690,18 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
             showWarning={showWarning}
             showInfo={showInfo}
           />
-          <IoCManagement 
+          <IoCManagement
             active={activePage === 'ioc-management'}
             lastUpdate={lastUpdate}
             onRefresh={() => setLastUpdate(Date.now())}
+            navigationState={navigationState}
+            setNavigationState={setNavigationState}
           />
           <TTPAnalysis active={activePage === 'ttp-analysis'} />
           <Institutions active={activePage === 'institutions'} api={api} showPage={showPage} user={user} />
-          <OrganisationManagement active={activePage === 'organisation-management'} />
+          <OrganisationManagement active={activePage === 'organisation-management'} navigationState={navigationState} setNavigationState={setNavigationState} />
           <TrustManagement active={activePage === 'trust-management'} />
-          <UserManagement active={activePage === 'user-management'} />
+          <UserManagement active={activePage === 'user-management'} navigationState={navigationState} setNavigationState={setNavigationState} />
           <Reports active={activePage === 'reports'} />
           <Notifications active={activePage === 'notifications'} />
           <AssetManagement active={activePage === 'asset-management'} />
@@ -2918,6 +2925,31 @@ function ThreatFeeds({
         triggerModal: null,
         modalParams: {}
       });
+    } else if (active && navigationState?.triggerModal === 'highlightFeed') {
+      console.log('🛡️ ThreatFeeds: Handling highlightFeed navigation state:', navigationState.modalParams);
+      // Handle highlighting a specific feed from search
+      const { feedId, feedName } = navigationState.modalParams;
+
+      // Set filter to search for the specific feed
+      setFilters(prev => ({ ...prev, search: feedName }));
+      console.log('🔍 ThreatFeeds: Set search filter to:', feedName);
+
+      // Show a notification about the highlighted feed
+      setTimeout(() => {
+        const feedElement = document.querySelector(`[data-feed-id="${feedId}"]`);
+        console.log('🎯 ThreatFeeds: Looking for feed element with ID:', feedId, 'Found:', !!feedElement);
+        if (feedElement) {
+          feedElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          feedElement.style.animation = 'highlight 2s ease-in-out';
+          console.log('✅ ThreatFeeds: Highlighted feed element');
+        }
+      }, 500);
+
+      // Clear navigation state after handling
+      setNavigationState({
+        triggerModal: null,
+        modalParams: {}
+      });
     }
   }, [active, navigationState, setNavigationState]);
 
@@ -3936,7 +3968,7 @@ function ThreatFeeds({
           ) : (
             <ul className="feed-items" key={`feeds-${refreshTrigger}`}>
               {getPaginatedFeeds().map((feed) => (
-                <li key={`${feed.id}-${refreshTrigger}`} className="feed-item">
+                <li key={`${feed.id}-${refreshTrigger}`} className="feed-item" data-feed-id={feed.id}>
                   <div className="feed-icon">
                     <i className={feed.is_external ? "fas fa-globe" : "fas fa-server"}></i>
                   </div>
@@ -4288,7 +4320,7 @@ function ThreatFeeds({
 }
 
 // IoC Management Component
-function IoCManagement({ active, lastUpdate, onRefresh }) {
+function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavigationState }) {
   if (!active) return null;
   
   const [indicators, setIndicators] = useState([]);
@@ -4389,6 +4421,35 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
       fetchIndicatorsCallback();
     }
   }, [active, lastUpdate, fetchIndicatorsCallback]);
+
+  // Handle navigation state for highlighting specific indicators from search
+  useEffect(() => {
+    if (active && navigationState?.triggerModal === 'highlightIndicator') {
+      console.log('⚠️ IoCManagement: Handling highlightIndicator navigation state:', navigationState.modalParams);
+      const { indicatorId, indicatorValue } = navigationState.modalParams;
+
+      // Set search filter to find the specific indicator
+      setFilters(prev => ({ ...prev, searchTerm: indicatorValue }));
+      console.log('🔍 IoCManagement: Set search filter to:', indicatorValue);
+
+      // Scroll to the indicator if it exists in the DOM
+      setTimeout(() => {
+        const indicatorElement = document.querySelector(`[data-indicator-id="${indicatorId}"]`);
+        console.log('🎯 IoCManagement: Looking for indicator element with ID:', indicatorId, 'Found:', !!indicatorElement);
+        if (indicatorElement) {
+          indicatorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          indicatorElement.style.animation = 'highlight-indicator 2s ease-in-out';
+          console.log('✅ IoCManagement: Highlighted indicator element');
+        }
+      }, 500);
+
+      // Clear navigation state after handling
+      setNavigationState({
+        triggerModal: null,
+        modalParams: {}
+      });
+    }
+  }, [active, navigationState, setNavigationState]);
 
   // Listen for feed consumption completion events for real-time updates
   const handleFeedUpdate = useCallback((event) => {
@@ -5009,7 +5070,7 @@ function IoCManagement({ active, lastUpdate, onRefresh }) {
                 </tr>
               ) : getPaginatedIndicators().length > 0 ? (
                 getPaginatedIndicators().map((indicator) => (
-                  <tr key={indicator.id}>
+                  <tr key={indicator.id} data-indicator-id={indicator.id}>
                     <td style={{width: '4%', textAlign: 'center', padding: '8px 4px', whiteSpace: 'normal', wordWrap: 'break-word'}}><input type="checkbox" /></td>
                     <td style={{width: '8%', textAlign: 'center', padding: '8px 4px', whiteSpace: 'normal', wordWrap: 'break-word'}}>
                       <span className={`type-badge type-${indicator.rawType}`}>
@@ -12811,6 +12872,13 @@ function CSSStyles() {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
+
+        /* Indicator highlight animation for search navigation */
+        @keyframes highlight-indicator {
+            0% { background-color: transparent; }
+            20% { background-color: rgba(0, 86, 179, 0.15); }
+            100% { background-color: transparent; }
+        }
         
         .btn.loading {
             position: relative;
@@ -14341,6 +14409,12 @@ function CSSStyles() {
         
         .feed-item:last-child {
             border-bottom: none;
+        }
+
+        @keyframes highlight {
+            0% { background-color: transparent; }
+            20% { background-color: rgba(0, 86, 179, 0.1); border-radius: 8px; }
+            100% { background-color: transparent; }
         }
 
         /* Consumption Parameters */
