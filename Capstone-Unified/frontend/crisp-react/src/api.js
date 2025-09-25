@@ -1062,18 +1062,34 @@ export const deleteRequest = async (endpoint) => {
       method: 'DELETE',
       headers: getAuthHeaders()
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    
+
+    // Handle different response scenarios
+    if (!response.ok) {
+      // Try to get detailed error message from response
+      let errorMessage = `HTTP ${response.status}`;
+      try {
+        const errorData = await response.json();
+        console.error(`DELETE API Error Details for ${endpoint}:`, errorData);
+        errorMessage = errorData.message || errorData.detail || JSON.stringify(errorData);
+      } catch (parseError) {
+        console.error(`Could not parse error response for DELETE ${endpoint}`);
+      }
+      throw new Error(errorMessage);
+    }
+
     // For DELETE requests, we might get 204 No Content with no response body
     if (response.status === 204) {
+      console.log(`DELETE ${endpoint} returned 204 No Content`);
       return { success: true };
     }
-    
+
     // Try to parse JSON, but handle empty responses
     const text = await response.text();
-    return text ? JSON.parse(text) : { success: true };
+    const result = text ? JSON.parse(text) : { success: true };
+    console.log(`DELETE ${endpoint} result:`, result);
+    return result;
   } catch (error) {
-    console.error(`API Error: ${endpoint}`, error);
+    console.error(`DELETE API Error: ${endpoint}`, error);
     throw error;
   }
 };

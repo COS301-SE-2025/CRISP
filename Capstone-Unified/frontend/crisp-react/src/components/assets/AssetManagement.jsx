@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Fragment } from 'react';
 import { get } from '../../api';
-import { getAssetInventory, createAsset, updateAsset, deleteAsset, bulkUploadAssets, getCustomAlerts, getAssetAlertStatistics, triggerAssetCorrelation, getCustomAlertDetails, updateAlertStatus } from '../../api/assets';
+import { getAssetInventory, createAsset, updateAsset, deleteAsset, bulkUploadAssets, getCustomAlerts, getAssetAlertStatistics, triggerAssetCorrelation, getCustomAlertDetails, updateAlertStatus, deleteAlert } from '../../api/assets';
 import LoadingSpinner from '../enhanced/LoadingSpinner';
 import NotificationToast from '../enhanced/NotificationToast';
 import ConfirmationModal from '../enhanced/ConfirmationModal';
@@ -83,8 +83,7 @@ const AssetInventoryTab = ({ assets, onAdd, onEdit, onDelete, onBulkUpload, load
               border: '1px solid #e0e0e0',
               borderRadius: '8px',
               padding: '1.5rem',
-              transition: 'box-shadow 0.2s',
-              cursor: 'pointer'
+              transition: 'box-shadow 0.2s'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ flex: 1 }}>
@@ -176,7 +175,12 @@ const AssetInventoryTab = ({ assets, onAdd, onEdit, onDelete, onBulkUpload, load
                     </svg>
                   </button>
                   <button
-                    onClick={() => onDelete(asset)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('Asset delete button clicked for asset:', asset);
+                      onDelete(asset);
+                    }}
                     title="Delete asset"
                     style={{
                       padding: '0.5rem',
@@ -187,7 +191,10 @@ const AssetInventoryTab = ({ assets, onAdd, onEdit, onDelete, onBulkUpload, load
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center'
+                      justifyContent: 'center',
+                      pointerEvents: 'auto',
+                      position: 'relative',
+                      zIndex: 20
                     }}
                   >
                     <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -241,7 +248,7 @@ const AssetInventoryTab = ({ assets, onAdd, onEdit, onDelete, onBulkUpload, load
   );
 };
 
-const CustomAlertsTab = ({ alerts, onView, loading, refreshInterval }) => {
+const CustomAlertsTab = ({ alerts, onView, onDelete, loading, refreshInterval }) => {
   return (
     <div style={{ padding: '1rem 0' }}>
       <div style={{ marginBottom: '2rem' }}>
@@ -275,18 +282,16 @@ const CustomAlertsTab = ({ alerts, onView, loading, refreshInterval }) => {
           {alerts && alerts.length > 0 ? alerts.map((alert, index) => (
             <div
               key={alert.id || index}
-              onClick={() => onView(alert)}
               style={{
                 backgroundColor: 'white',
                 border: '1px solid #e0e0e0',
                 borderRadius: '8px',
                 padding: '1.5rem',
-                cursor: 'pointer',
                 transition: 'box-shadow 0.2s'
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', position: 'relative' }}>
+                <div style={{ flex: 1, minWidth: 0, marginRight: '1rem', overflow: 'hidden' }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
                       <div style={{
@@ -369,10 +374,64 @@ const CustomAlertsTab = ({ alerts, onView, loading, refreshInterval }) => {
                     )}
                   </div>
                 </div>
-                <div style={{ marginLeft: '1rem', color: '#9e9e9e' }}>
-                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+                <div style={{
+                  display: 'flex',
+                  gap: '0.5rem',
+                  flexShrink: 0,
+                  position: 'relative',
+                  zIndex: 20,
+                  alignItems: 'flex-start'
+                }}>
+                  <button
+                    onClick={() => onView(alert)}
+                    title="View alert details"
+                    style={{
+                      padding: '0.5rem',
+                      backgroundColor: '#2196F3',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      pointerEvents: 'auto',
+                      position: 'relative',
+                      zIndex: 30
+                    }}
+                  >
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('Alert delete button clicked for alert:', alert);
+                      onDelete(alert);
+                    }}
+                    title="Delete alert"
+                    style={{
+                      padding: '0.5rem',
+                      backgroundColor: '#f44336',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      pointerEvents: 'auto',
+                      position: 'relative',
+                      zIndex: 30
+                    }}
+                  >
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
                 </div>
               </div>
             </div>
@@ -453,7 +512,7 @@ const AssetManagement = ({ active }) => {
         getAssetAlertStatistics()
       ]);
 
-      const alertsData = alertsRes?.data?.results || alertsRes?.data || [];
+      const alertsData = alertsRes?.results?.data || [];
 
       // Force state updates with new arrays to ensure re-render
       setAssets([...assetsData]);
@@ -475,15 +534,16 @@ const AssetManagement = ({ active }) => {
   };
 
   const handleTriggerCorrelation = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       await triggerAssetCorrelation();
       showNotification('Asset correlation triggered successfully! New alerts will be generated based on your asset inventory.', 'success');
-      fetchData();
+      setTimeout(() => {
+        fetchData();
+      }, 2000); // 2 second delay
     } catch (err) {
       console.error('Correlation error:', err);
       showNotification('Failed to trigger asset correlation. Please try again.', 'error');
-    } finally {
       setLoading(false);
     }
   };
@@ -532,28 +592,81 @@ const AssetManagement = ({ active }) => {
   };
 
   const handleDeleteAsset = (asset) => {
-    setConfirmModal({
+    console.log('handleDeleteAsset called with asset:', asset);
+    const modalConfig = {
       title: 'Delete Asset',
       message: `Are you sure you want to delete "${asset.name}"? This action cannot be undone.`,
       confirmText: 'Delete',
       cancelText: 'Cancel',
+      isDestructive: true,
+      actionType: 'delete',
+      onClose: () => setConfirmModal(null),
       onConfirm: async () => {
         try {
+          setLoading(true);
           const result = await deleteAsset(asset.id);
+          console.log('Asset delete result:', result);
+
           if (result && result.success !== false) {
             showNotification(`Asset "${asset.name}" deleted successfully.`, 'success');
-            fetchData();
+            // Remove the asset from state immediately for better UX
+            setAssets(prevAssets => prevAssets.filter(a => a.id !== asset.id));
+            // Refresh data to ensure consistency
+            await fetchData();
           } else {
             throw new Error(result?.message || 'Failed to delete asset');
           }
         } catch (err) {
-          console.error('Asset delete error:', err);
+          console.error('Asset deletion error:', err);
           showNotification(`Failed to delete asset: ${err.message}`, 'error');
+        } finally {
+          setLoading(false);
+          setConfirmModal(null);
         }
-        setConfirmModal(null);
       },
       onCancel: () => setConfirmModal(null)
-    });
+    };
+    console.log('Setting confirmModal with config:', modalConfig);
+    setConfirmModal(modalConfig);
+  };
+
+  const handleDeleteAlert = (alert) => {
+    console.log('handleDeleteAlert called with alert:', alert);
+    const modalConfig = {
+      title: 'Delete Alert',
+      message: `Are you sure you want to delete this alert "${alert.title}"? This action cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      isDestructive: true,
+      actionType: 'delete',
+      onClose: () => setConfirmModal(null),
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          const result = await deleteAlert(alert.id);
+          console.log('Alert delete result:', result);
+
+          if (result && result.success !== false) {
+            showNotification(`Alert "${alert.title}" deleted successfully.`, 'success');
+            // Remove the alert from state immediately for better UX
+            setAlerts(prevAlerts => prevAlerts.filter(a => a.id !== alert.id));
+            // Refresh data to ensure consistency
+            await fetchData();
+          } else {
+            throw new Error(result?.message || 'Failed to delete alert');
+          }
+        } catch (err) {
+          console.error('Alert deletion error:', err);
+          showNotification(`Failed to delete alert: ${err.message}`, 'error');
+        } finally {
+          setLoading(false);
+          setConfirmModal(null);
+        }
+      },
+      onCancel: () => setConfirmModal(null)
+    };
+    console.log('Setting alert confirmModal with config:', modalConfig);
+    setConfirmModal(modalConfig);
   };
 
   const handleOpenAlertModal = (alert) => {
@@ -882,8 +995,9 @@ const AssetManagement = ({ active }) => {
         )}
         {activeTab === 'alerts' && (
           <CustomAlertsTab
-            alerts={filteredAlerts.length > 0 ? filteredAlerts : alerts}
+            alerts={searchTerm || filterSeverity !== 'all' ? filteredAlerts : alerts}
             onView={handleOpenAlertModal}
+            onDelete={handleDeleteAlert}
             loading={loading}
             refreshInterval={refreshInterval !== null}
           />
@@ -895,7 +1009,7 @@ const AssetManagement = ({ active }) => {
       {showAlertModal && <AlertModal alert={selectedAlert} onClose={handleCloseAlertModal} />}
       {showBulkUploadModal && <BulkUploadModal onUpload={handleBulkUpload} onClose={handleCloseBulkUploadModal} />}
       {notification && <NotificationToast message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
-      {confirmModal && <ConfirmationModal {...confirmModal} />}
+      {confirmModal && <ConfirmationModal isOpen={true} {...confirmModal} />}
     </div>
   );
 };
@@ -1162,45 +1276,45 @@ const AlertModal = ({ alert, onClose }) => {
           {/* Content */}
           <div style={{ maxHeight: '400px', overflowY: 'auto', padding: '0 0 1rem 0' }}>
               {/* Alert Description */}
-              <div className="mb-6">
-                <h4 className="text-sm font-medium text-gray-900 mb-2">Description</h4>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{alert.description}</p>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h4 style={{ fontSize: '0.875rem', fontWeight: '500', color: '#111827', marginBottom: '0.5rem' }}>Description</h4>
+                <div style={{ backgroundColor: '#f9fafb', borderRadius: '0.5rem', padding: '1rem' }}>
+                  <p style={{ fontSize: '0.875rem', color: '#374151', whiteSpace: 'pre-wrap' }}>{alert.description}</p>
                 </div>
               </div>
 
               {/* Alert Metrics */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <div className="flex items-center">
-                    <svg className="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                <div style={{ backgroundColor: '#eff6ff', borderRadius: '0.5rem', padding: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <svg width="20" height="20" style={{ color: '#2563eb', marginRight: '0.5rem' }} fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     <div>
-                      <p className="text-sm font-medium text-blue-900">Confidence</p>
-                      <p className="text-lg font-bold text-blue-600">{Math.round((alert.confidence_score || 0) * 100)}%</p>
+                      <p style={{ fontSize: '0.875rem', fontWeight: '500', color: '#1e3a8a' }}>Confidence</p>
+                      <p style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#2563eb' }}>{Math.round((alert.confidence_score || 0) * 100)}%</p>
                     </div>
                   </div>
                 </div>
-                <div className="bg-purple-50 rounded-lg p-4">
-                  <div className="flex items-center">
-                    <svg className="w-5 h-5 text-purple-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <div style={{ backgroundColor: '#faf5ff', borderRadius: '0.5rem', padding: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <svg width="20" height="20" style={{ color: '#7c3aed', marginRight: '0.5rem' }} fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     <div>
-                      <p className="text-sm font-medium text-purple-900">Relevance</p>
-                      <p className="text-lg font-bold text-purple-600">{Math.round((alert.relevance_score || 0) * 100)}%</p>
+                      <p style={{ fontSize: '0.875rem', fontWeight: '500', color: '#581c87' }}>Relevance</p>
+                      <p style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#7c3aed' }}>{Math.round((alert.relevance_score || 0) * 100)}%</p>
                     </div>
                   </div>
                 </div>
-                <div className="bg-green-50 rounded-lg p-4">
-                  <div className="flex items-center">
-                    <svg className="w-5 h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <div style={{ backgroundColor: '#f0fdf4', borderRadius: '0.5rem', padding: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <svg width="20" height="20" style={{ color: '#059669', marginRight: '0.5rem' }} fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.415L11 9.586V6z" clipRule="evenodd" />
                     </svg>
                     <div>
-                      <p className="text-sm font-medium text-green-900">Detected</p>
-                      <p className="text-sm font-semibold text-green-600">{new Date(alert.detected_at).toLocaleString()}</p>
+                      <p style={{ fontSize: '0.875rem', fontWeight: '500', color: '#14532d' }}>Detected</p>
+                      <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#059669' }}>{new Date(alert.detected_at).toLocaleString()}</p>
                     </div>
                   </div>
                 </div>
@@ -1210,7 +1324,7 @@ const AlertModal = ({ alert, onClose }) => {
               {alert.matched_assets && alert.matched_assets.length > 0 && (
                 <div className="mb-6">
                   <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
-                    <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <svg width="20" height="20" style={{ marginRight: '0.5rem' }} fill="currentColor" viewBox="0 0 20 20">
                       <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
                     </svg>
                     Affected Assets ({alert.matched_assets.length})
@@ -1249,7 +1363,7 @@ const AlertModal = ({ alert, onClose }) => {
               {alert.source_indicators && alert.source_indicators.length > 0 && (
                 <div className="mb-6">
                   <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
-                    <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <svg width="20" height="20" style={{ marginRight: '0.5rem' }} fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd"/>
                     </svg>
                     Threat Indicators ({alert.source_indicators.length})
@@ -1276,7 +1390,7 @@ const AlertModal = ({ alert, onClose }) => {
               {alert.response_actions && alert.response_actions.length > 0 && (
                 <div>
                   <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
-                    <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <svg width="20" height="20" style={{ marginRight: '0.5rem' }} fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.994.89l-1 9A1 1 0 004 18h12a1 1 0 00.994-1.11l-1-9A1 1 0 0015 7h-1V6a4 4 0 00-4-4zm2 5V6a2 2 0 10-4 0v1h4zm-6 3a1 1 0 112 0 1 1 0 01-2 0zm7-1a1 1 0 100 2 1 1 0 000-2z" clipRule="evenodd" />
                     </svg>
                     Recommended Actions

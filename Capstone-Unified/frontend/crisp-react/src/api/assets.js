@@ -43,6 +43,10 @@ export const updateAlertStatus = (alertId, action) => {
   return post(`${BASE_URL}/assets/alerts/${alertId}/action/`, { action });
 };
 
+export const deleteAlert = (alertId) => {
+  return deleteRequest(`${BASE_URL}/assets/alerts/${alertId}/`);
+};
+
 // Statistics and Correlation API
 
 export const getAssetAlertStatistics = () => {

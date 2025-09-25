@@ -661,11 +661,11 @@ def bulk_asset_upload(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@api_view(['GET'])
+@api_view(['GET', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def custom_alert_detail(request, alert_id):
     """
-    Get detailed information about a specific custom alert.
+    Get detailed information about a specific custom alert or delete it.
     """
     try:
         organization = request.user.organization
@@ -675,25 +675,58 @@ def custom_alert_detail(request, alert_id):
                 'message': 'User must belong to an organization'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        alert_service = AssetBasedAlertService()
-        alert_details = alert_service.get_alert_details(alert_id, organization)
+        if request.method == 'GET':
+            alert_service = AssetBasedAlertService()
+            alert_details = alert_service.get_alert_details(alert_id, organization)
 
-        if not alert_details:
+            if not alert_details:
+                return Response({
+                    'success': False,
+                    'message': 'Alert not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+
             return Response({
-                'success': False,
-                'message': 'Alert not found'
-            }, status=status.HTTP_404_NOT_FOUND)
+                'success': True,
+                'data': alert_details
+            })
 
-        return Response({
-            'success': True,
-            'data': alert_details
-        })
+        elif request.method == 'DELETE':
+            try:
+                # Get the alert to verify ownership and existence
+                alert = CustomAlert.objects.filter(
+                    id=alert_id,
+                    matched_assets__organization=organization
+                ).distinct().first()
+
+                if not alert:
+                    return Response({
+                        'success': False,
+                        'message': 'Alert not found or access denied'
+                    }, status=status.HTTP_404_NOT_FOUND)
+
+                # Delete the alert
+                alert_title = alert.title
+                alert.delete()
+
+                logger.info(f"Alert '{alert_title}' (ID: {alert_id}) deleted by user {request.user.username}")
+
+                return Response({
+                    'success': True,
+                    'message': f'Alert "{alert_title}" deleted successfully'
+                })
+
+            except Exception as e:
+                logger.error(f"Error deleting alert {alert_id}: {str(e)}")
+                return Response({
+                    'success': False,
+                    'message': 'Failed to delete alert'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     except Exception as e:
         logger.error(f"Error in custom_alert_detail: {str(e)}")
         return Response({
             'success': False,
-            'message': 'Failed to get alert details'
+            'message': 'Failed to process request'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
