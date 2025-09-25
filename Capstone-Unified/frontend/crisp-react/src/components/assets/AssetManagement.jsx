@@ -138,209 +138,221 @@ const mockStats = {
 
 const AssetInventoryTab = ({ assets, onAdd, onEdit, onDelete, onBulkUpload, loading }) => {
   return (
-    <div className="space-y-6">
-      <div className="inventory-header">
-        <div className="inventory-title">
+    <div className={styles.spaceY6}>
+      <div className={styles.inventoryHeader}>
+        <div className={styles.inventoryTitle}>
           <h3>Asset Inventory</h3>
           <p>Manage and monitor your organization's digital assets</p>
         </div>
-        <div className="inventory-actions">
+        <div className={styles.inventoryActions}>
           <button
             onClick={onAdd}
-            className="action-button primary"
+            className={`${styles.actionButton} ${styles.primary}`}
           >
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
             Add Asset
           </button>
           <button
             onClick={onBulkUpload}
-            className="action-button secondary"
+            className={`${styles.actionButton} ${styles.secondary}`}
           >
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
             Bulk Upload
           </button>
         </div>
       </div>
 
-      <div style={{
-        minHeight: '400px',
-        padding: '20px',
-        backgroundColor: '#f8f9fa',
-        border: '2px solid #007bff',
-        borderRadius: '8px'
-      }}>
-        <div style={{ marginBottom: '20px', fontWeight: 'bold', color: '#007bff' }}>
-          ASSETS DEBUG: Total assets: {assets.length}, Loading: {loading.toString()}
+      {loading ? (
+        <div className={styles.loadingContainer}>
+          <LoadingSpinner />
         </div>
-
-        {assets && assets.length > 0 ? assets.map((asset, index) => (
-          <div key={asset.id || index} style={{
-            backgroundColor: 'white',
-            border: '2px solid #28a745',
-            borderRadius: '8px',
-            padding: '16px',
-            marginBottom: '12px',
-            boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h4 style={{ margin: '0 0 8px 0', color: '#333' }}>{asset.name || 'Unnamed Asset'}</h4>
-                <p style={{ margin: '0', color: '#666' }}>
-                  {asset.asset_type_display || asset.asset_type} - {asset.asset_value}
-                </p>
-                <p style={{ margin: '4px 0 0 0', fontSize: '0.9em', color: '#888' }}>
-                  {asset.description}
-                </p>
-              </div>
-              <div>
-                <button
-                  onClick={() => onEdit(asset)}
-                  style={{
-                    marginRight: '8px',
-                    padding: '4px 8px',
-                    backgroundColor: '#17a2b8',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => onDelete(asset)}
-                  style={{
-                    padding: '4px 8px',
-                    backgroundColor: '#dc3545',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Delete
-                </button>
+      ) : (
+        <div className={styles.assetGrid} style={{ minHeight: '400px' }}>
+          {assets && assets.length > 0 ? assets.map((asset, index) => (
+            <div key={asset.id || index} className={styles.assetCard}>
+              <div className={styles.assetCardContent}>
+                <div className={styles.assetInfo}>
+                  <div className={`${styles.assetStatus} ${styles[asset.criticality]}`}></div>
+                  <div className={styles.assetDetails}>
+                    <div className={styles.assetHeader}>
+                      <h4 className={styles.assetName}>{asset.name || 'Unnamed Asset'}</h4>
+                      <span className={`${styles.assetBadge} ${styles[asset.asset_type?.replace('_', '')]}`}>
+                        {asset.asset_type_display || asset.asset_type}
+                      </span>
+                      <span className={`${styles.assetBadge} ${styles[asset.criticality]}`}>
+                        {asset.criticality === 'critical' && '🔴'}
+                        {asset.criticality === 'high' && '🟠'}
+                        {asset.criticality === 'medium' && '🟡'}
+                        {asset.criticality === 'low' && '🟢'}
+                        {' ' + (asset.criticality?.charAt(0).toUpperCase() + asset.criticality?.slice(1))}
+                      </span>
+                    </div>
+                    <div className={styles.assetMeta}>
+                      <div className={styles.assetMetaItem}>
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        {asset.asset_value}
+                      </div>
+                      {asset.alert_enabled && (
+                        <div className={`${styles.assetMetaItem} ${styles.alertsEnabled}`}>
+                          <svg fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          Alerts Enabled
+                        </div>
+                      )}
+                    </div>
+                    {asset.description && (
+                      <p className={styles.assetDescription}>{asset.description}</p>
+                    )}
+                  </div>
+                </div>
+                <div className={styles.assetActions}>
+                  <button
+                    onClick={() => onEdit(asset)}
+                    className={`${styles.assetActionButton} ${styles.edit}`}
+                    title="Edit asset"
+                  >
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => onDelete(asset)}
+                    className={`${styles.assetActionButton} ${styles.delete}`}
+                    title="Delete asset"
+                  >
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )) : (
-          <div style={{
-            textAlign: 'center',
-            padding: '40px',
-            backgroundColor: '#fff3cd',
-            border: '2px solid #ffc107',
-            borderRadius: '8px'
-          }}>
-            <h3>No assets found</h3>
-            <p>Assets array is empty or undefined</p>
-            <button
-              onClick={onAdd}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#007bff',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              Add Asset
-            </button>
-          </div>
-        )}
-      </div>
+          )) : (
+            <div className={styles.emptyState}>
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+              </svg>
+              <h3>No assets found</h3>
+              <p>Get started by adding your first asset to monitor</p>
+              <button
+                onClick={onAdd}
+                className={`${styles.actionButton} ${styles.primary}`}
+              >
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Add Asset
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
 
 const CustomAlertsTab = ({ alerts, onView, loading, refreshInterval }) => {
   return (
-    <div className="space-y-6">
-      <div className="alerts-header">
-        <div className="alerts-title">
+    <div className={styles.spaceY6}>
+      <div className={styles.alertsHeader}>
+        <div className={styles.alertsTitle}>
           <h3>Custom Asset Alerts</h3>
-          <p>Smart alerts generated from IoC correlation with your assets</p>
+          <p>
+            Smart alerts generated from IoC correlation with your assets
+            {refreshInterval && (
+              <span className="refresh-indicator">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Auto-refreshing
+              </span>
+            )}
+          </p>
         </div>
       </div>
 
-      <div style={{
-        minHeight: '400px',
-        padding: '20px',
-        backgroundColor: '#fff5f5',
-        border: '2px solid #dc3545',
-        borderRadius: '8px'
-      }}>
-        <div style={{ marginBottom: '20px', fontWeight: 'bold', color: '#dc3545' }}>
-          ALERTS DEBUG: Total alerts: {alerts.length}, Loading: {loading.toString()}
+      {loading ? (
+        <div className={styles.loadingContainer}>
+          <LoadingSpinner />
         </div>
-
-        {alerts && alerts.length > 0 ? alerts.map((alert, index) => (
-          <div
-            key={alert.id || index}
-            onClick={() => onView(alert.id)}
-            style={{
-              backgroundColor: 'white',
-              border: '2px solid #fd7e14',
-              borderRadius: '8px',
-              padding: '16px',
-              marginBottom: '12px',
-              boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-              cursor: 'pointer'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div style={{ flex: 1 }}>
-                <h4 style={{ margin: '0 0 8px 0', color: '#333' }}>
-                  {alert.title || 'Unnamed Alert'}
-                </h4>
-                <div style={{ marginBottom: '8px' }}>
-                  <span style={{
-                    display: 'inline-block',
-                    padding: '2px 8px',
-                    backgroundColor: alert.severity === 'critical' ? '#dc3545' :
-                                   alert.severity === 'high' ? '#fd7e14' :
-                                   alert.severity === 'medium' ? '#ffc107' : '#28a745',
-                    color: 'white',
-                    borderRadius: '12px',
-                    fontSize: '0.8em',
-                    marginRight: '8px'
-                  }}>
-                    {alert.severity_display || alert.severity}
-                  </span>
-                  <span style={{
-                    display: 'inline-block',
-                    padding: '2px 8px',
-                    backgroundColor: '#6c757d',
-                    color: 'white',
-                    borderRadius: '12px',
-                    fontSize: '0.8em'
-                  }}>
-                    {alert.status_display || alert.status}
-                  </span>
+      ) : (
+        <div className={styles.alertsGrid} style={{ minHeight: '400px' }}>
+          {alerts && alerts.length > 0 ? alerts.map((alert, index) => (
+            <div
+              key={alert.id || index}
+              onClick={() => onView(alert.id)}
+              className={styles.alertCard}
+            >
+              <div className={styles.alertCardContent}>
+                <div className={styles.alertMain}>
+                  <div className={styles.alertHeader}>
+                    <div className={`${styles.alertStatus} ${styles[alert.severity]}`}></div>
+                    <div className={styles.alertInfo}>
+                      <h4 className={styles.alertTitle}>{alert.title || 'Unnamed Alert'}</h4>
+                      <div className={styles.alertBadges}>
+                        <span className={`${styles.alertBadge} ${styles['severity' + (alert.severity?.charAt(0).toUpperCase() + alert.severity?.slice(1))]}`}>
+                          {alert.severity === 'critical' && '🔴'}
+                          {alert.severity === 'high' && '🟠'}
+                          {alert.severity === 'medium' && '🟡'}
+                          {alert.severity === 'low' && '🟢'}
+                          {alert.severity_display || alert.severity}
+                        </span>
+                        <span className={`${styles.alertBadge} ${styles['status' + (alert.status?.charAt(0).toUpperCase() + alert.status?.slice(1))]}`}>
+                          {alert.status_display || alert.status}
+                        </span>
+                        {alert.confidence_score && (
+                          <span className={`${styles.alertBadge} ${styles.confidence}`}>
+                            🎯 {Math.round(alert.confidence_score * 100)}% confidence
+                          </span>
+                        )}
+                      </div>
+                      <div className={styles.alertMeta}>
+                        <div className={styles.alertMetaItem}>
+                          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          {new Date(alert.detected_at).toLocaleString()}
+                        </div>
+                        {alert.matched_assets && alert.matched_assets.length > 0 && (
+                          <div className={styles.alertMetaItem}>
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            {alert.matched_assets.length} affected asset{alert.matched_assets.length !== 1 ? 's' : ''}
+                          </div>
+                        )}
+                      </div>
+                      {alert.description && (
+                        <p className={styles.alertDescription}>{alert.description}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <p style={{ margin: '0', color: '#666', fontSize: '0.9em' }}>
-                  {alert.description}
-                </p>
-                <p style={{ margin: '4px 0 0 0', fontSize: '0.8em', color: '#888' }}>
-                  Detected: {new Date(alert.detected_at).toLocaleString()}
-                </p>
-              </div>
-              <div style={{ marginLeft: '16px', color: '#666' }}>
-                →
+                <div className={styles.alertArrow}>
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
               </div>
             </div>
-          </div>
-        )) : (
-          <div style={{
-            textAlign: 'center',
-            padding: '40px',
-            backgroundColor: '#d1ecf1',
-            border: '2px solid #bee5eb',
-            borderRadius: '8px'
-          }}>
-            <h3>No alerts detected</h3>
-            <p>Alerts array is empty or undefined</p>
-          </div>
-        )}
-      </div>
+          )) : (
+            <div className={styles.emptyState}>
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5-5-5h5v-5a7.5 7.5 0 00-15 0v5h5l-5 5-5-5h5V7.5a7.5 7.5 0 0115 0V17z" />
+              </svg>
+              <h3>No alerts detected</h3>
+              <p>Your assets are currently secure. New alerts will appear here when threats are detected.</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -601,94 +613,186 @@ const AssetManagement = ({ active }) => {
   }
 
   return (
-    <div style={{ padding: '20px', backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
-      {/* Simple Stats Dashboard */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '30px' }}>
-        <div style={{ backgroundColor: '#e3f2fd', padding: '20px', borderRadius: '8px', border: '2px solid #2196f3' }}>
-          <h3>Total Assets</h3>
-          <div style={{ fontSize: '2em', fontWeight: 'bold' }}>{stats?.asset_statistics?.total_assets || assets.length}</div>
-          <div>Managed assets</div>
+    <div
+      className={styles.assetManagement}
+      style={{ padding: '20px', minHeight: '100vh' }}
+    >
+      {/* Enhanced Stats Dashboard */}
+      <div
+        className={styles.statsDashboard}
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', marginBottom: '32px' }}
+      >
+        <div className={`${styles.statCard} ${styles.blue}`}>
+          <div className={styles.statContent}>
+            <div className={styles.statInfo}>
+              <h3>Total Assets</h3>
+              <div className={styles.statNumber}>{stats?.asset_statistics?.total_assets || assets.length}</div>
+              <div className={styles.statLabel}>Managed assets</div>
+            </div>
+            <div className={styles.statIcon}>
+              <svg fill="currentColor" viewBox="0 0 20 20">
+                <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+              </svg>
+            </div>
+          </div>
         </div>
-        <div style={{ backgroundColor: '#fff3e0', padding: '20px', borderRadius: '8px', border: '2px solid #ff9800' }}>
-          <h3>Active Alerts</h3>
-          <div style={{ fontSize: '2em', fontWeight: 'bold' }}>{stats?.alert_statistics?.recent_alerts || alerts.length}</div>
-          <div>Last 30 days</div>
+
+        <div className={`${styles.statCard} ${styles.orange}`}>
+          <div className={styles.statContent}>
+            <div className={styles.statInfo}>
+              <h3>Active Alerts</h3>
+              <div className={styles.statNumber}>{stats?.alert_statistics?.recent_alerts || alerts.length}</div>
+              <div className={styles.statLabel}>Last 30 days</div>
+            </div>
+            <div className={styles.statIcon}>
+              <svg fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd"/>
+              </svg>
+            </div>
+          </div>
         </div>
-        <div style={{ backgroundColor: '#e8f5e8', padding: '20px', borderRadius: '8px', border: '2px solid #4caf50' }}>
-          <h3>Coverage</h3>
-          <div style={{ fontSize: '2em', fontWeight: 'bold' }}>{stats?.asset_statistics?.alert_coverage_percentage || 100}%</div>
-          <div>Asset monitoring</div>
+
+        <div className={`${styles.statCard} ${styles.green}`}>
+          <div className={styles.statContent}>
+            <div className={styles.statInfo}>
+              <h3>Coverage</h3>
+              <div className={styles.statNumber}>{stats?.asset_statistics?.alert_coverage_percentage || 100}%</div>
+              <div className={styles.statLabel}>Asset monitoring</div>
+            </div>
+            <div className={styles.statIcon}>
+              <svg fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+              </svg>
+            </div>
+          </div>
         </div>
-        <div style={{ backgroundColor: '#f3e5f5', padding: '20px', borderRadius: '8px', border: '2px solid #9c27b0' }}>
-          <h3>Smart Correlation</h3>
-          <button
-            onClick={handleTriggerCorrelation}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#9c27b0',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            {loading ? 'Processing...' : 'Trigger Now'}
-          </button>
+
+        <div className={`${styles.statCard} ${styles.purple}`}>
+          <div className={styles.statContent}>
+            <div className={styles.statInfo}>
+              <h3>Smart Correlation</h3>
+              <button
+                onClick={handleTriggerCorrelation}
+                disabled={loading}
+                className={styles.correlationButton}
+              >
+                {loading ? 'Processing...' : 'Trigger Now'}
+              </button>
+            </div>
+            <div className={styles.statIcon}>
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Simple Tabs */}
-      <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '20px', border: '2px solid #ccc' }}>
-        <div style={{ marginBottom: '20px', borderBottom: '2px solid #eee' }}>
-          <button
-            onClick={() => setActiveTab('inventory')}
-            style={{
-              padding: '10px 20px',
-              margin: '0 10px 10px 0',
-              backgroundColor: activeTab === 'inventory' ? '#2196f3' : '#f5f5f5',
-              color: activeTab === 'inventory' ? 'white' : 'black',
-              border: '2px solid #2196f3',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 'bold'
-            }}
-          >
-            Asset Inventory ({assets.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('alerts')}
-            style={{
-              padding: '10px 20px',
-              margin: '0 10px 10px 0',
-              backgroundColor: activeTab === 'alerts' ? '#f44336' : '#f5f5f5',
-              color: activeTab === 'alerts' ? 'white' : 'black',
-              border: '2px solid #f44336',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 'bold'
-            }}
-          >
-            Custom Alerts ({alerts.length})
-          </button>
+      {/* Enhanced Tabs with Search and Filters */}
+      <div
+        className={styles.mainContentCard}
+        style={{ backgroundColor: 'rgba(255, 255, 255, 0.98)', borderRadius: '24px', overflow: 'hidden' }}
+      >
+        <div className={styles.tabHeader}>
+          <div className={styles.tabContainer}>
+            <nav className={styles.tabNavigation}>
+              <button
+                onClick={() => setActiveTab('inventory')}
+                className={`${styles.tabButton} ${activeTab === 'inventory' ? styles.active : ''}`}
+              >
+                <div className={styles.tabButtonContent}>
+                  <svg fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+                  </svg>
+                  <span>Asset Inventory</span>
+                  <span className={styles.tabBadge}>
+                    {filteredAssets.length}
+                  </span>
+                </div>
+                {activeTab === 'inventory' && (
+                  <div className={styles.tabIndicator}></div>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab('alerts')}
+                className={`${styles.tabButton} ${activeTab === 'alerts' ? styles.active : ''}`}
+              >
+                <div className={styles.tabButtonContent}>
+                  <svg fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd"/>
+                  </svg>
+                  <span>Custom Alerts</span>
+                  <span className={styles.tabBadge}>
+                    {filteredAlerts.length}
+                  </span>
+                </div>
+                {activeTab === 'alerts' && (
+                  <div className={styles.tabIndicator}></div>
+                )}
+              </button>
+            </nav>
+
+            {/* Search and Filter Controls */}
+            <div className={styles.controlsContainer}>
+              <div className={styles.searchContainer}>
+                <input
+                  type="text"
+                  placeholder={`Search ${activeTab === 'inventory' ? 'assets' : 'alerts'}...`}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className={styles.searchInput}
+                />
+                <svg className={styles.searchIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+
+              {activeTab === 'inventory' ? (
+                <select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                  className={styles.filterSelect}
+                >
+                  <option value="all">All Types</option>
+                  <option value="domain">Domains</option>
+                  <option value="ip_range">IP Ranges</option>
+                  <option value="software">Software</option>
+                  <option value="service">Services</option>
+                </select>
+              ) : (
+                <select
+                  value={filterSeverity}
+                  onChange={(e) => setFilterSeverity(e.target.value)}
+                  className={styles.filterSelect}
+                >
+                  <option value="all">All Severities</option>
+                  <option value="critical">Critical</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Simple Content */}
-        <div>
+        {/* Enhanced Content */}
+        <div className={styles.tabContent} style={{ padding: '32px', minHeight: '400px' }}>
           {activeTab === 'inventory' && (
             <AssetInventoryTab
-              assets={assets}
+              assets={filteredAssets.length > 0 ? filteredAssets : assets}
               onAdd={() => handleOpenAssetModal()}
               onEdit={handleOpenAssetModal}
               onDelete={handleDeleteAsset}
               onBulkUpload={handleOpenBulkUploadModal}
-              loading={false}
+              loading={loading}
             />
           )}
           {activeTab === 'alerts' && (
             <CustomAlertsTab
-              alerts={alerts}
+              alerts={filteredAlerts.length > 0 ? filteredAlerts : alerts}
               onView={handleOpenAlertModal}
-              loading={false}
+              loading={loading}
               refreshInterval={refreshInterval !== null}
             />
           )}
