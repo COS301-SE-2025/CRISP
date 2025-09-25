@@ -42,7 +42,6 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY core/ ./core/
 COPY settings/ ./settings/
 COPY manage.py .
-COPY .env .
 
 # Create necessary directories
 RUN mkdir -p /app/logs /app/media /app/staticfiles
