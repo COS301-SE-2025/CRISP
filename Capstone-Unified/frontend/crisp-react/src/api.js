@@ -1119,3 +1119,29 @@ export const exportTtps = async (format, filters = {}) => {
 
   return response; // Return the response object so caller can handle blob/filename
 };
+
+// Indicators API functions
+export const getIndicators = async (queryParams = {}) => {
+  const params = new URLSearchParams();
+  
+  // Add pagination and filtering parameters
+  Object.entries(queryParams).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && value !== '') {
+      params.append(key, value.toString());
+    }
+  });
+
+  const url = `${API_BASE_URL}/api/indicators/${params.toString() ? `?${params.toString()}` : ''}`;
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch indicators');
+  }
+
+  return await response.json();
+};

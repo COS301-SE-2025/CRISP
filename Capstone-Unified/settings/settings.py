@@ -59,12 +59,13 @@ THIRD_PARTY_APPS = [
     'corsheaders',
 ]
 
-# Integrated CRISP applications - threat intel + user/trust management
+# Integrated CRISP applications - threat intel + user/trust management + SOC
 LOCAL_APPS = [
     'core',
     'core.alerts',
     'core.user_management',
     'core.trust_management',
+    'soc',  # SOC system
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

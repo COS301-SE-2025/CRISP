@@ -179,5 +179,6 @@ urlpatterns = [
     path('ttps/', include(ttp_urlpatterns)), # TTP URLs
     path('reports/', include(reports_urlpatterns)), # Reports URLs
     path('assets/', include(asset_urlpatterns)), # Asset Management URLs (WOW Factor #1)
+    path('soc/', include('soc.urls')), # SOC Management URLs
     path('', include(threat_feed_urlpatterns)), # Threat Feed URLs (no prefix, as they are already under 'api/' in crisp_unified/urls.py)
 ]

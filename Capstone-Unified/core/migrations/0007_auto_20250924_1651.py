@@ -11,10 +11,21 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='systemactivity',
-            name='organization',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='core.organization'),
+        migrations.RunSQL(
+            """
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'core_systemactivity' 
+                    AND column_name = 'organization_id'
+                ) THEN
+                    ALTER TABLE core_systemactivity 
+                    ADD COLUMN organization_id UUID REFERENCES core_organization(id) ON DELETE CASCADE;
+                END IF;
+            END $$;
+            """,
+            reverse_sql="ALTER TABLE core_systemactivity DROP COLUMN IF EXISTS organization_id;"
         ),
         migrations.RunSQL(
             "CREATE TABLE IF NOT EXISTS core_trustlog (id SERIAL PRIMARY KEY, action VARCHAR(50), source_organization_id UUID, target_organization_id UUID, details TEXT, created_at TIMESTAMP DEFAULT NOW());",
