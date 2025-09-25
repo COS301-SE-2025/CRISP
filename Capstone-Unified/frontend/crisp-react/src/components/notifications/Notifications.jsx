@@ -31,20 +31,28 @@ const Notifications = ({ active }) => {
     try {
       setLoading(true);
       setError(null);
-      
+
+      console.log('🔔 Fetching notifications...');
+      console.log('🔑 Auth token exists:', !!localStorage.getItem('access_token') || !!localStorage.getItem('crisp_auth_token'));
+      console.log('👤 Current user:', localStorage.getItem('crisp_user'));
+
       // Use API function to fetch notifications
       const response = await getAlerts();
-      
+
+      console.log('📥 API Response received:', response);
+
       // Extract data array from API response
       const data = response.data || response || [];
-      
+
+      console.log('📋 Data extracted:', { dataLength: data.length, isArray: Array.isArray(data) });
+
       // Ensure data is an array
       if (!Array.isArray(data)) {
         console.warn('API response data is not an array:', data);
         setNotifications([]);
         return;
       }
-      
+
       // Transform API data to match component expectations
       const apiNotifications = data.map(notification => ({
         id: notification.id,
@@ -58,6 +66,8 @@ const Notifications = ({ active }) => {
         metadata: notification.metadata
       }));
 
+      console.log('✨ Transformed notifications:', apiNotifications);
+
       // Apply client-side filtering
       let filteredNotifications = apiNotifications;
       if (filter !== 'all') {
@@ -68,9 +78,10 @@ const Notifications = ({ active }) => {
         });
       }
 
+      console.log('🔍 Final filtered notifications:', filteredNotifications);
       setNotifications(filteredNotifications);
     } catch (err) {
-      console.error('Error fetching notifications:', err);
+      console.error('❌ Error fetching notifications:', err);
       setError('Error loading notifications: ' + err.message);
     } finally {
       setLoading(false);
@@ -174,6 +185,10 @@ const Notifications = ({ active }) => {
           <div className="loading-state">
             <i className="fas fa-spinner fa-spin"></i>
             <p>Loading notifications...</p>
+            <div style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>
+              <p>Auth: {localStorage.getItem('access_token') || localStorage.getItem('crisp_auth_token') ? 'YES' : 'NO'}</p>
+              <p>User: {localStorage.getItem('crisp_user') ? JSON.parse(localStorage.getItem('crisp_user')).username || 'Unknown' : 'None'}</p>
+            </div>
           </div>
         </div>
       </section>
@@ -259,6 +274,13 @@ const Notifications = ({ active }) => {
             <i className="fas fa-bell-slash"></i>
             <h3>No notifications</h3>
             <p>You're all caught up! No notifications to show.</p>
+            <div style={{ marginTop: '15px', fontSize: '12px', color: '#666', background: '#fff3cd', padding: '10px', border: '1px solid #ffeaa7', borderRadius: '4px' }}>
+              <strong>Troubleshooting:</strong><br/>
+              • Check browser console for API errors<br/>
+              • Verify you're logged in as admin<br/>
+              • Check if backend is running<br/>
+              • Look for CORS or network issues
+            </div>
           </div>
         ) : (
           notifications.map(notification => (

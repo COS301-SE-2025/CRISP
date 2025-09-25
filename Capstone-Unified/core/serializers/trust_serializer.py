@@ -113,15 +113,15 @@ class TrustGroupMembershipSerializer(serializers.ModelSerializer):
     class Meta:
         model = TrustGroupMembership
         fields = [
-            'id', 'organization', 'role', 'is_active', 'joined_at',
-            'permissions', 'metadata'
+            'id', 'organization', 'membership_type', 'is_active', 'joined_at',
+            'left_at', 'invited_by', 'approved_by'
         ]
         read_only_fields = ['id', 'joined_at']
 
 class TrustGroupSerializer(serializers.ModelSerializer):
     """Detailed trust group serializer"""
 
-    members = TrustGroupMembershipSerializer(source='trustgroupmembership_set', many=True, read_only=True)
+    members = TrustGroupMembershipSerializer(source='group_memberships', many=True, read_only=True)
     member_count = serializers.SerializerMethodField()
     organization_count = serializers.SerializerMethodField()
 
@@ -129,19 +129,19 @@ class TrustGroupSerializer(serializers.ModelSerializer):
         model = TrustGroup
         fields = [
             'id', 'name', 'description', 'group_type', 'is_active',
-            'access_policy', 'sharing_policy', 'governance_model',
-            'metadata', 'created_at', 'updated_at', 'members',
+            'is_public', 'requires_approval', 'group_policies', 
+            'created_at', 'updated_at', 'created_by', 'members',
             'member_count', 'organization_count'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def get_member_count(self, obj):
         """Get total member count"""
-        return obj.trustgroupmembership_set.filter(is_active=True).count()
+        return obj.group_memberships.filter(is_active=True).count()
 
     def get_organization_count(self, obj):
         """Get unique organization count"""
-        return obj.trustgroupmembership_set.filter(
+        return obj.group_memberships.filter(
             is_active=True
         ).values('organization').distinct().count()
 

@@ -144,11 +144,14 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
   // Fetch unread notifications count
   const fetchUnreadCount = async () => {
     try {
+      console.log('🔔 Fetching unread count...');
       const response = await api.getAlerts({ unread_only: 'true' });
+      console.log('📊 Unread count response:', response);
       const count = response.data ? response.data.length : 0;
+      console.log('🔢 Setting unread count to:', count);
       setUnreadCount(count);
     } catch (error) {
-      console.error('Error fetching unread count:', error);
+      console.error('❌ Error fetching unread count:', error);
     }
   };
 

@@ -583,31 +583,72 @@ def asset_alert_statistics(request):
     Get asset-based alert statistics for the organization.
     """
     try:
-        organization = request.user.organization
-        if not organization:
-            return Response({
-                'success': False,
-                'message': 'User must belong to an organization'
-            }, status=status.HTTP_400_BAD_REQUEST)
+        # Check if user is superuser or BlueVisionAdmin - they can see all organizations
+        if request.user.is_superuser or request.user.role == 'BlueVisionAdmin':
+            # Get statistics across all organizations
+            organization = None
+            asset_filter = AssetInventory.objects.all()
+            org_display = {"name": "All Organizations", "type": "System-wide"}
+        else:
+            organization = request.user.organization
+            if not organization:
+                return Response({
+                    'success': False,
+                    'message': 'User must belong to an organization'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            asset_filter = AssetInventory.objects.filter(organization=organization)
+            org_display = {
+                "name": organization.name,
+                "type": organization.get_organization_type_display() if hasattr(organization, 'get_organization_type_display') else organization.organization_type
+            }
 
         # Initialize alert service
         alert_service = AssetBasedAlertService()
 
-        # Get statistics
-        alert_stats = alert_service.get_alert_statistics(organization)
+        # Get statistics (modified to handle all organizations for admins)
+        if organization:
+            alert_stats = alert_service.get_alert_statistics(organization)
+        else:
+            # Get combined statistics across all organizations for system admins
+            from core.models.models import Organization
+            all_orgs = Organization.objects.all()
+            combined_stats = {
+                'total_alerts': 0,
+                'recent_alerts': 0,
+                'weekly_alerts': 0,
+                'by_severity': {'info': 0, 'low': 0, 'medium': 0, 'high': 0, 'critical': 0},
+                'by_status': {'new': 0, 'acknowledged': 0, 'investigating': 0, 'resolved': 0, 'false_positive': 0},
+                'avg_confidence': 0.0,
+                'avg_relevance': 0.0,
+                'critical_alerts_today': 0
+            }
+
+            # Aggregate across all organizations
+            for org in all_orgs:
+                org_stats = alert_service.get_alert_statistics(org)
+                if 'alert_statistics' in org_stats:
+                    stats = org_stats['alert_statistics']
+                    combined_stats['total_alerts'] += stats.get('total_alerts', 0)
+                    combined_stats['recent_alerts'] += stats.get('recent_alerts', 0)
+                    combined_stats['weekly_alerts'] += stats.get('weekly_alerts', 0)
+
+                    # Aggregate by severity and status
+                    for severity in combined_stats['by_severity']:
+                        combined_stats['by_severity'][severity] += stats.get('by_severity', {}).get(severity, 0)
+                    for status_key in combined_stats['by_status']:
+                        combined_stats['by_status'][status_key] += stats.get('by_status', {}).get(status_key, 0)
+
+            alert_stats = {'alert_statistics': combined_stats}
 
         # Get asset statistics
-        total_assets = AssetInventory.objects.filter(organization=organization).count()
-        alert_enabled_assets = AssetInventory.objects.filter(
-            organization=organization,
-            alert_enabled=True
-        ).count()
+        total_assets = asset_filter.count()
+        alert_enabled_assets = asset_filter.filter(alert_enabled=True).count()
 
         # Asset breakdown by type and criticality
         asset_types = {}
         asset_criticalities = {}
 
-        for asset in AssetInventory.objects.filter(organization=organization):
+        for asset in asset_filter:
             asset_type = asset.get_asset_type_display()
             asset_types[asset_type] = asset_types.get(asset_type, 0) + 1
 
@@ -625,10 +666,7 @@ def asset_alert_statistics(request):
                 'by_type': asset_types,
                 'by_criticality': asset_criticalities
             },
-            'organization': {
-                'name': organization.name,
-                'type': organization.get_organization_type_display() if hasattr(organization, 'get_organization_type_display') else organization.organization_type
-            }
+            'organization': org_display
         }
 
         return Response({

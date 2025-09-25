@@ -969,10 +969,11 @@ export const get = async (endpoint) => {
       return cached.data;
     }
 
-    const token = localStorage.getItem('crisp_auth_token');
-    
+    const token = localStorage.getItem('access_token') || localStorage.getItem('crisp_auth_token');
+
     // Don't make API calls if we don't have a token (except for auth endpoints)
     if (!token && !endpoint.includes('/auth/')) {
+      console.error(`No auth token found for endpoint: ${endpoint}`);
       return null;
     }
     
