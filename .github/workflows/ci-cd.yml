@@ -2,7 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, Dev ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -11,6 +11,7 @@ jobs:
   test:
     name: Run All Tests
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
     
     services:
       postgres:
@@ -211,11 +212,53 @@ jobs:
         path: bandit-report.json
         if-no-files-found: ignore
 
+  docker-build-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    needs: [test]
+    if: always() && (github.ref == 'refs/heads/main' && needs.test.result == 'success') || github.ref == 'refs/heads/Dev'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: datadefenders/crisp
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./Capstone-Unified
+        file: ./Capstone-Unified/Dockerfile
+        target: production
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
   status-report:
     name: Pipeline Status Report
     runs-on: ubuntu-latest
-    needs: [test]
-    if: always()
+    needs: [test, docker-build-push]
+    if: always() && github.ref == 'refs/heads/main'
     
     steps:
     - name: Report pipeline status
@@ -223,7 +266,8 @@ jobs:
         echo "================================================"
         echo "CI/CD PIPELINE RESULTS"
         echo "================================================"
-        echo "Status: ${{ needs.test.result }}"
+        echo "Test Status: ${{ needs.test.result }}"
+        echo "Docker Build Status: ${{ needs.docker-build-push.result }}"
         echo ""
         if [ "${{ needs.test.result }}" == "success" ]; then
           echo "SUCCESS: All tests and quality checks passed"
