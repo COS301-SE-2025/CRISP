@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as api from '../../api.js';
 
-const IncidentsList = ({ active }) => {
+const IncidentsList = ({ active, showPage }) => {
   if (!active) return null;
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -376,8 +376,6 @@ const IncidentsList = ({ active }) => {
                   {incidents.map((incident) => (
                     <tr 
                       key={incident.id}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => window.location.hash = `dashboard?page=soc-incident-detail&id=${incident.id}`}
                     >
                       <td>
                         <code>{incident.incident_id}</code>
@@ -388,22 +386,49 @@ const IncidentsList = ({ active }) => {
                         </div>
                       </td>
                       <td>
-                        <span className="badge badge-secondary">
+                        <span 
+                          style={{ 
+                            backgroundColor: '#6c757d', 
+                            color: 'white',
+                            padding: '4px 8px',
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold',
+                            textTransform: 'uppercase',
+                            borderRadius: '2px',
+                            display: 'inline-block'
+                          }}
+                        >
                           {incident.category_display}
                         </span>
                       </td>
                       <td>
                         <span 
-                          className="badge" 
-                          style={{ backgroundColor: getPriorityColor(incident.priority), color: 'white' }}
+                          style={{ 
+                            backgroundColor: getPriorityColor(incident.priority), 
+                            color: 'white',
+                            padding: '4px 8px',
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold',
+                            textTransform: 'uppercase',
+                            borderRadius: '2px',
+                            display: 'inline-block'
+                          }}
                         >
                           {incident.priority_display}
                         </span>
                       </td>
                       <td>
                         <span 
-                          className="badge" 
-                          style={{ backgroundColor: getStatusColor(incident.status), color: 'white' }}
+                          style={{ 
+                            backgroundColor: getStatusColor(incident.status), 
+                            color: 'white',
+                            padding: '4px 8px',
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold',
+                            textTransform: 'uppercase',
+                            borderRadius: '2px',
+                            display: 'inline-block'
+                          }}
                         >
                           {incident.status_display}
                         </span>
@@ -427,10 +452,10 @@ const IncidentsList = ({ active }) => {
                           </small>
                         )}
                       </td>
-                      <td onClick={(e) => e.stopPropagation()}>
+                      <td>
                         <button 
                           className="btn btn-sm btn-outline-primary"
-                          onClick={() => window.location.hash = `dashboard?page=soc-incident-detail&id=${incident.id}`}
+                          onClick={() => alert(`Incident Detail: ${incident.incident_id}`)}
                         >
                           View
                         </button>

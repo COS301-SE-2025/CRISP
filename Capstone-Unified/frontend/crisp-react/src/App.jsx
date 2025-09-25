@@ -697,8 +697,8 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
           <Reports active={activePage === 'reports'} />
           <Notifications active={activePage === 'notifications'} />
           <AssetManagement active={activePage === 'asset-management'} />
-          <SOCDashboard active={activePage === 'soc-dashboard'} />
-          <IncidentsList active={activePage === 'soc-incidents'} />
+          <SOCDashboard active={activePage === 'soc-dashboard'} showPage={showPage} />
+          <IncidentsList active={activePage === 'soc-incidents'} showPage={showPage} />
           <UserProfile active={activePage === 'profile'} />
           <AccountSettings active={activePage === 'account-settings'} />
         </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as api from '../../api.js';
 
-const SOCDashboard = ({ active }) => {
+const SOCDashboard = ({ active, showPage }) => {
   if (!active) return null;
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -197,8 +197,17 @@ const SOCDashboard = ({ active }) => {
                 <div key={status} className="d-flex justify-content-between mb-2">
                   <span>
                     <span 
-                      className="badge mr-2" 
-                      style={{ backgroundColor: getStatusColor(status), color: 'white' }}
+                      className="mr-2" 
+                      style={{ 
+                        backgroundColor: getStatusColor(status), 
+                        color: 'white',
+                        padding: '4px 8px',
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                        textTransform: 'uppercase',
+                        borderRadius: '2px',
+                        display: 'inline-block'
+                      }}
                     >
                       {status.replace('_', ' ')}
                     </span>
@@ -224,8 +233,17 @@ const SOCDashboard = ({ active }) => {
                 <div key={priority} className="d-flex justify-content-between mb-2">
                   <span>
                     <span 
-                      className="badge mr-2" 
-                      style={{ backgroundColor: getPriorityColor(priority), color: 'white' }}
+                      className="mr-2" 
+                      style={{ 
+                        backgroundColor: getPriorityColor(priority), 
+                        color: 'white',
+                        padding: '4px 8px',
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                        textTransform: 'uppercase',
+                        borderRadius: '2px',
+                        display: 'inline-block'
+                      }}
                     >
                       {priority}
                     </span>
@@ -247,7 +265,7 @@ const SOCDashboard = ({ active }) => {
           </h5>
           <button 
             className="btn btn-primary btn-sm"
-            onClick={() => window.location.hash = 'dashboard?page=soc-incidents'}
+            onClick={() => showPage('soc-incidents')}
           >
             View All
           </button>
@@ -274,9 +292,7 @@ const SOCDashboard = ({ active }) => {
                 <tbody>
                   {recent_incidents.map((incident) => (
                     <tr 
-                      key={incident.id} 
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => window.location.hash = `dashboard?page=soc-incident-detail&id=${incident.id}`}
+                      key={incident.id}
                     >
                       <td>
                         <code>{incident.incident_id}</code>
@@ -288,16 +304,32 @@ const SOCDashboard = ({ active }) => {
                       </td>
                       <td>
                         <span 
-                          className="badge" 
-                          style={{ backgroundColor: getPriorityColor(incident.priority), color: 'white' }}
+                          style={{ 
+                            backgroundColor: getPriorityColor(incident.priority), 
+                            color: 'white',
+                            padding: '4px 8px',
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold',
+                            textTransform: 'uppercase',
+                            borderRadius: '2px',
+                            display: 'inline-block'
+                          }}
                         >
                           {incident.priority}
                         </span>
                       </td>
                       <td>
                         <span 
-                          className="badge" 
-                          style={{ backgroundColor: getStatusColor(incident.status), color: 'white' }}
+                          style={{ 
+                            backgroundColor: getStatusColor(incident.status), 
+                            color: 'white',
+                            padding: '4px 8px',
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold',
+                            textTransform: 'uppercase',
+                            borderRadius: '2px',
+                            display: 'inline-block'
+                          }}
                         >
                           {incident.status.replace('_', ' ')}
                         </span>
