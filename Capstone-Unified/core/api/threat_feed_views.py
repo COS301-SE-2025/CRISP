@@ -38,24 +38,29 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
 
     def get_queryset(self):
-        """Filter threat feeds based on user's organization and feed type."""
+        """Filter threat feeds based on user's organization and feed type, excluding inactive feeds."""
         from django.db.models import Q
 
         user_org = getattr(self.request.user, 'organization', None)
 
+        # Base filter to exclude inactive feeds from main threat feeds list
+        base_filter = Q(is_active=True)
+
         if user_org is None:
-            # User has no organization, only show external feeds
-            return ThreatFeed.objects.filter(is_external=True)
+            # User has no organization, only show active external feeds
+            return ThreatFeed.objects.filter(base_filter & Q(is_external=True))
         elif self.request.user.role == 'BlueVisionAdmin':
-            # BlueVision admins can see all threat feeds
-            return ThreatFeed.objects.all()
+            # BlueVision admins can see all active threat feeds (hidden feeds like internal manual indicators are excluded)
+            return ThreatFeed.objects.filter(base_filter)
         else:
             # Regular users can see:
-            # 1. All external/public threat feeds
-            # 2. Their organization's internal threat feeds
+            # 1. All active external/public threat feeds
+            # 2. Their organization's active internal threat feeds
             return ThreatFeed.objects.filter(
-                Q(is_external=True) |  # All external feeds
-                Q(owner=user_org, is_external=False)  # Own organization's internal feeds
+                base_filter & (
+                    Q(is_external=True) |  # All external feeds
+                    Q(owner=user_org, is_external=False)  # Own organization's internal feeds
+                )
             )
 
     def perform_create(self, serializer):
@@ -1011,18 +1016,19 @@ def indicators_list(request):
                         status=status.HTTP_400_BAD_REQUEST
                     )
             
-            # Get or create default threat feed for manual entries
+            # Get or create internal feed for manual entries (hidden from main feed list)
             default_org, created = Organization.objects.get_or_create(
-                name="Manual Entry",
-                defaults={'description': 'Default organization for manually created indicators'}
+                name="Internal System",
+                defaults={'description': 'Internal system organization for manually created indicators'}
             )
             
+            # Create hidden internal feed that won't appear in main threat feeds list
             default_feed, created = ThreatFeed.objects.get_or_create(
-                name="Manual Entry Feed",
+                name="Internal Manual Indicators",
                 defaults={
-                    'description': 'Default feed for manually created indicators',
+                    'description': 'Internal storage for manually created indicators',
                     'is_external': False,
-                    'is_active': True,
+                    'is_active': False,  # Make inactive so it doesn't appear in main feeds list
                     'owner': default_org
                 }
             )
@@ -1049,7 +1055,7 @@ def indicators_list(request):
             
             # Log activity
             activity_title = f"New {indicator.type} indicator added"
-            activity_description = f"Indicator '{indicator.value}' added to {indicator.threat_feed.name if indicator.threat_feed else 'Manual Entry Feed'}"
+            activity_description = f"Indicator '{indicator.value}' added manually"
             SystemActivity.log_activity(
                 activity_type='indicator_added',
                 title=activity_title,
@@ -1059,7 +1065,7 @@ def indicators_list(request):
                 metadata={
                     'indicator_type': indicator.type,
                     'confidence': indicator.confidence,
-                    'source': indicator.threat_feed.name if indicator.threat_feed else 'Manual Entry'
+                    'source': 'Manual Entry'
                 }
             )
             
@@ -1308,18 +1314,19 @@ def indicators_bulk_import(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Get or create default threat feed for manual entries
+        # Get or create internal feed for manual entries (hidden from main feed list)
         default_org, created = Organization.objects.get_or_create(
-            name="Manual Entry",
-            defaults={'description': 'Default organization for manually created indicators'}
+            name="Internal System",
+            defaults={'description': 'Internal system organization for manually created indicators'}
         )
         
+        # Create hidden internal feed that won't appear in main threat feeds list
         default_feed, created = ThreatFeed.objects.get_or_create(
-            name="Manual Entry Feed",
+            name="Internal Manual Indicators",
             defaults={
-                'description': 'Default feed for manually created indicators',
+                'description': 'Internal storage for manually created indicators',
                 'is_external': False,
-                'is_active': True,
+                'is_active': False,  # Make inactive so it doesn't appear in main feeds list
                 'owner': default_org
             }
         )
