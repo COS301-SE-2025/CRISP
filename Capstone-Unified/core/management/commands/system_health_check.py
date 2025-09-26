@@ -10,9 +10,10 @@ from django.db import connection
 from django.conf import settings
 from django.core.mail import send_mail
 from core.models.models import (
-    CustomUser, Organization, TrustRelationship, ThreatFeed, 
-    Indicator, TTPData, AuthenticationLog
+    Organization, TrustRelationship, ThreatFeed,
+    Indicator, TTPData
 )
+from core.user_management.models.user_models import CustomUser, AuthenticationLog
 from core.services.trust_service import TrustService
 from core.services.access_control_service import AccessControlService
 from core.services.audit_service import AuditService

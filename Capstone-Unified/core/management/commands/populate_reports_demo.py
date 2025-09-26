@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from core.models.models import Organization, ThreatFeed, Indicator, TTPData
 from core.trust_management.models.trust_models import TrustRelationship, TrustLevel
 
@@ -449,7 +450,7 @@ class Command(BaseCommand):
 
     def create_indicators_for_organizations(self, organizations, campaign_name, ips, domains, hashes, ttp_ids):
         """Create indicators distributed across organizations over the past 30 days"""
-        end_date = datetime.now()
+        end_date = timezone.now()
         start_date = end_date - timedelta(days=30)
         
         for org in organizations:
@@ -459,8 +460,7 @@ class Command(BaseCommand):
                 owner=org,
                 defaults={
                     'description': f'Threat indicators for {campaign_name} affecting {org.name}',
-                    'is_active': True,
-                    'created_at': datetime.now()
+                    'is_active': True
                 }
             )
             
@@ -471,7 +471,7 @@ class Command(BaseCommand):
             for i in range(num_indicators):
                 # Random date within last 30 days
                 days_ago = random.randint(0, 30)
-                indicator_date = end_date - timedelta(days=days_ago)
+                indicator_date = timezone.now() - timedelta(days=days_ago)
                 
                 # Pick random indicator
                 indicator_value = random.choice(all_indicators)

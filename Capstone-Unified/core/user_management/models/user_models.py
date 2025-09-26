@@ -137,6 +137,7 @@ class CustomUser(AbstractUser):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        app_label = 'user_management'
         verbose_name = 'User'
         verbose_name_plural = 'Users'
         ordering = ['username']
@@ -264,6 +265,7 @@ class AuthenticationLog(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        app_label = 'user_management'
         verbose_name = 'Authentication Log'
         verbose_name_plural = 'Authentication Logs'
         ordering = ['-timestamp']
@@ -335,6 +337,7 @@ class UserSession(models.Model):
     )
 
     class Meta:
+        app_label = 'user_management'
         verbose_name = 'User Session'
         verbose_name_plural = 'User Sessions'
         ordering = ['-created_at']
@@ -420,6 +423,7 @@ class TrustedDevice(models.Model):
     )
 
     class Meta:
+        app_label = 'user_management'
         verbose_name = 'Trusted Device'
         verbose_name_plural = 'Trusted Devices'
         unique_together = ['user', 'device_fingerprint']
