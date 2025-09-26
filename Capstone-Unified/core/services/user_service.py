@@ -7,9 +7,12 @@ from django.contrib.auth import authenticate
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from core.models.models import (
-    Organization, UserProfile, 
-    UserSession, TrustedDevice, UserInvitation, PasswordResetToken
+from core.models.models import Organization
+from core.user_management.models import (
+    UserSession, TrustedDevice
+)
+from core.user_management.models.invitation_models import (
+    UserInvitation, PasswordResetToken
 )
 from core.user_management.models import CustomUser, AuthenticationLog
 from datetime import timedelta
@@ -40,8 +43,7 @@ class UserService:
                     **extra_fields
                 )
                 
-                # Create user profile
-                UserProfile.objects.create(user=user)
+                # Note: UserProfile creation removed for simplification
                 
                 # Log user creation
                 AuthenticationLog.log_authentication_event(
@@ -540,10 +542,7 @@ class UserService:
                 TrustedDevice.objects.filter(user=user).delete()
                 
                 # Delete user profile
-                try:
-                    UserProfile.objects.filter(user=user).delete()
-                except:
-                    pass  # UserProfile might not exist
+                # Note: UserProfile deletion removed for simplification
                 
                 # Delete authentication logs related to this user
                 AuthenticationLog.objects.filter(user=user).delete()

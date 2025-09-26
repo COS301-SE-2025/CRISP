@@ -3,7 +3,7 @@ from django.db import transaction, models
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.contrib.auth.password_validation import validate_password
 from django.utils import timezone
-from ..models import CustomUser, Organization, AuthenticationLog, UserProfile
+from ..models import CustomUser, Organization, AuthenticationLog
 from ..factories.user_factory import UserFactory
 from .access_control_service import AccessControlService
 import logging
@@ -232,26 +232,9 @@ class UserService:
                 else:
                     profile_updates[field] = value
         
+        # Note: UserProfile functionality has been removed for simplification
         if profile_updates:
-            try:
-                # Get or create user profile
-                profile, created = UserProfile.objects.get_or_create(user=target_user)
-                
-                # Update profile fields
-                updated_profile_fields = []
-                for field, value in profile_updates.items():
-                    if hasattr(profile, field):
-                        old_value = getattr(profile, field)
-                        if old_value != value:
-                            setattr(profile, field, value)
-                            updated_profile_fields.append(field)
-                
-                if updated_profile_fields:
-                    profile.save(update_fields=updated_profile_fields + ['updated_at'])
-                    logger.info(f"Profile updated for {target_user.username}. Fields: {', '.join(updated_profile_fields)}")
-                
-            except Exception as e:
-                logger.error(f"Error updating profile for {target_user.username}: {str(e)}")
+            logger.info(f"Profile updates requested for {target_user.username}, but UserProfile model is not available")
         
         return target_user
     
@@ -374,58 +357,18 @@ class UserService:
                 'permissions': self._get_user_permissions_safe(target_user)
             })
             
-            # Add profile information if exists and flatten for frontend compatibility
-            try:
-                if hasattr(target_user, 'profile') and target_user.profile:
-                    profile = target_user.profile
-                    # Add profile fields to top level for frontend compatibility
-                    user_details.update({
-                        'bio': profile.bio,
-                        'department': profile.department,
-                        'job_title': profile.job_title,
-                        'phone': profile.phone_number,  # Map phone_number to phone
-                        'email_notifications': profile.email_notifications,
-                        'threat_alerts': profile.threat_alerts,
-                        'security_notifications': profile.security_notifications,
-                        'profile_visibility': profile.profile_visibility
-                    })
-                    # Also keep nested profile for completeness
-                    user_details['profile'] = {
-                        'bio': profile.bio,
-                        'department': profile.department,
-                        'job_title': profile.job_title,
-                        'phone_number': profile.phone_number,
-                        'email_notifications': profile.email_notifications,
-                        'threat_alerts': profile.threat_alerts,
-                        'security_notifications': profile.security_notifications,
-                        'profile_visibility': profile.profile_visibility
-                    }
-                else:
-                    # Add default values for missing profile fields
-                    user_details.update({
-                        'bio': '',
-                        'department': '',
-                        'job_title': '',
-                        'phone': '',
-                        'email_notifications': True,
-                        'threat_alerts': True,
-                        'security_notifications': True,
-                        'profile_visibility': 'organization'
-                    })
-                    user_details['profile'] = None
-            except (UserProfile.DoesNotExist, AttributeError):
-                # Add default values for missing profile fields
-                user_details.update({
-                    'bio': '',
-                    'department': '',
-                    'job_title': '',
-                    'phone': '',
-                    'email_notifications': True,
-                    'threat_alerts': True,
-                    'security_notifications': True,
-                    'profile_visibility': 'organization'
-                })
-                user_details['profile'] = None
+            # Add default profile information (UserProfile model removed for simplification)
+            user_details.update({
+                'bio': '',
+                'department': '',
+                'job_title': '',
+                'phone': '',
+                'email_notifications': True,
+                'threat_alerts': True,
+                'security_notifications': True,
+                'profile_visibility': 'organization'
+            })
+            user_details['profile'] = None
         
         return user_details
     
@@ -710,9 +653,7 @@ class UserService:
                 target_user.authentication_logs.all().delete()
                 target_user.devices.all().delete()
                 
-                # Handle UserProfile (OneToOne relationship)
-                if hasattr(target_user, 'profile'):
-                    target_user.profile.delete()
+                # Note: UserProfile model has been removed for simplification
                 
                 # Clear user groups and permissions
                 target_user.groups.clear()

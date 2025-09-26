@@ -11,7 +11,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
-from core.models.models import Organization, UserInvitation
+from core.models.models import Organization
+from core.user_management.models.invitation_models import UserInvitation
 from core.user_management.models import CustomUser
 from core.services.user_service import UserService
 from core.services.invitation_service import UserInvitationService

@@ -16,17 +16,16 @@ from .invitation_models import (
     PasswordResetToken,
 )
 
-# Re-export core models for convenience  
-from core.models.models import Organization, UserProfile
+# Re-export core models for convenience
+from core.models.models import Organization
 
 __all__ = [
     'CustomUser',
     'CustomUserManager',
     'AuthenticationLog',
-    'UserSession', 
+    'UserSession',
     'TrustedDevice',
     'UserInvitation',
     'PasswordResetToken',
     'Organization',
-    'UserProfile',
 ]

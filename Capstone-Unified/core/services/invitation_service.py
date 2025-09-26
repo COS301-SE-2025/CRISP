@@ -9,8 +9,9 @@ from typing import Dict, Any, List, Optional
 from django.utils import timezone
 from django.db import transaction
 from django.core.exceptions import ValidationError
-from core.models.models import (
-    Organization, UserInvitation, PasswordResetToken
+from core.models.models import Organization
+from core.user_management.models.invitation_models import (
+    UserInvitation, PasswordResetToken
 )
 from core.user_management.models import CustomUser, AuthenticationLog
 import logging

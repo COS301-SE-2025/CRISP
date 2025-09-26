@@ -2,7 +2,7 @@ from django.db.models.signals import post_save, pre_save, post_delete
 from django.dispatch import receiver
 from django.contrib.auth.signals import user_logged_in, user_logged_out, user_login_failed
 from django.utils import timezone
-from .models import CustomUser, Organization, UserProfile, AuthenticationLog
+from .models import CustomUser, Organization, AuthenticationLog
 import logging
 
 logger = logging.getLogger(__name__)
@@ -14,26 +14,6 @@ def _safe_get_organization_name(instance):
     except:
         return None
 
-
-@receiver(post_save, sender=CustomUser)
-def create_user_profile(sender, instance, created, **kwargs):
-    """
-    Automatically create UserProfile when a new user is created
-    """
-    if created:
-        UserProfile.objects.create(user=instance)
-        logger.info(f"Created user profile for user: {instance.username}")
-
-
-@receiver(post_save, sender=CustomUser)
-def save_user_profile(sender, instance, **kwargs):
-    """
-    Save UserProfile when user is saved
-    """
-    try:
-        instance.profile.save()
-    except UserProfile.DoesNotExist:
-        UserProfile.objects.create(user=instance)
 
 
 @receiver(pre_save, sender=CustomUser)
