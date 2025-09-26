@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import * as api from '../../api.js';
+import { useNotifications } from '../enhanced/NotificationManager.jsx';
 
 const SOCDashboard = ({ active, showPage }) => {
+  const { showError } = useNotifications();
+
   if (!active) return null;
-  
+
   // Check if user is BlueVisionAdmin
   const currentUser = api.getCurrentUser();
   if (!currentUser || currentUser.role !== 'BlueVisionAdmin') {
@@ -101,7 +104,7 @@ const SOCDashboard = ({ active, showPage }) => {
       }
     } catch (err) {
       console.error('Download error:', err);
-      alert('Failed to download incidents: ' + err.message);
+      showError('Download Failed', 'Failed to download incidents: ' + err.message);
     } finally {
       setDownloading(false);
     }

@@ -188,7 +188,7 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
-  const [useAsync, setUseAsync] = useState(false);
+  const [useAsync, setUseAsync] = useState(true);
 
   // Function to check task status (bypasses cache for real-time updates)
   const checkTaskStatus = async (taskId) => {
@@ -955,7 +955,7 @@ function Header({
                     onLogout();
                   } else {
                     console.error('onLogout is not a function:', onLogout);
-                    alert('Logout function not available. Please refresh the page.');
+                    showError('Logout Error', 'Logout function not available. Please refresh the page.');
                   }
                 }} type="button">
                   <i className="fas fa-sign-out-alt"></i>
@@ -1178,7 +1178,7 @@ function Dashboard({ active, showPage, user }) {
         fetchDashboardData();
       }, {
         backgroundRefresh: true,
-        isVisible: () => active && activePage === 'dashboard'
+        isVisible: () => active
       });
 
       return () => {
@@ -1558,13 +1558,13 @@ function Dashboard({ active, showPage, user }) {
       if (response && response.success) {
         // Refresh system health to show updated connection status
         fetchSystemHealth();
-        alert('Connection test successful!');
+        showSuccess('Connection Test', 'Connection test successful!');
       } else {
-        alert('Connection test failed. Please check the feed configuration.');
+        showError('Connection Test Failed', 'Please check the feed configuration.');
       }
     } catch (error) {
       console.error('Error testing feed connection:', error);
-      alert('Connection test failed due to an error.');
+      showError('Connection Test Error', 'Connection test failed due to an error.');
     }
   };
   
@@ -1978,7 +1978,7 @@ function Dashboard({ active, showPage, user }) {
       
     } catch (error) {
       console.error('Dashboard export failed:', error);
-      alert('Export failed. Please try again.');
+      showError('Export Failed', 'Please try again.');
     } finally {
       setDashboardExporting(false);
     }
@@ -3103,8 +3103,10 @@ function ThreatFeeds({
       
       const statusResults = await Promise.all(statusPromises);
       
-      // Update feedProgress state with consumption status
+      // Update feedProgress state with consumption status and recover active tasks
       const progressUpdates = {};
+      const recoveredTasks = new Map();
+      
       statusResults.forEach(({ feedId, status }) => {
         if (status && status.success) {
           progressUpdates[feedId] = {
@@ -3116,6 +3118,17 @@ function ThreatFeeds({
             canBeResumed: status.can_be_resumed,
             isConsuming: status.is_consuming
           };
+          
+          // Recover active tasks for running or paused feeds
+          if (status.current_task_id && ['running', 'paused'].includes(status.consumption_status)) {
+            const feedInfo = feeds.find(f => f.id === feedId);
+            recoveredTasks.set(status.current_task_id, {
+              feedId: feedId,
+              feedName: feedInfo?.name || status.feed_name || `Feed ${feedId}`,
+              startTime: new Date(), // We don't have the actual start time after refresh
+            });
+            console.log(`🔄 Recovered ${status.consumption_status} task ${status.current_task_id} for feed ${feedInfo?.name || feedId}`);
+          }
         }
       });
       
@@ -3125,6 +3138,18 @@ function ThreatFeeds({
           ...progressUpdates
         }));
         console.log(`✅ Updated status for ${Object.keys(progressUpdates).length} feeds`);
+      }
+      
+      // Update active tasks if any were recovered
+      if (recoveredTasks.size > 0) {
+        setActiveTasks(prev => {
+          const newTasks = new Map(prev);
+          recoveredTasks.forEach((taskInfo, taskId) => {
+            newTasks.set(taskId, taskInfo);
+          });
+          return newTasks;
+        });
+        console.log(`✅ Recovered ${recoveredTasks.size} active tasks after page refresh`);
       }
       
     } catch (error) {
@@ -3262,6 +3287,12 @@ function ThreatFeeds({
 
   const handlePauseFeedConsumption = async (feedId) => {
     try {
+      // Ensure async mode is enabled for pause functionality
+      if (!useAsync) {
+        setUseAsync(true);
+        showInfo('Background Processing Enabled', 'Async mode has been automatically enabled to support pause functionality.');
+      }
+
       // Update UI to show pausing state
       setFeedProgress(prev => ({
         ...prev,
@@ -3361,6 +3392,11 @@ function ThreatFeeds({
   };
 
   const handleConsumeFeed = async (feedId) => {
+    // Warn if async mode is disabled (pause functionality won't work)
+    if (!useAsync) {
+      showWarning('Background Processing Disabled', 'You are consuming feeds in synchronous mode. Pause/resume functionality will not be available. Consider enabling background processing.');
+    }
+
     // Batch state updates to prevent React reconciliation issues
     setConsumingFeeds(prev => {
       if (prev.includes(feedId)) return prev;
@@ -3395,6 +3431,40 @@ function ThreatFeeds({
       const url = `/api/threat-feeds/${feedId}/consume/${params.toString() ? '?' + params.toString() : ''}`;
       console.log('API Call URL:', url);
       console.log('Async enabled:', useAsync);
+      // Check if feed is already running before attempting consumption
+      const { getFeedConsumptionStatus } = await import('./api.js');
+      const currentStatus = await getFeedConsumptionStatus(feedId);
+      
+      if (currentStatus?.success && currentStatus.is_consuming) {
+        const statusMessage = `Feed is ${currentStatus.consumption_status}. ${currentStatus.can_be_paused ? 'Use pause to control it.' : ''}`;
+        showError('Feed Already Running', statusMessage);
+        
+        // If it's running, recover the task in the UI
+        if (currentStatus.current_task_id) {
+          const feedInfo = threatFeeds.find(f => f.id === feedId);
+          setActiveTasks(prev => new Map(prev.set(currentStatus.current_task_id, {
+            feedId,
+            feedName: feedInfo?.name || currentStatus.feed_name || `Feed ${feedId}`,
+            startTime: new Date(),
+          })));
+          
+          setFeedProgress(prev => ({
+            ...prev,
+            [feedId]: {
+              paused: currentStatus.consumption_status === 'paused',
+              status: currentStatus.consumption_status,
+              taskId: currentStatus.current_task_id,
+              canBePaused: currentStatus.can_be_paused,
+              canBeResumed: currentStatus.can_be_resumed,
+              isConsuming: currentStatus.is_consuming,
+              stage: currentStatus.consumption_status === 'paused' ? 'Paused' : 'Running',
+              message: `Task ID: ${currentStatus.current_task_id}`
+            }
+          }));
+        }
+        return;
+      }
+      
       const result = await api.post(url);
       if (result) {
         console.log('Feed consumption started:', result);
@@ -3918,8 +3988,10 @@ function ThreatFeeds({
               </div>
               <div className="active-tasks-grid" style={{display: 'grid', gap: '10px'}}>
                 {Array.from(activeTasks.entries()).map(([taskId, taskInfo]) => {
-                  const feedInfo = feeds.find(f => f.id === taskInfo.feedId);
-                  const progress = feedProgress[taskInfo.feedId];
+                  const feedInfo = feeds.find(f => f.id === taskInfo.feedId) || 
+                    feeds.find(f => feedProgress[f.id]?.taskId === taskId);
+                  const progress = feedProgress[taskInfo.feedId] || 
+                    Object.values(feedProgress).find(p => p.taskId === taskId);
                   
                   return (
                     <div key={taskId} className="task-item" style={{
@@ -3966,16 +4038,30 @@ function ThreatFeeds({
                           )}
                         </div>
                         <div style={{display: 'flex', flexDirection: 'column', gap: '4px', marginLeft: '12px'}}>
-                          <button
-                            className="btn btn-xs btn-warning"
-                            onClick={() => handleCancelFeedConsumption(taskInfo.feedId, 'stop_now')}
-                            title="Stop task but keep data"
-                            style={{fontSize: '10px', padding: '4px 8px'}}
-                            disabled={progress?.cancelling}
-                          >
-                            <i className={progress?.cancelling ? "fas fa-clock" : "fas fa-pause"}></i>
-                            {progress?.cancelling ? 'Stopping...' : 'Stop'}
-                          </button>
+                          {/* Show appropriate buttons based on task state */}
+                          {progress?.paused ? (
+                            <button
+                              className="btn btn-xs btn-success"
+                              onClick={() => handleResumeFeedConsumption(taskInfo.feedId)}
+                              title="Resume consumption from where it was paused"
+                              style={{fontSize: '10px', padding: '4px 8px'}}
+                              disabled={progress?.resuming}
+                            >
+                              <i className={progress?.resuming ? "fas fa-clock" : "fas fa-play"}></i>
+                              {progress?.resuming ? 'Resuming...' : 'Resume'}
+                            </button>
+                          ) : (
+                            <button
+                              className="btn btn-xs btn-warning"
+                              onClick={() => handlePauseFeedConsumption(taskInfo.feedId)}
+                              title="Pause consumption and save progress for later resume"
+                              style={{fontSize: '10px', padding: '4px 8px'}}
+                              disabled={progress?.pausing}
+                            >
+                              <i className={progress?.pausing ? "fas fa-clock" : "fas fa-pause"}></i>
+                              {progress?.pausing ? 'Pausing...' : 'Pause'}
+                            </button>
+                          )}
                           <button
                             className="btn btn-xs btn-danger"
                             onClick={() => handleCancelFeedConsumption(taskInfo.feedId, 'cancel_job')}
@@ -4090,7 +4176,7 @@ function ThreatFeeds({
                 checked={useAsync}
                 onChange={(e) => setUseAsync(e.target.checked)}
               />
-              <span className="async-label-header">Process in background</span>
+              <span className="async-label-header">Process in background (required for pause/resume)</span>
             </label>
           </div>
         </div>
@@ -5094,19 +5180,19 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
         }
 
         if (result.deleted_count > 0) {
-          alert(`Successfully deleted all ${result.deleted_count} indicators`);
+          showSuccess('Indicators Deleted', `Successfully deleted all ${result.deleted_count} indicators`);
         } else {
-          alert(`No indicators were deleted. You may not have any indicators in your organization or the indicators may belong to other organizations.`);
+          showWarning('No Indicators Deleted', 'You may not have any indicators in your organization or the indicators may belong to other organizations.');
         }
 
       } else {
         console.error('Bulk delete failed:', result);
-        alert(`Error clearing indicators: ${result.error || 'Unknown error'}`);
+        showError('Error Clearing Indicators', result.error || 'Unknown error');
       }
       
     } catch (error) {
       console.error('Error during clear all operation:', error);
-      alert('Error clearing indicators. Please try again.');
+      showError('Error Clearing Indicators', 'Please try again.');
     } finally {
       setLoading(false);
     }
@@ -6499,7 +6585,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
   async function handleExport() {
     const exportCount = getExportCount();
     if (exportCount === 0) {
-      alert('No indicators to export');
+      showWarning('Export Warning', 'No indicators to export');
       return;
     }
 
@@ -6564,11 +6650,11 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
       closeExportModal();
 
       console.log(`Successfully exported ${totalCount} IoCs as ${exportFormat.toUpperCase()}`);
-      alert(`Export completed! Downloaded ${totalCount} indicators as ${filename}`);
+      showSuccess('Export Completed', `Downloaded ${totalCount} indicators as ${filename}`);
 
     } catch (error) {
       console.error('Export failed:', error);
-      alert(`Export failed: ${error.message}. Please try again or reduce the number of indicators.`);
+      showError('Export Failed', `${error.message}. Please try again or reduce the number of indicators.`);
     } finally {
       setExporting(false);
     }
@@ -6731,7 +6817,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
       
     } catch (error) {
       console.error('File validation failed:', error);
-      alert(`Security validation failed: ${error.message}`);
+      showError('Security Validation Failed', error.message);
     } finally {
       setImporting(false);
     }
@@ -6786,7 +6872,11 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
         const message = `Import completed! Added ${response.created_count} new indicators.`;
         const errorMessage = response.error_count > 0 ? ` ${response.error_count} errors occurred.` : '';
         console.log(`${message}${errorMessage}`, response.errors);
-        alert(`${message}${errorMessage}`);
+        if (response.error_count > 0) {
+          showWarning('Import Completed with Errors', `${message}${errorMessage}`);
+        } else {
+          showSuccess('Import Completed', message);
+        }
         
       } else {
         throw new Error('Bulk import failed');
@@ -6794,7 +6884,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
       
     } catch (error) {
       console.error('Import failed:', error);
-      alert('Import failed. Please try again.');
+      showError('Import Failed', 'Please try again.');
     } finally {
       setImporting(false);
     }
@@ -7194,7 +7284,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
         ));
         
         closeEditModal();
-        alert('Indicator updated successfully!');
+        showSuccess('Indicator Updated', 'Indicator updated successfully!');
 
         // Trigger refresh after successful indicator update
         refreshManager.triggerRefresh(['indicators', 'dashboard'], 'indicator_updated');
@@ -7278,14 +7368,14 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
         // Refresh the indicators list from server
         await fetchIndicators();
         
-        alert(`Successfully deleted ${deletedCount} out of ${indicatorIds.length} indicators`);
+        showSuccess('Indicators Deleted', `Successfully deleted ${deletedCount} out of ${indicatorIds.length} indicators`);
         
         // Trigger refresh after successful bulk deletion
         refreshManager.triggerRefresh(['indicators', 'dashboard'], 'indicator_deleted');
         
       } catch (error) {
         console.error('Error during bulk delete:', error);
-        alert('Error deleting indicators. Please try again.');
+        showError('Delete Error', 'Error deleting indicators. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -7319,16 +7409,16 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
           // Refresh the indicators list from server to ensure consistency
           await fetchIndicators();
 
-          alert('Indicator deleted successfully');
+          showSuccess('Indicator Deleted', 'Indicator deleted successfully');
 
           // Trigger refresh after successful indicator deletion
           refreshManager.triggerRefresh(['indicators', 'dashboard'], 'indicator_deleted');
         } else {
-          alert('Failed to delete indicator. Please try again.');
+          showError('Delete Failed', 'Failed to delete indicator. Please try again.');
         }
       } catch (error) {
         console.error('Error deleting indicator:', error);
-        alert('Error deleting indicator. Please try again.');
+        showError('Delete Error', 'Error deleting indicator. Please try again.');
       }
     }
   }
@@ -7384,7 +7474,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
     e.preventDefault();
     
     if (!sharingIndicator || shareFormData.organisations.length === 0) {
-      alert('Please select at least one organisation to share with.');
+      showWarning('Selection Required', 'Please select at least one organisation to share with.');
       return;
     }
     
@@ -7402,7 +7492,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
       }).filter(id => id !== null);
 
       if (organizationIds.length === 0) {
-        alert('Unable to find organization IDs. Please try again.');
+        showError('Organization Error', 'Unable to find organization IDs. Please try again.');
         setSharing(false);
         return;
       }
@@ -7427,7 +7517,11 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
           message += ` (${failedCount} failed)`;
         }
 
-        alert(message);
+        if (failedCount > 0) {
+          showWarning('Sharing Completed with Issues', message);
+        } else {
+          showSuccess('Sharing Successful', message);
+        }
       } else {
         const errorMsg = response?.message || response?.error || 'Failed to share indicator';
         throw new Error(errorMsg);
@@ -7436,7 +7530,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
     } catch (error) {
       console.error('Error sharing indicator:', error);
       const errorMessage = error.message || 'Failed to share indicator. Please try again.';
-      alert(`Sharing failed: ${errorMessage}`);
+      showError('Sharing Failed', errorMessage);
     } finally {
       setSharing(false);
     }
@@ -7488,7 +7582,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
         
         // Show success message
         console.log('IoC added successfully:', response);
-        alert('IoC added successfully!');
+        showSuccess('IoC Added', 'IoC added successfully!');
 
         // Trigger refresh after successful IoC addition
         refreshManager.triggerRefresh(['indicators', 'dashboard'], 'indicator_added');
@@ -7696,7 +7790,7 @@ function TTPAnalysis({ active }) {
   // Load TTPs from selected feed (like IoC Management)
   const loadFeedTTPs = async () => {
     if (!selectedFeedForConsumption) {
-      alert('Please select a threat feed to analyze');
+      showWarning('Selection Required', 'Please select a threat feed to analyze');
       return;
     }
 
@@ -8260,7 +8354,7 @@ function TTPAnalysis({ active }) {
         setIsEditMode(false);
 
         // Show success message
-        alert('TTP updated successfully');
+        showSuccess('TTP Updated', 'TTP updated successfully');
 
         // Refresh all TTP-related data to reflect changes immediately
         await Promise.all([
@@ -8274,11 +8368,11 @@ function TTPAnalysis({ active }) {
         // Close the modal after successful update and refresh
         closeTTPModal();
       } else {
-        alert('Failed to update TTP');
+        showError('Update Failed', 'Failed to update TTP');
       }
     } catch (error) {
       console.error('Error updating TTP:', error);
-      alert('Error updating TTP: ' + (error.message || 'Unknown error'));
+      showError('Update Error', 'Error updating TTP: ' + (error.message || 'Unknown error'));
     }
   };
 
@@ -8351,7 +8445,7 @@ function TTPAnalysis({ active }) {
       
       // Close modal and show success message
       closeExportModal();
-      alert(`Export completed successfully! Downloaded: ${filename}`);
+      showSuccess('Export Completed', `Export completed successfully! Downloaded: ${filename}`);
       
     } catch (error) {
       console.error('Export failed:', error);
@@ -8711,16 +8805,16 @@ function TTPAnalysis({ active }) {
       if (response && response.success) {
         // Remove the deleted TTP from the local state
         setTtpData(prevData => prevData.filter(ttp => ttp.id !== ttpId));
-        alert('TTP deleted successfully');
+        showSuccess('TTP Deleted', 'TTP deleted successfully');
         
         // Refresh trends data to reflect deletion
         fetchTTPTrendsData();
       } else {
-        alert('Failed to delete TTP');
+        showError('Delete Failed', 'Failed to delete TTP');
       }
     } catch (error) {
       console.error('Error deleting TTP:', error);
-      alert('Error deleting TTP: ' + (error.message || 'Unknown error'));
+      showError('Delete Error', 'Error deleting TTP: ' + (error.message || 'Unknown error'));
     }
   };
   

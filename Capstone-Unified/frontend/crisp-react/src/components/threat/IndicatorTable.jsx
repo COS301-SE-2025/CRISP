@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNotifications } from '../enhanced/NotificationManager.jsx';
 
 const IndicatorTable = () => {
+  const { showError } = useNotifications();
   const [indicators, setIndicators] = useState([]);
   const [sharedIndicators, setSharedIndicators] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -280,7 +282,7 @@ const IndicatorTable = () => {
       
     } catch (error) {
       console.error('Error during bulk delete:', error);
-      alert(`Error deleting indicators: ${error.message}`);
+      showError('Delete Error', `Error deleting indicators: ${error.message}`);
     }
   };
 

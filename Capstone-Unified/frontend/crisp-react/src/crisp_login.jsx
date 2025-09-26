@@ -5,6 +5,7 @@ import CrispHelp from './crisp_help.jsx'; // Import the help component
 import Construction from './construction.jsx'; // Import construction component
 import ChangePassword from './components/ChangePassword.jsx'; // Import change password component
 import LoadingSpinner from './components/LoadingSpinner.jsx'; // Import loading spinner
+import { useNotifications } from './components/enhanced/NotificationManager.jsx';
 
 // Login Component that works with the AuthWrapper in main.jsx
 function CrispLogin({ onLoginSuccess, switchView }) {
@@ -13,6 +14,7 @@ function CrispLogin({ onLoginSuccess, switchView }) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false); // State for help modal
+  const { showSuccess } = useNotifications();
   const [showConstruction, setShowConstruction] = useState(false); // State for construction page
   const [showChangePassword, setShowChangePassword] = useState(false); // State for change password modal
 
@@ -57,7 +59,7 @@ function CrispLogin({ onLoginSuccess, switchView }) {
 
   const handlePasswordChanged = () => {
     setError('');
-    alert('Password changed successfully! You can now log in with your new password.');
+    showSuccess('Password Changed', 'Password changed successfully! You can now log in with your new password.');
   };
 
   // Handle navigation from help component

@@ -4,6 +4,7 @@ import { getAssetInventory, createAsset, updateAsset, deleteAsset, bulkUploadAss
 import LoadingSpinner from '../enhanced/LoadingSpinner';
 import NotificationToast from '../enhanced/NotificationToast';
 import ConfirmationModal from '../enhanced/ConfirmationModal';
+import { useNotifications } from '../enhanced/NotificationManager.jsx';
 
 
 
@@ -459,6 +460,8 @@ const CustomAlertsTab = ({ alerts, onView, onDelete, loading, refreshInterval })
 };
 
 const AssetManagement = ({ active }) => {
+  const { showError, showWarning } = useNotifications();
+
   if (!active) {
     return null;
   }
@@ -1065,6 +1068,7 @@ const AssetManagement = ({ active }) => {
 };
 
 const AssetModal = ({ asset, onSave, onClose, errorMessage }) => {
+  const { showWarning } = useNotifications();
   const [formData, setFormData] = useState({
     name: '',
     asset_type: 'domain',
@@ -1105,11 +1109,11 @@ const AssetModal = ({ asset, onSave, onClose, errorMessage }) => {
     
     // Basic validation
     if (!formData.name?.trim()) {
-      alert('Please enter an asset name');
+      showWarning('Validation Error', 'Please enter an asset name');
       return;
     }
     if (!formData.asset_value?.trim()) {
-      alert('Please enter an asset value');
+      showWarning('Validation Error', 'Please enter an asset value');
       return;
     }
     

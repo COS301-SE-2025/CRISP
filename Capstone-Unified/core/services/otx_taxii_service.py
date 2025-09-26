@@ -365,13 +365,17 @@ class OTXTaxiiService:
                 try:
                     # Check for cancellation before processing each block
                     if cancel_check_callback:
+                        logger.info(f"Calling pause check callback for block {i+1}/{len(content_blocks)}")
                         action = cancel_check_callback()
+                        logger.info(f"Pause check callback returned: {action}")
                         if action == 'pause':
                             logger.info(f"OTX feed consumption paused during processing for {threat_feed.name} after {i} blocks")
                             raise Exception(f"Feed consumption paused by user request at block {i+1}/{len(content_blocks)}")
                         elif action == 'cancel':
                             logger.info(f"OTX feed consumption cancelled during processing for {threat_feed.name} after {i} blocks")
                             break
+                    else:
+                        logger.warning(f"No cancel_check_callback provided for block {i+1}")
                         
                     logger.info(f"Processing block {i+1}/{len(content_blocks)}")
                     

@@ -10,7 +10,7 @@ import Construction from "./construction.jsx";
 import ForgotPassword from "./components/ForgotPassword.jsx";
 import ResetPassword from "./components/ResetPassword.jsx";
 import SessionTimeout from "./components/enhanced/SessionTimeout.jsx";
-import { NotificationProvider } from "./components/enhanced/NotificationManager.jsx";
+import { NotificationProvider, useNotifications } from "./components/enhanced/NotificationManager.jsx";
 import NotificationWatcher from "./components/enhanced/NotificationWatcher.jsx";
 import "./assets/index_ut.css";
 import "./assets/trust-management.css";
@@ -24,11 +24,12 @@ function AppWrapper({ user, onLogout, isAdmin }) {
   return <CRISPApp user={user} onLogout={onLogout} isAdmin={isAdmin} />;
 }
 
-function AuthRoutes() {
+function AuthRoutesWithNotifications() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userData, setUserData] = useState(null);
   const navigate = useNavigate();
+  const { showSuccess, showError } = useNotifications();
   
 
   // Check if user is already authenticated on app load
@@ -73,7 +74,7 @@ function AuthRoutes() {
       navigate('/dashboard', { replace: true });
     } catch (error) {
       console.error("Error storing authentication data:", error);
-      alert("Login error: Unable to store session data");
+      showError('Login Error', 'Unable to store session data');
     }
   };
 
@@ -91,7 +92,7 @@ function AuthRoutes() {
       setIsAuthenticated(true);
     } catch (error) {
       console.error("Error storing authentication data:", error);
-      alert("Registration error: Unable to store session data");
+      showError('Registration Error', 'Unable to store session data');
     }
   };
 
@@ -240,7 +241,7 @@ function AuthRoutes() {
             ) : isAdmin ? (
               <RegisterUser 
                 onRegisterSuccess={() => {
-                  alert("User registered successfully!");
+                  showSuccess('Registration Successful', 'User registered successfully!');
                   navigate('/dashboard');
                 }}
                 switchView={() => navigate('/dashboard')}
@@ -341,6 +342,14 @@ window.addEventListener("popstate", () => {
     window.location.reload();
   }
 });
+
+function AuthRoutes() {
+  return (
+    <NotificationProvider>
+      <AuthRoutesWithNotifications />
+    </NotificationProvider>
+  );
+}
 
 function AuthWrapper() {
   return (
