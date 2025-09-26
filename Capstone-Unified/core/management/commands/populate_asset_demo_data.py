@@ -73,7 +73,13 @@ class Command(BaseCommand):
         self.stdout.write('Cleaning existing demo data...')
         CustomAlert.objects.filter(alert_id__startswith='DEMO-').delete()
         AssetInventory.objects.filter(metadata__contains={'demo': True}).delete()
-        Indicator.objects.filter(metadata__contains={'demo': True}).delete()
+        
+        # Clean indicators by demo feed
+        demo_feed = ThreatFeed.objects.filter(name='Demo Threat Feed').first()
+        if demo_feed:
+            Indicator.objects.filter(threat_feed=demo_feed).delete()
+            demo_feed.delete()
+            
         User.objects.filter(metadata__contains={'demo': True}).delete()
         Organization.objects.filter(trust_metadata__contains={'demo': True}).delete()
 

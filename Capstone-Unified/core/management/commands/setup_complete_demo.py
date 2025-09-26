@@ -39,11 +39,11 @@ class Command(BaseCommand):
                 )
             )
 
+            # Step 1: Basic system setup (ensure tables exist)
+            self.setup_basic_system()
+
             if options['clean']:
                 self.clean_all_data()
-
-            # Step 1: Basic system setup
-            self.setup_basic_system()
 
             # Step 2: Population parameters based on mode
             if options['quick']:
