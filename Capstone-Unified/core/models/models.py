@@ -583,6 +583,37 @@ class ThreatFeed(models.Model):
     sync_count = models.IntegerField(default=0)
     last_published_time = models.DateTimeField(blank=True, null=True)
     
+    # Consumption status for pause/resume functionality
+    CONSUMPTION_STATUS_CHOICES = [
+        ('idle', 'Idle'),
+        ('running', 'Running'), 
+        ('paused', 'Paused'),
+        ('stopping', 'Stopping'),
+        ('error', 'Error')
+    ]
+    consumption_status = models.CharField(
+        max_length=20,
+        choices=CONSUMPTION_STATUS_CHOICES,
+        default='idle',
+        help_text='Current consumption status for pause/resume functionality'
+    )
+    paused_at = models.DateTimeField(
+        blank=True, 
+        null=True,
+        help_text='Timestamp when consumption was paused'
+    )
+    pause_metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Metadata for resuming consumption from paused state (e.g., last processed item, progress info)'
+    )
+    current_task_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text='Current Celery task ID for consumption tracking'
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -645,6 +676,55 @@ class ThreatFeed(models.Model):
         if hasattr(self, 'subscriptions'):
             return self.subscriptions.filter(institution=institution).exists()
         return False
+    
+    # Pause/Resume helper methods
+    def start_consumption(self, task_id):
+        """Mark feed consumption as started"""
+        self.consumption_status = 'running'
+        self.current_task_id = task_id
+        self.paused_at = None
+        self.pause_metadata = {}
+        self.last_error = None
+        self.save(update_fields=['consumption_status', 'current_task_id', 'paused_at', 'pause_metadata', 'last_error'])
+    
+    def pause_consumption(self, metadata=None):
+        """Mark feed consumption as paused"""
+        from django.utils import timezone
+        self.consumption_status = 'paused'
+        self.paused_at = timezone.now()
+        if metadata:
+            self.pause_metadata.update(metadata)
+        self.save(update_fields=['consumption_status', 'paused_at', 'pause_metadata'])
+    
+    def resume_consumption(self, new_task_id):
+        """Mark feed consumption as resumed"""
+        self.consumption_status = 'running'
+        self.current_task_id = new_task_id
+        self.paused_at = None
+        # Keep pause_metadata for the resumed task to use
+        self.save(update_fields=['consumption_status', 'current_task_id', 'paused_at'])
+    
+    def stop_consumption(self, error_message=None):
+        """Mark feed consumption as stopped/idle"""
+        self.consumption_status = 'error' if error_message else 'idle'
+        self.current_task_id = None
+        self.paused_at = None
+        self.pause_metadata = {}
+        if error_message:
+            self.last_error = error_message
+        self.save(update_fields=['consumption_status', 'current_task_id', 'paused_at', 'pause_metadata', 'last_error'])
+    
+    def can_be_paused(self):
+        """Check if feed consumption can be paused"""
+        return self.consumption_status == 'running' and self.current_task_id is not None
+    
+    def can_be_resumed(self):
+        """Check if feed consumption can be resumed"""
+        return self.consumption_status == 'paused' and self.pause_metadata
+    
+    def is_consuming(self):
+        """Check if feed is currently being consumed"""
+        return self.consumption_status in ['running', 'paused', 'stopping']
     
     def save(self, *args, **kwargs):
         """Override save to trigger observer notifications"""

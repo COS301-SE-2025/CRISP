@@ -1257,3 +1257,46 @@ export const assignSOCIncident = async (incidentId, username) => {
 
   return await response.json();
 };
+
+// Threat Feed Pause/Resume API Functions
+export const pauseFeedConsumption = async (feedId) => {
+  const response = await fetch(`${API_BASE_URL}/api/threat-feeds/${feedId}/pause_consumption/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to pause feed consumption');
+  }
+
+  return await response.json();
+};
+
+export const resumeFeedConsumption = async (feedId) => {
+  const response = await fetch(`${API_BASE_URL}/api/threat-feeds/${feedId}/resume_consumption/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to resume feed consumption');
+  }
+
+  return await response.json();
+};
+
+export const getFeedConsumptionStatus = async (feedId) => {
+  const response = await fetch(`${API_BASE_URL}/api/threat-feeds/${feedId}/consumption_status/`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to get feed consumption status');
+  }
+
+  return await response.json();
+};

@@ -20,17 +20,17 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://backend:8000',
+        target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false
       },
       '/admin': {
-        target: 'http://backend:8000',
+        target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false
       },
       '/taxii2': {
-        target: 'http://backend:8000',
+        target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false
       }

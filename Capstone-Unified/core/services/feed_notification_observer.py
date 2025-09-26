@@ -90,6 +90,12 @@ def indicator_saved_handler(sender, instance, created, **kwargs):
     """Handle indicator creation/update to add to batch notifications"""
     try:
         if instance.threat_feed:
+            # Skip notifications for internal manual indicators feed
+            if (instance.threat_feed.name == "Internal Manual Indicators" and 
+                not instance.threat_feed.is_active):
+                logger.debug(f"Skipping notification for internal manual indicator: {instance.value}")
+                return
+            
             # Determine if this is a new or updated indicator
             new_count = 1 if created else 0
             updated_count = 0 if created else 1

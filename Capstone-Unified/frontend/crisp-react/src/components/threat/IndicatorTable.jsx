@@ -11,10 +11,14 @@ const IndicatorTable = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [selectedIndicators, setSelectedIndicators] = useState(new Set());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const itemsPerPage = 20;
 
   useEffect(() => {
     fetchIndicators();
+    // Clear selections when filter or search changes
+    setSelectedIndicators(new Set());
   }, [filter, searchTerm]);
 
   // Auto-refresh every 30 seconds when enabled
@@ -30,6 +34,11 @@ const IndicatorTable = () => {
       if (interval) clearInterval(interval);
     };
   }, [autoRefresh, filter, searchTerm]);
+
+  // Clear selections when page changes
+  useEffect(() => {
+    setSelectedIndicators(new Set());
+  }, [currentPage]);
 
   // Listen for feed consumption completion events
   useEffect(() => {
@@ -189,6 +198,91 @@ const IndicatorTable = () => {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = indicators.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(indicators.length / itemsPerPage);
+
+  // Selection logic
+  const handleSelectAll = () => {
+    if (selectedIndicators.size === currentItems.length) {
+      // If all current items are selected, deselect all
+      setSelectedIndicators(new Set());
+    } else {
+      // Select all current items
+      setSelectedIndicators(new Set(currentItems.map(indicator => indicator.id)));
+    }
+  };
+
+  const handleSelectIndicator = (indicatorId) => {
+    const newSelected = new Set(selectedIndicators);
+    if (newSelected.has(indicatorId)) {
+      newSelected.delete(indicatorId);
+    } else {
+      newSelected.add(indicatorId);
+    }
+    setSelectedIndicators(newSelected);
+  };
+
+  const isAllSelected = currentItems.length > 0 && selectedIndicators.size === currentItems.length;
+  const isIndeterminate = selectedIndicators.size > 0 && selectedIndicators.size < currentItems.length;
+
+  const handleBulkDelete = () => {
+    if (selectedIndicators.size === 0) return;
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDelete = (clickedIndicatorId) => {
+    // If multiple indicators are selected and the clicked indicator is one of them,
+    // delete all selected indicators. Otherwise, delete just the clicked one.
+    if (selectedIndicators.size > 1 && selectedIndicators.has(clickedIndicatorId)) {
+      // Bulk delete scenario
+      setShowDeleteConfirm(true);
+    } else if (selectedIndicators.size > 0) {
+      // If some indicators are selected but clicked one is not among them,
+      // select just the clicked one and delete it
+      setSelectedIndicators(new Set([clickedIndicatorId]));
+      setShowDeleteConfirm(true);
+    } else {
+      // Single delete scenario
+      setSelectedIndicators(new Set([clickedIndicatorId]));
+      setShowDeleteConfirm(true);
+    }
+  };
+
+  const confirmBulkDelete = async () => {
+    try {
+      const selectedIds = Array.from(selectedIndicators);
+      
+      // Make DELETE requests for each selected indicator
+      const deletePromises = selectedIds.map(async (id) => {
+        const response = await fetch(`/api/indicators/${id}/`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(localStorage.getItem('token') && {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            })
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to delete indicator ${id}: ${response.status}`);
+        }
+        
+        return id;
+      });
+
+      await Promise.all(deletePromises);
+      
+      console.log(`Successfully deleted ${selectedIds.length} indicators`);
+      
+      // Clear selections and refresh data
+      setSelectedIndicators(new Set());
+      setShowDeleteConfirm(false);
+      fetchIndicators();
+      
+    } catch (error) {
+      console.error('Error during bulk delete:', error);
+      alert(`Error deleting indicators: ${error.message}`);
+    }
+  };
 
   if (loading) {
     return (
@@ -352,10 +446,46 @@ const IndicatorTable = () => {
         </button>
       </div>
 
+      {selectedIndicators.size > 0 && (
+        <div className="selection-info">
+          <i className="fas fa-check-circle"></i>
+          {selectedIndicators.size} indicator{selectedIndicators.size !== 1 ? 's' : ''} selected
+          <div className="selection-actions">
+            <button 
+              className="btn btn-sm btn-danger"
+              onClick={handleBulkDelete}
+              title="Delete selected indicators"
+            >
+              <i className="fas fa-trash"></i>
+              Delete Selected
+            </button>
+            <button 
+              className="btn btn-sm btn-outline"
+              onClick={() => setSelectedIndicators(new Set())}
+              title="Clear selection"
+            >
+              <i className="fas fa-times"></i>
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="table-container">
         <table className="indicators-table">
           <thead>
             <tr>
+              <th className="select-column">
+                <input
+                  type="checkbox"
+                  checked={isAllSelected}
+                  ref={(input) => {
+                    if (input) input.indeterminate = isIndeterminate;
+                  }}
+                  onChange={handleSelectAll}
+                  title={selectedIndicators.size > 0 ? `${selectedIndicators.size} selected` : 'Select all'}
+                />
+              </th>
               <th onClick={() => handleSort('type')}>
                 Type
                 {sortConfig.key === 'type' && (
@@ -404,6 +534,13 @@ const IndicatorTable = () => {
           <tbody>
             {currentItems.map(indicator => (
               <tr key={indicator.id} className={indicator.is_shared ? 'shared-indicator' : ''}>
+                <td className="select-column">
+                  <input
+                    type="checkbox"
+                    checked={selectedIndicators.has(indicator.id)}
+                    onChange={() => handleSelectIndicator(indicator.id)}
+                  />
+                </td>
                 <td>
                   <div className="type-cell">
                     <i className={getTypeIcon(indicator.type)}></i>
@@ -500,6 +637,16 @@ const IndicatorTable = () => {
                     <button className="btn-icon" title="Export">
                       <i className="fas fa-download"></i>
                     </button>
+                    <button 
+                      className="btn-icon delete-btn" 
+                      onClick={() => handleDelete(indicator.id)}
+                      title={selectedIndicators.size > 1 ? `Delete ${selectedIndicators.size} selected indicators` : "Delete indicator"}
+                    >
+                      <i className="fas fa-trash"></i>
+                      {selectedIndicators.size > 1 && selectedIndicators.has(indicator.id) && (
+                        <span className="bulk-indicator">{selectedIndicators.size}</span>
+                      )}
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -539,6 +686,39 @@ const IndicatorTable = () => {
             Next
             <i className="fas fa-chevron-right"></i>
           </button>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>Confirm Bulk Delete</h3>
+              <i className="fas fa-exclamation-triangle" style={{color: '#dc3545', marginLeft: '10px'}}></i>
+            </div>
+            <div className="modal-body">
+              <p>Are you sure you want to delete <strong>{selectedIndicators.size}</strong> selected indicator{selectedIndicators.size !== 1 ? 's' : ''}?</p>
+              <p style={{color: '#dc3545', fontSize: '14px', marginTop: '10px'}}>
+                <i className="fas fa-warning"></i> This action cannot be undone.
+              </p>
+            </div>
+            <div className="modal-actions">
+              <button 
+                className="btn btn-outline"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn btn-danger"
+                onClick={confirmBulkDelete}
+              >
+                <i className="fas fa-trash"></i>
+                Delete {selectedIndicators.size} Indicator{selectedIndicators.size !== 1 ? 's' : ''}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -809,6 +989,32 @@ const IndicatorTable = () => {
           color: #495057;
         }
 
+        .delete-btn {
+          position: relative;
+        }
+
+        .delete-btn:hover {
+          background: #fee;
+          color: #dc3545;
+        }
+
+        .bulk-indicator {
+          position: absolute;
+          top: -6px;
+          right: -6px;
+          background: #dc3545;
+          color: white;
+          border-radius: 50%;
+          width: 18px;
+          height: 18px;
+          font-size: 10px;
+          font-weight: bold;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 2px solid white;
+        }
+
         .pagination {
           display: flex;
           justify-content: center;
@@ -962,6 +1168,114 @@ const IndicatorTable = () => {
           display: inline-flex;
           align-items: center;
           gap: 3px;
+        }
+
+        .select-column {
+          width: 40px;
+          text-align: center;
+          padding: 8px !important;
+        }
+
+        .select-column input[type="checkbox"] {
+          cursor: pointer;
+          transform: scale(1.1);
+        }
+
+        .select-column input[type="checkbox"]:indeterminate {
+          background-color: #0056b3;
+        }
+
+        .selection-info {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 12px 16px;
+          background: #e3f2fd;
+          border: 1px solid #bbdefb;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          color: #0056b3;
+          font-weight: 500;
+        }
+
+        .selection-info i {
+          color: #0056b3;
+        }
+
+        .selection-info .btn {
+          margin-left: auto;
+        }
+
+        .selection-actions {
+          display: flex;
+          gap: 8px;
+          margin-left: auto;
+        }
+
+        .btn-danger {
+          background: #dc3545;
+          color: white;
+          border: 1px solid #dc3545;
+        }
+
+        .btn-danger:hover {
+          background: #c82333;
+          border-color: #bd2130;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+        }
+
+        .modal-content {
+          background: white;
+          border-radius: 8px;
+          padding: 0;
+          max-width: 500px;
+          width: 90%;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+          padding: 20px;
+          border-bottom: 1px solid #dee2e6;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .modal-header h3 {
+          margin: 0;
+          color: #333;
+          font-size: 18px;
+        }
+
+        .modal-body {
+          padding: 20px;
+          color: #495057;
+          line-height: 1.5;
+        }
+
+        .modal-body p {
+          margin: 0 0 10px 0;
+        }
+
+        .modal-actions {
+          padding: 20px;
+          border-top: 1px solid #dee2e6;
+          display: flex;
+          gap: 10px;
+          justify-content: flex-end;
         }
       `}</style>
     </div>
