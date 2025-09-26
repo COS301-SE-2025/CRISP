@@ -78,3 +78,8 @@ export const dismissAlert = (alertId) => {
 export const escalateAlert = (alertId) => {
   return updateAlertStatus(alertId, 'escalate');
 };
+
+// Demo data management
+export const clearDemoData = () => {
+  return post(`${BASE_URL}/assets/clear-demo-data/`);
+};

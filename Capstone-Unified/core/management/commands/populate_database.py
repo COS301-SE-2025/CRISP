@@ -845,20 +845,12 @@ class Command(BaseCommand):
 
                                 indicator = Indicator.objects.create(
                                     value=value,
-                                    indicator_type=mapped_type,
+                                    type=mapped_type,
                                     threat_feed=threat_feed,
                                     confidence=indicator_data.get('confidence', 75),
                                     first_seen=timezone.now() - timedelta(days=30),
                                     last_seen=timezone.now() - timedelta(days=1),
-                                    is_active=True,
-                                    metadata={
-                                        'labels': indicator_data.get('labels', []),
-                                        'kill_chain_phases': indicator_data.get('kill_chain_phases', []),
-                                        'threat_actor': indicator_data.get('threat_actor'),
-                                        'malware_family': indicator_data.get('malware_family'),
-                                        'campaign': indicator_data.get('campaign'),
-                                        'original_metadata': indicator_data.get('metadata', {})
-                                    }
+                                    stix_id=indicator_data.get('id', f"indicator--{uuid.uuid4()}")
                                 )
                                 indicator_count += 1
 
@@ -877,13 +869,7 @@ class Command(BaseCommand):
                                     mitre_technique_id=ttp_data['mitre_technique_id'],
                                     mitre_tactic=ttp_data['tactic'],
                                     threat_feed=threat_feed,
-                                    confidence_score=85,
-                                    is_active=True,
-                                    metadata={
-                                        'detection_rules': ttp_data.get('detection_rules', []),
-                                        'mitigations': ttp_data.get('mitigations', []),
-                                        'feed_source': threat_feed.name
-                                    }
+                                    stix_id=ttp_data.get('id', f"attack-pattern--{uuid.uuid4()}")
                                 )
                                 ttp_count += 1
 

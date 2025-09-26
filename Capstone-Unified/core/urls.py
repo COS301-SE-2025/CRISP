@@ -176,6 +176,7 @@ asset_urlpatterns = [
     path('statistics/', asset_api.asset_alert_statistics, name='asset_alert_statistics'),
     path('bulk-upload/', asset_api.bulk_asset_upload, name='bulk_asset_upload'),
     path('alerts/feed/', asset_api.asset_alert_feed, name='asset_alert_feed'),
+    path('clear-demo-data/', asset_api.clear_demo_data, name='clear_demo_data'),
 ]
 
 # Main URL patterns

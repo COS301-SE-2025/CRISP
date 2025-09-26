@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Fragment } from 'react';
 import { get } from '../../api';
-import { getAssetInventory, createAsset, updateAsset, deleteAsset, bulkUploadAssets, getCustomAlerts, getAssetAlertStatistics, triggerAssetCorrelation, getCustomAlertDetails, updateAlertStatus, deleteAlert } from '../../api/assets';
+import { getAssetInventory, createAsset, updateAsset, deleteAsset, bulkUploadAssets, getCustomAlerts, getAssetAlertStatistics, triggerAssetCorrelation, getCustomAlertDetails, updateAlertStatus, deleteAlert, clearDemoData } from '../../api/assets';
 import LoadingSpinner from '../enhanced/LoadingSpinner';
 import NotificationToast from '../enhanced/NotificationToast';
 import ConfirmationModal from '../enhanced/ConfirmationModal';
@@ -548,6 +548,23 @@ const AssetManagement = ({ active }) => {
     }
   };
 
+  const handleClearDemoData = async () => {
+    if (!window.confirm('Are you sure you want to clear all demo data? This will remove demo alerts and assets and cannot be undone.')) {
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const response = await clearDemoData();
+      showNotification(`Demo data cleared successfully! ${response.data.deleted_alerts} alerts and ${response.data.deleted_assets} assets removed.`, 'success');
+      fetchData();
+    } catch (err) {
+      console.error('Clear demo data error:', err);
+      showNotification('Failed to clear demo data. Please try again.', 'error');
+      setLoading(false);
+    }
+  };
+
   const handleOpenAssetModal = (asset = null) => {
     setEditingAsset(asset);
     setShowAssetModal(true);
@@ -976,6 +993,39 @@ const AssetManagement = ({ active }) => {
               }}
             >
               Bulk Upload
+            </button>
+          </>
+        )}
+
+        {activeTab === 'alerts' && (
+          <>
+            <button
+              onClick={handleTriggerCorrelation}
+              disabled={loading}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: loading ? '#ccc' : '#FF9800',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: loading ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {loading ? 'Processing...' : 'Trigger New Correlation'}
+            </button>
+            <button
+              onClick={handleClearDemoData}
+              disabled={loading}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: loading ? '#ccc' : '#f44336',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: loading ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Clear Demo Data
             </button>
           </>
         )}

@@ -911,3 +911,48 @@ def asset_alert_feed(request):
             'success': False,
             'message': 'Failed to get alert feed'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def clear_demo_data(request):
+    """
+    Clear demo data from the system.
+    """
+    try:
+        organization = request.user.organization
+        if not organization:
+            return Response({
+                'success': False,
+                'message': 'User must belong to an organization'
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        # Delete demo alerts (those with DEMO- prefix)
+        deleted_alerts = CustomAlert.objects.filter(
+            organization=organization,
+            alert_id__startswith='DEMO-'
+        ).delete()[0]
+
+        # Delete demo assets
+        deleted_assets = AssetInventory.objects.filter(
+            organization=organization,
+            metadata__contains={'demo': True}
+        ).delete()[0]
+
+        logger.info(f"Cleared demo data for {organization.name}: {deleted_alerts} alerts, {deleted_assets} assets")
+
+        return Response({
+            'success': True,
+            'message': f'Successfully cleared demo data: {deleted_alerts} alerts and {deleted_assets} assets removed',
+            'data': {
+                'deleted_alerts': deleted_alerts,
+                'deleted_assets': deleted_assets
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error in clear_demo_data: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to clear demo data'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
