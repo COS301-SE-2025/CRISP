@@ -1873,15 +1873,10 @@ def indicators_bulk_delete(request):
         indicator_ids = data.get('indicator_ids', [])
         
         if clear_all:
-            # Clear all indicators for the user's organization
-            user_org = getattr(request.user, 'organization', None) if hasattr(request, 'user') and request.user.is_authenticated else None
-            
-            if user_org:
-                # For regular users, only delete indicators from their organization's feeds
-                indicators = Indicator.objects.filter(threat_feed__organization=user_org)
-            else:
-                # For admin or unauthenticated requests, delete all indicators
-                indicators = Indicator.objects.all()
+            # For now, simply delete all indicators regardless of organization
+            # This matches the behavior expected by BlueVisionAdmin users
+            indicators = Indicator.objects.all()
+            logger.info(f"Clearing all indicators - total count: {indicators.count()}")
             
             total_count = indicators.count()
             
@@ -1906,15 +1901,16 @@ def indicators_bulk_delete(request):
             
             # Log the bulk deletion for audit purposes
             audit_service = AuditService()
+            user = request.user if hasattr(request, 'user') and request.user.is_authenticated else None
             audit_service.log_user_action(
-                user=request.user if hasattr(request, 'user') and request.user.is_authenticated else None,
+                user=user,
                 action='indicators_bulk_deleted',
                 success=True,
                 additional_data={
                     'description': f'Bulk deleted all indicators (total: {deleted_count})',
                     'deleted_count': deleted_count,
                     'clear_all': True,
-                    'organization': user_org.name if user_org else 'All organizations'
+                    'user_role': getattr(user, 'role', 'Unknown') if user else 'Unauthenticated'
                 }
             )
             
