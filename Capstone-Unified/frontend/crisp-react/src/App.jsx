@@ -3103,8 +3103,10 @@ function ThreatFeeds({
       
       const statusResults = await Promise.all(statusPromises);
       
-      // Update feedProgress state with consumption status
+      // Update feedProgress state with consumption status and recover active tasks
       const progressUpdates = {};
+      const recoveredTasks = new Map();
+      
       statusResults.forEach(({ feedId, status }) => {
         if (status && status.success) {
           progressUpdates[feedId] = {
@@ -3116,6 +3118,17 @@ function ThreatFeeds({
             canBeResumed: status.can_be_resumed,
             isConsuming: status.is_consuming
           };
+          
+          // Recover active tasks for running or paused feeds
+          if (status.current_task_id && ['running', 'paused'].includes(status.consumption_status)) {
+            const feedInfo = feeds.find(f => f.id === feedId);
+            recoveredTasks.set(status.current_task_id, {
+              feedId: feedId,
+              feedName: feedInfo?.name || status.feed_name || `Feed ${feedId}`,
+              startTime: new Date(), // We don't have the actual start time after refresh
+            });
+            console.log(`🔄 Recovered ${status.consumption_status} task ${status.current_task_id} for feed ${feedInfo?.name || feedId}`);
+          }
         }
       });
       
@@ -3125,6 +3138,18 @@ function ThreatFeeds({
           ...progressUpdates
         }));
         console.log(`✅ Updated status for ${Object.keys(progressUpdates).length} feeds`);
+      }
+      
+      // Update active tasks if any were recovered
+      if (recoveredTasks.size > 0) {
+        setActiveTasks(prev => {
+          const newTasks = new Map(prev);
+          recoveredTasks.forEach((taskInfo, taskId) => {
+            newTasks.set(taskId, taskInfo);
+          });
+          return newTasks;
+        });
+        console.log(`✅ Recovered ${recoveredTasks.size} active tasks after page refresh`);
       }
       
     } catch (error) {
@@ -3406,6 +3431,40 @@ function ThreatFeeds({
       const url = `/api/threat-feeds/${feedId}/consume/${params.toString() ? '?' + params.toString() : ''}`;
       console.log('API Call URL:', url);
       console.log('Async enabled:', useAsync);
+      // Check if feed is already running before attempting consumption
+      const { getFeedConsumptionStatus } = await import('./api.js');
+      const currentStatus = await getFeedConsumptionStatus(feedId);
+      
+      if (currentStatus?.success && currentStatus.is_consuming) {
+        const statusMessage = `Feed is ${currentStatus.consumption_status}. ${currentStatus.can_be_paused ? 'Use pause to control it.' : ''}`;
+        showError('Feed Already Running', statusMessage);
+        
+        // If it's running, recover the task in the UI
+        if (currentStatus.current_task_id) {
+          const feedInfo = threatFeeds.find(f => f.id === feedId);
+          setActiveTasks(prev => new Map(prev.set(currentStatus.current_task_id, {
+            feedId,
+            feedName: feedInfo?.name || currentStatus.feed_name || `Feed ${feedId}`,
+            startTime: new Date(),
+          })));
+          
+          setFeedProgress(prev => ({
+            ...prev,
+            [feedId]: {
+              paused: currentStatus.consumption_status === 'paused',
+              status: currentStatus.consumption_status,
+              taskId: currentStatus.current_task_id,
+              canBePaused: currentStatus.can_be_paused,
+              canBeResumed: currentStatus.can_be_resumed,
+              isConsuming: currentStatus.is_consuming,
+              stage: currentStatus.consumption_status === 'paused' ? 'Paused' : 'Running',
+              message: `Task ID: ${currentStatus.current_task_id}`
+            }
+          }));
+        }
+        return;
+      }
+      
       const result = await api.post(url);
       if (result) {
         console.log('Feed consumption started:', result);
@@ -3929,8 +3988,10 @@ function ThreatFeeds({
               </div>
               <div className="active-tasks-grid" style={{display: 'grid', gap: '10px'}}>
                 {Array.from(activeTasks.entries()).map(([taskId, taskInfo]) => {
-                  const feedInfo = feeds.find(f => f.id === taskInfo.feedId);
-                  const progress = feedProgress[taskInfo.feedId];
+                  const feedInfo = feeds.find(f => f.id === taskInfo.feedId) || 
+                    feeds.find(f => feedProgress[f.id]?.taskId === taskId);
+                  const progress = feedProgress[taskInfo.feedId] || 
+                    Object.values(feedProgress).find(p => p.taskId === taskId);
                   
                   return (
                     <div key={taskId} className="task-item" style={{
@@ -3977,16 +4038,30 @@ function ThreatFeeds({
                           )}
                         </div>
                         <div style={{display: 'flex', flexDirection: 'column', gap: '4px', marginLeft: '12px'}}>
-                          <button
-                            className="btn btn-xs btn-warning"
-                            onClick={() => handleCancelFeedConsumption(taskInfo.feedId, 'stop_now')}
-                            title="Stop task but keep data"
-                            style={{fontSize: '10px', padding: '4px 8px'}}
-                            disabled={progress?.cancelling}
-                          >
-                            <i className={progress?.cancelling ? "fas fa-clock" : "fas fa-pause"}></i>
-                            {progress?.cancelling ? 'Stopping...' : 'Stop'}
-                          </button>
+                          {/* Show appropriate buttons based on task state */}
+                          {progress?.paused ? (
+                            <button
+                              className="btn btn-xs btn-success"
+                              onClick={() => handleResumeFeedConsumption(taskInfo.feedId)}
+                              title="Resume consumption from where it was paused"
+                              style={{fontSize: '10px', padding: '4px 8px'}}
+                              disabled={progress?.resuming}
+                            >
+                              <i className={progress?.resuming ? "fas fa-clock" : "fas fa-play"}></i>
+                              {progress?.resuming ? 'Resuming...' : 'Resume'}
+                            </button>
+                          ) : (
+                            <button
+                              className="btn btn-xs btn-warning"
+                              onClick={() => handlePauseFeedConsumption(taskInfo.feedId)}
+                              title="Pause consumption and save progress for later resume"
+                              style={{fontSize: '10px', padding: '4px 8px'}}
+                              disabled={progress?.pausing}
+                            >
+                              <i className={progress?.pausing ? "fas fa-clock" : "fas fa-pause"}></i>
+                              {progress?.pausing ? 'Pausing...' : 'Pause'}
+                            </button>
+                          )}
                           <button
                             className="btn btn-xs btn-danger"
                             onClick={() => handleCancelFeedConsumption(taskInfo.feedId, 'cancel_job')}
