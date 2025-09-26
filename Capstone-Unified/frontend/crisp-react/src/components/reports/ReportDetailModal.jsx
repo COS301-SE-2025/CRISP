@@ -66,41 +66,15 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
     }
   };
 
-  const handleExport = (format) => {
+  const handleExportPDF = () => {
     if (!fullReportData && !report) {
       console.warn('No report data available for export');
       return;
     }
 
-    const reportData = fullReportData || report;
-    const filename = `${report?.title || 'Report'}_${new Date().toISOString().split('T')[0]}`;
-    
-    if (format === 'pdf') {
-      // For now, open print dialog which can save as PDF
-      window.print();
-    } else if (format === 'csv') {
-      // Create CSV from statistics data
-      const stats = reportData.statistics || reportData.stats || [];
-      if (stats.length === 0) {
-        console.warn('No statistics data available for CSV export');
-        return;
-      }
-      
-      const csvContent = [
-        'Label,Value',
-        ...stats.map(stat => `"${stat.label}","${stat.value}"`)
-      ].join('\n');
-      
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `${filename}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    // For now, open print dialog which can save as PDF
+    // TODO: Implement proper PDF generation with report data
+    window.print();
   };
 
   if (!isOpen) return null;
@@ -116,11 +90,8 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
             </p>
           </div>
           <div className="report-detail-actions">
-            <button className="report-btn report-btn-outline report-btn-sm" onClick={() => handleExport('pdf')}>
+            <button className="report-btn report-btn-outline report-btn-sm" onClick={handleExportPDF}>
               <i className="fas fa-file-pdf"></i> Export PDF
-            </button>
-            <button className="report-btn report-btn-outline report-btn-sm" onClick={() => handleExport('csv')}>
-              <i className="fas fa-file-csv"></i> Export CSV
             </button>
             <button className="report-close-btn" onClick={onClose}>
               <i className="fas fa-times"></i>
