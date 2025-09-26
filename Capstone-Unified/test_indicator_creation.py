@@ -23,12 +23,20 @@ def test_indicator_creation():
     print("Testing Indicator Creation...")
     
     try:
+        # Get or create an organization
+        from core.models.models import Organization
+        org, created = Organization.objects.get_or_create(
+            name="Test Organization",
+            defaults={'description': 'Test organization for validation'}
+        )
+        
         # Create or get a threat feed
         threat_feed, created = ThreatFeed.objects.get_or_create(
             name="Test Feed",
             defaults={
                 'description': 'Test threat feed for validation',
                 'taxii_server_url': 'https://test.example.com',
+                'owner': org,
                 'is_external': True,
                 'is_public': True
             }
@@ -57,12 +65,20 @@ def test_ttp_creation():
     print("Testing TTP Creation...")
     
     try:
+        # Get or create an organization
+        from core.models.models import Organization
+        org, created = Organization.objects.get_or_create(
+            name="Test Organization",
+            defaults={'description': 'Test organization for validation'}
+        )
+        
         # Create or get a threat feed
         threat_feed, created = ThreatFeed.objects.get_or_create(
             name="Test Feed",
             defaults={
                 'description': 'Test threat feed for validation',
                 'taxii_server_url': 'https://test.example.com',
+                'owner': org,
                 'is_external': True,
                 'is_public': True
             }
