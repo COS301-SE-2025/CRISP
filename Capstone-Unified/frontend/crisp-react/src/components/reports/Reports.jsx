@@ -506,15 +506,10 @@ const Reports = ({ active = true }) => {
                       })}</span>
                       <span><i className="fas fa-user"></i> {report.generated_by || 'System'}</span>
                     </div>
-                    <div className="meta-right">
-                      <span><i className="fas fa-eye"></i> {report.view_count || 0}</span>
-                      <span><i className="fas fa-clock"></i> {report.age_days}d old</span>
-                    </div>
                   </div>
                 </div>
                 <div className="report-content">
                   <div className="report-stats">
-                    {console.log('Rendering stats for report:', report.id, 'Stats:', report.stats, 'Length:', report.stats?.length)}
                     {(report.stats || []).map((stat, index) => (
                       <div key={index} className="report-stat">
                         <div className="stat-number">{stat.value}</div>
@@ -770,14 +765,10 @@ const Reports = ({ active = true }) => {
           gap: 10px;
         }
 
-        .meta-left, .meta-right {
+        .meta-left {
           display: flex;
           flex-direction: column;
           gap: 4px;
-        }
-
-        .meta-right {
-          text-align: right;
         }
 
         .report-meta span {
