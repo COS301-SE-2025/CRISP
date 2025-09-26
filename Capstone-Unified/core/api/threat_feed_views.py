@@ -499,14 +499,23 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
                 if request.query_params.get('async', '').lower() == 'true':
                     from core.tasks.taxii_tasks import consume_feed_task
                     
-                    # Check if feed can be started (not already running or paused)
-                    if feed.is_consuming():
+                    # Check if feed is actively running (allow starting fresh consumption even if previously paused)
+                    if feed.consumption_status == 'running':
                         return Response({
-                            "error": f"Feed consumption is already {feed.consumption_status}. Use pause/resume endpoints to control it.",
+                            "error": f"Feed consumption is already running. Use pause endpoint to control it.",
                             "current_status": feed.consumption_status,
                             "can_be_paused": feed.can_be_paused(),
                             "can_be_resumed": feed.can_be_resumed()
                         }, status=status.HTTP_400_BAD_REQUEST)
+                    
+                    # Reset paused state for fresh consumption
+                    if feed.consumption_status == 'paused':
+                        logger.info(f"Resetting paused feed {feed.name} for fresh consumption")
+                        feed.consumption_status = 'idle'
+                        feed.current_task_id = None
+                        feed.paused_at = None
+                        feed.pause_metadata = {}
+                        feed.save(update_fields=['consumption_status', 'current_task_id', 'paused_at', 'pause_metadata'])
                     
                     task = consume_feed_task.delay(
                         feed_id=int(pk),

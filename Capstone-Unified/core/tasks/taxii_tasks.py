@@ -120,21 +120,24 @@ def consume_feed_task(self, feed_id, limit=None, force_days=None, batch_size=Non
         def check_pause_cancellation():
             """Check if task should be paused or cancelled"""
             # Debug logging
-            logger.info(f"Checking pause/cancel signals for feed {feed_id} - cancel_key: {cancel_key}, pause_key: {pause_key}")
+            logger.info(f"🔍 PAUSE CHECK: Checking pause/cancel signals for feed {feed_id}")
+            logger.info(f"🔑 PAUSE CHECK: cancel_key={cancel_key}, pause_key={pause_key}")
             
             # Check for cancellation first
             cancel_signal = cache.get(cancel_key)
+            logger.info(f"🚫 PAUSE CHECK: Cancel signal result: {cancel_signal}")
             if cancel_signal:
-                logger.info(f"Cancel signal detected for feed {feed_id}: {cancel_signal}")
+                logger.info(f"🚫 CANCEL DETECTED for feed {feed_id}: {cancel_signal}")
                 return 'cancel'
             
             # Check for pause signal
             pause_signal = cache.get(pause_key)
+            logger.info(f"⏸️ PAUSE CHECK: Pause signal result: {pause_signal}")
             if pause_signal:
-                logger.info(f"Pause signal detected for feed {feed_id}: {pause_signal}")
+                logger.info(f"⏸️ PAUSE DETECTED for feed {feed_id}: {pause_signal}")
                 return 'pause'
             
-            logger.debug(f"No pause/cancel signals found for feed {feed_id}")
+            logger.info(f"✅ PAUSE CHECK: No pause/cancel signals found for feed {feed_id}")
             
             try:
                 # Also check if Celery task was revoked

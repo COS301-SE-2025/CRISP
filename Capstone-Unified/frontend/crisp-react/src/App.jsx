@@ -188,7 +188,7 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
-  const [useAsync, setUseAsync] = useState(false);
+  const [useAsync, setUseAsync] = useState(true);
 
   // Function to check task status (bypasses cache for real-time updates)
   const checkTaskStatus = async (taskId) => {
@@ -1178,7 +1178,7 @@ function Dashboard({ active, showPage, user }) {
         fetchDashboardData();
       }, {
         backgroundRefresh: true,
-        isVisible: () => active && activePage === 'dashboard'
+        isVisible: () => active
       });
 
       return () => {
@@ -3262,6 +3262,12 @@ function ThreatFeeds({
 
   const handlePauseFeedConsumption = async (feedId) => {
     try {
+      // Ensure async mode is enabled for pause functionality
+      if (!useAsync) {
+        setUseAsync(true);
+        showInfo('Background Processing Enabled', 'Async mode has been automatically enabled to support pause functionality.');
+      }
+
       // Update UI to show pausing state
       setFeedProgress(prev => ({
         ...prev,
@@ -3361,6 +3367,11 @@ function ThreatFeeds({
   };
 
   const handleConsumeFeed = async (feedId) => {
+    // Warn if async mode is disabled (pause functionality won't work)
+    if (!useAsync) {
+      showWarning('Background Processing Disabled', 'You are consuming feeds in synchronous mode. Pause/resume functionality will not be available. Consider enabling background processing.');
+    }
+
     // Batch state updates to prevent React reconciliation issues
     setConsumingFeeds(prev => {
       if (prev.includes(feedId)) return prev;
@@ -4090,7 +4101,7 @@ function ThreatFeeds({
                 checked={useAsync}
                 onChange={(e) => setUseAsync(e.target.checked)}
               />
-              <span className="async-label-header">Process in background</span>
+              <span className="async-label-header">Process in background (required for pause/resume)</span>
             </label>
           </div>
         </div>
