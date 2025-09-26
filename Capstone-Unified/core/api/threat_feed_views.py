@@ -427,8 +427,73 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
                     }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             else:
-                # Use OTXTaxiiService for other feeds
-                service = OTXTaxiiService()
+                # Route to appropriate service based on feed type
+                if 'crisp' in feed.name.lower() and feed.taxii_server_url and 'crisp-threat-intel' in feed.taxii_server_url:
+                    # CRISP custom feeds should populate their data when consumed
+                    logger.info("CRISP custom feed detected - populating custom data")
+
+                    try:
+                        from django.core.management import call_command
+                        from io import StringIO
+                        import sys
+
+                        # Capture output from the population command
+                        old_stdout = sys.stdout
+                        mystdout = StringIO()
+                        sys.stdout = mystdout
+
+                        # Run population command for this specific feed
+                        call_command('populate_comprehensive_threat_intel', feed_name=feed.name, verbosity=0)
+
+                        # Restore stdout and get output
+                        sys.stdout = old_stdout
+                        command_output = mystdout.getvalue()
+
+                        # Get updated counts
+                        indicators_count = feed.indicators.count()
+                        ttps_count = feed.ttps.count()
+
+                        logger.info(f"CRISP feed {feed.name} populated: {indicators_count} indicators, {ttps_count} TTPs")
+
+                        return Response({
+                            'success': True,
+                            'message': f'CRISP custom feed "{feed.name}" populated successfully.',
+                            'feed_name': feed.name,
+                            'service_type': 'crisp_custom',
+                            'indicators_count': indicators_count,
+                            'ttps_count': ttps_count,
+                            'indicators_created': indicators_count,
+                            'ttps_created': ttps_count,
+                            'note': 'CRISP custom feeds populate data from internal configurations.'
+                        })
+
+                    except Exception as e:
+                        logger.error(f"Error populating CRISP feed {feed.name}: {str(e)}")
+                        return Response({
+                            'success': False,
+                            'message': f'Failed to populate CRISP feed "{feed.name}": {str(e)}',
+                            'feed_name': feed.name,
+                            'service_type': 'crisp_custom'
+                        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                elif 'mitre' in feed.name.lower() or 'cti-taxii.mitre.org' in (feed.taxii_server_url or ''):
+                    # MITRE feeds should use StixTaxiiService
+                    logger.info("MITRE feed detected - using StixTaxiiService")
+                    from core.services.stix_taxii_service import StixTaxiiService
+                    service = StixTaxiiService()
+
+                elif ('alienvault' in feed.name.lower() or 'otx' in feed.name.lower() or
+                      'otx.alienvault.com' in (feed.taxii_server_url or '')):
+                    # AlienVault OTX feeds should use OTXTaxiiService
+                    logger.info("AlienVault OTX feed detected - using OTXTaxiiService")
+                    from core.services.otx_taxii_service import OTXTaxiiService
+                    service = OTXTaxiiService()
+
+                else:
+                    # Default to StixTaxiiService for unknown feeds
+                    logger.info(f"Unknown feed type for {feed.name} - defaulting to StixTaxiiService")
+                    from core.services.stix_taxii_service import StixTaxiiService
+                    service = StixTaxiiService()
 
                 # Check if async processing is requested
                 if request.query_params.get('async', '').lower() == 'true':
@@ -1065,15 +1130,19 @@ def indicators_list(request):
             # Get user's organization
             user_org = getattr(request.user, 'organization', None)
             
-            logger.info(f"User {request.user.username} role: {request.user.role}, org: {user_org}")
+            # Check if user is superuser or BlueVisionAdmin
+            is_admin = (getattr(request.user, 'is_superuser', False) or
+                       getattr(request.user, 'role', '') == 'BlueVisionAdmin')
 
-            if user_org is None and request.user.role != 'BlueVisionAdmin':
-                # User has no organization and is not BlueVisionAdmin, return empty queryset
-                logger.info(f"User has no organization and is not BlueVisionAdmin, returning empty queryset")
+            logger.info(f"User {request.user.username} role: {request.user.role}, org: {user_org}, is_admin: {is_admin}")
+
+            if user_org is None and not is_admin:
+                # User has no organization and is not admin, return empty queryset
+                logger.info(f"User has no organization and is not admin, returning empty queryset")
                 indicators = Indicator.objects.none()
-            elif request.user.role == 'BlueVisionAdmin':
-                # BlueVision admins can see all indicators
-                logger.info(f"BlueVisionAdmin user, returning all indicators")
+            elif is_admin:
+                # Admins (superuser or BlueVisionAdmin) can see all indicators
+                logger.info(f"Admin user, returning all indicators")
                 indicators = Indicator.objects.all()
             else:
                 # Regular users can see:
@@ -1873,15 +1942,27 @@ def indicators_bulk_delete(request):
         indicator_ids = data.get('indicator_ids', [])
         
         if clear_all:
-            # Clear all indicators for the user's organization
+            # Check if user is authenticated and is a superuser
+            is_superuser = (hasattr(request, 'user') and
+                          request.user.is_authenticated and
+                          getattr(request.user, 'is_superuser', False))
+
+            # Get user's organization
             user_org = getattr(request.user, 'organization', None) if hasattr(request, 'user') and request.user.is_authenticated else None
-            
-            if user_org:
-                # For regular users, only delete indicators from their organization's feeds
-                indicators = Indicator.objects.filter(threat_feed__organization=user_org)
-            else:
-                # For admin or unauthenticated requests, delete all indicators
+
+            if is_superuser:
+                # Superusers can delete ALL indicators regardless of organization
                 indicators = Indicator.objects.all()
+            elif user_org:
+                # Regular users only delete indicators from their organization's feeds
+                # Use the correct relationship: threat_feed__owner (not organization)
+                indicators = Indicator.objects.filter(threat_feed__owner=user_org)
+            else:
+                # Unauthenticated requests - no deletion allowed
+                return Response(
+                    {"error": "Authentication required to delete indicators"},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
             
             total_count = indicators.count()
             

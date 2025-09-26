@@ -5084,15 +5084,21 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
         setTotalItems(0);
         setTotalPages(0);
         setCurrentPage(1);
-        
-        // Refresh data from server to ensure consistency
-        await fetchIndicators();
-        
-        alert(`Successfully deleted all ${result.deleted_count} indicators`);
-        
-        // Trigger refresh after clearing all indicators
-        refreshManager.triggerRefresh(['indicators', 'dashboard'], 'indicators_cleared');
-        
+
+        // Only refresh from server if indicators were actually deleted
+        // This prevents reloading data when user had 0 indicators to delete
+        if (result.deleted_count > 0) {
+          await fetchIndicators();
+          // Trigger refresh after clearing all indicators
+          refreshManager.triggerRefresh(['indicators', 'dashboard'], 'indicators_cleared');
+        }
+
+        if (result.deleted_count > 0) {
+          alert(`Successfully deleted all ${result.deleted_count} indicators`);
+        } else {
+          alert(`No indicators were deleted. You may not have any indicators in your organization or the indicators may belong to other organizations.`);
+        }
+
       } else {
         console.error('Bulk delete failed:', result);
         alert(`Error clearing indicators: ${result.error || 'Unknown error'}`);

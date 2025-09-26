@@ -253,14 +253,15 @@ class Command(BaseCommand):
                     }
                 ]
 
-                # Get or create a demo threat feed
+                # Get or create a demo threat feed (INACTIVE for manual consumption only)
                 demo_feed, feed_created = ThreatFeed.objects.get_or_create(
                     name='Demo Threat Feed',
                     defaults={
-                        'description': 'Demo threat feed for asset-based alert testing',
+                        'description': 'Demo threat feed for asset-based alert testing (INACTIVE)',
                         'owner': organization,
                         'is_external': False,
-                        'is_public': True
+                        'is_public': False,
+                        'is_active': False  # INACTIVE - won't be consumed during server runs
                     }
                 )
 
@@ -369,10 +370,10 @@ class Command(BaseCommand):
         if not demo_feed:
             demo_feed = ThreatFeed.objects.create(
                 name='Demo Threat Feed',
-                description='Demo threat feed',
+                description='Demo threat feed (INACTIVE for manual consumption only)',
                 owner=organization,
                 is_external=False,
-                is_active=True
+                is_active=False  # INACTIVE - won't be consumed during server runs
             )
 
         # Create indicators that will match demo assets

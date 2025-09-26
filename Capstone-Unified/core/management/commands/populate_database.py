@@ -562,18 +562,26 @@ class Command(BaseCommand):
         self.stdout.write(f"Created {created_count} user sessions")
 
     def create_threat_feeds(self):
-        """Create threat feeds and collections"""
-        self.stdout.write(f"Creating {self.NUM_THREAT_FEEDS} threat feeds...")
-        
+        """Create comprehensive threat feeds including custom CRISP feeds"""
+        self.stdout.write("Creating comprehensive threat feeds with custom CRISP intelligence...")
+
         if not self.organizations or not self.users:
             self.stdout.write("Skipping threat feeds - missing prerequisites")
             return
-        
+
         created_count = 0
-        
+
+        # Import custom feed configurations
+        try:
+            from core.config.custom_threat_feeds import CUSTOM_FEEDS_CONFIG
+            self.stdout.write(f"Loaded {len(CUSTOM_FEEDS_CONFIG)} custom CRISP threat feeds")
+        except ImportError as e:
+            self.stdout.write(f"Warning: Could not import custom feeds: {e}")
+            CUSTOM_FEEDS_CONFIG = []
+
         # Create some collections first
         collections = []
-        for i in range(10):
+        for i in range(15):  # Increased for more comprehensive coverage
             try:
                 with transaction.atomic():
                     collection = Collection.objects.create(
@@ -589,94 +597,116 @@ class Command(BaseCommand):
             except Exception as e:
                 self.stdout.write(f"Error creating collection: {e}")
                 continue
-        
-        # Create threat feeds
-        for i in range(self.NUM_THREAT_FEEDS):
+
+        # First, create our comprehensive custom CRISP feeds
+        self.stdout.write("Creating custom CRISP threat intelligence feeds...")
+        for feed_config in CUSTOM_FEEDS_CONFIG:
             try:
                 user = random.choice(self.users)
                 org = random.choice(self.organizations)
                 collection = random.choice(collections) if collections else None
-                
-                # Create realistic TAXII feed configurations with REAL collection IDs
-                feed_configs = [
-                    {
-                        'name': 'MITRE ATT&CK Enterprise',
-                        'description': 'MITRE ATT&CK Enterprise tactics, techniques, and procedures',
-                        'taxii_server_url': 'https://cti-taxii.mitre.org',
-                        'taxii_api_root': 'stix',
-                        'taxii_collection_id': '95ecc380-afe9-11e4-9b6c-751b66dd541e',
-                        'is_external': True,
-                        'is_public': True,
-                        'sync_interval_hours': 24,
-                    },
-                    {
-                        'name': 'AlienVault OTX - General',
-                        'description': 'AlienVault Open Threat Exchange general threat intelligence',
-                        'taxii_server_url': 'https://otx.alienvault.com',
-                        'taxii_api_root': 'taxii',
-                        'taxii_collection_id': 'user_AlienVault',
-                        'is_external': True,
-                        'is_public': True,
-                        'sync_interval_hours': 6,
-                    },
-                    {
-                        'name': 'AlienVault OTX - DataDefenders',
-                        'description': 'AlienVault OTX DataDefenders collection',
-                        'taxii_server_url': 'https://otx.alienvault.com',
-                        'taxii_api_root': 'taxii',
-                        'taxii_collection_id': 'user_datadefenders',
-                        'is_external': True,
-                        'is_public': True,
-                        'sync_interval_hours': 12,
-                    },
-                    {
-                        'name': 'MITRE ATT&CK Mobile',
-                        'description': 'MITRE ATT&CK Mobile tactics and techniques',
-                        'taxii_server_url': 'https://cti-taxii.mitre.org',
-                        'taxii_api_root': 'stix',
-                        'taxii_collection_id': '2f669986-b40b-4423-b720-4396ca6a462b',
-                        'is_external': True,
-                        'is_public': True,
-                        'sync_interval_hours': 24,
-                    },
-                    {
-                        'name': 'MITRE ATT&CK ICS',
-                        'description': 'MITRE ATT&CK Industrial Control Systems',
-                        'taxii_server_url': 'https://cti-taxii.mitre.org',
-                        'taxii_api_root': 'stix',
-                        'taxii_collection_id': '02c3ef24-9cd4-48f3-a99f-b74ce24f1d34',
-                        'is_external': True,
-                        'is_public': True,
-                        'sync_interval_hours': 24,
-                    },
-                    {
-                        'name': f'{org.name} Internal Feed',
-                        'description': f'Internal threat intelligence feed for {org.name}',
-                        'taxii_server_url': f"https://internal.{org.name.lower().replace(' ', '-').replace(',', '')}.com/taxii/",
-                        'taxii_api_root': 'internal',
-                        'taxii_collection_id': f"internal-collection",
-                        'is_external': False,
-                        'is_public': False,
-                        'sync_interval_hours': 1,
-                    }
-                ]
 
-                # Select a random config or use a generic one
-                if i < len(feed_configs):
-                    config = feed_configs[i % len(feed_configs)]
-                else:
-                    # Use a cycling pattern from the valid configs
-                    base_config = feed_configs[i % len(feed_configs)]
-                    config = {
-                        'name': f"{fake.company()} {base_config['name']} Clone {i}",
-                        'description': f"Mirror of {base_config['description']} for {fake.company()}",
-                        'taxii_server_url': base_config['taxii_server_url'],
-                        'taxii_api_root': base_config['taxii_api_root'],
-                        'taxii_collection_id': base_config['taxii_collection_id'],
-                        'is_external': base_config['is_external'],
-                        'is_public': random.choice([True, False]),
-                        'sync_interval_hours': random.choice([6, 12, 24, 48]),
-                    }
+                with transaction.atomic():
+                    threat_feed = ThreatFeed.objects.create(
+                        name=feed_config['name'],
+                        description=feed_config['description'],
+                        taxii_server_url=feed_config['taxii_server_url'],
+                        taxii_api_root=feed_config['taxii_api_root'],
+                        taxii_collection_id=feed_config['taxii_collection_id'],
+                        taxii_username=feed_config.get('taxii_username'),
+                        taxii_password=feed_config.get('taxii_password'),
+                        owner=org,
+                        is_external=feed_config['is_external'],
+                        is_public=feed_config['is_public'],
+                        sync_interval_hours=feed_config['sync_interval_hours'],
+                        is_active=True,
+                        last_sync=fake.date_time_between(start_date='-7d', end_date='now', tzinfo=timezone.get_current_timezone()),
+                        sync_count=random.randint(50, 500)  # Simulate active feeds
+                    )
+
+                    # Create associated Feed if collection exists
+                    if collection:
+                        feed_name = f"Feed for {threat_feed.name}"
+                        Feed.objects.create(
+                            title=feed_name,
+                            name=feed_name,
+                            alias=f"feed--{uuid.uuid4()}",
+                            description=f"TAXII feed for {threat_feed.name}",
+                            status='active',
+                            created_by=user,
+                            collection=collection,
+                            organization=org,
+                            threat_feed=threat_feed,
+                            is_public=threat_feed.is_public
+                        )
+
+                    created_count += 1
+                    self.stdout.write(f"  ✓ Created: {feed_config['name']}")
+
+            except Exception as e:
+                self.stdout.write(f"Error creating custom feed {feed_config['name']}: {e}")
+                continue
+
+        # Then create standard external feeds (only the working ones after cleanup)
+        self.stdout.write("Creating working external threat feeds...")
+        standard_feeds = [
+            {
+                'name': 'MITRE ATT&CK Enterprise',
+                'description': 'MITRE ATT&CK Enterprise tactics, techniques, and procedures',
+                'taxii_server_url': 'https://cti-taxii.mitre.org',
+                'taxii_api_root': 'stix',
+                'taxii_collection_id': '95ecc380-afe9-11e4-9b6c-751b66dd541e',
+                'is_external': True,
+                'is_public': True,
+                'sync_interval_hours': 24,
+            },
+            {
+                'name': 'MITRE ATT&CK Mobile',
+                'description': 'MITRE ATT&CK Mobile tactics and techniques',
+                'taxii_server_url': 'https://cti-taxii.mitre.org',
+                'taxii_api_root': 'stix',
+                'taxii_collection_id': '2f669986-b40b-4423-b720-4396ca6a462b',
+                'is_external': True,
+                'is_public': True,
+                'sync_interval_hours': 24,
+            },
+            {
+                'name': 'MITRE ATT&CK ICS',
+                'description': 'MITRE ATT&CK Industrial Control Systems',
+                'taxii_server_url': 'https://cti-taxii.mitre.org',
+                'taxii_api_root': 'stix',
+                'taxii_collection_id': '02c3ef24-9cd4-48f3-a99f-b74ce24f1d34',
+                'is_external': True,
+                'is_public': True,
+                'sync_interval_hours': 24,
+            },
+            {
+                'name': 'AlienVault OTX - General',
+                'description': 'AlienVault Open Threat Exchange general threat intelligence',
+                'taxii_server_url': 'https://otx.alienvault.com',
+                'taxii_api_root': 'taxii',
+                'taxii_collection_id': 'user_AlienVault',
+                'is_external': True,
+                'is_public': True,
+                'sync_interval_hours': 6,
+            },
+            {
+                'name': 'AlienVault OTX - DataDefenders',
+                'description': 'AlienVault OTX DataDefenders collection',
+                'taxii_server_url': 'https://otx.alienvault.com',
+                'taxii_api_root': 'taxii',
+                'taxii_collection_id': 'user_datadefenders',
+                'is_external': True,
+                'is_public': True,
+                'sync_interval_hours': 12,
+            }
+        ]
+
+        for config in standard_feeds:
+            try:
+                user = random.choice(self.users)
+                org = random.choice(self.organizations)
+                collection = random.choice(collections) if collections else None
 
                 with transaction.atomic():
                     threat_feed = ThreatFeed.objects.create(
@@ -695,7 +725,7 @@ class Command(BaseCommand):
                         last_sync=fake.date_time_between(start_date='-30d', end_date='now', tzinfo=timezone.get_current_timezone()) if random.choice([True, False]) else None,
                         sync_count=random.randint(0, 100) if random.choice([True, False]) else 0
                     )
-                    
+
                     # Create associated Feed if collection exists
                     if collection:
                         feed_name = f"Feed for {threat_feed.name}"
@@ -713,12 +743,169 @@ class Command(BaseCommand):
                         )
 
                     created_count += 1
+                    self.stdout.write(f"  ✓ Created: {config['name']}")
 
             except Exception as e:
-                self.stdout.write(f"Error creating threat feed {i}: {e}")
+                self.stdout.write(f"Error creating standard feed {config['name']}: {e}")
                 continue
-                
-        self.stdout.write(f"Created {created_count} threat feeds")
+
+        # Create Demo Threat Feed as INACTIVE (for manual consumption only)
+        self.stdout.write("Creating inactive demo threat feed...")
+        try:
+            user = random.choice(self.users)
+            org = random.choice(self.organizations)
+            collection = random.choice(collections) if collections else None
+
+            with transaction.atomic():
+                demo_feed = ThreatFeed.objects.create(
+                    name='Demo Threat Feed',
+                    description='Demo threat intelligence feed for testing purposes (INACTIVE)',
+                    taxii_server_url='https://demo-feeds.crisp.internal',
+                    taxii_api_root='demo-api',
+                    taxii_collection_id='demo-collection-123',
+                    owner=org,
+                    is_external=False,
+                    is_public=False,
+                    is_active=False,  # INACTIVE - won't be consumed during server runs
+                    sync_interval_hours=24,
+                    last_sync=timezone.now() - timedelta(hours=48)
+                )
+
+                # Create corresponding Feed object
+                Feed.objects.create(
+                    title='Demo Feed',
+                    name='Demo Feed',
+                    alias=f"feed--{uuid.uuid4()}",
+                    description=f"TAXII feed for {demo_feed.name} (INACTIVE)",
+                    status='inactive',
+                    created_by=user,
+                    collection=collection,
+                    organization=org,
+                    threat_feed=demo_feed,
+                    is_public=False
+                )
+
+                created_count += 1
+                self.stdout.write(f"  ✓ Created INACTIVE Demo Feed (for manual consumption only)")
+
+        except Exception as e:
+            self.stdout.write(f"Error creating demo feed: {e}")
+
+        self.stdout.write(f"Created {created_count} comprehensive threat feeds")
+        self.stdout.write(f"  - {len(CUSTOM_FEEDS_CONFIG)} custom CRISP intelligence feeds")
+        self.stdout.write(f"  - {len(standard_feeds)} standard external feeds")
+        self.stdout.write(f"  - 1 inactive demo feed (manual consumption only)")
+
+        # Now populate indicators and TTPs for custom feeds
+        self.stdout.write("Populating indicators and TTPs for custom feeds...")
+        self.populate_custom_feed_data()
+
+    def populate_custom_feed_data(self):
+        """Populate indicators and TTPs for custom threat feeds"""
+        try:
+            from core.config.custom_threat_feeds import CUSTOM_FEEDS_CONFIG
+            from core.models.models import Indicator, TTPData
+
+            # Get created threat feeds
+            created_feeds = ThreatFeed.objects.filter(
+                name__in=[feed['name'] for feed in CUSTOM_FEEDS_CONFIG]
+            )
+
+            indicator_count = 0
+            ttp_count = 0
+
+            for feed_config in CUSTOM_FEEDS_CONFIG:
+                try:
+                    threat_feed = created_feeds.get(name=feed_config['name'])
+
+                    # Create indicators
+                    indicators = feed_config.get('indicators', [])
+                    for indicator_data in indicators:
+                        try:
+                            with transaction.atomic():
+                                # Map indicator type
+                                indicator_type_mapping = {
+                                    'domain-name': 'domain',
+                                    'ipv4-addr': 'ip',
+                                    'file': 'hash',
+                                    'email-addr': 'email',
+                                    'url': 'url'
+                                }
+
+                                mapped_type = indicator_type_mapping.get(
+                                    indicator_data['type'],
+                                    indicator_data['type']
+                                )
+
+                                # Get the indicator value
+                                if indicator_data['type'] == 'file':
+                                    value = list(indicator_data['hashes'].values())[0]
+                                else:
+                                    value = indicator_data['value']
+
+                                indicator = Indicator.objects.create(
+                                    value=value,
+                                    indicator_type=mapped_type,
+                                    threat_feed=threat_feed,
+                                    confidence=indicator_data.get('confidence', 75),
+                                    first_seen=timezone.now() - timedelta(days=30),
+                                    last_seen=timezone.now() - timedelta(days=1),
+                                    is_active=True,
+                                    metadata={
+                                        'labels': indicator_data.get('labels', []),
+                                        'kill_chain_phases': indicator_data.get('kill_chain_phases', []),
+                                        'threat_actor': indicator_data.get('threat_actor'),
+                                        'malware_family': indicator_data.get('malware_family'),
+                                        'campaign': indicator_data.get('campaign'),
+                                        'original_metadata': indicator_data.get('metadata', {})
+                                    }
+                                )
+                                indicator_count += 1
+
+                        except Exception as e:
+                            self.stdout.write(f"    Warning: Could not create indicator {indicator_data.get('value', 'unknown')}: {e}")
+                            continue
+
+                    # Create TTPs
+                    ttps = feed_config.get('ttps', [])
+                    for ttp_data in ttps:
+                        try:
+                            with transaction.atomic():
+                                ttp = TTPData.objects.create(
+                                    name=ttp_data['name'],
+                                    description=ttp_data['description'],
+                                    mitre_technique_id=ttp_data['mitre_technique_id'],
+                                    mitre_tactic=ttp_data['tactic'],
+                                    threat_feed=threat_feed,
+                                    confidence_score=85,
+                                    is_active=True,
+                                    metadata={
+                                        'detection_rules': ttp_data.get('detection_rules', []),
+                                        'mitigations': ttp_data.get('mitigations', []),
+                                        'feed_source': threat_feed.name
+                                    }
+                                )
+                                ttp_count += 1
+
+                        except Exception as e:
+                            self.stdout.write(f"    Warning: Could not create TTP {ttp_data.get('name', 'unknown')}: {e}")
+                            continue
+
+                    self.stdout.write(f"  ✓ {threat_feed.name}: {len(indicators)} indicators, {len(ttps)} TTPs")
+
+                except ThreatFeed.DoesNotExist:
+                    self.stdout.write(f"    Warning: Feed {feed_config['name']} not found")
+                    continue
+                except Exception as e:
+                    self.stdout.write(f"    Error populating {feed_config['name']}: {e}")
+                    continue
+
+            self.stdout.write(f"Populated {indicator_count} indicators and {ttp_count} TTPs across custom feeds")
+
+        except ImportError as e:
+            self.stdout.write(f"Could not import custom feeds for data population: {e}")
+        except Exception as e:
+            self.stdout.write(f"Error during custom feed data population: {e}")
 
     def print_summary(self):
         """Print summary of created data"""
