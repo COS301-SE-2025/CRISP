@@ -515,34 +515,6 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
                     </div>
                   )}
 
-                  {/* Data Summary */}
-                  {fullReportData.data_summary && (
-                    <div className="data-summary">
-                      <h4>Data Sources Summary</h4>
-                      <div className="summary-grid">
-                        <div className="summary-item">
-                          <i className="fas fa-shield-alt"></i>
-                          <span className="summary-label">Indicators Analyzed</span>
-                          <span className="summary-value">{fullReportData.data_summary.indicators_analyzed}</span>
-                        </div>
-                        <div className="summary-item">
-                          <i className="fas fa-crosshairs"></i>
-                          <span className="summary-label">TTPs Analyzed</span>
-                          <span className="summary-value">{fullReportData.data_summary.ttps_analyzed}</span>
-                        </div>
-                        <div className="summary-item">
-                          <i className="fas fa-handshake"></i>
-                          <span className="summary-label">Trust Relationships</span>
-                          <span className="summary-value">{fullReportData.data_summary.trust_relationships}</span>
-                        </div>
-                        <div className="summary-item">
-                          <i className="fas fa-building"></i>
-                          <span className="summary-label">Organizations</span>
-                          <span className="summary-value">{fullReportData.organizations_analyzed || 0}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
@@ -1229,54 +1201,6 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
           font-size: 18px;
         }
 
-        .data-summary {
-          background: white;
-          border-radius: 16px;
-          padding: 24px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
-
-        .data-summary h4 {
-          font-size: 18px;
-          font-weight: 600;
-          color: #1e3d59;
-          margin-bottom: 20px;
-        }
-
-        .summary-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 20px;
-        }
-
-        .summary-item {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 20px;
-          background: linear-gradient(135deg, #f8f9ff 0%, #f0f8ff 100%);
-          border-radius: 12px;
-          border: 1px solid #e1e8ff;
-          text-align: center;
-        }
-
-        .summary-item i {
-          font-size: 24px;
-          color: #5a9fd4;
-          margin-bottom: 12px;
-        }
-
-        .summary-label {
-          font-size: 14px;
-          color: #666;
-          margin-bottom: 8px;
-        }
-
-        .summary-value {
-          font-size: 24px;
-          font-weight: 700;
-          color: #1e3d59;
-        }
 
         .report-detail-footer {
           padding: 20px 32px;
@@ -1379,9 +1303,6 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
             grid-template-columns: 1fr;
           }
 
-          .summary-grid {
-            grid-template-columns: 1fr 1fr;
-          }
 
           .chart-container {
             padding: 12px;
@@ -1390,9 +1311,6 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
 
         @media (max-width: 480px) {
           .overview-stats,
-          .summary-grid {
-            grid-template-columns: 1fr;
-          }
 
           .report-detail-footer {
             flex-direction: column;
