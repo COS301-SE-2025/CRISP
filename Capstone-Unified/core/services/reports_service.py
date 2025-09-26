@@ -129,12 +129,19 @@ class ReportsService:
             # Base query for organization's own reports
             queryset = Report.objects.filter(organization=organization)
 
+            # Add sector reports (public threat intelligence) - these should be visible to all organizations
+            sector_report_types = ['education_sector', 'financial_sector', 'government_sector']
+            sector_reports = Report.objects.filter(report_type__in=sector_report_types).exclude(organization=organization)
+            if sector_reports.exists():
+                queryset = queryset.union(sector_reports)
+
             # Add shared reports if requested
             if include_shared:
                 shared_reports = Report.objects.filter(
                     shared_with_organizations=organization
-                ).exclude(organization=organization)
-                queryset = queryset.union(shared_reports)
+                ).exclude(organization=organization).exclude(report_type__in=sector_report_types)
+                if shared_reports.exists():
+                    queryset = queryset.union(shared_reports)
 
             # Filter by report type
             if report_type:
@@ -256,7 +263,28 @@ class ReportsService:
                     'indicators_analyzed': len(indicators),
                     'ttps_analyzed': len(ttps),
                     'trust_relationships': len(trust_data.get('relationships', []))
-                }
+                },
+                'indicators': [
+                    {
+                        'id': str(ind.id),
+                        'type': getattr(ind, 'type', 'unknown'),
+                        'value': getattr(ind, 'value', 'N/A'),
+                        'severity': getattr(ind, 'severity', 'medium'),
+                        'first_seen': getattr(ind, 'first_seen', ind.created_at).isoformat() if hasattr(ind, 'first_seen') else ind.created_at.isoformat(),
+                        'created_at': ind.created_at.isoformat(),
+                        'source': getattr(ind, 'source', 'Internal')
+                    } for ind in indicators
+                ],
+                'ttps': [
+                    {
+                        'id': str(ttp.id),
+                        'technique': getattr(ttp, 'technique', getattr(ttp, 'name', 'Unknown')),
+                        'mitre_technique_id': getattr(ttp, 'mitre_technique_id', 'N/A'),
+                        'tactic': getattr(ttp, 'tactic', 'Unknown'),
+                        'description': getattr(ttp, 'description', 'No description available'),
+                        'created_at': ttp.created_at.isoformat()
+                    } for ttp in ttps
+                ]
             }
 
             # Persist report if requested and parameters provided
@@ -314,23 +342,23 @@ class ReportsService:
         return list(queryset)
     
     def _get_sector_indicators(self, org_ids: List[str], start_date: datetime, end_date: datetime) -> List[Indicator]:
-        """Get IoC indicators associated with educational organizations."""
+        """Get IoC indicators from all active threat feeds (not limited to organization-owned feeds)."""
         try:
-            # Get threat feeds belonging to educational organizations
+            # Get all active threat feeds (including external feeds like AlienVault)
+            # This ensures we include indicators from external sources that benefit all organizations
             threat_feeds = ThreatFeed.objects.filter(
-                owner_id__in=org_ids,
                 is_active=True
             )
-            
+
             feed_ids = [str(tf.id) for tf in threat_feeds]
-            
+
             # Get indicators from these feeds within date range
             indicators = Indicator.objects.filter(
                 threat_feed_id__in=feed_ids,
                 created_at__gte=start_date,
                 created_at__lte=end_date
             ).select_related('threat_feed')
-            
+
             return list(indicators)
             
         except Exception as e:
@@ -338,23 +366,23 @@ class ReportsService:
             return []
     
     def _get_sector_ttps(self, org_ids: List[str], start_date: datetime, end_date: datetime) -> List[TTPData]:
-        """Get TTP data associated with educational organizations."""
+        """Get TTP data from all active threat feeds (not limited to organization-owned feeds)."""
         try:
-            # Get TTPs associated with educational organizations' threat feeds
+            # Get all active threat feeds (including external feeds like AlienVault)
+            # This ensures we include TTPs from external sources that benefit all organizations
             threat_feeds = ThreatFeed.objects.filter(
-                owner_id__in=org_ids,
                 is_active=True
             )
-            
+
             feed_ids = [str(tf.id) for tf in threat_feeds]
-            
+
             # Get TTPs from these feeds within date range
             ttps = TTPData.objects.filter(
                 threat_feed_id__in=feed_ids,
                 created_at__gte=start_date,
                 created_at__lte=end_date
             ).select_related('threat_feed')
-            
+
             return list(ttps)
             
         except Exception as e:
@@ -593,7 +621,28 @@ class ReportsService:
                     'indicators_analyzed': len(indicators),
                     'ttps_analyzed': len(ttps),
                     'trust_relationships': len(trust_data.get('relationships', []))
-                }
+                },
+                'indicators': [
+                    {
+                        'id': str(ind.id),
+                        'type': getattr(ind, 'type', 'unknown'),
+                        'value': getattr(ind, 'value', 'N/A'),
+                        'severity': getattr(ind, 'severity', 'medium'),
+                        'first_seen': getattr(ind, 'first_seen', ind.created_at).isoformat() if hasattr(ind, 'first_seen') else ind.created_at.isoformat(),
+                        'created_at': ind.created_at.isoformat(),
+                        'source': getattr(ind, 'source', 'Internal')
+                    } for ind in indicators
+                ],
+                'ttps': [
+                    {
+                        'id': str(ttp.id),
+                        'technique': getattr(ttp, 'technique', getattr(ttp, 'name', 'Unknown')),
+                        'mitre_technique_id': getattr(ttp, 'mitre_technique_id', 'N/A'),
+                        'tactic': getattr(ttp, 'tactic', 'Unknown'),
+                        'description': getattr(ttp, 'description', 'No description available'),
+                        'created_at': ttp.created_at.isoformat()
+                    } for ttp in ttps
+                ]
             }
 
             # Persist report if requested and parameters provided
@@ -699,7 +748,28 @@ class ReportsService:
                     'indicators_analyzed': len(indicators),
                     'ttps_analyzed': len(ttps),
                     'trust_relationships': len(trust_data.get('relationships', []))
-                }
+                },
+                'indicators': [
+                    {
+                        'id': str(ind.id),
+                        'type': getattr(ind, 'type', 'unknown'),
+                        'value': getattr(ind, 'value', 'N/A'),
+                        'severity': getattr(ind, 'severity', 'medium'),
+                        'first_seen': getattr(ind, 'first_seen', ind.created_at).isoformat() if hasattr(ind, 'first_seen') else ind.created_at.isoformat(),
+                        'created_at': ind.created_at.isoformat(),
+                        'source': getattr(ind, 'source', 'Internal')
+                    } for ind in indicators
+                ],
+                'ttps': [
+                    {
+                        'id': str(ttp.id),
+                        'technique': getattr(ttp, 'technique', getattr(ttp, 'name', 'Unknown')),
+                        'mitre_technique_id': getattr(ttp, 'mitre_technique_id', 'N/A'),
+                        'tactic': getattr(ttp, 'tactic', 'Unknown'),
+                        'description': getattr(ttp, 'description', 'No description available'),
+                        'created_at': ttp.created_at.isoformat()
+                    } for ttp in ttps
+                ]
             }
 
             # Persist report if requested and parameters provided

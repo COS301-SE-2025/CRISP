@@ -94,15 +94,17 @@ def education_sector_analysis(request):
         # Generate report
         logger.info(f"Generating education sector analysis for user {request.user.username}")
 
-        # Get user's organization (directly from user model)
-        organization = getattr(request.user, 'organization', None)
+        # For sector reports, use a representative organization from the education sector
+        # rather than the user's organization to avoid attribution confusion
+        from core.models.models import Organization
+        education_org = Organization.objects.filter(organization_type='educational', is_active=True).first()
 
         report_data = reports_service.generate_education_sector_analysis(
             start_date=start_date,
             end_date=end_date,
             organization_ids=organization_ids,
             generated_by=request.user,
-            organization=organization,
+            organization=education_org,
             persist=True
         )
         
@@ -211,15 +213,17 @@ def financial_sector_analysis(request):
         # Generate report
         logger.info(f"Generating financial sector analysis for user {request.user.username}")
 
-        # Get user's organization (directly from user model)
-        organization = getattr(request.user, 'organization', None)
+        # For sector reports, use a representative organization from the financial sector
+        # rather than the user's organization to avoid attribution confusion
+        from core.models.models import Organization
+        financial_org = Organization.objects.filter(organization_type='private', is_active=True).first()
 
         report_data = reports_service.generate_financial_sector_analysis(
             start_date=start_date,
             end_date=end_date,
             organization_ids=organization_ids,
             generated_by=request.user,
-            organization=organization,
+            organization=financial_org,
             persist=True
         )
         
@@ -327,15 +331,17 @@ def government_sector_analysis(request):
         # Generate report
         logger.info(f"Generating government sector analysis for user {request.user.username}")
 
-        # Get user's organization (directly from user model)
-        organization = getattr(request.user, 'organization', None)
+        # For sector reports, use a representative organization from the government sector
+        # rather than the user's organization to avoid attribution confusion
+        from core.models.models import Organization
+        government_org = Organization.objects.filter(organization_type='government', is_active=True).first()
 
         report_data = reports_service.generate_government_sector_analysis(
             start_date=start_date,
             end_date=end_date,
             organization_ids=organization_ids,
             generated_by=request.user,
-            organization=organization,
+            organization=government_org,
             persist=True
         )
         
