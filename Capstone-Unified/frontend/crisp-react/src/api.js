@@ -12,6 +12,30 @@ const getAuthHeaders = () => {
   };
 };
 
+// Helper function to create user-friendly error messages
+const createUserFriendlyError = (response, defaultMessage, context = '') => {
+  const status = response.status;
+  const contextPrefix = context ? `${context}: ` : '';
+
+  switch (status) {
+    case 403:
+      return `${contextPrefix}Access denied. You don't have permission to view this content. Please check with your administrator if you need access.`;
+    case 401:
+      return `${contextPrefix}Authentication required. Please log in again.`;
+    case 404:
+      return `${contextPrefix}The requested resource was not found.`;
+    case 500:
+      return `${contextPrefix}Server error. Please try again later or contact support.`;
+    case 429:
+      return `${contextPrefix}Too many requests. Please wait a moment before trying again.`;
+    case 0:
+    case 'Failed to fetch':
+      return `${contextPrefix}Network error. Please check your internet connection and try again.`;
+    default:
+      return `${contextPrefix}${defaultMessage}`;
+  }
+};
+
 // Helper function to get current user from localStorage
 export const getCurrentUser = () => {
   try {
@@ -177,7 +201,7 @@ export const deleteUserPermanently = async (userId, reason = '') => {
 export const getOrganizations = async (queryParams = {}) => {
   const params = new URLSearchParams(queryParams).toString();
   const url = `${API_BASE_URL}/api/organizations/${params ? `?${params}` : ''}`;
-  
+
   const response = await fetch(url, {
     method: 'GET',
     headers: getAuthHeaders(),
@@ -185,7 +209,8 @@ export const getOrganizations = async (queryParams = {}) => {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || 'Failed to fetch organizations');
+    const friendlyMessage = createUserFriendlyError(response, 'Failed to fetch organizations', 'Organizations');
+    throw new Error(friendlyMessage);
   }
 
   return await response.json();
@@ -341,7 +366,8 @@ export const getConnectedOrganizations = async () => {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || 'Failed to fetch connected organizations');
+    const friendlyMessage = createUserFriendlyError(response, 'Failed to fetch connected organizations', 'Connected Organizations');
+    throw new Error(friendlyMessage);
   }
 
   return await response.json();
@@ -988,7 +1014,19 @@ export const get = async (endpoint) => {
         localStorage.removeItem('crisp_user');
         window.location.href = '/static/react/login';
       }
-      throw new Error(`HTTP ${response.status}`);
+
+      // Try to get detailed error message
+      let errorMessage = '';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.detail || errorData.message || 'Request failed';
+      } catch (parseError) {
+        errorMessage = 'Request failed';
+      }
+
+      // Create user-friendly error message
+      const friendlyMessage = createUserFriendlyError(response, errorMessage);
+      throw new Error(friendlyMessage);
     }
     
     const data = await response.json();
@@ -1023,15 +1061,19 @@ export const post = async (endpoint, data) => {
     
     if (!response.ok) {
       // Try to get detailed error message
-      let errorMessage = `HTTP ${response.status}`;
+      let errorMessage = '';
       try {
         const errorData = await response.json();
         console.error(`API Error Details for ${endpoint}:`, errorData);
-        errorMessage = errorData.detail || errorData.message || JSON.stringify(errorData);
+        errorMessage = errorData.detail || errorData.message || 'Request failed';
       } catch (parseError) {
         console.error(`Could not parse error response for ${endpoint}`);
+        errorMessage = 'Request failed';
       }
-      throw new Error(errorMessage);
+
+      // Create user-friendly error message
+      const friendlyMessage = createUserFriendlyError(response, errorMessage);
+      throw new Error(friendlyMessage);
     }
     
     return await response.json();
@@ -1048,7 +1090,22 @@ export const put = async (endpoint, data) => {
       headers: getAuthHeaders(),
       body: JSON.stringify(data)
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    if (!response.ok) {
+      // Try to get detailed error message
+      let errorMessage = '';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.detail || errorData.message || 'Request failed';
+      } catch (parseError) {
+        errorMessage = 'Request failed';
+      }
+
+      // Create user-friendly error message
+      const friendlyMessage = createUserFriendlyError(response, errorMessage);
+      throw new Error(friendlyMessage);
+    }
+
     return await response.json();
   } catch (error) {
     console.error(`API Error: ${endpoint}`, error);
@@ -1066,15 +1123,19 @@ export const deleteRequest = async (endpoint) => {
     // Handle different response scenarios
     if (!response.ok) {
       // Try to get detailed error message from response
-      let errorMessage = `HTTP ${response.status}`;
+      let errorMessage = '';
       try {
         const errorData = await response.json();
         console.error(`DELETE API Error Details for ${endpoint}:`, errorData);
-        errorMessage = errorData.message || errorData.detail || JSON.stringify(errorData);
+        errorMessage = errorData.message || errorData.detail || 'Request failed';
       } catch (parseError) {
         console.error(`Could not parse error response for DELETE ${endpoint}`);
+        errorMessage = 'Request failed';
       }
-      throw new Error(errorMessage);
+
+      // Create user-friendly error message
+      const friendlyMessage = createUserFriendlyError(response, errorMessage);
+      throw new Error(friendlyMessage);
     }
 
     // For DELETE requests, we might get 204 No Content with no response body

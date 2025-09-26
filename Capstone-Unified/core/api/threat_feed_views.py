@@ -3022,14 +3022,33 @@ def _create_ttp(request):
 def _update_ttp(request, ttp_id):
     """
     Update an existing TTP with validation and conflict detection.
-    
+
     Supports both PUT (complete update) and PATCH (partial update) methods.
     """
     try:
         from core.repositories.ttp_repository import TTPRepository
         from core.services.ttp_service import TTPService
         import re
-        
+
+        # Check permissions - only publishers and BlueVision admins can edit TTPs
+        if not request.user.is_authenticated:
+            return Response({
+                "success": False,
+                "message": "Authentication required to edit TTPs"
+            }, status=status.HTTP_401_UNAUTHORIZED)
+
+        user_role = getattr(request.user, 'role', 'viewer')
+        user_org = getattr(request.user, 'organization', None)
+
+        if user_role not in ['publisher', 'BlueVisionAdmin'] and not request.user.is_superuser:
+            org_name = user_org.name if user_org else "your organization"
+            return Response({
+                "success": False,
+                "message": f"Access denied. Only publishers can edit TTPs. Please contact the administrator of {org_name} to request publisher access.",
+                "user_role": user_role,
+                "required_roles": ["publisher", "BlueVisionAdmin"]
+            }, status=status.HTTP_403_FORBIDDEN)
+
         # Get the existing TTP
         ttp = TTPRepository.get_by_id(ttp_id)
         if not ttp:
@@ -3268,7 +3287,7 @@ def _format_ttp_response(ttp):
 def _delete_ttp(request, ttp_id):
     """
     Delete a TTP with safety checks and comprehensive logging.
-    
+
     Performs the following operations:
     1. Validates TTP exists
     2. Checks for related data and dependencies
@@ -3280,7 +3299,26 @@ def _delete_ttp(request, ttp_id):
         from core.repositories.ttp_repository import TTPRepository
         from core.services.ttp_service import TTPService
         from django.db.models import Q
-        
+
+        # Check permissions - only publishers and BlueVision admins can delete TTPs
+        if not request.user.is_authenticated:
+            return Response({
+                "success": False,
+                "message": "Authentication required to delete TTPs"
+            }, status=status.HTTP_401_UNAUTHORIZED)
+
+        user_role = getattr(request.user, 'role', 'viewer')
+        user_org = getattr(request.user, 'organization', None)
+
+        if user_role not in ['publisher', 'BlueVisionAdmin'] and not request.user.is_superuser:
+            org_name = user_org.name if user_org else "your organization"
+            return Response({
+                "success": False,
+                "message": f"Access denied. Only publishers can delete TTPs. Please contact the administrator of {org_name} to request publisher access.",
+                "user_role": user_role,
+                "required_roles": ["publisher", "BlueVisionAdmin"]
+            }, status=status.HTTP_403_FORBIDDEN)
+
         # Get the existing TTP
         ttp = TTPRepository.get_by_id(ttp_id)
         if not ttp:
@@ -3425,7 +3463,7 @@ def _delete_ttp(request, ttp_id):
 
 
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
-@permission_classes([AllowAny])
+@permission_classes([AllowAny])  # Keep AllowAny for GET, but add role checks in _update_ttp
 def ttp_detail(request, ttp_id):
     """
     GET: Get detailed information about a specific TTP.

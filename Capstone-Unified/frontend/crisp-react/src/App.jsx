@@ -10730,9 +10730,12 @@ function TTPAnalysis({ active }) {
                       </button>
                     </>
                   ) : (
-                    <button className="btn btn-primary" onClick={toggleEditMode}>
-                      <i className="fas fa-edit"></i> Edit TTP
-                    </button>
+                    // Only show edit button for publishers and BlueVision admins
+                    (userRole === 'publisher' || userRole === 'BlueVisionAdmin' || user?.is_superuser) && (
+                      <button className="btn btn-primary" onClick={toggleEditMode}>
+                        <i className="fas fa-edit"></i> Edit TTP
+                      </button>
+                    )
                   )}
                 </>
               )}

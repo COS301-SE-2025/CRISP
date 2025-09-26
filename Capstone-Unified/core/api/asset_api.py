@@ -864,19 +864,64 @@ def trigger_asset_correlation(request):
                 'message': f'Access denied. Only publishers can trigger asset correlation. Your role: {request.user.role}'
             }, status=status.HTTP_403_FORBIDDEN)
 
-        organization = request.user.organization
-        if not organization:
-            return Response({
-                'success': False,
-                'message': 'User must belong to an organization'
-            }, status=status.HTTP_400_BAD_REQUEST)
-
         days = request.data.get('days', 1)
         if not isinstance(days, int) or days < 1 or days > 30:
             days = 1
 
         alert_service = AssetBasedAlertService()
-        result = alert_service.trigger_correlation_for_organization(organization, days)
+
+        # BlueVision admins can trigger correlation across all organizations with assets
+        if request.user.role == 'BlueVisionAdmin' or request.user.is_superuser:
+            from core.models.models import Organization
+
+            # Get all organizations that have assets
+            orgs_with_assets = Organization.objects.filter(
+                asset_inventory__isnull=False
+            ).distinct()
+
+            if not orgs_with_assets.exists():
+                return Response({
+                    'success': False,
+                    'message': 'No organizations with assets found for correlation'
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            total_alerts = 0
+            total_indicators = 0
+            org_results = []
+
+            # Trigger correlation for each organization with assets
+            for org in orgs_with_assets:
+                result = alert_service.trigger_correlation_for_organization(org, days)
+                if result['success']:
+                    total_alerts += result.get('alerts_generated', 0)
+                    total_indicators += result.get('indicators_processed', 0)
+                    org_results.append({
+                        'organization': org.name,
+                        'alerts_generated': result.get('alerts_generated', 0),
+                        'indicators_processed': result.get('indicators_processed', 0)
+                    })
+
+            return Response({
+                'success': True,
+                'message': f'Correlation triggered across {len(orgs_with_assets)} organizations: {total_alerts} alerts generated from {total_indicators} indicators',
+                'data': {
+                    'total_alerts_generated': total_alerts,
+                    'total_indicators_processed': total_indicators,
+                    'organizations_processed': len(orgs_with_assets),
+                    'organization_results': org_results,
+                    'time_range_days': days
+                }
+            })
+        else:
+            # Regular publishers can only trigger for their organization
+            organization = request.user.organization
+            if not organization:
+                return Response({
+                    'success': False,
+                    'message': 'User must belong to an organization'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            result = alert_service.trigger_correlation_for_organization(organization, days)
 
         if result['success']:
             return Response({

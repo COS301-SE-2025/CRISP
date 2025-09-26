@@ -1106,7 +1106,7 @@ const AssetModal = ({ asset, onSave, onClose, errorMessage }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Basic validation
     if (!formData.name?.trim()) {
       showWarning('Validation Error', 'Please enter an asset name');
@@ -1116,7 +1116,7 @@ const AssetModal = ({ asset, onSave, onClose, errorMessage }) => {
       showWarning('Validation Error', 'Please enter an asset value');
       return;
     }
-    
+
     setIsSubmitting(true);
     try {
       await onSave(formData);
@@ -1132,109 +1132,532 @@ const AssetModal = ({ asset, onSave, onClose, errorMessage }) => {
       left: 0,
       width: '100%',
       height: '100%',
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+      backdropFilter: 'blur(8px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      zIndex: 1000
+      zIndex: 1000,
+      padding: '1rem'
     }}>
       <div style={{
-        backgroundColor: 'white',
-        borderRadius: '8px',
-        padding: '2rem',
-        maxWidth: '500px',
-        width: '90%',
-        maxHeight: '80vh',
-        overflow: 'auto',
-        fontFamily: 'Arial, sans-serif',
+        background: 'rgba(255, 255, 255, 0.98)',
+        backdropFilter: 'blur(20px)',
+        borderRadius: '24px',
+        boxShadow: '0 16px 64px rgba(0, 0, 0, 0.15)',
+        border: '1px solid rgba(255, 255, 255, 0.3)',
+        maxWidth: '600px',
+        width: '100%',
+        maxHeight: '90vh',
+        overflow: 'hidden',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif',
         position: 'relative'
       }}>
+        {/* Header */}
+        <div style={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          padding: '2rem 2rem 1.5rem',
+          color: 'white',
+          position: 'relative'
+        }}>
           <button
             onClick={onClose}
             style={{
               position: 'absolute',
               top: '1rem',
               right: '1rem',
-              background: 'none',
+              background: 'rgba(255, 255, 255, 0.2)',
               border: 'none',
-              fontSize: '1.5rem',
+              borderRadius: '50%',
+              width: '40px',
+              height: '40px',
               cursor: 'pointer',
-              color: '#666'
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = 'rgba(255, 255, 255, 0.3)';
+              e.target.style.transform = 'rotate(90deg)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+              e.target.style.transform = 'rotate(0deg)';
             }}
           >
-            &times;
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
-          <form onSubmit={handleSubmit}>
-            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">{asset ? 'Edit' : 'Add'} Asset</h3>
-              {errorMessage && (
-                <div style={{ color: 'red', marginTop: '1rem', padding: '0.5rem', backgroundColor: '#ffebee', border: '1px solid #e57373', borderRadius: '4px' }}>
-                  {errorMessage}
-                </div>
-              )}
-              <div className="mt-2">
-                <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2">Name</label>
-                  <input type="text" name="name" value={formData.name} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required />
-                </div>
-                <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2">Asset Type</label>
-                  <select name="asset_type" value={formData.asset_type} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                    <option value="domain">Domain</option>
-                    <option value="ip_range">IP Range</option>
-                    <option value="software">Software</option>
-                  </select>
-                </div>
-                <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2">Asset Value</label>
-                  <input type="text" name="asset_value" value={formData.asset_value} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required />
-                </div>
-                <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2">Description</label>
-                  <textarea name="description" value={formData.description} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"></textarea>
-                </div>
-                <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2">Criticality</label>
-                  <select name="criticality" value={formData.criticality} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="critical">Critical</option>
-                  </select>
-                </div>
-                <div className="mb-4">
-                  <label className="flex items-center">
-                    <input type="checkbox" name="alert_enabled" checked={formData.alert_enabled} onChange={handleChange} className="mr-2" />
-                    <span>Enable Alerts</span>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.2)',
+              borderRadius: '16px',
+              padding: '1rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div>
+              <h2 style={{
+                fontSize: '2rem',
+                fontWeight: '800',
+                margin: '0 0 0.5rem 0',
+                textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+              }}>
+                {asset ? 'Edit Asset' : 'Add New Asset'}
+              </h2>
+              <p style={{
+                fontSize: '1rem',
+                margin: 0,
+                opacity: 0.9,
+                fontWeight: '500'
+              }}>
+                {asset ? 'Update asset information and settings' : 'Create a new digital asset for monitoring'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Form Content */}
+        <form onSubmit={handleSubmit} style={{ height: 'calc(100% - 140px)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{
+            padding: '2rem',
+            flex: 1,
+            overflowY: 'auto',
+            background: 'linear-gradient(to bottom, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95))'
+          }}>
+            {/* Error Message */}
+            {errorMessage && (
+              <div style={{
+                background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                border: '1px solid #f87171',
+                borderRadius: '12px',
+                padding: '1rem 1.5rem',
+                marginBottom: '2rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem'
+              }}>
+                <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#dc2626', flexShrink: 0 }}>
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                <span style={{ color: '#dc2626', fontWeight: '600', fontSize: '0.875rem' }}>{errorMessage}</span>
+              </div>
+            )}
+
+            {/* Form Fields Grid */}
+            <div style={{ display: 'grid', gap: '1.5rem' }}>
+              {/* Asset Name */}
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '700',
+                  color: '#374151',
+                  marginBottom: '0.5rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Asset Name
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="Enter a descriptive name for this asset..."
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '1rem 1.25rem',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '12px',
+                    fontSize: '1rem',
+                    fontWeight: '500',
+                    color: '#111827',
+                    background: 'white',
+                    transition: 'all 0.3s ease',
+                    outline: 'none'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#667eea';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                    e.target.style.transform = 'translateY(-1px)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#e5e7eb';
+                    e.target.style.boxShadow = 'none';
+                    e.target.style.transform = 'translateY(0)';
+                  }}
+                />
+              </div>
+
+              {/* Asset Type and Value Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.875rem',
+                    fontWeight: '700',
+                    color: '#374151',
+                    marginBottom: '0.5rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Asset Type
                   </label>
+                  <select
+                    name="asset_type"
+                    value={formData.asset_type}
+                    onChange={handleChange}
+                    style={{
+                      width: '100%',
+                      padding: '1rem 1.25rem',
+                      border: '2px solid #e5e7eb',
+                      borderRadius: '12px',
+                      fontSize: '1rem',
+                      fontWeight: '500',
+                      color: '#111827',
+                      background: 'white',
+                      transition: 'all 0.3s ease',
+                      outline: 'none',
+                      cursor: 'pointer'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#667eea';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#e5e7eb';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  >
+                    <option value="domain">🌐 Domain</option>
+                    <option value="ip_range">📡 IP Range</option>
+                    <option value="software">💻 Software</option>
+                    <option value="service">⚙️ Service</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.875rem',
+                    fontWeight: '700',
+                    color: '#374151',
+                    marginBottom: '0.5rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Criticality Level
+                  </label>
+                  <select
+                    name="criticality"
+                    value={formData.criticality}
+                    onChange={handleChange}
+                    style={{
+                      width: '100%',
+                      padding: '1rem 1.25rem',
+                      border: '2px solid #e5e7eb',
+                      borderRadius: '12px',
+                      fontSize: '1rem',
+                      fontWeight: '500',
+                      color: '#111827',
+                      background: 'white',
+                      transition: 'all 0.3s ease',
+                      outline: 'none',
+                      cursor: 'pointer'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#667eea';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#e5e7eb';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  >
+                    <option value="low">🟢 Low</option>
+                    <option value="medium">🟡 Medium</option>
+                    <option value="high">🟠 High</option>
+                    <option value="critical">🔴 Critical</option>
+                  </select>
                 </div>
               </div>
-            </div>
-            <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? (
-                  <div className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Saving...
+
+              {/* Asset Value */}
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '700',
+                  color: '#374151',
+                  marginBottom: '0.5rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Asset Value
+                </label>
+                <input
+                  type="text"
+                  name="asset_value"
+                  value={formData.asset_value}
+                  onChange={handleChange}
+                  placeholder="e.g., example.com, 192.168.1.0/24, Apache v2.4.41"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '1rem 1.25rem',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '12px',
+                    fontSize: '1rem',
+                    fontWeight: '500',
+                    color: '#111827',
+                    background: 'white',
+                    transition: 'all 0.3s ease',
+                    outline: 'none',
+                    fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, monospace'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#667eea';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                    e.target.style.transform = 'translateY(-1px)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#e5e7eb';
+                    e.target.style.boxShadow = 'none';
+                    e.target.style.transform = 'translateY(0)';
+                  }}
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '700',
+                  color: '#374151',
+                  marginBottom: '0.5rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Description (Optional)
+                </label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  placeholder="Provide additional context or notes about this asset..."
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '1rem 1.25rem',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '12px',
+                    fontSize: '1rem',
+                    fontWeight: '500',
+                    color: '#111827',
+                    background: 'white',
+                    transition: 'all 0.3s ease',
+                    outline: 'none',
+                    resize: 'vertical',
+                    minHeight: '80px'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#667eea';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#e5e7eb';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                />
+              </div>
+
+              {/* Alert Enabled Toggle */}
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.8)',
+                border: '2px solid #e5e7eb',
+                borderRadius: '12px',
+                padding: '1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <div>
+                  <div style={{
+                    fontSize: '0.875rem',
+                    fontWeight: '700',
+                    color: '#374151',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    marginBottom: '0.25rem'
+                  }}>
+                    Smart Monitoring
                   </div>
-                ) : (
-                  'Save Asset'
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-              >
-                Cancel
-              </button>
+                  <div style={{
+                    fontSize: '0.875rem',
+                    color: '#6b7280',
+                    fontWeight: '500'
+                  }}>
+                    Enable intelligent threat detection for this asset
+                  </div>
+                </div>
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  position: 'relative'
+                }}>
+                  <input
+                    type="checkbox"
+                    name="alert_enabled"
+                    checked={formData.alert_enabled}
+                    onChange={handleChange}
+                    style={{ display: 'none' }}
+                  />
+                  <div style={{
+                    width: '60px',
+                    height: '32px',
+                    borderRadius: '16px',
+                    background: formData.alert_enabled
+                      ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                      : '#d1d5db',
+                    transition: 'all 0.3s ease',
+                    position: 'relative',
+                    boxShadow: formData.alert_enabled
+                      ? '0 4px 12px rgba(102, 126, 234, 0.4)'
+                      : '0 2px 4px rgba(0, 0, 0, 0.1)'
+                  }}>
+                    <div style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '50%',
+                      background: 'white',
+                      position: 'absolute',
+                      top: '2px',
+                      left: formData.alert_enabled ? '30px' : '2px',
+                      transition: 'all 0.3s ease',
+                      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      {formData.alert_enabled && (
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#667eea' }}>
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div style={{
+            background: 'rgba(248, 250, 252, 0.95)',
+            backdropFilter: 'blur(10px)',
+            borderTop: '1px solid rgba(226, 232, 240, 0.8)',
+            padding: '1.5rem 2rem',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: '1rem'
+          }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                background: 'white',
+                border: '2px solid #e5e7eb',
+                borderRadius: '12px',
+                padding: '0.75rem 1.5rem',
+                fontSize: '1rem',
+                fontWeight: '600',
+                color: '#6b7280',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.borderColor = '#d1d5db';
+                e.target.style.color = '#374151';
+                e.target.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.borderColor = '#e5e7eb';
+                e.target.style.color = '#6b7280';
+                e.target.style.transform = 'translateY(0)';
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              style={{
+                background: isSubmitting
+                  ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)'
+                  : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '0.75rem 2rem',
+                fontSize: '1rem',
+                fontWeight: '700',
+                color: 'white',
+                cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                boxShadow: isSubmitting
+                  ? 'none'
+                  : '0 4px 16px rgba(102, 126, 234, 0.4)'
+              }}
+              onMouseEnter={(e) => {
+                if (!isSubmitting) {
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 8px 24px rgba(102, 126, 234, 0.5)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isSubmitting) {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 4px 16px rgba(102, 126, 234, 0.4)';
+                }
+              }}
+            >
+              {isSubmitting ? (
+                <>
+                  <svg style={{ animation: 'spin 1s linear infinite' }} width="20" height="20" fill="none" viewBox="0 0 24 24">
+                    <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Saving Asset...
+                </>
+              ) : (
+                <>
+                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  {asset ? 'Update Asset' : 'Create Asset'}
+                </>
+              )}
+            </button>
           </div>
         </form>
       </div>
