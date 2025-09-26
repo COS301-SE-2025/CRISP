@@ -3067,6 +3067,9 @@ function ThreatFeeds({
         setRefreshTrigger(prev => prev + 1); // Force re-render
         console.log('✅ Threat feeds state updated');
         
+        // Fetch consumption status for all feeds to restore paused/running states
+        await fetchFeedConsumptionStatus(data.results);
+        
         // Force a re-render by updating a dummy state
         setTimeout(() => {
           console.log('🔄 Force checking state after update:', threatFeeds.length);
@@ -3078,6 +3081,55 @@ function ThreatFeeds({
       console.error('❌ Error fetching threat feeds:', error);
     }
     setLoading(false);
+  };
+
+  const fetchFeedConsumptionStatus = async (feeds) => {
+    try {
+      console.log('🔄 Fetching consumption status for all feeds...');
+      
+      // Import the API function
+      const { getFeedConsumptionStatus } = await import('./api.js');
+      
+      // Check status for all feeds in parallel
+      const statusPromises = feeds.map(async (feed) => {
+        try {
+          const status = await getFeedConsumptionStatus(feed.id);
+          return { feedId: feed.id, status };
+        } catch (error) {
+          console.warn(`Failed to get status for feed ${feed.id}:`, error.message);
+          return { feedId: feed.id, status: null };
+        }
+      });
+      
+      const statusResults = await Promise.all(statusPromises);
+      
+      // Update feedProgress state with consumption status
+      const progressUpdates = {};
+      statusResults.forEach(({ feedId, status }) => {
+        if (status && status.success) {
+          progressUpdates[feedId] = {
+            ...feedProgress[feedId],
+            paused: status.consumption_status === 'paused',
+            status: status.consumption_status,
+            taskId: status.current_task_id,
+            canBePaused: status.can_be_paused,
+            canBeResumed: status.can_be_resumed,
+            isConsuming: status.is_consuming
+          };
+        }
+      });
+      
+      if (Object.keys(progressUpdates).length > 0) {
+        setFeedProgress(prev => ({
+          ...prev,
+          ...progressUpdates
+        }));
+        console.log(`✅ Updated status for ${Object.keys(progressUpdates).length} feeds`);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error fetching feed consumption status:', error);
+    }
   };
   
   const handleCancelFeedConsumption = async (feedId, mode = 'stop_now') => {
@@ -3205,6 +3257,106 @@ function ThreatFeeds({
     } catch (error) {
       console.error('Error cancelling feed consumption:', error);
       showError('Cancel Failed', 'Failed to cancel feed consumption. Please try again.');
+    }
+  };
+
+  const handlePauseFeedConsumption = async (feedId) => {
+    try {
+      // Update UI to show pausing state
+      setFeedProgress(prev => ({
+        ...prev,
+        [feedId]: {
+          ...prev[feedId],
+          pausing: true
+        }
+      }));
+
+      const { pauseFeedConsumption } = await import('./api.js');
+      const response = await pauseFeedConsumption(feedId);
+      
+      if (response.success) {
+        // Update UI to show paused state
+        setFeedProgress(prev => ({
+          ...prev,
+          [feedId]: {
+            ...prev[feedId],
+            pausing: false,
+            paused: true,
+            status: 'paused'
+          }
+        }));
+
+        showSuccess('Feed Paused', response.message);
+      } else {
+        throw new Error(response.error || 'Failed to pause feed');
+      }
+    } catch (error) {
+      console.error('Error pausing feed consumption:', error);
+      
+      // Reset pausing state
+      setFeedProgress(prev => ({
+        ...prev,
+        [feedId]: {
+          ...prev[feedId],
+          pausing: false
+        }
+      }));
+
+      showError('Pause Failed', error.message || 'Failed to pause feed consumption. Please try again.');
+    }
+  };
+
+  const handleResumeFeedConsumption = async (feedId) => {
+    try {
+      // Update UI to show resuming state
+      setFeedProgress(prev => ({
+        ...prev,
+        [feedId]: {
+          ...prev[feedId],
+          resuming: true,
+          paused: false
+        }
+      }));
+
+      const { resumeFeedConsumption } = await import('./api.js');
+      const response = await resumeFeedConsumption(feedId);
+      
+      if (response.success) {
+        // Update UI to show running state
+        setFeedProgress(prev => ({
+          ...prev,
+          [feedId]: {
+            ...prev[feedId],
+            resuming: false,
+            paused: false,
+            status: 'running',
+            taskId: response.task_id
+          }
+        }));
+
+        showSuccess('Feed Resumed', response.message);
+        
+        // Start polling for the resumed task
+        if (response.task_id) {
+          startTaskPolling(response.task_id, feedId);
+        }
+      } else {
+        throw new Error(response.error || 'Failed to resume feed');
+      }
+    } catch (error) {
+      console.error('Error resuming feed consumption:', error);
+      
+      // Reset resuming state and restore paused state
+      setFeedProgress(prev => ({
+        ...prev,
+        [feedId]: {
+          ...prev[feedId],
+          resuming: false,
+          paused: true
+        }
+      }));
+
+      showError('Resume Failed', error.message || 'Failed to resume feed consumption. Please try again.');
     }
   };
 
@@ -3412,6 +3564,18 @@ function ThreatFeeds({
                 if (progress.stage === 'Completed' || (progress.percentage && progress.percentage >= 100)) {
                 clearInterval(progressInterval);
                 activeIntervals.current = activeIntervals.current.filter(id => id !== progressInterval);
+
+                // Immediately mark as completed to disable pause button
+                setFeedProgress(prev => ({
+                  ...prev,
+                  [feedId]: {
+                    ...prev[feedId],
+                    completed: true,
+                    paused: false,
+                    pausing: false,
+                    stage: 'Completed'
+                  }
+                }));
 
                 // Dispatch event to notify other components
                 window.dispatchEvent(new CustomEvent('feedConsumptionComplete', {
@@ -4076,16 +4240,30 @@ function ThreatFeeds({
                               </div>
                             </div>
                             <div className="cancel-options" style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
-                              <button
-                                className="btn btn-xs btn-warning"
-                                onClick={() => handleCancelFeedConsumption(feed.id, 'stop_now')}
-                                title="Stop consumption but keep indicators already processed"
-                                style={{fontSize: '10px', padding: '2px 6px'}}
-                                disabled={feedProgress[feed.id]?.cancelling}
-                              >
-                                <i className={feedProgress[feed.id]?.cancelling ? "fas fa-clock" : "fas fa-pause"}></i> 
-                                {feedProgress[feed.id]?.cancelling ? 'Stopping...' : 'Stop Now'}
-                              </button>
+                              {/* Only show pause button if feed is actively running and not completed */}
+                              {!feedProgress[feed.id]?.paused && !feedProgress[feed.id]?.completed && (consumingFeeds.includes(feed.id) || activeTasks.has(feedProgress[feed.id]?.taskId)) ? (
+                                <button
+                                  className="btn btn-xs btn-warning"
+                                  onClick={() => handlePauseFeedConsumption(feed.id)}
+                                  title="Pause consumption and save progress for later resume"
+                                  style={{fontSize: '10px', padding: '2px 6px'}}
+                                  disabled={feedProgress[feed.id]?.pausing}
+                                >
+                                  <i className={feedProgress[feed.id]?.pausing ? "fas fa-clock" : "fas fa-pause"}></i> 
+                                  {feedProgress[feed.id]?.pausing ? 'Pausing...' : 'Pause'}
+                                </button>
+                              ) : feedProgress[feed.id]?.paused ? (
+                                <button
+                                  className="btn btn-xs btn-success"
+                                  onClick={() => handleResumeFeedConsumption(feed.id)}
+                                  title="Resume consumption from where it was paused"
+                                  style={{fontSize: '10px', padding: '2px 6px'}}
+                                  disabled={feedProgress[feed.id]?.resuming}
+                                >
+                                  <i className={feedProgress[feed.id]?.resuming ? "fas fa-clock" : "fas fa-play"}></i> 
+                                  {feedProgress[feed.id]?.resuming ? 'Resuming...' : 'Resume'}
+                                </button>
+                              ) : null}
                               <button
                                 className="btn btn-xs btn-danger"
                                 onClick={() => handleCancelFeedConsumption(feed.id, 'cancel_job')}
@@ -4395,6 +4573,9 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
   const [importPreview, setImportPreview] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
   
+  // Selection state
+  const [selectedIndicators, setSelectedIndicators] = useState(new Set());
+  
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingIndicator, setEditingIndicator] = useState(null);
@@ -4475,6 +4656,11 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
       };
     }
   }, [active, lastUpdate, fetchIndicatorsCallback]);
+
+  // Clear selections when filters or page changes
+  useEffect(() => {
+    setSelectedIndicators(new Set());
+  }, [filters, currentPage]);
 
   // Handle navigation state for highlighting specific indicators from search
   useEffect(() => {
@@ -4790,6 +4976,136 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
     return filteredIndicators;
   };
 
+  // Selection logic
+  const currentPageIndicators = getPaginatedIndicators();
+  
+  const handleSelectAll = () => {
+    if (selectedIndicators.size === currentPageIndicators.length) {
+      // If all current items are selected, deselect all
+      setSelectedIndicators(new Set());
+    } else {
+      // Select all current items
+      setSelectedIndicators(new Set(currentPageIndicators.map(indicator => indicator.id)));
+    }
+  };
+
+  const handleSelectIndicator = (indicatorId) => {
+    const newSelected = new Set(selectedIndicators);
+    if (newSelected.has(indicatorId)) {
+      newSelected.delete(indicatorId);
+    } else {
+      newSelected.add(indicatorId);
+    }
+    setSelectedIndicators(newSelected);
+  };
+
+  const isAllSelected = currentPageIndicators.length > 0 && selectedIndicators.size === currentPageIndicators.length;
+  const isIndeterminate = selectedIndicators.size > 0 && selectedIndicators.size < currentPageIndicators.length;
+
+  // Bulk delete function
+  const handleBulkDelete = async () => {
+    if (selectedIndicators.size === 0) return;
+    
+    if (!confirm(`Are you sure you want to delete ${selectedIndicators.size} selected indicator(s)? This action cannot be undone.`)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const indicatorIds = Array.from(selectedIndicators);
+      
+      for (const indicatorId of indicatorIds) {
+        try {
+          const response = await fetch(`http://localhost:8000/api/indicators/${indicatorId}/`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+              'Content-Type': 'application/json',
+            }
+          });
+          
+          if (!response.ok) {
+            console.error(`Failed to delete indicator ${indicatorId}`);
+          }
+        } catch (error) {
+          console.error(`Error deleting indicator ${indicatorId}:`, error);
+        }
+      }
+      
+      // Clear selections and refresh data
+      setSelectedIndicators(new Set());
+      await fetchIndicators(currentPage, itemsPerPage, {});
+      
+      console.log(`Successfully deleted ${indicatorIds.length} indicators`);
+      
+    } catch (error) {
+      console.error('Error during bulk delete:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Clear all indicators function
+  const handleClearAllIndicators = async () => {
+    const confirmMessage = `Are you sure you want to delete ALL ${totalItems} indicators? This action cannot be undone and will remove all IoCs from your system.`;
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    const doubleConfirm = confirm("This will permanently delete ALL indicators. Click OK to proceed or Cancel to abort.");
+    if (!doubleConfirm) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Use the new bulk delete API endpoint
+      const response = await fetch('/api/indicators/bulk-delete/', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(localStorage.getItem('access_token') && {
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          })
+        },
+        body: JSON.stringify({
+          clear_all: true
+        })
+      });
+
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        // Clear all local state
+        setIndicators([]);
+        setFilteredIndicators([]);
+        setSelectedIndicators(new Set());
+        setTotalItems(0);
+        setTotalPages(0);
+        setCurrentPage(1);
+        
+        // Refresh data from server to ensure consistency
+        await fetchIndicators();
+        
+        alert(`Successfully deleted all ${result.deleted_count} indicators`);
+        
+        // Trigger refresh after clearing all indicators
+        refreshManager.triggerRefresh(['indicators', 'dashboard'], 'indicators_cleared');
+        
+      } else {
+        console.error('Bulk delete failed:', result);
+        alert(`Error clearing indicators: ${result.error || 'Unknown error'}`);
+      }
+      
+    } catch (error) {
+      console.error('Error during clear all operation:', error);
+      alert('Error clearing indicators. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handle page changes
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
@@ -5087,6 +5403,27 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
               ></i> 
               {loading ? 'Refreshing...' : 'Refresh'}
             </button>
+            <button 
+              className="btn btn-danger btn-sm"
+              onClick={handleClearAllIndicators}
+              disabled={loading || indicators.length === 0}
+              style={{
+                height: '32px',
+                fontSize: '0.875rem',
+                padding: '0.25rem 0.75rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                borderRadius: '4px',
+                lineHeight: '1',
+                minHeight: '32px',
+                maxHeight: '32px',
+                marginLeft: '0.5rem'
+              }}
+            >
+              <i className="fas fa-trash-alt"></i>
+              Clear All IoC
+            </button>
           </div>
         </div>
         <div className="card-content">
@@ -5098,7 +5435,17 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
             }}>
             <thead>
               <tr>
-                <th style={{width: '4%', textAlign: 'center'}}><input type="checkbox" /></th>
+                <th style={{width: '4%', textAlign: 'center'}}>
+                  <input 
+                    type="checkbox" 
+                    checked={isAllSelected}
+                    ref={(input) => {
+                      if (input) input.indeterminate = isIndeterminate;
+                    }}
+                    onChange={handleSelectAll}
+                    title={selectedIndicators.size > 0 ? `${selectedIndicators.size} selected` : 'Select all'}
+                  />
+                </th>
                 <th style={{width: '8%', textAlign: 'center'}}>Type</th>
                 <th style={{width: '20%'}}>Value</th>
                 <th style={{width: '20%'}}>Description</th>
@@ -5120,7 +5467,13 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
               ) : getPaginatedIndicators().length > 0 ? (
                 getPaginatedIndicators().map((indicator) => (
                   <tr key={indicator.id} data-indicator-id={indicator.id}>
-                    <td style={{width: '4%', textAlign: 'center', padding: '8px 4px', whiteSpace: 'normal', wordWrap: 'break-word'}}><input type="checkbox" /></td>
+                    <td style={{width: '4%', textAlign: 'center', padding: '8px 4px', whiteSpace: 'normal', wordWrap: 'break-word'}}>
+                      <input 
+                        type="checkbox" 
+                        checked={selectedIndicators.has(indicator.id)}
+                        onChange={() => handleSelectIndicator(indicator.id)}
+                      />
+                    </td>
                     <td style={{width: '8%', textAlign: 'center', padding: '8px 4px', whiteSpace: 'normal', wordWrap: 'break-word'}}>
                       <span className={`type-badge type-${indicator.rawType}`}>
                         {indicator.type}
@@ -5214,10 +5567,35 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
                       </button>
                       <button
                         className="btn btn-outline btn-sm btn-danger"
-                        title="Delete Indicator"
+                        title={selectedIndicators.size > 1 && selectedIndicators.has(indicator.id) ? 
+                          `Delete ${selectedIndicators.size} selected indicators` : 
+                          "Delete Indicator"}
                         onClick={() => handleDeleteIndicator(indicator)}
+                        style={{
+                          position: 'relative'
+                        }}
                       >
                         <i className="fas fa-trash"></i>
+                        {selectedIndicators.size > 1 && selectedIndicators.has(indicator.id) && (
+                          <span style={{
+                            position: 'absolute',
+                            top: '-6px',
+                            right: '-6px',
+                            background: '#dc3545',
+                            color: 'white',
+                            borderRadius: '50%',
+                            width: '18px',
+                            height: '18px',
+                            fontSize: '10px',
+                            fontWeight: 'bold',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: '2px solid white'
+                          }}>
+                            {selectedIndicators.size}
+                          </span>
+                        )}
                       </button>
                     </td>
                   </tr>
@@ -6851,44 +7229,101 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
   }
 
   async function handleDeleteIndicator(indicator) {
-    if (!confirm(`Are you sure you want to delete the indicator "${indicator.value}"? This action cannot be undone.`)) {
-      return;
-    }
-
-    try {
-      const response = await api.delete(`/api/indicators/${indicator.id}/delete/`);
-      if (response && response.success) {
-        // Update local state immediately for better UX
-        setIndicators(prevIndicators =>
-          prevIndicators.filter(ind => ind.id !== indicator.id)
-        );
-        setFilteredIndicators(prevFiltered =>
-          prevFiltered.filter(ind => ind.id !== indicator.id)
-        );
-
-        // Update pagination counts
-        setTotalItems(prev => Math.max(0, prev - 1));
-        const newTotalPages = Math.ceil(Math.max(0, totalItems - 1) / itemsPerPage);
-        setTotalPages(newTotalPages);
-
-        // If current page becomes empty and we're not on page 1, go to previous page
-        if (currentPage > newTotalPages && newTotalPages > 0) {
-          setCurrentPage(newTotalPages);
-        }
-
-        // Refresh the indicators list from server to ensure consistency
-        await fetchIndicators();
-
-        alert('Indicator deleted successfully');
-
-        // Trigger refresh after successful indicator deletion
-        refreshManager.triggerRefresh(['indicators', 'dashboard'], 'indicator_deleted');
-      } else {
-        alert('Failed to delete indicator. Please try again.');
+    // Check if multiple indicators are selected and the clicked indicator is one of them
+    const isMultipleSelected = selectedIndicators.size > 1;
+    const isClickedIndicatorSelected = selectedIndicators.has(indicator.id);
+    
+    if (isMultipleSelected && isClickedIndicatorSelected) {
+      // Bulk delete scenario - delete all selected indicators
+      if (!confirm(`Are you sure you want to delete ${selectedIndicators.size} selected indicators? This action cannot be undone.`)) {
+        return;
       }
-    } catch (error) {
-      console.error('Error deleting indicator:', error);
-      alert('Error deleting indicator. Please try again.');
+      
+      try {
+        setLoading(true);
+        const indicatorIds = Array.from(selectedIndicators);
+        let deletedCount = 0;
+        
+        // Use the new bulk delete API endpoint
+        const response = await fetch('/api/indicators/bulk-delete/', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(localStorage.getItem('access_token') && {
+              'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            })
+          },
+          body: JSON.stringify({
+            indicator_ids: indicatorIds
+          })
+        });
+
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          deletedCount = result.deleted_count;
+        } else {
+          console.error('Bulk delete failed:', result);
+        }
+        
+        // Clear selections
+        setSelectedIndicators(new Set());
+        
+        // Refresh the indicators list from server
+        await fetchIndicators();
+        
+        alert(`Successfully deleted ${deletedCount} out of ${indicatorIds.length} indicators`);
+        
+        // Trigger refresh after successful bulk deletion
+        refreshManager.triggerRefresh(['indicators', 'dashboard'], 'indicator_deleted');
+        
+      } catch (error) {
+        console.error('Error during bulk delete:', error);
+        alert('Error deleting indicators. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      // Single delete scenario - delete just the clicked indicator
+      if (!confirm(`Are you sure you want to delete the indicator "${indicator.value}"? This action cannot be undone.`)) {
+        return;
+      }
+
+      try {
+        const response = await api.delete(`/api/indicators/${indicator.id}/delete/`);
+        if (response && response.success) {
+          // Update local state immediately for better UX
+          setIndicators(prevIndicators =>
+            prevIndicators.filter(ind => ind.id !== indicator.id)
+          );
+          setFilteredIndicators(prevFiltered =>
+            prevFiltered.filter(ind => ind.id !== indicator.id)
+          );
+
+          // Update pagination counts
+          setTotalItems(prev => Math.max(0, prev - 1));
+          const newTotalPages = Math.ceil(Math.max(0, totalItems - 1) / itemsPerPage);
+          setTotalPages(newTotalPages);
+
+          // If current page becomes empty and we're not on page 1, go to previous page
+          if (currentPage > newTotalPages && newTotalPages > 0) {
+            setCurrentPage(newTotalPages);
+          }
+
+          // Refresh the indicators list from server to ensure consistency
+          await fetchIndicators();
+
+          alert('Indicator deleted successfully');
+
+          // Trigger refresh after successful indicator deletion
+          refreshManager.triggerRefresh(['indicators', 'dashboard'], 'indicator_deleted');
+        } else {
+          alert('Failed to delete indicator. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error deleting indicator:', error);
+        alert('Error deleting indicator. Please try again.');
+      }
     }
   }
 

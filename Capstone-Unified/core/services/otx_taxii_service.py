@@ -250,15 +250,20 @@ class OTXTaxiiService:
         logger.error(f"All {max_retries} polling attempts failed")
         raise last_error
 
-    def consume_feed(self, threat_feed, limit=None, force_days=None, batch_size=None, cancel_check_callback=None):
+    def consume_feed(self, threat_feed, limit=None, force_days=None, batch_size=None, cancel_check_callback=None, resume_metadata=None):
         """
         Consume STIX data from a TAXII collection and convert to CRISP entities
         """
         try:
             # Check for cancellation before starting
-            if cancel_check_callback and cancel_check_callback():
-                logger.info(f"OTX feed consumption cancelled before starting for {threat_feed.name}")
-                return 0, 0
+            if cancel_check_callback:
+                action = cancel_check_callback()
+                if action == 'pause':
+                    logger.info(f"OTX feed consumption paused before starting for {threat_feed.name}")
+                    raise Exception("Feed consumption paused by user request")
+                elif action == 'cancel':
+                    logger.info(f"OTX feed consumption cancelled before starting for {threat_feed.name}")
+                    return 0, 0
                 
             # Use OTX settings if parameters not provided with async optimizations
             if force_days is None:
@@ -358,10 +363,15 @@ class OTXTaxiiService:
             # Process content blocks
             for i, block in enumerate(content_blocks):
                 try:
-                    # Check for cancellation periodically during processing
-                    if cancel_check_callback and i % 5 == 0 and cancel_check_callback():
-                        logger.info(f"OTX feed consumption cancelled during processing for {threat_feed.name} after {i} blocks")
-                        break
+                    # Check for cancellation before processing each block
+                    if cancel_check_callback:
+                        action = cancel_check_callback()
+                        if action == 'pause':
+                            logger.info(f"OTX feed consumption paused during processing for {threat_feed.name} after {i} blocks")
+                            raise Exception(f"Feed consumption paused by user request at block {i+1}/{len(content_blocks)}")
+                        elif action == 'cancel':
+                            logger.info(f"OTX feed consumption cancelled during processing for {threat_feed.name} after {i} blocks")
+                            break
                         
                     logger.info(f"Processing block {i+1}/{len(content_blocks)}")
                     
@@ -402,6 +412,16 @@ class OTXTaxiiService:
 
             # If we have indicators but no TTPs, try to extract TTPs from indicators
             if indicator_count > 0 and ttp_count == 0:
+                # Check for cancellation before TTP extraction
+                if cancel_check_callback:
+                    action = cancel_check_callback()
+                    if action == 'pause':
+                        logger.info(f"OTX feed consumption paused before TTP extraction for {threat_feed.name}")
+                        raise Exception("Feed consumption paused by user request")
+                    elif action == 'cancel':
+                        logger.info(f"OTX feed consumption cancelled before TTP extraction for {threat_feed.name}")
+                        return indicator_count, ttp_count
+                    
                 logger.info(f"No TTPs found in STIX data, extracting TTPs from {indicator_count} indicators")
                 try:
                     from core.services.ttp_extraction_service import TTPExtractionService

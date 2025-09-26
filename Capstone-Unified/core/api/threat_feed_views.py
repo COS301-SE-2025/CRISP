@@ -433,16 +433,31 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
                 # Check if async processing is requested
                 if request.query_params.get('async', '').lower() == 'true':
                     from core.tasks.taxii_tasks import consume_feed_task
+                    
+                    # Check if feed can be started (not already running or paused)
+                    if feed.is_consuming():
+                        return Response({
+                            "error": f"Feed consumption is already {feed.consumption_status}. Use pause/resume endpoints to control it.",
+                            "current_status": feed.consumption_status,
+                            "can_be_paused": feed.can_be_paused(),
+                            "can_be_resumed": feed.can_be_resumed()
+                        }, status=status.HTTP_400_BAD_REQUEST)
+                    
                     task = consume_feed_task.delay(
                         feed_id=int(pk),
                         limit=limit,
                         force_days=force_days,
                         batch_size=batch_size
                     )
+                    
+                    # Update feed status to running
+                    feed.start_consumption(task.id)
+                    
                     return Response({
                         "status": "processing",
                         "message": "Processing started in background",
-                        "task_id": task.id
+                        "task_id": task.id,
+                        "feed_status": feed.consumption_status
                     })
 
                 stats = service.consume_feed(feed, limit=limit, force_days=force_days, batch_size=batch_size)
@@ -677,6 +692,209 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
             
         except Exception as e:
             logger.error(f"Error cancelling task {task_id}: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['post'])
+    def pause_consumption(self, request, pk=None):
+        """Pause consumption of a specific threat feed."""
+        try:
+            feed = get_object_or_404(ThreatFeed, pk=pk)
+            
+            from django.core.cache import cache
+            from django.utils import timezone
+            
+            # Check if there's an active task for this feed
+            active_task_found = False
+            
+            # Method 1: Check database status (existing logic)
+            can_pause_db = feed.can_be_paused()
+            
+            # Method 2: Check for recent task status in cache
+            # The consume_feed_task sets cache entries like "task_status_{task_id}"
+            # We'll look for any that match our feed_id and are active
+            try:
+                from django.conf import settings
+                cache_keys_to_check = []
+                
+                # Since we can't reliably enumerate cache keys, we'll check recent task IDs
+                # from the last consume request if available
+                
+                # Check if there's already a pause signal for this feed
+                pause_key = f"pause_consumption_{feed.id}"
+                existing_pause_signal = cache.get(pause_key)
+                
+                if existing_pause_signal:
+                    # There's already a pause request pending
+                    logger.info(f"Pause already requested for feed {feed.id}")
+                    return Response({
+                        'success': True,
+                        'message': f'Pause already requested for feed "{feed.name}". The task will pause at the next checkpoint.',
+                        'feed_id': str(feed.id),
+                        'current_status': feed.consumption_status,
+                        'already_requested': True
+                    })
+                else:
+                    # Check if feed was consuming very recently (within last 2 minutes)
+                    # This handles the race condition where DB hasn't been updated yet
+                    if hasattr(feed, 'last_sync') and feed.last_sync:
+                        recent_threshold = timezone.now() - timezone.timedelta(minutes=2)
+                        if feed.last_sync >= recent_threshold:
+                            logger.info(f"Feed {feed.id} was active recently, allowing pause attempt")
+                            active_task_found = True
+                    
+                    # Final fallback: If this is a consume-capable feed, allow pause attempt
+                    # The task itself will determine if it can actually be paused
+                    if feed.is_external and feed.taxii_server_url and feed.taxii_collection_id:
+                        active_task_found = True
+                        logger.info(f"External feed {feed.id} is consume-capable, allowing pause attempt")
+                        
+            except Exception as e:
+                logger.warning(f"Error checking for active tasks: {e}")
+                # Be conservative - only allow if DB says it's pausable
+                active_task_found = False
+            
+            # Allow pause if either DB status allows it OR we found an active task
+            if not can_pause_db and not active_task_found:
+                return Response({
+                    'success': False,
+                    'error': f'Feed consumption cannot be paused. Current status: {feed.consumption_status}',
+                    'current_status': feed.consumption_status,
+                    'current_task_id': feed.current_task_id,
+                    'can_be_paused': feed.can_be_paused(),
+                    'can_be_resumed': feed.can_be_resumed(),
+                    'is_consuming': feed.is_consuming(),
+                    'active_task_found': active_task_found
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Set pause flag in cache for the running task to check
+            pause_key = f"pause_consumption_{feed.id}"
+            cache.set(pause_key, {
+                'paused': True,
+                'requested_at': timezone.now().isoformat(),
+                'user_id': request.user.id if hasattr(request, 'user') else None
+            }, timeout=3600)  # 1 hour timeout
+            
+            logger.info(f"Pause requested for feed {feed.name} (ID: {feed.id})")
+            
+            return Response({
+                'success': True,
+                'message': f'Pause requested for feed "{feed.name}". The task will pause at the next checkpoint.',
+                'feed_id': str(feed.id),
+                'current_status': feed.consumption_status
+            })
+            
+        except Exception as e:
+            logger.error(f"Error pausing feed consumption: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['post'])
+    def resume_consumption(self, request, pk=None):
+        """Resume consumption of a paused threat feed."""
+        try:
+            feed = get_object_or_404(ThreatFeed, pk=pk)
+            
+            if not feed.can_be_resumed():
+                # Provide more detailed error information
+                error_details = {
+                    'success': False,
+                    'error': f'Feed consumption cannot be resumed. Current status: {feed.consumption_status}',
+                    'current_status': feed.consumption_status,
+                    'can_be_resumed': feed.can_be_resumed(),
+                    'has_pause_metadata': bool(feed.pause_metadata),
+                    'current_task_id': feed.current_task_id
+                }
+                
+                # Provide user-friendly explanation
+                if feed.consumption_status == 'idle':
+                    error_details['explanation'] = 'Feed is not paused. It may have completed successfully or was never paused.'
+                elif feed.consumption_status == 'running':
+                    error_details['explanation'] = 'Feed is currently running and does not need to be resumed.'
+                else:
+                    error_details['explanation'] = f'Feed status "{feed.consumption_status}" does not support resumption.'
+                
+                logger.info(f"Resume request failed for feed {feed.id}: {error_details['explanation']}")
+                return Response(error_details, status=status.HTTP_400_BAD_REQUEST)
+            
+            from core.tasks.taxii_tasks import consume_feed_task
+            from django.core.cache import cache
+            
+            # Clear any pause flags
+            pause_key = f"pause_consumption_{feed.id}"
+            cache.delete(pause_key)
+            
+            # Start a new task to resume consumption using the saved metadata
+            task = consume_feed_task.delay(
+                feed_id=str(feed.id),
+                resume_metadata=feed.pause_metadata,
+                is_resume=True
+            )
+            
+            # Update feed status
+            feed.resume_consumption(task.id)
+            
+            logger.info(f"Resuming consumption for feed {feed.name} (ID: {feed.id}) with task {task.id}")
+            
+            return Response({
+                'success': True,
+                'message': f'Resuming consumption for feed "{feed.name}"',
+                'feed_id': str(feed.id),
+                'task_id': task.id,
+                'resumed_from': feed.pause_metadata.get('last_processed_item', 'beginning')
+            })
+            
+        except Exception as e:
+            logger.error(f"Error resuming feed consumption: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['get'])
+    def consumption_status(self, request, pk=None):
+        """Get detailed consumption status for a threat feed."""
+        try:
+            feed = get_object_or_404(ThreatFeed, pk=pk)
+            
+            from django.core.cache import cache
+            
+            # Check for pause flags
+            pause_key = f"pause_consumption_{feed.id}"
+            pause_info = cache.get(pause_key)
+            
+            # Get task status if available
+            task_status = None
+            if feed.current_task_id:
+                from settings.celery import app as celery_app
+                try:
+                    task = celery_app.AsyncResult(feed.current_task_id)
+                    task_status = task.status
+                except:
+                    task_status = 'UNKNOWN'
+            
+            return Response({
+                'success': True,
+                'feed_id': str(feed.id),
+                'feed_name': feed.name,
+                'consumption_status': feed.consumption_status,
+                'current_task_id': feed.current_task_id,
+                'task_status': task_status,
+                'paused_at': feed.paused_at.isoformat() if feed.paused_at else None,
+                'can_be_paused': feed.can_be_paused(),
+                'can_be_resumed': feed.can_be_resumed(),
+                'is_consuming': feed.is_consuming(),
+                'pause_requested': pause_info is not None,
+                'pause_metadata': feed.pause_metadata,
+                'last_error': feed.last_error
+            })
+            
+        except Exception as e:
+            logger.error(f"Error getting consumption status: {str(e)}")
             return Response({
                 'success': False,
                 'error': str(e)
@@ -1635,6 +1853,143 @@ def indicator_delete(request, indicator_id):
         logger.error(f"Error deleting indicator {indicator_id}: {str(e)}")
         return Response(
             {"error": "Failed to delete indicator", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['DELETE'])
+@permission_classes([AllowAny])
+def indicators_bulk_delete(request):
+    """Bulk delete indicators or clear all indicators."""
+    try:
+        from core.repositories.indicator_repository import IndicatorRepository
+        from core.services.audit_service import AuditService
+        from core.models.models import Indicator
+        
+        # Get request data
+        data = request.data if hasattr(request, 'data') and request.data else {}
+        
+        # Check if this is a "clear all" request
+        clear_all = data.get('clear_all', False)
+        indicator_ids = data.get('indicator_ids', [])
+        
+        if clear_all:
+            # Clear all indicators for the user's organization
+            user_org = getattr(request.user, 'organization', None) if hasattr(request, 'user') and request.user.is_authenticated else None
+            
+            if user_org:
+                # For regular users, only delete indicators from their organization's feeds
+                indicators = Indicator.objects.filter(threat_feed__organization=user_org)
+            else:
+                # For admin or unauthenticated requests, delete all indicators
+                indicators = Indicator.objects.all()
+            
+            total_count = indicators.count()
+            
+            if total_count == 0:
+                return Response(
+                    {"success": True, "message": "No indicators to delete", "deleted_count": 0},
+                    status=status.HTTP_200_OK
+                )
+            
+            # Delete all indicators in batches to avoid memory issues
+            batch_size = 1000
+            deleted_count = 0
+            
+            while indicators.exists():
+                batch_ids = list(indicators.values_list('id', flat=True)[:batch_size])
+                batch_deleted, _ = Indicator.objects.filter(id__in=batch_ids).delete()
+                deleted_count += batch_deleted
+                
+                # Log progress for large deletions
+                if deleted_count % 5000 == 0:
+                    logger.info(f"Bulk delete progress: {deleted_count}/{total_count} indicators deleted")
+            
+            # Log the bulk deletion for audit purposes
+            audit_service = AuditService()
+            audit_service.log_user_action(
+                user=request.user if hasattr(request, 'user') and request.user.is_authenticated else None,
+                action='indicators_bulk_deleted',
+                success=True,
+                additional_data={
+                    'description': f'Bulk deleted all indicators (total: {deleted_count})',
+                    'deleted_count': deleted_count,
+                    'clear_all': True,
+                    'organization': user_org.name if user_org else 'All organizations'
+                }
+            )
+            
+            return Response(
+                {
+                    "success": True,
+                    "message": f"Successfully deleted all {deleted_count} indicators",
+                    "deleted_count": deleted_count,
+                    "operation": "clear_all"
+                },
+                status=status.HTTP_200_OK
+            )
+            
+        elif indicator_ids:
+            # Bulk delete specific indicators
+            if not isinstance(indicator_ids, list):
+                return Response(
+                    {"error": "indicator_ids must be a list"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Limit the number of indicators that can be deleted at once
+            if len(indicator_ids) > 10000:
+                return Response(
+                    {"error": "Cannot delete more than 10,000 indicators at once"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Get indicators that exist
+            existing_indicators = Indicator.objects.filter(id__in=indicator_ids)
+            existing_count = existing_indicators.count()
+            
+            if existing_count == 0:
+                return Response(
+                    {"success": True, "message": "No valid indicators found to delete", "deleted_count": 0},
+                    status=status.HTTP_200_OK
+                )
+            
+            # Delete the indicators
+            deleted_count, _ = existing_indicators.delete()
+            
+            # Log the bulk deletion for audit purposes
+            audit_service = AuditService()
+            audit_service.log_user_action(
+                user=request.user if hasattr(request, 'user') and request.user.is_authenticated else None,
+                action='indicators_bulk_deleted',
+                success=True,
+                additional_data={
+                    'description': f'Bulk deleted {deleted_count} indicators',
+                    'deleted_count': deleted_count,
+                    'requested_ids': len(indicator_ids),
+                    'indicator_ids': indicator_ids[:100]  # Log first 100 IDs only
+                }
+            )
+            
+            return Response(
+                {
+                    "success": True,
+                    "message": f"Successfully deleted {deleted_count} out of {len(indicator_ids)} requested indicators",
+                    "deleted_count": deleted_count,
+                    "requested_count": len(indicator_ids),
+                    "operation": "bulk_delete"
+                },
+                status=status.HTTP_200_OK
+            )
+        else:
+            return Response(
+                {"error": "Must provide either 'clear_all': true or 'indicator_ids': [...]"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+    except Exception as e:
+        logger.error(f"Error in bulk delete indicators: {str(e)}")
+        return Response(
+            {"error": "Failed to delete indicators", "details": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 

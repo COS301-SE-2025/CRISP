@@ -76,7 +76,7 @@ def schedule_taxii_feed_consumption():
     logger.info(f"Scheduled {feeds_to_update.count()} TAXII feeds for consumption")
 
 @app.task(name='consume_feed_task', soft_time_limit=300, time_limit=600, bind=True)
-def consume_feed_task(self, feed_id, limit=None, force_days=None, batch_size=None):
+def consume_feed_task(self, feed_id, limit=None, force_days=None, batch_size=None, resume_metadata=None, is_resume=False):
     """
     Consume a specific TAXII feed with parameters.
     """
@@ -99,10 +99,13 @@ def consume_feed_task(self, feed_id, limit=None, force_days=None, batch_size=Non
 
         # Check for cancellation signal before starting
         cancel_key = f"cancel_consumption_{feed.id}"
+        pause_key = f"pause_consumption_{feed.id}"
+        
         cancellation_signal = cache.get(cancel_key)
         if cancellation_signal:
             logger.info(f"Task cancelled before start for feed {feed.name}")
             cache.delete(cancel_key)  # Clean up
+            feed.stop_consumption()  # Update feed status
             cache.set(task_key, {
                 'status': 'cancelled',
                 'feed_id': feed_id,
@@ -110,19 +113,39 @@ def consume_feed_task(self, feed_id, limit=None, force_days=None, batch_size=Non
             }, timeout=3600)
             return {'status': 'cancelled', 'message': 'Task was cancelled before processing started'}
 
-        def check_cancellation():
-            """Check if task should be cancelled"""
-            if cache.get(cancel_key):
-                return True
-            # Also check if Celery task was revoked
+        # Log if this is a resume operation
+        if is_resume and resume_metadata:
+            logger.info(f"Resuming consumption for feed {feed.name} from: {resume_metadata.get('last_processed_item', 'unknown point')}")
+
+        def check_pause_cancellation():
+            """Check if task should be paused or cancelled"""
+            # Debug logging
+            logger.info(f"Checking pause/cancel signals for feed {feed_id} - cancel_key: {cancel_key}, pause_key: {pause_key}")
+            
+            # Check for cancellation first
+            cancel_signal = cache.get(cancel_key)
+            if cancel_signal:
+                logger.info(f"Cancel signal detected for feed {feed_id}: {cancel_signal}")
+                return 'cancel'
+            
+            # Check for pause signal
+            pause_signal = cache.get(pause_key)
+            if pause_signal:
+                logger.info(f"Pause signal detected for feed {feed_id}: {pause_signal}")
+                return 'pause'
+            
+            logger.debug(f"No pause/cancel signals found for feed {feed_id}")
+            
             try:
+                # Also check if Celery task was revoked
                 from celery.result import AsyncResult
                 result = AsyncResult(task_id, app=app)
                 if result.state == 'REVOKED':
-                    return True
+                    logger.info(f"Celery task {task_id} was revoked")
+                    return 'cancel'
             except:
                 pass
-            return False
+            return None
 
         # Update task status
         cache.set(task_key, {
@@ -151,16 +174,74 @@ def consume_feed_task(self, feed_id, limit=None, force_days=None, batch_size=Non
             'message': 'Fetching and processing indicators...'
         }, timeout=3600)
         
-        stats = service.consume_feed(
-            feed, 
-            limit=limit, 
-            force_days=force_days, 
-            batch_size=batch_size,
-            cancel_check_callback=check_cancellation
-        )
+        try:
+            stats = service.consume_feed(
+                feed, 
+                limit=limit, 
+                force_days=force_days, 
+                batch_size=batch_size,
+                cancel_check_callback=check_pause_cancellation,
+                resume_metadata=resume_metadata
+            )
+        except Exception as e:
+            if "paused" in str(e).lower():
+                # Task was paused during consumption
+                logger.info(f"Feed consumption paused for {feed.name}")
+                cache.delete(pause_key)  # Clean up pause signal
+                
+                # Update feed status in database
+                # Extract block information from exception message if available
+                block_info = 'unknown'
+                try:
+                    if 'at block' in str(e):
+                        block_info = str(e).split('at block')[1].strip()
+                except:
+                    pass
+                
+                pause_metadata = {
+                    'paused_at': timezone.now().isoformat(),
+                    'paused_after_blocks': block_info,
+                    'reason': 'user_request',
+                    'exception_message': str(e)
+                }
+                feed.pause_consumption(pause_metadata)
+                
+                # Update task status to paused
+                cache.set(task_key, {
+                    'status': 'paused',
+                    'feed_id': feed_id,
+                    'feed_name': feed.name,
+                    'paused_at': timezone.now().isoformat(),
+                    'message': 'Task paused by user request'
+                }, timeout=3600)
+                
+                return {"status": "paused", "message": "Task paused successfully"}
+            else:
+                # Other error occurred
+                feed.stop_consumption(str(e))
+                raise
         
-        # Final check for cancellation after completion
-        if check_cancellation():
+        # Final check for pause/cancellation after completion
+        final_action = check_pause_cancellation()
+        if final_action == 'pause':
+            # Handle pause after completion
+            pause_signal = cache.get(pause_key)
+            cache.delete(pause_key)
+            
+            logger.info(f"Feed consumption paused after completion for {feed.name}")
+            feed.pause_consumption({'completed': True, 'stats': stats})
+            
+            cache.set(task_key, {
+                'status': 'paused',
+                'feed_id': feed_id,
+                'feed_name': feed.name,
+                'paused_at': timezone.now().isoformat(),
+                'message': 'Task paused after completion'
+            }, timeout=3600)
+            
+            return {"status": "paused", "message": "Task paused after completion", "stats": stats}
+            
+        elif final_action == 'cancel':
             cancellation_signal = cache.get(cancel_key)
             cache.delete(cancel_key)  # Clean up
             
@@ -207,6 +288,8 @@ def consume_feed_task(self, feed_id, limit=None, force_days=None, batch_size=Non
                 }
         
         # Task completed successfully
+        feed.stop_consumption()  # Mark as idle/completed
+        
         cache.set(task_key, {
             'status': 'completed',
             'feed_id': feed_id,
