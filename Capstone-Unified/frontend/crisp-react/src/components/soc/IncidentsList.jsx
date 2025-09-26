@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import * as api from '../../api.js';
+import { useNotifications } from '../enhanced/NotificationManager.jsx';
 
 const IncidentsList = ({ active, showPage }) => {
+  const { showSuccess, showError, showWarning, showInfo } = useNotifications();
+
   if (!active) return null;
   
   // Check if user is BlueVisionAdmin
@@ -181,11 +184,11 @@ const IncidentsList = ({ active, showPage }) => {
         setShowAssignModal(false);
         setSelectedIncident(null);
         fetchIncidents(); // Refresh the list
-        alert(`Incident assigned to ${username} successfully`);
+        showSuccess('Incident Assigned', `Incident assigned to ${username} successfully`);
       }
     } catch (err) {
       console.error('Assignment error:', err);
-      alert('Failed to assign incident: ' + err.message);
+      showError('Assignment Failed', 'Failed to assign incident: ' + err.message);
     }
   };
 
@@ -244,7 +247,7 @@ const IncidentsList = ({ active, showPage }) => {
         fetchIncidents(); // Refresh the list
       } catch (err) {
         console.error('Create incident error:', err);
-        alert('Failed to create incident: ' + err.message);
+        showError('Creation Failed', 'Failed to create incident: ' + err.message);
       } finally {
         setCreating(false);
       }
@@ -386,7 +389,7 @@ const IncidentsList = ({ active, showPage }) => {
     const handleAssign = async (e) => {
       e.preventDefault();
       if (!selectedUser) {
-        alert('Please select a user to assign the incident to.');
+        showWarning('Selection Required', 'Please select a user to assign the incident to.');
         return;
       }
       
@@ -745,7 +748,7 @@ const IncidentsList = ({ active, showPage }) => {
                         <div style={{ display: 'flex', gap: '5px' }}>
                           <button 
                             className="btn btn-sm btn-outline-primary"
-                            onClick={() => alert(`Incident Detail: ${incident.incident_id}`)}
+                            onClick={() => showInfo('Incident Detail', `Incident ID: ${incident.incident_id}`)}
                           >
                             View
                           </button>

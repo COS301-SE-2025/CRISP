@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNotifications } from './enhanced/NotificationManager.jsx';
 
 // API configuration
 const API_BASE_URL = 'http://localhost:8000';
@@ -7,6 +8,7 @@ function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { showError } = useNotifications();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -40,11 +42,11 @@ function ForgotPassword() {
         setIsSubmitted(true);
       } else {
         console.error('❌ Failed to send password reset email:', data.message);
-        alert(data.message || 'Failed to send password reset email. Please try again.');
+        showError('Password Reset Failed', data.message || 'Failed to send password reset email. Please try again.');
       }
     } catch (error) {
       console.error('💥 Forgot password error:', error);
-      alert('An error occurred while sending the password reset email. Please try again later.');
+      showError('Password Reset Error', 'An error occurred while sending the password reset email. Please try again later.');
     } finally {
       setIsLoading(false);
       console.log('🏁 Forgot password request completed');
