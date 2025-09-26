@@ -7,6 +7,8 @@ const Reports = ({ active = true }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
+  const [sectorFilter, setSectorFilter] = useState('all');
+  const [dateRangeFilter, setDateRangeFilter] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -20,7 +22,7 @@ const Reports = ({ active = true }) => {
     fetchReports();
     fetchDashboardStats();
     fetchRecentActivity();
-  }, [filter]);
+  }, [filter, sectorFilter, dateRangeFilter]);
 
   const fetchDashboardStats = async () => {
     try {
@@ -80,24 +82,33 @@ const Reports = ({ active = true }) => {
             const reportData = report.report_data || {};
             const statistics = reportData.statistics || [];
 
-            // Get key metrics
+
+            // Get key metrics from real data or create reasonable defaults
             const severity = statistics.find(s => s.label === 'Severity')?.value || 'Medium';
             const iocCount = parseInt(statistics.find(s => s.label.includes('IoC'))?.value || '0');
-            const orgCount = parseInt(statistics.find(s => s.label.includes('Organizations') || s.label.includes('Institutions'))?.value || '0');
+            const orgCount = parseInt(statistics.find(s =>
+              s.label.includes('Organizations') ||
+              s.label.includes('Institutions') ||
+              s.label.includes('Affected') ||
+              s.label.includes('Targeted')
+            )?.value || '0');
+            const ttpCount = parseInt(statistics.find(s => s.label.includes('TTP'))?.value || '0');
 
-            // Use real statistics from database, no fallback mock data
-            const reportStats = statistics.length > 0 ? statistics : [];
+            // Use ONLY real statistics from database - no mock data for production
+            const reportStats = statistics;
 
             return {
               id: report.id,
               title: report.title,
               type: report.report_type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) + ' Analysis',
+              created_at: report.created_at,
               date: new Date(report.created_at).toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric'
               }),
               views: report.view_count,
+              view_count: report.view_count,
               description: report.description || `Analysis report for ${report.report_type.replace('_', ' ')} sector`,
               stats: reportStats,
               severity: severity,
@@ -119,11 +130,52 @@ const Reports = ({ active = true }) => {
 
           // Apply filters
           let filteredReports = transformedReports;
+
+          // Report type filter
           if (filter !== 'all') {
-            filteredReports = transformedReports.filter(r => {
-              const reportType = r.sector || 'general';
-              return reportType === filter || filter === 'sector_analysis';
+            filteredReports = filteredReports.filter(r => {
+              const reportType = r.type.toLowerCase();
+              return reportType.includes(filter.toLowerCase()) ||
+                     r.report_type?.toLowerCase().includes(filter.toLowerCase());
             });
+          }
+
+          // Sector filter
+          if (sectorFilter !== 'all') {
+            filteredReports = filteredReports.filter(r => {
+              const reportSector = r.sector || 'general';
+              return reportSector === sectorFilter;
+            });
+          }
+
+          // Date range filter
+          if (dateRangeFilter !== 'all') {
+            const now = new Date();
+            let cutoffDate;
+
+            switch (dateRangeFilter) {
+              case 'week':
+                cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                break;
+              case 'month':
+                cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                break;
+              case 'quarter':
+                cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                break;
+              case 'year':
+                cutoffDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+                break;
+              default:
+                cutoffDate = null;
+            }
+
+            if (cutoffDate) {
+              filteredReports = filteredReports.filter(r => {
+                const reportDate = new Date(r.lastUpdated || r.created_at);
+                return reportDate >= cutoffDate;
+              });
+            }
           }
 
           setReports(filteredReports);
@@ -247,8 +299,6 @@ const Reports = ({ active = true }) => {
     }
   };
 
-  const shareReport = (report) => {
-  };
 
   const getSeverityColor = (severity) => {
     switch (severity?.toLowerCase()) {
@@ -294,21 +344,25 @@ const Reports = ({ active = true }) => {
   };
 
   const filteredAndSortedReports = reports
-    .filter(report => 
+    .filter(report =>
       report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      report.description.toLowerCase().includes(searchTerm.toLowerCase())
+      report.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      report.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      report.sector?.toLowerCase().includes(searchTerm.toLowerCase())
     )
     .sort((a, b) => {
       switch (sortBy) {
         case 'date':
-          return new Date(b.lastUpdated) - new Date(a.lastUpdated);
+          return new Date(b.lastUpdated || b.created_at) - new Date(a.lastUpdated || a.created_at);
         case 'severity':
           const severityOrder = { 'Critical': 4, 'High': 3, 'Medium': 2, 'Low': 1 };
           return (severityOrder[b.severity] || 0) - (severityOrder[a.severity] || 0);
         case 'views':
-          return b.views - a.views;
+          return (b.views || b.view_count || 0) - (a.views || a.view_count || 0);
         case 'title':
           return a.title.localeCompare(b.title);
+        case 'type':
+          return a.type.localeCompare(b.type);
         default:
           return 0;
       }
@@ -365,30 +419,29 @@ const Reports = ({ active = true }) => {
             <div className="filter-control">
               <select value={filter} onChange={(e) => setFilter(e.target.value)}>
                 <option value="all">All Types</option>
-                <option value="incident">Incident</option>
-                <option value="campaign">Campaign</option>
-                <option value="trend">Trend Analysis</option>
-                <option value="summary">Weekly Summary</option>
+                <option value="sector">Sector Analysis</option>
+                <option value="education">Education Analysis</option>
+                <option value="financial">Financial Analysis</option>
+                <option value="government">Government Analysis</option>
               </select>
             </div>
           </div>
           <div className="filter-group">
             <label className="filter-label">Sector Focus</label>
             <div className="filter-control">
-              <select>
-                <option value="">All Sectors</option>
+              <select value={sectorFilter} onChange={(e) => setSectorFilter(e.target.value)}>
+                <option value="all">All Sectors</option>
                 <option value="education">Education</option>
                 <option value="financial">Financial</option>
                 <option value="government">Government</option>
-                <option value="healthcare">Healthcare</option>
               </select>
             </div>
           </div>
           <div className="filter-group">
             <label className="filter-label">Date Range</label>
             <div className="filter-control">
-              <select>
-                <option value="">All Time</option>
+              <select value={dateRangeFilter} onChange={(e) => setDateRangeFilter(e.target.value)}>
+                <option value="all">All Time</option>
                 <option value="week">Last Week</option>
                 <option value="month">Last Month</option>
                 <option value="quarter">Last Quarter</option>
@@ -405,6 +458,18 @@ const Reports = ({ active = true }) => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
+            </div>
+          </div>
+          <div className="filter-group">
+            <label className="filter-label">Sort By</label>
+            <div className="filter-control">
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <option value="date">Date Created</option>
+                <option value="title">Report Title</option>
+                <option value="severity">Severity Level</option>
+                <option value="views">View Count</option>
+                <option value="type">Report Type</option>
+              </select>
             </div>
           </div>
         </div>
@@ -433,13 +498,24 @@ const Reports = ({ active = true }) => {
                   <div className="report-type">{report.report_type || report.type}</div>
                   <h3 className="report-title">{report.title}</h3>
                   <div className="report-meta">
-                    <span>{report.date || new Date(report.created_at).toLocaleDateString()}</span>
-                    <span><i className="fas fa-eye"></i> {report.views || report.view_count || 0}</span>
+                    <div className="meta-left">
+                      <span><i className="fas fa-calendar"></i> {new Date(report.created_at || report.lastUpdated).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}</span>
+                      <span><i className="fas fa-user"></i> {report.generated_by || 'System'}</span>
+                    </div>
+                    <div className="meta-right">
+                      <span><i className="fas fa-eye"></i> {report.view_count || 0}</span>
+                      <span><i className="fas fa-clock"></i> {report.age_days}d old</span>
+                    </div>
                   </div>
                 </div>
                 <div className="report-content">
                   <div className="report-stats">
-                    {(report.stats || report.statistics || []).map((stat, index) => (
+                    {console.log('Rendering stats for report:', report.id, 'Stats:', report.stats, 'Length:', report.stats?.length)}
+                    {(report.stats || []).map((stat, index) => (
                       <div key={index} className="report-stat">
                         <div className="stat-number">{stat.value}</div>
                         <div className="stat-label">{stat.label}</div>
@@ -448,14 +524,14 @@ const Reports = ({ active = true }) => {
                   </div>
                   <p>{report.description}</p>
                   <div className="report-actions">
-                    <button className="btn btn-outline btn-sm">
-                      <i className="fas fa-share-alt"></i> Share
-                    </button>
                     <button
                       className="btn btn-primary btn-sm"
                       onClick={() => viewReport(report)}
                     >
                       <i className="fas fa-eye"></i> View Report
+                    </button>
+                    <button className="btn btn-outline btn-sm" disabled>
+                      <i className="fas fa-file-pdf"></i> Export PDF
                     </button>
                   </div>
                 </div>
@@ -541,7 +617,7 @@ const Reports = ({ active = true }) => {
         />
       )}
 
-      <style jsx>{`
+      <style>{`
         :root {
           --primary-blue: #1e3d59;
           --secondary-blue: #5a9fd4;
@@ -688,9 +764,31 @@ const Reports = ({ active = true }) => {
         .report-meta {
           display: flex;
           justify-content: space-between;
-          align-items: center;
+          align-items: flex-start;
           color: var(--text-muted);
           font-size: 13px;
+          gap: 10px;
+        }
+
+        .meta-left, .meta-right {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .meta-right {
+          text-align: right;
+        }
+
+        .report-meta span {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .report-meta i {
+          width: 12px;
+          font-size: 10px;
         }
 
         .report-content {

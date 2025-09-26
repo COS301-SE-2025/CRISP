@@ -602,6 +602,7 @@ def list_reports(request):
                     'end_date': report.analysis_end_date.isoformat() if report.analysis_end_date else None
                 },
                 'data_summary': report.data_counts,
+                'report_data': report.report_data,
                 'age_days': report.get_age_in_days(),
                 'is_expired': report.is_expired()
             }

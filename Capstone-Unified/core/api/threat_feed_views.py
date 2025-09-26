@@ -1987,15 +1987,16 @@ def indicators_bulk_delete(request):
             
             # Log the bulk deletion for audit purposes
             audit_service = AuditService()
+            user = request.user if hasattr(request, 'user') and request.user.is_authenticated else None
             audit_service.log_user_action(
-                user=request.user if hasattr(request, 'user') and request.user.is_authenticated else None,
+                user=user,
                 action='indicators_bulk_deleted',
                 success=True,
                 additional_data={
                     'description': f'Bulk deleted all indicators (total: {deleted_count})',
                     'deleted_count': deleted_count,
                     'clear_all': True,
-                    'organization': user_org.name if user_org else 'All organizations'
+                    'user_role': getattr(user, 'role', 'Unknown') if user else 'Unauthenticated'
                 }
             )
             
