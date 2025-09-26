@@ -527,10 +527,13 @@ class AssetBasedAlertService:
 
             # Generate summary text
             if total_count == 1:
-                summary = f"1 {matched_assets[0].get_asset_type_display().lower()}"
+                asset = matched_assets[0]
+                summary = f"asset '{asset.name}' ({asset.asset_value})"
             else:
-                top_type = max(type_counts, key=type_counts.get)
-                summary = f"{total_count} assets ({top_type}s)"
+                asset_names = [asset.name for asset in matched_assets[:3]]
+                summary = f"{total_count} assets, including: {', '.join(asset_names)}"
+                if total_count > 3:
+                    summary += f", and {total_count - 3} more"
 
             return {
                 'summary': summary,
@@ -695,11 +698,30 @@ class AssetBasedAlertService:
             # Send multi-channel notifications
             delivery_results = self.multi_channel_service.deliver_alert(alert, delivery_channels)
 
+            # Generate a more detailed notification message
+            matched_assets = alert.matched_assets.all()
+            asset_count = matched_assets.count()
+            asset_details = []
+            for asset in matched_assets[:3]:  # show details for up to 3 assets
+                asset_details.append(f"{asset.name} ({asset.get_asset_type_display()})")
+
+            assets_summary_str = ", ".join(asset_details)
+            if asset_count > 3:
+                assets_summary_str += f" and {asset_count - 3} more"
+
+            indicator = alert.source_indicators.first()
+            threat_type = indicator.type if indicator else "Unknown"
+
+            message = (
+                f"Threat Detected: A {threat_type} indicator has matched {asset_count} of your asset(s). "
+                f"Affected asset(s): {assets_summary_str}. "
+                f"Severity: {alert.get_severity_display()}."
+            )
             # Send in-app notifications
             for user in alert.affected_users.all():
                 self.notification_service.create_threat_alert_notification(
                     title=f"Asset-Based Alert: {alert.title}",
-                    message=f"Custom alert {alert.alert_id} has been generated for threats targeting your infrastructure.",
+                    message=message,
                     recipients=[user],
                     priority=alert.severity,
                     metadata={
