@@ -487,8 +487,8 @@ const Reports = ({ active = true }) => {
               <i className="fas fa-file-alt"></i>
               <h3>No reports found</h3>
               <p>Generate your first report to see analytics and insights.</p>
-              <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
-                <i className="fas fa-plus"></i> Generate Report
+              <button className="btn btn-primary btn-sm empty-state-btn" onClick={() => setShowCreateModal(true)}>
+                Generate Report
               </button>
             </div>
           ) : (
@@ -884,6 +884,15 @@ const Reports = ({ active = true }) => {
         .empty-state h3 {
           margin: 0 0 10px 0;
           color: #495057;
+        }
+
+        .empty-state-btn {
+          padding: 3px 8px !important;
+          font-size: 10px !important;
+          margin-top: 16px;
+          min-width: auto !important;
+          text-align: center;
+          display: inline-block;
         }
 
         .loading-state,
