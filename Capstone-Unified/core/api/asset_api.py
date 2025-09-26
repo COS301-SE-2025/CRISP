@@ -20,6 +20,36 @@ from core.serializers.threat_feed_serializer import ThreatFeedSerializer
 logger = logging.getLogger(__name__)
 
 
+def require_role(allowed_roles):
+    """
+    Decorator to check if user has one of the allowed roles.
+    allowed_roles can be a string or list of strings.
+
+    Usage:
+    @require_role('publisher')  # Only publishers
+    @require_role(['publisher', 'BlueVisionAdmin'])  # Publishers or BlueVision admins
+    """
+    if isinstance(allowed_roles, str):
+        allowed_roles = [allowed_roles]
+
+    def decorator(view_func):
+        def wrapped_view(request, *args, **kwargs):
+            # Superusers and BlueVision admins can access everything
+            if request.user.is_superuser or request.user.role == 'BlueVisionAdmin':
+                return view_func(request, *args, **kwargs)
+
+            # Check if user has required role
+            if request.user.role not in allowed_roles:
+                return Response({
+                    'success': False,
+                    'message': f'Access denied. Required role: {", ".join(allowed_roles)}. Your role: {request.user.role}'
+                }, status=status.HTTP_403_FORBIDDEN)
+
+            return view_func(request, *args, **kwargs)
+        return wrapped_view
+    return decorator
+
+
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 20
     page_size_query_param = 'page_size'
@@ -96,6 +126,13 @@ def asset_inventory_list(request):
             })
 
         elif request.method == 'POST':
+            # Check permissions - only publishers can create assets
+            if request.user.role not in ['publisher', 'BlueVisionAdmin'] and not request.user.is_superuser:
+                return Response({
+                    'success': False,
+                    'message': f'Access denied. Only publishers can create assets. Your role: {request.user.role}'
+                }, status=status.HTTP_403_FORBIDDEN)
+
             # Create new asset
             asset_data = request.data
 
@@ -184,10 +221,14 @@ def asset_inventory_detail(request, asset_id):
 
         # Get asset
         try:
-            asset = AssetInventory.objects.get(
-                id=asset_id,
-                organization=organization
-            )
+            # Superusers and BlueVisionAdmins can access any asset
+            if request.user.is_superuser or request.user.role == 'BlueVisionAdmin':
+                asset = AssetInventory.objects.get(id=asset_id)
+            else:
+                asset = AssetInventory.objects.get(
+                    id=asset_id,
+                    organization=organization
+                )
         except AssetInventory.DoesNotExist:
             return Response({
                 'success': False,
@@ -237,6 +278,13 @@ def asset_inventory_detail(request, asset_id):
             })
 
         elif request.method == 'PUT':
+            # Check permissions - only publishers can update assets
+            if request.user.role not in ['publisher', 'BlueVisionAdmin'] and not request.user.is_superuser:
+                return Response({
+                    'success': False,
+                    'message': f'Access denied. Only publishers can modify assets. Your role: {request.user.role}'
+                }, status=status.HTTP_403_FORBIDDEN)
+
             # Update asset
             asset_data = request.data
 
@@ -290,6 +338,13 @@ def asset_inventory_detail(request, asset_id):
                     }, status=status.HTTP_400_BAD_REQUEST)
 
         elif request.method == 'DELETE':
+            # Check permissions - only publishers can delete assets
+            if request.user.role not in ['publisher', 'BlueVisionAdmin'] and not request.user.is_superuser:
+                return Response({
+                    'success': False,
+                    'message': f'Access denied. Only publishers can delete assets. Your role: {request.user.role}'
+                }, status=status.HTTP_403_FORBIDDEN)
+
             # Delete asset
             asset_name = asset.name
             asset.delete()
@@ -594,6 +649,13 @@ def bulk_asset_upload(request):
     Bulk upload assets from CSV or JSON data.
     """
     try:
+        # Check permissions - only publishers can bulk upload assets
+        if request.user.role not in ['publisher', 'BlueVisionAdmin'] and not request.user.is_superuser:
+            return Response({
+                'success': False,
+                'message': f'Access denied. Only publishers can bulk upload assets. Your role: {request.user.role}'
+            }, status=status.HTTP_403_FORBIDDEN)
+
         organization = request.user.organization
         if not organization:
             return Response({
@@ -693,10 +755,14 @@ def custom_alert_detail(request, alert_id):
         elif request.method == 'DELETE':
             try:
                 # Get the alert to verify ownership and existence
-                alert = CustomAlert.objects.filter(
-                    id=alert_id,
-                    matched_assets__organization=organization
-                ).distinct().first()
+                # Superusers and BlueVisionAdmins can delete any alert
+                if request.user.is_superuser or request.user.role == 'BlueVisionAdmin':
+                    alert = CustomAlert.objects.filter(id=alert_id).first()
+                else:
+                    alert = CustomAlert.objects.filter(
+                        id=alert_id,
+                        organization=organization
+                    ).first()
 
                 if not alert:
                     return Response({
@@ -737,6 +803,13 @@ def custom_alert_action(request, alert_id):
     Perform actions on custom alerts (acknowledge, resolve, dismiss, escalate).
     """
     try:
+        # Check permissions - only publishers can perform alert actions
+        if request.user.role not in ['publisher', 'BlueVisionAdmin'] and not request.user.is_superuser:
+            return Response({
+                'success': False,
+                'message': f'Access denied. Only publishers can perform alert actions. Your role: {request.user.role}'
+            }, status=status.HTTP_403_FORBIDDEN)
+
         organization = request.user.organization
         if not organization:
             return Response({
@@ -784,6 +857,13 @@ def trigger_asset_correlation(request):
     Manually trigger asset correlation for the organization.
     """
     try:
+        # Check permissions - only publishers can trigger correlation
+        if request.user.role not in ['publisher', 'BlueVisionAdmin'] and not request.user.is_superuser:
+            return Response({
+                'success': False,
+                'message': f'Access denied. Only publishers can trigger asset correlation. Your role: {request.user.role}'
+            }, status=status.HTTP_403_FORBIDDEN)
+
         organization = request.user.organization
         if not organization:
             return Response({
@@ -918,28 +998,49 @@ def asset_alert_feed(request):
 def clear_demo_data(request):
     """
     Clear demo data from the system.
+    BlueVision admins and superusers can clear demo data across all organizations.
+    Regular users can only clear demo data from their own organization.
     """
     try:
-        organization = request.user.organization
-        if not organization:
-            return Response({
-                'success': False,
-                'message': 'User must belong to an organization'
-            }, status=status.HTTP_403_FORBIDDEN)
+        # Check if user can clear demo data across all organizations
+        can_clear_all = (
+            request.user.is_superuser or
+            request.user.role == 'BlueVisionAdmin'
+        )
 
-        # Delete demo alerts (those with DEMO- prefix)
-        deleted_alerts = CustomAlert.objects.filter(
-            organization=organization,
-            alert_id__startswith='DEMO-'
-        ).delete()[0]
+        if can_clear_all:
+            # Clear demo data across all organizations
+            deleted_alerts = CustomAlert.objects.filter(
+                alert_id__startswith='DEMO-'
+            ).delete()[0]
 
-        # Delete demo assets
-        deleted_assets = AssetInventory.objects.filter(
-            organization=organization,
-            metadata__contains={'demo': True}
-        ).delete()[0]
+            deleted_assets = AssetInventory.objects.filter(
+                metadata__contains={'demo': True}
+            ).delete()[0]
 
-        logger.info(f"Cleared demo data for {organization.name}: {deleted_alerts} alerts, {deleted_assets} assets")
+            logger.info(f"BlueVision admin {request.user.username} cleared demo data globally: {deleted_alerts} alerts, {deleted_assets} assets")
+        else:
+            # Regular users can only clear demo data from their organization
+            organization = request.user.organization
+            if not organization:
+                return Response({
+                    'success': False,
+                    'message': 'User must belong to an organization'
+                }, status=status.HTTP_403_FORBIDDEN)
+
+            # Delete demo alerts (those with DEMO- prefix) for this organization only
+            deleted_alerts = CustomAlert.objects.filter(
+                organization=organization,
+                alert_id__startswith='DEMO-'
+            ).delete()[0]
+
+            # Delete demo assets for this organization only
+            deleted_assets = AssetInventory.objects.filter(
+                organization=organization,
+                metadata__contains={'demo': True}
+            ).delete()[0]
+
+            logger.info(f"Cleared demo data for {organization.name}: {deleted_alerts} alerts, {deleted_assets} assets")
 
         return Response({
             'success': True,

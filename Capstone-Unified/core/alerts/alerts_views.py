@@ -106,21 +106,26 @@ def mark_notification_read(request, notification_id):
 def mark_all_notifications_read(request):
     """
     Mark all notifications as read for the user
+    Optimized to use bulk update instead of individual queries
     """
     try:
         from .models import Notification
-        
+
+        # Get unread notifications for the user and update them in bulk
         unread_notifications = Notification.get_unread_for_user(request.user)
         count = unread_notifications.count()
-        
-        for notification in unread_notifications:
-            notification.mark_as_read()
-        
+
+        # Bulk update - single database query instead of N queries
+        unread_notifications.update(
+            is_read=True,
+            read_at=timezone.now()
+        )
+
         return Response({
             'success': True,
             'message': f'Marked {count} notifications as read'
         }, status=status.HTTP_200_OK)
-        
+
     except Exception as e:
         logger.error(f"Error marking all notifications as read: {str(e)}")
         return Response({
