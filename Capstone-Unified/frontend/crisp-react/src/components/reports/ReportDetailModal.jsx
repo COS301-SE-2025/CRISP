@@ -406,9 +406,6 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
                             <div className="ttp-technique-id">
                               {ttp.mitre_technique_id || 'N/A'}
                             </div>
-                            <div className={`ttp-tactic ${(ttp.tactic || '').toLowerCase().replace(/\s+/g, '-')}`}>
-                              {ttp.tactic || 'Unknown'}
-                            </div>
                           </div>
                           <div className="ttp-title">
                             {ttp.technique || ttp.name || 'Unknown Technique'}
