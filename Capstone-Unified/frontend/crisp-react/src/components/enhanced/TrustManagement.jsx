@@ -551,17 +551,24 @@ function TrustManagement({ active, initialTab = null }) {
             }
           } else if (modalType === 'group') {
             const groupData = { ...formData };
-            if (formData.trust_level) {
+            if (formData.trust_level && formData.trust_level.trim() !== '') {
               // Find the trust level ID by the level value
               const trustLevelObj = trustData.trustLevels.find(level => level.level === formData.trust_level);
               if (trustLevelObj) {
                 groupData.default_trust_level_id = trustLevelObj.id;
+                console.log('✅ TRUST LEVEL FOUND:', { level: formData.trust_level, id: trustLevelObj.id });
+                console.log('🔍 DEBUG: All available trust levels:', trustData.trustLevels.map(tl => ({ level: tl.level, id: tl.id, name: tl.name })));
               } else {
                 console.error('❌ TRUST LEVEL ERROR: Could not find trust level for:', formData.trust_level);
+                console.error('Available trust levels:', trustData.trustLevels.map(tl => ({ level: tl.level, id: tl.id, name: tl.name })));
                 throw new Error(`Trust level not found: ${formData.trust_level}`);
               }
-              delete groupData.trust_level;
+            } else {
+              console.log('ℹ️ No trust level selected - backend will use default (public)');
+              console.log('🔍 DEBUG: Available trust levels when none selected:', trustData.trustLevels.map(tl => ({ level: tl.level, id: tl.id, name: tl.name })));
             }
+            // Always remove trust_level from group data as backend expects default_trust_level_id
+            delete groupData.trust_level;
             
             if (modalMode === 'add') {
               console.log('🚀 CREATING trust group with data:', groupData);
@@ -1105,10 +1112,10 @@ function TrustManagement({ active, initialTab = null }) {
                             fontSize: '0.75rem',
                             fontWeight: '600',
                             textTransform: 'uppercase',
-                            backgroundColor: item.trust_level === 'HIGH' ? '#d4edda' : item.trust_level === 'MEDIUM' ? '#fff3cd' : '#f8f9fa',
-                            color: item.trust_level === 'HIGH' ? '#155724' : item.trust_level === 'MEDIUM' ? '#856404' : '#495057'
+                            backgroundColor: item.trust_level?.name === 'HIGH' ? '#d4edda' : item.trust_level?.name === 'MEDIUM' ? '#fff3cd' : '#f8f9fa',
+                            color: item.trust_level?.name === 'HIGH' ? '#155724' : item.trust_level?.name === 'MEDIUM' ? '#856404' : '#495057'
                           }}>
-                            {item.trust_level}
+                            {item.trust_level?.name || item.trust_level?.level || 'Unknown'}
                           </span>
                           <span style={{
                             padding: '0.25rem 0.5rem',
@@ -1539,7 +1546,7 @@ function TrustManagement({ active, initialTab = null }) {
                   
                   <div style={{ marginBottom: '1rem' }}>
                     <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                      Trust Level
+                      Trust Level (Optional)
                     </label>
                     <select
                       value={formData.trust_level}
@@ -1551,11 +1558,14 @@ function TrustManagement({ active, initialTab = null }) {
                         borderRadius: '4px'
                       }}
                     >
-                      <option value="">Select Trust Level</option>
+                      <option value="">Default (Public)</option>
                       {trustData.trustLevels.map(level => (
                         <option key={level.id} value={level.level}>{level.name}</option>
                       ))}
                     </select>
+                    <small style={{ color: '#6c757d', fontSize: '0.875em', display: 'block', marginTop: '0.25rem' }}>
+                      If not selected, the group will use Public trust level by default
+                    </small>
                   </div>
                   
                   <div style={{ marginBottom: '1rem', display: 'flex', gap: '1rem' }}>
@@ -1705,7 +1715,7 @@ function TrustManagement({ active, initialTab = null }) {
                 marginBottom: '0.5rem'
               }}>
                 {activeTab === 'relationships' ? 
-                  `Trust Level: ${selectedItemForActions.trust_level}` :
+                  `Trust Level: ${selectedItemForActions.trust_level?.name || selectedItemForActions.trust_level?.level || 'Unknown'}` :
                   selectedItemForActions.description
                 }
               </div>
@@ -2164,10 +2174,10 @@ function TrustManagement({ active, initialTab = null }) {
                         borderRadius: '4px',
                         fontSize: '0.875rem',
                         fontWeight: '600',
-                        backgroundColor: detailItem.trust_level === 'HIGH' ? '#d4edda' : detailItem.trust_level === 'MEDIUM' ? '#fff3cd' : '#f8f9fa',
-                        color: detailItem.trust_level === 'HIGH' ? '#155724' : detailItem.trust_level === 'MEDIUM' ? '#856404' : '#495057'
+                        backgroundColor: detailItem.trust_level?.name === 'HIGH' ? '#d4edda' : detailItem.trust_level?.name === 'MEDIUM' ? '#fff3cd' : '#f8f9fa',
+                        color: detailItem.trust_level?.name === 'HIGH' ? '#155724' : detailItem.trust_level?.name === 'MEDIUM' ? '#856404' : '#495057'
                       }}>
-                        {detailItem.trust_level}
+                        {detailItem.trust_level?.name || detailItem.trust_level?.level || 'Unknown'}
                       </span>
                     </div>
                     <div>

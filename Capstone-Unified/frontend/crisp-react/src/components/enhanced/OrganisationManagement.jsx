@@ -1877,12 +1877,12 @@ const OrganisationManagement = ({ active = true, initialSection = null, navigati
                                 fontSize: '0.75rem',
                                 fontWeight: '600',
                                 textTransform: 'uppercase',
-                                backgroundColor: relationship.trust_level === 'HIGH' ? '#d4edda' :
-                                               relationship.trust_level === 'MEDIUM' ? '#fff3cd' : '#f8f9fa',
-                                color: relationship.trust_level === 'HIGH' ? '#155724' :
-                                       relationship.trust_level === 'MEDIUM' ? '#856404' : '#495057'
+                                backgroundColor: relationship.trust_level?.name === 'HIGH' ? '#d4edda' :
+                                               relationship.trust_level?.name === 'MEDIUM' ? '#fff3cd' : '#f8f9fa',
+                                color: relationship.trust_level?.name === 'HIGH' ? '#155724' :
+                                       relationship.trust_level?.name === 'MEDIUM' ? '#856404' : '#495057'
                               }}>
-                                {relationship.trust_level}
+                                {relationship.trust_level?.name || relationship.trust_level?.level || 'Unknown'}
                               </span>
                               <span style={{
                                 padding: '0.25rem 0.5rem',
