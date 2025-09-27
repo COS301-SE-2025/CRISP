@@ -572,9 +572,10 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
                     from django.utils import timezone
                     feed.consumption_status = 'idle'
                     feed.last_sync = timezone.now()
+                    feed.last_consumed = timezone.now()  # Track last consumption completion
                     feed.sync_count = (feed.sync_count or 0) + 1
                     feed.last_error = None
-                    feed.save(update_fields=['consumption_status', 'last_sync', 'sync_count', 'last_error'])
+                    feed.save(update_fields=['consumption_status', 'last_sync', 'last_consumed', 'sync_count', 'last_error'])
 
                 except Exception as consumption_error:
                     # Update feed status on error
@@ -631,8 +632,10 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
                         # Trigger frontend auto-refresh for feed consumption
                         from django.core.cache import cache
                         from django.utils import timezone
-                        cache.set('indicators_updated', timezone.now().isoformat(), timeout=300)
-                        cache.set('feeds_updated', timezone.now().isoformat(), timeout=300)
+                        refresh_timestamp = timezone.now().isoformat()
+                        cache.set('indicators_updated', refresh_timestamp, timeout=300)
+                        cache.set('feeds_updated', refresh_timestamp, timeout=300)
+                        cache.set('feed_consumption_completed', refresh_timestamp, timeout=300)
                         logger.info(f"🔄 Triggered frontend refresh after feed consumption: {feed.name} (+{indicator_count} indicators)")
                     except Exception as e:
                         logger.error(f"Error adding feed consumption to batch notification service: {e}")
@@ -654,6 +657,61 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
             logger.error(traceback.format_exc())
             return Response(
                 {"error": "Failed to consume feed", "details": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=['get'])
+    def check_refresh_triggers(self, request):
+        """Check for cache-based refresh triggers from backend notifications"""
+        try:
+            from django.core.cache import cache
+
+            triggers = []
+
+            # Check for indicators updated trigger
+            indicators_updated = cache.get('indicators_updated')
+            if indicators_updated:
+                triggers.append({
+                    'type': 'indicators_updated',
+                    'timestamp': indicators_updated,
+                    'components': ['indicators', 'dashboard', 'threat-feeds']
+                })
+
+            # Check for feeds updated trigger
+            feeds_updated = cache.get('feeds_updated')
+            if feeds_updated:
+                triggers.append({
+                    'type': 'feeds_updated',
+                    'timestamp': feeds_updated,
+                    'components': ['threat-feeds', 'dashboard']
+                })
+
+            # Check for threat feed completion trigger
+            feed_consumption_completed = cache.get('feed_consumption_completed')
+            if feed_consumption_completed:
+                triggers.append({
+                    'type': 'feed_consumption_completed',
+                    'timestamp': feed_consumption_completed,
+                    'components': ['threat-feeds', 'indicators', 'dashboard']
+                })
+
+            # Clear processed triggers to prevent repeated notifications
+            if triggers:
+                cache.delete('indicators_updated')
+                cache.delete('feeds_updated')
+                cache.delete('feed_consumption_completed')
+                logger.info(f"🧹 Cleared {len(triggers)} processed refresh triggers")
+
+            return Response({
+                'success': True,
+                'triggers': triggers,
+                'checked_at': timezone.now().isoformat()
+            })
+
+        except Exception as e:
+            logger.error(f"Error checking refresh triggers: {str(e)}")
+            return Response(
+                {"error": "Failed to check refresh triggers", "details": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         

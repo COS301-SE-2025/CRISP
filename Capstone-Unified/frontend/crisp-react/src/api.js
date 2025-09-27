@@ -1295,6 +1295,46 @@ export const getFeedConsumptionStatus = async (feedId) => {
   return await response.json();
 };
 
+export const consumeThreatFeed = async (feedId, options = {}) => {
+  const params = new URLSearchParams();
+
+  // Add optional parameters
+  if (options.limit) params.append('limit', options.limit);
+  if (options.force_days) params.append('force_days', options.force_days);
+  if (options.batch_size) params.append('batch_size', options.batch_size);
+
+  const url = `${API_BASE_URL}/api/threat-feeds/${feedId}/consume/${params.toString() ? `?${params.toString()}` : ''}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || errorData.message || 'Failed to consume threat feed');
+  }
+
+  return await response.json();
+};
+
+export const getThreatFeeds = async (queryParams = {}) => {
+  const params = new URLSearchParams(queryParams).toString();
+  const url = `${API_BASE_URL}/api/threat-feeds/${params ? `?${params}` : ''}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch threat feeds');
+  }
+
+  return await response.json();
+};
+
 // Enhanced SOC API Functions
 
 export const getSOCDashboard = async () => {
@@ -1581,5 +1621,24 @@ export const getLastSeen = async () => {
   }
 
   return await response.json();
+};
+
+// Check for cache-based refresh triggers from backend
+export const checkRefreshTriggers = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/sync/check-refresh-triggers/`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      return { triggers: [] }; // Return empty triggers on error
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error checking refresh triggers:', error);
+    return { triggers: [] };
+  }
 };
 

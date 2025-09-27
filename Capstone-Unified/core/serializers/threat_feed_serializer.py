@@ -13,9 +13,9 @@ class ThreatFeedSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'description', 'owner', 'created_at', 'updated_at',
             'is_public', 'taxii_collection_id', 'taxii_server_url',
-            'taxii_api_root', 'taxii_username', 'taxii_password', 'last_sync', 'is_external', 'is_active'
+            'taxii_api_root', 'taxii_username', 'taxii_password', 'last_sync', 'last_consumed', 'is_external', 'is_active'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'last_sync']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'last_sync', 'last_consumed']
         extra_kwargs = {
             'taxii_password': {'write_only': True},
             'owner': {'required': False}

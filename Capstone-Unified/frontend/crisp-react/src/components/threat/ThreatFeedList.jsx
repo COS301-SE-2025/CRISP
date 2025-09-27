@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { getThreatFeeds, consumeThreatFeed } from '../../api.js';
+import refreshManager from '../../utils/RefreshManager.js';
 
 const ThreatFeedList = () => {
   const [feeds, setFeeds] = useState([]);
@@ -6,94 +8,170 @@ const ThreatFeedList = () => {
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
+  const [consumingFeeds, setConsumingFeeds] = useState(new Set());
+  const [pollIntervalId, setPollIntervalId] = useState(null);
+  const [previousFeedStates, setPreviousFeedStates] = useState(new Map());
 
-  useEffect(() => {
-    fetchFeeds();
-  }, [filter]);
-
-  const fetchFeeds = async () => {
+  // Memoize fetchFeeds to prevent infinite re-renders
+  const fetchFeeds = useCallback(async () => {
     try {
       setLoading(true);
-      // Mock threat feed data - replace with actual API call
-      const mockFeeds = [
-        {
-          id: '1',
-          name: 'AlienVault OTX',
-          type: 'STIX/TAXII',
-          status: 'active',
-          description: 'Open Threat Exchange community threat intelligence feed',
-          url: 'https://otx.alienvault.com/taxii/discovery',
-          indicators_count: 15432,
-          last_updated: '2025-01-15T14:30:00Z',
-          update_frequency: '1 hour',
-          subscribed: true,
-          trust_level: 'high',
-          organization: 'AlienVault',
-          collections: ['indicators', 'malware', 'campaigns']
-        },
-        {
-          id: '2',
-          name: 'MISP Feed',
-          type: 'MISP',
-          status: 'active',
-          description: 'Malware Information Sharing Platform community feed',
-          url: 'https://misppriv.circl.lu',
-          indicators_count: 8921,
-          last_updated: '2025-01-15T12:15:00Z',
-          update_frequency: '30 minutes',
-          subscribed: true,
-          trust_level: 'medium',
-          organization: 'CIRCL',
-          collections: ['events', 'attributes', 'objects']
-        },
-        {
-          id: '3',
-          name: 'Emerging Threats',
-          type: 'STIX/TAXII',
-          status: 'pending',
-          description: 'Proofpoint Emerging Threats intelligence feed',
-          url: 'https://rules.emergingthreats.net/taxii',
-          indicators_count: 0,
-          last_updated: null,
-          update_frequency: '6 hours',
-          subscribed: false,
-          trust_level: 'high',
-          organization: 'Proofpoint',
-          collections: ['signatures', 'indicators', 'rules']
-        },
-        {
-          id: '4',
-          name: 'Internal Threat Feed',
-          type: 'Custom',
-          status: 'active',
-          description: 'Organization-specific threat intelligence collected internally',
-          url: 'internal://threat-feed',
-          indicators_count: 2145,
-          last_updated: '2025-01-15T16:00:00Z',
-          update_frequency: 'Real-time',
-          subscribed: true,
-          trust_level: 'high',
-          organization: 'Internal',
-          collections: ['incidents', 'indicators', 'artifacts']
-        }
-      ];
+      const response = await getThreatFeeds();
+      const threatFeeds = response.results || response || [];
 
-      let filteredFeeds = mockFeeds;
+      // Apply filters to the real data
+      let filteredFeeds = threatFeeds;
       if (filter !== 'all') {
-        filteredFeeds = mockFeeds.filter(f => {
-          if (filter === 'subscribed') return f.subscribed;
-          if (filter === 'available') return !f.subscribed;
-          return f.status === filter || f.type === filter;
+        filteredFeeds = threatFeeds.filter(f => {
+          if (filter === 'subscribed') return f.is_external;
+          if (filter === 'available') return !f.is_external;
+          return f.consumption_status === filter || f.taxii_server_url?.includes(filter);
         });
       }
 
       setFeeds(filteredFeeds);
+
+      // Check for status changes and show notifications
+      filteredFeeds.forEach(feed => {
+        const previousState = previousFeedStates.get(feed.id);
+        const currentStatus = feed.consumption_status || 'idle';
+
+        if (previousState && previousState !== currentStatus) {
+          if (previousState === 'running' && (currentStatus === 'completed' || currentStatus === 'idle')) {
+            // Feed completed successfully
+            showCompletionNotification(feed);
+          } else if (previousState === 'running' && currentStatus === 'error') {
+            // Feed failed
+            showErrorNotification(feed);
+          }
+        }
+      });
+
+      // Update previous states for next comparison
+      const newStates = new Map();
+      filteredFeeds.forEach(feed => {
+        newStates.set(feed.id, feed.consumption_status || 'idle');
+      });
+      setPreviousFeedStates(newStates);
+
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
+  }, [filter, previousFeedStates]);
+
+  useEffect(() => {
+    fetchFeeds();
+  }, [fetchFeeds]);
+
+  // Subscribe to RefreshManager for automatic updates
+  useEffect(() => {
+    refreshManager.subscribe('threat-feeds', fetchFeeds, {
+      backgroundRefresh: true,
+      isVisible: () => true // This component is visible when mounted
+    });
+
+    console.log('🔄 ThreatFeedList: Subscribed to RefreshManager');
+
+    return () => {
+      refreshManager.unsubscribe('threat-feeds');
+      console.log('🔄 ThreatFeedList: Unsubscribed from RefreshManager');
+    };
+  }, [fetchFeeds]);
+
+  // Smart polling only when needed - much less aggressive
+  useEffect(() => {
+    if (consumingFeeds.size > 0) {
+      // Only poll while we have locally tracked consuming feeds
+      const intervalId = setInterval(() => {
+        console.log('🔄 Checking status for locally tracked consuming feeds');
+        fetchFeeds();
+      }, 10000); // Much more reasonable 10 seconds instead of 3
+
+      setPollIntervalId(intervalId);
+
+      return () => {
+        clearInterval(intervalId);
+        setPollIntervalId(null);
+      };
+    } else if (pollIntervalId) {
+      // Stop polling when no local feeds are consuming
+      clearInterval(pollIntervalId);
+      setPollIntervalId(null);
+    }
+  }, [consumingFeeds, fetchFeeds]); // Removed feeds dependency to prevent constant polling
+
+  // Notification functions
+  const showCompletionNotification = (feed) => {
+    console.log(`✅ Feed consumption completed: ${feed.name}`);
+
+    // Create a browser notification if possible
+    if (Notification.permission === 'granted') {
+      new Notification('Threat Feed Consumption Complete', {
+        body: `Feed "${feed.name}" has finished consuming`,
+        icon: '/favicon.ico'
+      });
+    }
+
+    // Also show an in-page notification (you can customize this)
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed; top: 20px; right: 20px; z-index: 10000;
+      background: #28a745; color: white; padding: 15px 20px;
+      border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      max-width: 300px; animation: slideIn 0.3s ease-out;
+    `;
+    notification.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <i class="fas fa-check-circle" style="font-size: 18px;"></i>
+        <div>
+          <strong>Feed Consumption Complete</strong><br>
+          <small>${feed.name}</small>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(notification);
+    setTimeout(() => {
+      notification.remove();
+    }, 5000);
   };
+
+  const showErrorNotification = (feed) => {
+    console.log(`❌ Feed consumption failed: ${feed.name}`);
+
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed; top: 20px; right: 20px; z-index: 10000;
+      background: #dc3545; color: white; padding: 15px 20px;
+      border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      max-width: 300px;
+    `;
+    notification.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <i class="fas fa-exclamation-circle" style="font-size: 18px;"></i>
+        <div>
+          <strong>Feed Consumption Failed</strong><br>
+          <small>${feed.name}</small>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(notification);
+    setTimeout(() => {
+      notification.remove();
+    }, 7000);
+  };
+
+  // Request notification permission on component mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
 
   const getStatusIcon = (status) => {
     const icons = {
@@ -125,9 +203,41 @@ const ThreatFeedList = () => {
   };
 
   const toggleSubscription = (feedId) => {
-    setFeeds(prev => prev.map(f => 
+    setFeeds(prev => prev.map(f =>
       f.id === feedId ? { ...f, subscribed: !f.subscribed } : f
     ));
+  };
+
+  const handleConsumeFeed = async (feedId) => {
+    try {
+      setConsumingFeeds(prev => new Set(prev).add(feedId));
+      console.log(`🔄 Starting consumption for feed ${feedId}`);
+
+      const result = await consumeThreatFeed(feedId, {
+        limit: 10,
+        batch_size: 100
+      });
+
+      console.log('Feed consumption result:', result);
+
+      // Trigger refresh for related components
+      refreshManager.triggerRelated('threat-feeds', 'feed_consumption_completed');
+
+      // Also immediately refresh this component
+      setTimeout(() => {
+        fetchFeeds();
+      }, 1000);
+
+    } catch (error) {
+      console.error('Feed consumption error:', error);
+      setError(`Failed to consume feed: ${error.message}`);
+    } finally {
+      setConsumingFeeds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(feedId);
+        return newSet;
+      });
+    }
   };
 
   if (loading) {
@@ -265,44 +375,48 @@ const ThreatFeedList = () => {
                   <div className="feed-title">
                     <h3>{feed.name}</h3>
                     <div className="feed-badges">
-                      <span className="type-badge">{feed.type}</span>
-                      <span 
+                      <span className="type-badge">{feed.is_external ? 'External' : 'Internal'}</span>
+                      <span
                         className="trust-badge"
-                        style={{ backgroundColor: getTrustLevelColor(feed.trust_level) }}
+                        style={{ backgroundColor: getTrustLevelColor('medium') }}
                       >
-                        {feed.trust_level} trust
+                        {feed.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </div>
                   </div>
-                  <p className="feed-description">{feed.description}</p>
+                  <p className="feed-description">{feed.description || 'No description available'}</p>
                   <div className="feed-details">
                     <span className="detail-item">
                       <i className="fas fa-building"></i>
-                      {feed.organization}
+                      {feed.owner?.name || 'Unknown'}
                     </span>
-                    <span className="detail-item">
-                      <i className="fas fa-link"></i>
-                      {feed.url}
-                    </span>
-                    <span className="detail-item">
-                      <i className="fas fa-sync-alt"></i>
-                      Updates every {feed.update_frequency}
-                    </span>
-                    {feed.last_updated && (
+                    {feed.taxii_server_url && (
+                      <span className="detail-item">
+                        <i className="fas fa-link"></i>
+                        {feed.taxii_server_url}
+                      </span>
+                    )}
+                    {feed.last_sync && (
                       <span className="detail-item">
                         <i className="fas fa-calendar"></i>
-                        Last updated: {new Date(feed.last_updated).toLocaleString()}
+                        Last synced: {new Date(feed.last_sync).toLocaleString()}
+                      </span>
+                    )}
+                    {feed.last_consumed && (
+                      <span className="detail-item">
+                        <i className="fas fa-check-circle"></i>
+                        Last consumed: {new Date(feed.last_consumed).toLocaleString()}
                       </span>
                     )}
                   </div>
                 </div>
                 <div className="feed-status">
-                  <span 
+                  <span
                     className="status-indicator"
-                    style={{ color: getStatusColor(feed.status) }}
+                    style={{ color: getStatusColor(feed.consumption_status || 'idle') }}
                   >
-                    <i className={getStatusIcon(feed.status)}></i>
-                    {feed.status.charAt(0).toUpperCase() + feed.status.slice(1)}
+                    <i className={getStatusIcon(feed.consumption_status || 'idle')}></i>
+                    {(feed.consumption_status || 'idle').charAt(0).toUpperCase() + (feed.consumption_status || 'idle').slice(1)}
                   </span>
                 </div>
               </div>
@@ -310,35 +424,38 @@ const ThreatFeedList = () => {
               <div className="feed-stats">
                 <div className="stat">
                   <i className="fas fa-shield-alt"></i>
-                  <span className="stat-number">{feed.indicators_count.toLocaleString()}</span>
+                  <span className="stat-number">{(feed.indicators_count || 0).toLocaleString()}</span>
                   <span className="stat-label">Indicators</span>
                 </div>
                 <div className="stat">
-                  <i className="fas fa-layer-group"></i>
-                  <span className="stat-number">{feed.collections.length}</span>
-                  <span className="stat-label">Collections</span>
+                  <i className="fas fa-clock"></i>
+                  <span className="stat-number">{feed.sync_count || 0}</span>
+                  <span className="stat-label">Sync Count</span>
                 </div>
               </div>
 
-              <div className="feed-collections">
-                <h4>Collections:</h4>
-                <div className="collections-list">
-                  {feed.collections.map(collection => (
-                    <span key={collection} className="collection-tag">
-                      {collection}
+              {feed.taxii_collection_id && (
+                <div className="feed-collections">
+                  <h4>Collection:</h4>
+                  <div className="collections-list">
+                    <span className="collection-tag">
+                      {feed.taxii_collection_id}
                     </span>
-                  ))}
+                  </div>
                 </div>
-              </div>
-              
+              )}
+
               <div className="feed-actions">
-                <button 
-                  className={`btn btn-sm ${feed.subscribed ? 'btn-danger' : 'btn-success'}`}
-                  onClick={() => toggleSubscription(feed.id)}
-                >
-                  <i className={`fas ${feed.subscribed ? 'fa-unlink' : 'fa-link'}`}></i>
-                  {feed.subscribed ? 'Unsubscribe' : 'Subscribe'}
-                </button>
+                {feed.is_external && feed.taxii_server_url && (
+                  <button
+                    className={`btn btn-sm ${consumingFeeds.has(feed.id) ? 'btn-secondary' : 'btn-primary'}`}
+                    onClick={() => handleConsumeFeed(feed.id)}
+                    disabled={consumingFeeds.has(feed.id) || feed.consumption_status === 'running'}
+                  >
+                    <i className={`fas ${consumingFeeds.has(feed.id) || feed.consumption_status === 'running' ? 'fa-spinner fa-spin' : 'fa-download'}`}></i>
+                    {consumingFeeds.has(feed.id) || feed.consumption_status === 'running' ? 'Consuming...' : 'Consume'}
+                  </button>
+                )}
                 <button className="btn btn-sm btn-outline">
                   <i className="fas fa-eye"></i>
                   View Details
@@ -346,10 +463,6 @@ const ThreatFeedList = () => {
                 <button className="btn btn-sm btn-outline">
                   <i className="fas fa-cog"></i>
                   Configure
-                </button>
-                <button className="btn btn-sm btn-outline">
-                  <i className="fas fa-download"></i>
-                  Export
                 </button>
               </div>
             </div>

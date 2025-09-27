@@ -39,12 +39,12 @@ class RefreshManager {
   }
 
   startGlobalRefresh() {
-    // Single 60-second timer replaces all the 5-30 second timers
+    // Start with more frequent polling for better responsiveness
     this.globalInterval = setInterval(() => {
       if (this.isActive && !this.isProcessing && this.subscribers.size > 0) {
         this.processBackgroundRefresh();
       }
-    }, 60000); // 60 seconds - much more reasonable than current 5-30s intervals
+    }, 10000); // 10 seconds for better responsiveness with threat feed consumption
   }
 
   async processBackgroundRefresh() {
@@ -52,6 +52,9 @@ class RefreshManager {
 
     this.isProcessing = true;
     try {
+      // Check for backend refresh triggers first
+      await this.checkRefreshTriggers();
+
       // Only refresh components that are visible and need background updates
       for (const [key, subscriber] of this.subscribers) {
         if (subscriber.backgroundRefresh && subscriber.isVisible && subscriber.isVisible()) {
@@ -61,6 +64,37 @@ class RefreshManager {
       }
     } finally {
       this.isProcessing = false;
+    }
+  }
+
+  async checkRefreshTriggers() {
+    try {
+      // Import the API function dynamically to avoid circular dependencies
+      const response = await fetch('http://localhost:8000/api/threat-feeds/check_refresh_triggers/', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('crisp_auth_token')}`,
+        },
+      });
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+      if (data.success && data.triggers && data.triggers.length > 0) {
+        console.log('🔔 RefreshManager: Found backend triggers:', data.triggers);
+
+        // Process each trigger
+        for (const trigger of data.triggers) {
+          if (trigger.components && trigger.components.length > 0) {
+            console.log(`⚡ RefreshManager: Processing trigger '${trigger.type}' for components:`, trigger.components);
+            await this.triggerRefresh(trigger.components, `backend_trigger:${trigger.type}`);
+          }
+        }
+      }
+    } catch (error) {
+      // Silently fail to avoid spam in logs
+      console.debug('RefreshManager: Error checking triggers:', error);
     }
   }
 

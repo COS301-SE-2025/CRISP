@@ -575,6 +575,7 @@ class ThreatFeed(models.Model):
     is_external = models.BooleanField(default=True)
     is_public = models.BooleanField(default=False)
     last_sync = models.DateTimeField(blank=True, null=True)
+    last_consumed = models.DateTimeField(blank=True, null=True, help_text='Last time this feed was successfully consumed')
     sync_interval_hours = models.IntegerField(default=24)
     
     # Status tracking
@@ -707,13 +708,25 @@ class ThreatFeed(models.Model):
     
     def stop_consumption(self, error_message=None):
         """Mark feed consumption as stopped/idle"""
+        from django.utils import timezone
+
         self.consumption_status = 'error' if error_message else 'completed'
         self.current_task_id = None
         self.paused_at = None
         self.pause_metadata = {}
+
+        update_fields = ['consumption_status', 'current_task_id', 'paused_at', 'pause_metadata']
+
         if error_message:
             self.last_error = error_message
-        self.save(update_fields=['consumption_status', 'current_task_id', 'paused_at', 'pause_metadata', 'last_error'])
+            update_fields.append('last_error')
+        else:
+            # Successful completion - update last_consumed
+            self.last_consumed = timezone.now()
+            self.last_error = None  # Clear any previous errors
+            update_fields.extend(['last_consumed', 'last_error'])
+
+        self.save(update_fields=update_fields)
     
     def can_be_paused(self):
         """Check if feed consumption can be paused"""

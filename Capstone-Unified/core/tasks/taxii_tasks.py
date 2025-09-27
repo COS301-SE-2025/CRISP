@@ -292,7 +292,7 @@ def consume_feed_task(self, feed_id, limit=None, force_days=None, batch_size=Non
         
         # Task completed successfully
         feed.stop_consumption()  # Mark as idle/completed
-        
+
         cache.set(task_key, {
             'status': 'completed',
             'feed_id': feed_id,
@@ -301,6 +301,13 @@ def consume_feed_task(self, feed_id, limit=None, force_days=None, batch_size=Non
             'stats': stats,
             'progress': 100
         }, timeout=3600)
+
+        # Trigger frontend refresh for async completion
+        refresh_timestamp = timezone.now().isoformat()
+        cache.set('indicators_updated', refresh_timestamp, timeout=300)
+        cache.set('feeds_updated', refresh_timestamp, timeout=300)
+        cache.set('feed_consumption_completed', refresh_timestamp, timeout=300)
+        logger.info(f"🔄 Triggered frontend refresh after async feed consumption: {feed.name}")
         
         logger.info(f"Feed {feed.name} consumed successfully: {stats}")
         return stats
