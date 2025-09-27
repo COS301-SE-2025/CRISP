@@ -12,6 +12,7 @@ const Notifications = ({ active }) => {
   const getSourceFromType = (type) => {
     const typeToSource = {
       'threat_alert': 'Threat Intelligence',
+      'asset_based_alert': 'Asset Security',
       'feed_update': 'Feed Management',
       'user_invitation': 'User Management',
       'system_alert': 'System',
@@ -135,6 +136,7 @@ const Notifications = ({ active }) => {
   const getNotificationIcon = (type) => {
     const icons = {
       threat_alert: 'fas fa-exclamation-triangle',
+      asset_based_alert: 'fas fa-shield-alt',
       trust_relationship: 'fas fa-handshake',
       feed_update: 'fas fa-rss',
       system_alert: 'fas fa-cog',
@@ -253,6 +255,12 @@ const Notifications = ({ active }) => {
           onClick={() => setFilter('threat_alert')}
         >
           Threats
+        </button>
+        <button
+          className={`filter-btn ${filter === 'asset_based_alert' ? 'active' : ''}`}
+          onClick={() => setFilter('asset_based_alert')}
+        >
+          Asset Alerts
         </button>
         <button
           className={`filter-btn ${filter === 'trust_relationship' ? 'active' : ''}`}
