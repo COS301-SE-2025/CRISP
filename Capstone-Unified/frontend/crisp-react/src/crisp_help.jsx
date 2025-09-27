@@ -78,145 +78,6 @@ function CrispHelp({ isOpen, onClose, onNavigate }) {
 
   if (!isOpen) return null;
 
-  const helpSections = {
-    'getting-started': {
-      title: 'Getting Started',
-      icon: 'play-circle',
-      content: [
-        {
-          title: 'Quick Start Guide',
-          description: 'Learn the basics of CRISP in 5 minutes',
-          type: 'tutorial',
-          duration: '5 min',
-          link: 'Construction'
-        },
-        {
-          title: 'Dashboard Overview',
-          description: 'Understanding your threat intelligence dashboard',
-          type: 'tutorial',
-          duration: '8 min',
-          link: 'Construction'
-        },
-        {
-          title: 'Setting up Your First Feed',
-          description: 'Connect to your first threat intelligence feed',
-          type: 'guide',
-          duration: '10 min',
-          link: 'Construction'
-        },
-        {
-          title: 'User Account Setup',
-          description: 'Configure your profile and preferences',
-          type: 'guide',
-          duration: '3 min',
-          link: 'Construction'
-        }
-      ]
-    },
-    'threat-feeds': {
-      title: 'Threat Feeds',
-      icon: 'rss',
-      content: [
-        {
-          title: 'Managing STIX/TAXII Feeds',
-          description: 'Configure and monitor STIX/TAXII data sources',
-          type: 'tutorial',
-          duration: '12 min',
-          link: 'Construction'
-        },
-        {
-          title: 'MISP Integration',
-          description: 'Connect and sync with MISP instances',
-          type: 'tutorial',
-          duration: '15 min',
-          link: 'Construction'
-        },
-        {
-          title: 'Feed Health Monitoring',
-          description: 'Track feed status and troubleshoot issues',
-          type: 'guide',
-          duration: '7 min',
-          link: 'Construction'
-        },
-        {
-          title: 'Custom Feed Creation',
-          description: 'Build custom threat intelligence feeds',
-          type: 'guide',
-          duration: '20 min',
-          link: 'Construction'
-        }
-      ]
-    },
-    'ioc-management': {
-      title: 'IoC Management',
-      icon: 'search',
-      content: [
-        {
-          title: 'IoC Validation and Verification',
-          description: 'Best practices for validating indicators',
-          type: 'guide',
-          duration: '10 min',
-          link: 'Construction'
-        },
-        {
-          title: 'Bulk IoC Operations',
-          description: 'Import, export, and manage large IoC datasets',
-          type: 'tutorial',
-          duration: '12 min',
-          link: 'Construction'
-        },
-        {
-          title: 'IoC Sharing and Collaboration',
-          description: 'Share indicators with trusted institutions',
-          type: 'tutorial',
-          duration: '8 min',
-          link: 'Construction'
-        },
-        {
-          title: 'Automated IoC Processing',
-          description: 'Set up automated IoC enrichment and classification',
-          type: 'guide',
-          duration: '18 min',
-          link: 'Construction'
-        }
-      ]
-    },
-    'ttp-analysis': {
-      title: 'TTP Analysis',
-      icon: 'trending-up',
-      content: [
-        {
-          title: 'MITRE ATT&CK Mapping',
-          description: 'Map observed behaviors to MITRE ATT&CK framework',
-          type: 'tutorial',
-          duration: '15 min',
-          link: 'Construction'
-        },
-        {
-          title: 'TTP Pattern Recognition',
-          description: 'Identify and analyze attack patterns',
-          type: 'guide',
-          duration: '12 min',
-          link: 'Construction'
-        },
-        {
-          title: 'Threat Actor Profiling',
-          description: 'Build comprehensive threat actor profiles',
-          type: 'tutorial',
-          duration: '20 min',
-          link: 'Construction'
-        },
-        {
-          title: 'Campaign Analysis',
-          description: 'Track and analyze multi-stage attack campaigns',
-          type: 'guide',
-          duration: '16 min',
-          link: 'Construction'
-        }
-      ]
-    }
-  };
-
   const faqData = [
     {
       category: 'General',
@@ -288,20 +149,29 @@ function CrispHelp({ isOpen, onClose, onNavigate }) {
     }
   ];
 
-  const filteredSections = Object.entries(helpSections).reduce((acc, [key, section]) => {
-    if (searchQuery) {
-      const filteredContent = section.content.filter(item =>
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      if (filteredContent.length > 0) {
-        acc[key] = { ...section, content: filteredContent };
+  // Simple demo content for all tabs
+  const demoContent = {
+    title: 'CRISP System Demo',
+    icon: 'play-circle',
+    content: [
+      {
+        type: 'demo',
+        title: 'Complete CRISP Platform Overview',
+        description: 'Watch this comprehensive demo video that covers all CRISP features including threat feeds, IoC management, TTP analysis, trust management, and collaboration tools.',
+        duration: '15 min',
+        link: 'construction'
       }
-    } else {
-      acc[key] = section;
-    }
-    return acc;
-  }, {});
+    ]
+  };
+
+  // Use demo content for all sections when not searching
+  const filteredSections = {};
+  if (!searchQuery) {
+    // Show demo content for all tabs except faqs and contact
+    ['getting-started', 'threat-feeds', 'ioc-management', 'ttp-analysis'].forEach(tab => {
+      filteredSections[tab] = demoContent;
+    });
+  }
 
   const filteredFAQs = faqData.map(category => ({
     ...category,
@@ -347,27 +217,7 @@ function CrispHelp({ isOpen, onClose, onNavigate }) {
                 <i data-feather="play-circle"></i>
                 Getting Started
               </button>
-              <button
-                className={`nav-item ${activeTab === 'threat-feeds' ? 'active' : ''}`}
-                onClick={() => setActiveTab('threat-feeds')}
-              >
-                <i data-feather="rss"></i>
-                Threat Feeds
-              </button>
-              <button
-                className={`nav-item ${activeTab === 'ioc-management' ? 'active' : ''}`}
-                onClick={() => setActiveTab('ioc-management')}
-              >
-                <i data-feather="search"></i>
-                IoC Management
-              </button>
-              <button
-                className={`nav-item ${activeTab === 'ttp-analysis' ? 'active' : ''}`}
-                onClick={() => setActiveTab('ttp-analysis')}
-              >
-                <i data-feather="trending-up"></i>
-                TTP Analysis
-              </button>
+
               <button
                 className={`nav-item ${activeTab === 'faqs' ? 'active' : ''}`}
                 onClick={() => setActiveTab('faqs')}

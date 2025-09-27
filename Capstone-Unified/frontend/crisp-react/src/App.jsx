@@ -223,9 +223,6 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
       case 'last24h':
         setConsumptionParams({ days_back: 1, block_limit: 50 }); // Last 24 hours
         break;
-      case 'lasthour':
-        setConsumptionParams({ days_back: 1, block_limit: 25 }); // Last hour equivalent (1 day with light data)
-        break;
       case 'lastweek':
         setConsumptionParams({ days_back: 7, block_limit: 100 }); // Last week
         break;
@@ -3721,9 +3718,8 @@ function ThreatFeeds({
     try {
       // Build query parameters for consumption
       const params = new URLSearchParams();
-      if (consumptionParams.days_back !== 30) { // Only add if different from default
-        params.append('force_days', consumptionParams.days_back);
-      }
+      // Always send force_days to ensure proper timerange filtering
+      params.append('force_days', consumptionParams.days_back);
       if (consumptionParams.block_limit !== 10) { // Only add if different from default
         params.append('limit', consumptionParams.block_limit);
       }
@@ -4418,12 +4414,6 @@ function ThreatFeeds({
                 onChange={(e) => handleParamChange('days_back', parseInt(e.target.value))}
                 className="param-select"
               >
-                <optgroup label="Hours (Recent Data)">
-                  <option value={1}>1 hour (uses 1 day filter)</option>
-                  <option value={1}>3 hours (uses 1 day filter)</option>
-                  <option value={1}>6 hours (uses 1 day filter)</option>
-                  <option value={1}>12 hours (uses 1 day filter)</option>
-                </optgroup>
                 <optgroup label="Days">
                   <option value={1}>1 day (last 24 hours)</option>
                   <option value={2}>2 days</option>

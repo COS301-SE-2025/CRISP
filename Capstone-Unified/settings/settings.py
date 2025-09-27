@@ -61,6 +61,7 @@ THIRD_PARTY_APPS = [
 
 # Integrated CRISP applications - threat intel + user/trust management + SOC
 LOCAL_APPS = [
+    'settings.apps.CrispThreatIntelConfig',  # Auto-startup configuration
     'core',
     'core.alerts',
     'core.user_management',

@@ -9,7 +9,7 @@ from django.apps import AppConfig
 
 class CrispThreatIntelConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'crisp_threat_intel'
+    name = 'settings'
     verbose_name = 'CRISP Threat Intelligence Platform'
 
     def ready(self):
@@ -44,11 +44,11 @@ class CrispThreatIntelConfig(AppConfig):
 
             worker_count = 0
             for line in result.stdout.split('\n'):
-                if 'celery -A settings worker' in line and 'python' in line:
+                if 'celery -A settings worker' in line and 'python' in line and 'grep' not in line:
                     worker_count += 1
 
-            # Start workers if needed
-            if worker_count < 2:
+            # Start workers if needed (only if none exist)
+            if worker_count == 0:
                 print(f"🔄 Starting Celery workers (found {worker_count}, need 2)...")
 
                 for i in range(2):

@@ -1477,6 +1477,35 @@ export const getSOCIncidentDetail = async (incidentId) => {
   return await response.json();
 };
 
+// SOC IOC Integration APIs
+export const getLiveIOCAlerts = async () => {
+  const response = await fetch(`${API_BASE_URL}/api/soc/live-ioc-alerts/`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch live IOC alerts');
+  }
+
+  return await response.json();
+};
+
+export const getIOCIncidentCorrelation = async () => {
+  const response = await fetch(`${API_BASE_URL}/api/soc/ioc-incident-correlation/`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch IOC-incident correlation data');
+  }
+
+  return await response.json();
+};
+
 export const assignSOCIncident = async (incidentId, username) => {
   const response = await fetch(`${API_BASE_URL}/api/soc/incidents/${incidentId}/assign/`, {
     method: 'POST',
