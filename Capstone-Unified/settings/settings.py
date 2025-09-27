@@ -273,6 +273,41 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_RESULT_EXPIRES = 3600  # Keep results for 1 hour
 CELERY_TASK_RESULT_EXPIRES = 3600  # Keep results for 1 hour
 
+# Periodic Tasks Configuration for Asset Monitoring
+CELERY_BEAT_SCHEDULE = {
+    # Continuous asset monitoring every 5 minutes
+    'continuous-asset-monitoring': {
+        'task': 'continuous_asset_monitoring',
+        'schedule': 300.0,  # 5 minutes
+        'args': (1,),  # Check last 1 hour of indicators
+    },
+
+    # Asset inventory sync every 30 minutes
+    'sync-asset-inventory': {
+        'task': 'sync_asset_inventory',
+        'schedule': 1800.0,  # 30 minutes
+    },
+
+    # Asset validation every 6 hours
+    'validate-asset-inventory': {
+        'task': 'validate_asset_inventory',
+        'schedule': 21600.0,  # 6 hours
+    },
+
+    # Cleanup old alerts daily at 2 AM
+    'cleanup-old-alerts': {
+        'task': 'cleanup_old_alerts',
+        'schedule': 86400.0,  # 24 hours
+        'args': (90,),  # Delete alerts older than 90 days
+    },
+
+    # Schedule periodic monitoring tasks every hour
+    'schedule-asset-monitoring': {
+        'task': 'schedule_asset_monitoring_tasks',
+        'schedule': 3600.0,  # 1 hour
+    },
+}
+
 # Logging Configuration
 LOGGING = {
     'version': 1,

@@ -20,45 +20,122 @@ logger = logging.getLogger(__name__)
 @permission_classes([IsAuthenticated])
 def get_alerts_list(request):
     """
-    Get list of alerts/notifications for the user
+    Get list of alerts/notifications for the user including asset-based custom alerts
     """
     try:
         from .models import Notification
-        
+        from core.models.models import CustomAlert
+        from datetime import timedelta
+
         # Get query parameters
         unread_only = request.GET.get('unread_only', 'false').lower() == 'true'
         limit = int(request.GET.get('limit', 50))
-        
-        # Build queryset
-        if unread_only:
-            notifications = Notification.get_unread_for_user(request.user)
-        else:
-            notifications = Notification.get_recent_for_user(request.user)
-        
-        # Limit results
-        notifications = notifications[:limit]
-        
-        # Serialize notifications
+
         alerts = []
-        for notification in notifications:
-            alerts.append({
-                'id': str(notification.id),
-                'type': notification.notification_type,
-                'title': notification.title,
-                'message': notification.message,
-                'priority': notification.priority,
-                'is_read': notification.is_read,
-                'created_at': notification.created_at.isoformat(),
-                'read_at': notification.read_at.isoformat() if notification.read_at else None,
-                'metadata': notification.metadata,
-            })
-        
+
+        # Get regular notifications
+        try:
+            if unread_only:
+                notifications = Notification.get_unread_for_user(request.user)
+            else:
+                notifications = Notification.get_recent_for_user(request.user)
+
+            # Limit notifications
+            notifications = notifications[:limit//2]  # Save half for custom alerts
+
+            # Serialize regular notifications
+            for notification in notifications:
+                alerts.append({
+                    'id': str(notification.id),
+                    'type': notification.notification_type,
+                    'notification_type': notification.notification_type,
+                    'title': notification.title,
+                    'message': notification.message,
+                    'priority': notification.priority,
+                    'is_read': notification.is_read,
+                    'created_at': notification.created_at.isoformat(),
+                    'read_at': notification.read_at.isoformat() if notification.read_at else None,
+                    'metadata': notification.metadata,
+                })
+        except Exception as e:
+            logger.warning(f"Error fetching regular notifications: {e}")
+            # Continue without regular notifications
+
+        # Get custom asset-based alerts for the user's organization
+        try:
+            user_org = getattr(request.user, 'organization', None)
+            if user_org:
+                # Get custom alerts for the user's organization
+                custom_alerts_query = CustomAlert.objects.filter(
+                    organization=user_org,
+                    affected_users=request.user
+                ).order_by('-created_at')
+
+                # Apply unread filter if needed
+                if unread_only:
+                    # For custom alerts, we'll consider them "unread" if they're new (less than 24 hours old)
+                    # and haven't been resolved/dismissed
+                    recent_cutoff = timezone.now() - timedelta(hours=24)
+                    custom_alerts_query = custom_alerts_query.filter(
+                        created_at__gte=recent_cutoff,
+                        status__in=['new', 'acknowledged', 'investigating']
+                    )
+
+                custom_alerts = custom_alerts_query[:limit//2]  # Get other half
+
+                # Serialize custom alerts
+                for alert in custom_alerts:
+                    # Determine if alert is "read" based on status
+                    is_read = alert.status in ['resolved', 'false_positive', 'dismissed']
+
+                    alerts.append({
+                        'id': str(alert.id),
+                        'type': 'asset_based_alert',
+                        'notification_type': 'asset_based_alert',
+                        'title': alert.title,
+                        'message': alert.description[:200] + ('...' if len(alert.description) > 200 else ''),
+                        'priority': alert.severity,  # critical, high, medium, low
+                        'is_read': is_read,
+                        'created_at': alert.created_at.isoformat(),
+                        'read_at': alert.updated_at.isoformat() if is_read else None,
+                        'metadata': {
+                            'alert_id': alert.alert_id,
+                            'alert_type': alert.alert_type,
+                            'severity': alert.severity,
+                            'confidence_score': alert.confidence_score,
+                            'relevance_score': alert.relevance_score,
+                            'matched_assets_count': alert.matched_assets.count(),
+                            'response_actions': alert.response_actions,
+                            'delivery_channels': alert.delivery_channels,
+                            'detected_at': alert.detected_at.isoformat(),
+                        },
+                    })
+
+                logger.info(f"Found {custom_alerts.count()} custom alerts for user {request.user.username}")
+            else:
+                logger.info(f"User {request.user.username} has no organization - skipping custom alerts")
+
+        except Exception as e:
+            logger.warning(f"Error fetching custom alerts: {e}")
+            # Continue without custom alerts
+
+        # Sort all alerts by creation date (newest first)
+        alerts.sort(key=lambda x: x['created_at'], reverse=True)
+
+        # Apply final limit
+        alerts = alerts[:limit]
+
+        # Count unread alerts
+        unread_count = len([a for a in alerts if not a['is_read']])
+
+        logger.info(f"Returning {len(alerts)} total alerts ({unread_count} unread) for user {request.user.username}")
+
         return Response({
             'success': True,
             'data': alerts,
-            'unread_count': Notification.get_unread_for_user(request.user).count()
+            'unread_count': unread_count
         }, status=status.HTTP_200_OK)
-        
+
     except Exception as e:
         logger.error(f"Error fetching alerts: {str(e)}")
         return Response({
@@ -71,28 +148,46 @@ def get_alerts_list(request):
 @permission_classes([IsAuthenticated])
 def mark_notification_read(request, notification_id):
     """
-    Mark a specific notification as read
+    Mark a specific notification/alert as read
     """
     try:
         from .models import Notification
-        
-        notification = Notification.objects.get(
-            id=notification_id,
-            recipient=request.user
-        )
-        
-        notification.mark_as_read()
-        
-        return Response({
-            'success': True,
-            'message': 'Notification marked as read'
-        }, status=status.HTTP_200_OK)
-        
-    except Notification.DoesNotExist:
-        return Response({
-            'success': False,
-            'message': 'Notification not found'
-        }, status=status.HTTP_404_NOT_FOUND)
+        from core.models.models import CustomAlert
+
+        # Try to find as regular notification first
+        try:
+            notification = Notification.objects.get(
+                id=notification_id,
+                recipient=request.user
+            )
+            notification.mark_as_read()
+            return Response({
+                'success': True,
+                'message': 'Notification marked as read'
+            }, status=status.HTTP_200_OK)
+
+        except Notification.DoesNotExist:
+            # Try to find as custom alert
+            try:
+                alert = CustomAlert.objects.get(
+                    id=notification_id,
+                    affected_users=request.user
+                )
+                # Mark custom alert as acknowledged (considered "read")
+                alert.status = 'acknowledged'
+                alert.save(update_fields=['status', 'updated_at'])
+
+                return Response({
+                    'success': True,
+                    'message': 'Alert marked as acknowledged'
+                }, status=status.HTTP_200_OK)
+
+            except CustomAlert.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': 'Notification or alert not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+
     except Exception as e:
         logger.error(f"Error marking notification as read: {str(e)}")
         return Response({

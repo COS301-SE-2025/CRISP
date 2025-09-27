@@ -52,25 +52,52 @@ const NotificationWatcher = ({ user }) => {
             }
             
             // Show in-app toast notification
-            switch (alert.priority || alert.type) {
-              case 'critical':
-                showError(title, message, { autoCloseDelay: 12000 });
-                break;
-              case 'high':
-                showError(title, message, { autoCloseDelay: 10000 });
-                break;
-              case 'medium':
-                showWarning(title, message, { autoCloseDelay: 8000 });
-                break;
-              case 'low':
-                showInfo(title, message, { autoCloseDelay: 6000 });
-                break;
-              case 'success':
-                showSuccess(title, message);
-                break;
-              default:
-                showInfo(title, message);
-                break;
+            const alertType = alert.type || alert.notification_type;
+            const priority = alert.priority || alert.severity;
+
+            // Special handling for asset-based alerts
+            if (alertType === 'asset_based_alert') {
+              const assetMessage = `Asset Security Alert: ${message}`;
+
+              switch (priority) {
+                case 'critical':
+                  showError(`🔴 ${title}`, assetMessage, { autoCloseDelay: 15000 });
+                  break;
+                case 'high':
+                  showError(`🟠 ${title}`, assetMessage, { autoCloseDelay: 12000 });
+                  break;
+                case 'medium':
+                  showWarning(`🟡 ${title}`, assetMessage, { autoCloseDelay: 10000 });
+                  break;
+                case 'low':
+                  showInfo(`🟢 ${title}`, assetMessage, { autoCloseDelay: 8000 });
+                  break;
+                default:
+                  showWarning(`🛡️ ${title}`, assetMessage, { autoCloseDelay: 10000 });
+                  break;
+              }
+            } else {
+              // Standard notification handling
+              switch (priority) {
+                case 'critical':
+                  showError(title, message, { autoCloseDelay: 12000 });
+                  break;
+                case 'high':
+                  showError(title, message, { autoCloseDelay: 10000 });
+                  break;
+                case 'medium':
+                  showWarning(title, message, { autoCloseDelay: 8000 });
+                  break;
+                case 'low':
+                  showInfo(title, message, { autoCloseDelay: 6000 });
+                  break;
+                case 'success':
+                  showSuccess(title, message);
+                  break;
+                default:
+                  showInfo(title, message);
+                  break;
+              }
             }
           });
 
