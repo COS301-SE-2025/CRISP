@@ -389,23 +389,6 @@ div.pagination-wrapper {
   height: 100%
 }
 
-.table-responsive::-webkit-scrollbar {
-  height: 8px;
-}
-
-.table-responsive::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-
-.table-responsive::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
-}
-
-.table-responsive::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
 
 /* Table Enhancements */
 .data-table {
@@ -1106,24 +1089,6 @@ section#ioc-management .type-badge {
   pointer-events: none;
 }
 
-/* Scrollbar styling for dropdown */
-.organisation-dropdown::-webkit-scrollbar {
-  width: 6px;
-}
-
-.organisation-dropdown::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.organisation-dropdown::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-.organisation-dropdown::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
 
 /* Form Radio Group Styles */
 .form-radio-group {

@@ -1150,11 +1150,8 @@ function Dashboard({ active, showPage, user }) {
       let totalIndicators = 0;
       let totalTTPs = 0;
       
-      // Limit to first 3 feeds to reduce API calls - for performance in production
-      const limitedFeeds = (feedsData.results || []).slice(0, 3);
-      
-      // Get indicator and TTP counts from limited feeds only
-      for (const feed of limitedFeeds) {
+      // Get indicator and TTP counts from all feeds
+      for (const feed of (feedsData.results || [])) {
         const feedStatus = await api.get(`/api/threat-feeds/${feed.id}/status/`);
         if (feedStatus) {
           totalIndicators += feedStatus.indicator_count || 0;
@@ -7972,14 +7969,30 @@ function TTPAnalysis({ active }) {
   // Fetch TTP data from backend
   useEffect(() => {
     if (active) {
-      fetchTTPData();
-      fetchMatrixData();
-      fetchFilterOptions();
-      fetchAvailableFeeds();
-      fetchAggregationData();
-      fetchFeedComparisonData();
-      fetchSeasonalPatternsData();
-      fetchTTPTrendsData();
+      // Load prerequisites first, then load TTP data
+      const loadData = async () => {
+        try {
+          // Load filter options and available feeds first (required for TTP data)
+          await Promise.all([
+            fetchFilterOptions(),
+            fetchAvailableFeeds()
+          ]);
+
+          // Now load TTP data with proper prerequisites
+          await fetchTTPData();
+
+          // Load supplementary data in parallel
+          fetchMatrixData();
+          fetchAggregationData();
+          fetchFeedComparisonData();
+          fetchSeasonalPatternsData();
+          fetchTTPTrendsData();
+        } catch (error) {
+          console.error('Error loading TTP data:', error);
+        }
+      };
+
+      loadData();
     }
   }, [active]);
   
