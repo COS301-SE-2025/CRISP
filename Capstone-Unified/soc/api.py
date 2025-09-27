@@ -739,3 +739,320 @@ def incidents_export(request):
             'success': False,
             'message': 'Failed to export incidents'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def threat_map(request):
+    """
+    Get threat map data for SOC visualization
+    """
+    try:
+        # Generate sample threat map data
+        # In a real implementation, this would pull from threat intelligence feeds
+        threat_data = {
+            'global_threats': {
+                'malware_families': [
+                    {'name': 'Emotet', 'severity': 'high', 'active_campaigns': 12, 'regions': ['NA', 'EU']},
+                    {'name': 'Ryuk', 'severity': 'critical', 'active_campaigns': 8, 'regions': ['NA', 'AS']},
+                    {'name': 'TrickBot', 'severity': 'medium', 'active_campaigns': 15, 'regions': ['EU', 'AS']}
+                ],
+                'attack_vectors': [
+                    {'vector': 'Phishing', 'count': 245, 'trend': 'increasing'},
+                    {'vector': 'Malicious Downloads', 'count': 156, 'trend': 'stable'},
+                    {'vector': 'Credential Stuffing', 'count': 89, 'trend': 'decreasing'}
+                ],
+                'targeted_industries': [
+                    {'industry': 'Healthcare', 'threat_level': 'high', 'incidents': 34},
+                    {'industry': 'Financial', 'threat_level': 'critical', 'incidents': 28},
+                    {'industry': 'Education', 'threat_level': 'medium', 'incidents': 19}
+                ]
+            },
+            'last_updated': timezone.now().isoformat()
+        }
+        
+        return Response({
+            'success': True,
+            'data': threat_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in threat_map: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to get threat map data'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def system_health(request):
+    """
+    Get system health metrics for SOC monitoring
+    """
+    try:
+        import random
+        
+        # Get simulated system metrics
+        cpu_usage = random.randint(15, 85)
+        memory_usage = random.randint(25, 75)
+        
+        # Count active SOC incidents
+        if request.user.is_superuser or request.user.role == 'BlueVisionAdmin':
+            active_alerts = SOCIncident.objects.filter(
+                status__in=['new', 'assigned', 'in_progress'],
+                priority__in=['high', 'critical']
+            ).count()
+            connected_users = CustomUser.objects.filter(last_login__gte=timezone.now() - timedelta(hours=1)).count()
+        else:
+            org = request.user.organization
+            active_alerts = SOCIncident.objects.filter(
+                organization=org,
+                status__in=['new', 'assigned', 'in_progress'],
+                priority__in=['high', 'critical']
+            ).count() if org else 0
+            connected_users = CustomUser.objects.filter(
+                organization=org,
+                last_login__gte=timezone.now() - timedelta(hours=1)
+            ).count() if org else 1
+        
+        health_data = {
+            'cpu_usage': round(cpu_usage, 1),
+            'memory_usage': round(memory_usage, 1),
+            'active_alerts': active_alerts,
+            'connected_users': connected_users,
+            'services_status': {
+                'threat_feeds': 'online',
+                'incident_management': 'online',
+                'user_authentication': 'online',
+                'database': 'online'
+            },
+            'last_updated': timezone.now().isoformat()
+        }
+        
+        return Response({
+            'success': True,
+            'data': health_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in system_health: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to get system health data'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def network_activity(request):
+    """
+    Get network activity metrics for SOC monitoring
+    """
+    try:
+        import random
+        
+        # Simulated network activity data
+        activity_data = {
+            'connections_count': random.randint(1500, 3000),
+            'bandwidth_usage': random.randint(45, 85),
+            'suspicious_ips': random.randint(5, 25),
+            'blocked_attempts': random.randint(50, 200),
+            'top_protocols': [
+                {'protocol': 'HTTPS', 'percentage': 65, 'count': 2450},
+                {'protocol': 'HTTP', 'percentage': 20, 'count': 750},
+                {'protocol': 'SSH', 'percentage': 10, 'count': 375},
+                {'protocol': 'FTP', 'percentage': 5, 'count': 188}
+            ],
+            'geo_distribution': [
+                {'country': 'United States', 'connections': 1200},
+                {'country': 'Canada', 'connections': 450},
+                {'country': 'United Kingdom', 'connections': 320},
+                {'country': 'Germany', 'connections': 280}
+            ],
+            'last_updated': timezone.now().isoformat()
+        }
+        
+        return Response({
+            'success': True,
+            'data': activity_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in network_activity: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to get network activity data'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def top_threats(request):
+    """
+    Get top threats based on recent incident data
+    """
+    try:
+        organization = request.user.organization
+        
+        # Build queryset based on user role
+        if request.user.is_superuser or request.user.role == 'BlueVisionAdmin':
+            incidents_qs = SOCIncident.objects.all()
+        else:
+            incidents_qs = SOCIncident.objects.filter(organization=organization) if organization else SOCIncident.objects.none()
+        
+        # Get recent incidents (last 30 days)
+        recent_incidents = incidents_qs.filter(
+            created_at__gte=timezone.now() - timedelta(days=30)
+        )
+        
+        # Aggregate threat data
+        threat_categories = {}
+        for incident in recent_incidents:
+            category = incident.category
+            if category not in threat_categories:
+                threat_categories[category] = {
+                    'name': incident.get_category_display(),
+                    'category': category,
+                    'incidents': 0,
+                    'severity': 'low'
+                }
+            threat_categories[category]['incidents'] += 1
+            
+            # Set highest severity seen
+            if incident.priority == 'critical':
+                threat_categories[category]['severity'] = 'critical'
+            elif incident.priority == 'high' and threat_categories[category]['severity'] != 'critical':
+                threat_categories[category]['severity'] = 'high'
+            elif incident.priority == 'medium' and threat_categories[category]['severity'] not in ['critical', 'high']:
+                threat_categories[category]['severity'] = 'medium'
+        
+        # Sort by incident count and return top 10
+        top_threats = sorted(
+            threat_categories.values(),
+            key=lambda x: x['incidents'],
+            reverse=True
+        )[:10]
+        
+        return Response({
+            'success': True,
+            'threats': top_threats
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in top_threats: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to get top threats data'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def mitre_tactics(request):
+    """
+    Get MITRE ATT&CK tactics data for SOC analysis
+    """
+    try:
+        # Simulated MITRE tactics data
+        tactics_data = [
+            {
+                'name': 'Initial Access',
+                'description': 'Techniques used to gain an initial foothold within a network',
+                'technique_count': 9,
+                'detection_count': 15,
+                'mitre_id': 'TA0001'
+            },
+            {
+                'name': 'Execution',
+                'description': 'Techniques that result in adversary-controlled code running on a local or remote system',
+                'technique_count': 12,
+                'detection_count': 8,
+                'mitre_id': 'TA0002'
+            },
+            {
+                'name': 'Persistence',
+                'description': 'Techniques that adversaries use to keep access to systems across restarts',
+                'technique_count': 19,
+                'detection_count': 12,
+                'mitre_id': 'TA0003'
+            },
+            {
+                'name': 'Privilege Escalation',
+                'description': 'Techniques used to gain higher-level permissions on a system or network',
+                'technique_count': 13,
+                'detection_count': 6,
+                'mitre_id': 'TA0004'
+            },
+            {
+                'name': 'Defense Evasion',
+                'description': 'Techniques that adversaries use to avoid detection throughout their compromise',
+                'technique_count': 40,
+                'detection_count': 22,
+                'mitre_id': 'TA0005'
+            },
+            {
+                'name': 'Credential Access',
+                'description': 'Techniques for stealing credentials like account names and passwords',
+                'technique_count': 15,
+                'detection_count': 9,
+                'mitre_id': 'TA0006'
+            }
+        ]
+        
+        return Response({
+            'success': True,
+            'tactics': tactics_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in mitre_tactics: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to get MITRE tactics data'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def threat_intelligence(request):
+    """
+    Get threat intelligence summary for SOC dashboard
+    """
+    try:
+        from core.models.models import ThreatFeed, Indicator
+        
+        # Get threat intelligence metrics
+        active_feeds = ThreatFeed.objects.filter(is_active=True).count()
+        total_iocs = Indicator.objects.count()
+        
+        # Recent updates
+        recent_indicators = Indicator.objects.filter(
+            created_at__gte=timezone.now() - timedelta(hours=24)
+        ).count()
+        
+        intel_data = {
+            'feeds_active': active_feeds,
+            'iocs_count': total_iocs,
+            'recent_iocs_24h': recent_indicators,
+            'confidence': 'High',
+            'last_update': timezone.now().isoformat(),
+            'threat_level': 'Medium',
+            'trending_threats': [
+                {'name': 'Phishing Campaigns', 'increase': '15%'},
+                {'name': 'Ransomware Activity', 'increase': '8%'},
+                {'name': 'Supply Chain Attacks', 'increase': '12%'}
+            ]
+        }
+        
+        return Response({
+            'success': True,
+            'data': intel_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in threat_intelligence: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to get threat intelligence data'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

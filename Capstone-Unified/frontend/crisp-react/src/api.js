@@ -1223,101 +1223,6 @@ export const getIndicators = async (queryParams = {}) => {
   return await response.json();
 };
 
-// SOC API functions
-export const getSOCDashboard = async () => {
-  const response = await fetch(`${API_BASE_URL}/api/soc/dashboard/`, {
-    method: 'GET',
-    headers: getAuthHeaders(),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || 'Failed to fetch SOC dashboard data');
-  }
-
-  return await response.json();
-};
-
-export const getSOCIncidents = async (queryParams = {}) => {
-  const params = new URLSearchParams();
-  
-  // Add pagination and filtering parameters
-  Object.entries(queryParams).forEach(([key, value]) => {
-    if (value !== null && value !== undefined && value !== '') {
-      params.append(key, value.toString());
-    }
-  });
-
-  const url = `${API_BASE_URL}/api/soc/incidents/${params.toString() ? `?${params.toString()}` : ''}`;
-  
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: getAuthHeaders(),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || 'Failed to fetch SOC incidents');
-  }
-
-  return await response.json();
-};
-
-export const createSOCIncident = async (incidentData) => {
-  const response = await fetch(`${API_BASE_URL}/api/soc/incidents/`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(incidentData),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || 'Failed to create SOC incident');
-  }
-
-  return await response.json();
-};
-
-export const exportSOCIncidents = async (format = 'csv', queryParams = {}) => {
-  const params = new URLSearchParams();
-  
-  // Add format parameter
-  params.append('format', format);
-  
-  // Add other query parameters
-  Object.entries(queryParams).forEach(([key, value]) => {
-    if (value !== null && value !== undefined && value !== '') {
-      params.append(key, value.toString());
-    }
-  });
-
-  const response = await fetch(`${API_BASE_URL}/api/soc/incidents/export/?${params.toString()}`, {
-    method: 'GET',
-    headers: getAuthHeaders(),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || 'Failed to export SOC incidents');
-  }
-
-  return response; // Return the response object so caller can handle blob/filename
-};
-
-export const assignSOCIncident = async (incidentId, username) => {
-  const response = await fetch(`${API_BASE_URL}/api/soc/incidents/${incidentId}/assign/`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ username }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || 'Failed to assign incident');
-  }
-
-  return await response.json();
-};
 
 // Threat Feed Pause/Resume API Functions
 export const pauseFeedConsumption = async (feedId) => {
@@ -1375,3 +1280,216 @@ export const getFeedConsumptionStatus = async (feedId) => {
 
   return await response.json();
 };
+
+// Enhanced SOC API Functions
+
+export const getSOCDashboard = async () => {
+  const response = await fetch(`${API_BASE_URL}/api/soc/dashboard/`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch SOC dashboard data');
+  }
+
+  return await response.json();
+};
+
+export const getSOCThreatMap = async () => {
+  const response = await fetch(`${API_BASE_URL}/api/soc/threat-map/`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch threat map data');
+  }
+
+  return await response.json();
+};
+
+export const getSOCSystemHealth = async () => {
+  const response = await fetch(`${API_BASE_URL}/api/soc/system-health/`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch system health data');
+  }
+
+  return await response.json();
+};
+
+export const getSOCNetworkActivity = async () => {
+  const response = await fetch(`${API_BASE_URL}/api/soc/network-activity/`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch network activity data');
+  }
+
+  return await response.json();
+};
+
+export const getSOCTopThreats = async () => {
+  const response = await fetch(`${API_BASE_URL}/api/soc/top-threats/`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch top threats data');
+  }
+
+  return await response.json();
+};
+
+export const getSOCMitreTactics = async () => {
+  const response = await fetch(`${API_BASE_URL}/api/soc/mitre-tactics/`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch MITRE tactics data');
+  }
+
+  return await response.json();
+};
+
+export const getSOCThreatIntelligence = async () => {
+  const response = await fetch(`${API_BASE_URL}/api/soc/threat-intelligence/`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch threat intelligence data');
+  }
+
+  return await response.json();
+};
+
+export const exportSOCIncidents = async (format = 'csv', options = {}) => {
+  const params = new URLSearchParams({
+    format,
+    ...options
+  });
+
+  const response = await fetch(`${API_BASE_URL}/api/soc/incidents/export/?${params.toString()}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to export SOC incidents');
+  }
+
+  return response; // Return the response object for blob handling
+};
+
+export const getSOCIncidents = async (queryParams = {}) => {
+  const params = new URLSearchParams(queryParams).toString();
+  const url = `${API_BASE_URL}/api/soc/incidents/${params ? `?${params}` : ''}`;
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch SOC incidents');
+  }
+
+  return await response.json();
+};
+
+export const createSOCIncident = async (incidentData) => {
+  const response = await fetch(`${API_BASE_URL}/api/soc/incidents/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(incidentData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to create SOC incident');
+  }
+
+  return await response.json();
+};
+
+export const updateSOCIncident = async (incidentId, incidentData) => {
+  const response = await fetch(`${API_BASE_URL}/api/soc/incidents/${incidentId}/`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(incidentData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to update SOC incident');
+  }
+
+  return await response.json();
+};
+
+export const getSOCIncidentDetail = async (incidentId) => {
+  const response = await fetch(`${API_BASE_URL}/api/soc/incidents/${incidentId}/`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch SOC incident details');
+  }
+
+  return await response.json();
+};
+
+export const assignSOCIncident = async (incidentId, username) => {
+  const response = await fetch(`${API_BASE_URL}/api/soc/incidents/${incidentId}/assign/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ username }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to assign SOC incident');
+  }
+
+  return await response.json();
+};
+
+export const addSOCIncidentComment = async (incidentId, comment) => {
+  const response = await fetch(`${API_BASE_URL}/api/soc/incidents/${incidentId}/comment/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ comment }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to add comment to SOC incident');
+  }
+
+  return await response.json();
+};
+
