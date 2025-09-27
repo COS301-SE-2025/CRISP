@@ -19,6 +19,9 @@ const Reports = ({ active = true }) => {
   const [viewMode, setViewMode] = useState('grid');
   const [savingReportId, setSavingReportId] = useState(null);
   const [exportingReportId, setExportingReportId] = useState(null);
+  const [deletingReportId, setDeletingReportId] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [reportToDelete, setReportToDelete] = useState(null);
 
   useEffect(() => {
     fetchReports();
@@ -499,6 +502,56 @@ const Reports = ({ active = true }) => {
     setShowDetailModal(true);
   };
 
+  // Show delete confirmation modal
+  const showDeleteConfirmation = (report) => {
+    setReportToDelete(report);
+    setShowDeleteModal(true);
+  };
+
+  // Delete report function
+  const confirmDeleteReport = async () => {
+    if (!reportToDelete) return;
+
+    try {
+      setDeletingReportId(reportToDelete.id);
+
+      // For saved reports, delete from backend
+      if (reportToDelete.isSaved && !reportToDelete.isTemporary) {
+        const token = localStorage.getItem('crisp_auth_token');
+        if (token) {
+          const response = await fetch(`http://localhost:8000/api/reports/${reportToDelete.id}/delete/`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          const data = await response.json();
+
+          if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Failed to delete report from server');
+          }
+
+          console.log('Report deleted from backend:', data.message);
+        }
+      }
+
+      // Remove from local state
+      setReports(prevReports => prevReports.filter(r => r.id !== reportToDelete.id));
+
+      // Close modal
+      setShowDeleteModal(false);
+      setReportToDelete(null);
+
+    } catch (error) {
+      console.error('Error deleting report:', error);
+      alert(error.message || 'Failed to delete report. Please try again.');
+    } finally {
+      setDeletingReportId(null);
+    }
+  };
+
   const closeDetailModal = () => {
     setShowDetailModal(false);
     setSelectedReport(null);
@@ -774,6 +827,22 @@ const Reports = ({ active = true }) => {
                         </>
                       )}
                     </button>
+                    <button
+                      className="btn btn-danger btn-sm"
+                      onClick={() => showDeleteConfirmation(report)}
+                      disabled={deletingReportId === report.id}
+                      title="Delete Report"
+                    >
+                      {deletingReportId === report.id ? (
+                        <>
+                          <i className="fas fa-spinner fa-spin"></i>
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-trash"></i>
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -856,6 +925,63 @@ const Reports = ({ active = true }) => {
           onClose={closeDetailModal}
           api={api}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && reportToDelete && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>Confirm Delete</h3>
+              <button
+                className="close-btn"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setReportToDelete(null);
+                }}
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="delete-confirmation">
+                <div className="warning-icon">
+                  <i className="fas fa-exclamation-triangle"></i>
+                </div>
+                <h4>Delete Report</h4>
+                <p>Are you sure you want to delete "{reportToDelete.title}"?</p>
+                <p className="warning-text">This action cannot be undone. The report will be permanently removed from the database.</p>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setReportToDelete(null);
+                }}
+                disabled={deletingReportId === reportToDelete.id}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={confirmDeleteReport}
+                disabled={deletingReportId === reportToDelete.id}
+              >
+                {deletingReportId === reportToDelete.id ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin"></i> Deleting...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-trash"></i> Delete Report
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <style>{`
@@ -1120,6 +1246,70 @@ const Reports = ({ active = true }) => {
         .btn-sm {
           padding: 6px 12px;
           font-size: 12px;
+        }
+
+        .btn-danger {
+          background: #dc3545;
+          border: 1px solid #dc3545;
+          color: white;
+        }
+
+        .btn-danger:hover {
+          background: #c82333;
+          border-color: #bd2130;
+        }
+
+        .btn-danger:disabled {
+          background: #6c757d;
+          border-color: #6c757d;
+          cursor: not-allowed;
+        }
+
+        .btn-secondary {
+          background: #6c757d;
+          border: 1px solid #6c757d;
+          color: white;
+        }
+
+        .btn-secondary:hover {
+          background: #5a6268;
+          border-color: #545b62;
+        }
+
+        .delete-confirmation {
+          text-align: center;
+          padding: 20px;
+        }
+
+        .warning-icon {
+          width: 60px;
+          height: 60px;
+          margin: 0 auto 20px;
+          background: #fff3cd;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #856404;
+          font-size: 24px;
+        }
+
+        .delete-confirmation h4 {
+          margin: 0 0 15px 0;
+          color: #333;
+          font-size: 18px;
+        }
+
+        .delete-confirmation p {
+          margin: 0 0 10px 0;
+          color: #495057;
+          line-height: 1.5;
+        }
+
+        .warning-text {
+          color: #856404 !important;
+          font-size: 14px;
+          font-weight: 500;
         }
 
         .empty-state {
