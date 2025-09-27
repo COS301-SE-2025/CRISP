@@ -657,7 +657,10 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
           <TrustManagement active={activePage === 'trust-management'} />
           <UserManagement active={activePage === 'user-management'} navigationState={navigationState} setNavigationState={setNavigationState} />
           <Reports active={activePage === 'reports'} />
-          <Notifications active={activePage === 'notifications'} />
+          <Notifications
+            active={activePage === 'notifications'}
+            onNotificationChange={fetchUnreadCount}
+          />
           <AssetManagement active={activePage === 'asset-management'} />
           <SOCDashboard active={activePage === 'soc-dashboard'} showPage={showPage} />
           <IncidentsList active={activePage === 'soc-incidents'} showPage={showPage} />

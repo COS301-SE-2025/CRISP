@@ -501,6 +501,48 @@ def delete_notification(request, notification_id):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_all_notifications(request):
+    """
+    Delete all notifications for the current user
+    """
+    try:
+        from .models import Notification
+        from core.models.models import CustomAlert
+
+        # Delete all regular notifications for the user
+        deleted_notifications = Notification.objects.filter(recipient=request.user).delete()
+
+        # Delete all custom alerts for the user's organization(s)
+        deleted_custom_alerts = 0
+        if hasattr(request.user, 'organization') and request.user.organization:
+            deleted_custom_alerts = CustomAlert.objects.filter(
+                organization=request.user.organization
+            ).delete()[0]
+
+        total_deleted = deleted_notifications[0] + deleted_custom_alerts
+
+        logger.info(f"User {request.user.username} deleted all notifications: {deleted_notifications[0]} notifications + {deleted_custom_alerts} custom alerts")
+
+        return Response({
+            'success': True,
+            'message': f'All notifications deleted successfully',
+            'deleted_count': total_deleted,
+            'details': {
+                'notifications': deleted_notifications[0],
+                'custom_alerts': deleted_custom_alerts
+            }
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        logger.error(f"Error deleting all notifications: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to delete all notifications'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_notification_preferences(request):

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { getAlerts, markNotificationRead, markAllNotificationsRead, deleteNotification } from '../../api.js';
+import { getAlerts, markNotificationRead, markAllNotificationsRead, deleteNotification, deleteAllNotifications } from '../../api.js';
 
-const Notifications = ({ active }) => {
+const Notifications = ({ active, onNotificationChange }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -92,13 +92,18 @@ const Notifications = ({ active }) => {
   const markAsRead = async (notificationId) => {
     try {
       await markNotificationRead(notificationId);
-      
+
       // Update local state
       setNotifications(prev =>
         prev.map(n =>
           n.id === notificationId ? { ...n, read: true } : n
         )
       );
+
+      // Update bell icon count
+      if (onNotificationChange) {
+        onNotificationChange();
+      }
     } catch (err) {
       console.error('Error marking notification as read:', err);
       setError('Failed to mark notification as read: ' + err.message);
@@ -108,11 +113,16 @@ const Notifications = ({ active }) => {
   const markAllAsRead = async () => {
     try {
       await markAllNotificationsRead();
-      
+
       // Update local state
       setNotifications(prev =>
         prev.map(n => ({ ...n, read: true }))
       );
+
+      // Update bell icon count
+      if (onNotificationChange) {
+        onNotificationChange();
+      }
     } catch (err) {
       console.error('Error marking all notifications as read:', err);
       setError('Failed to mark all notifications as read: ' + err.message);
@@ -122,14 +132,45 @@ const Notifications = ({ active }) => {
   const deleteNotificationHandler = async (notificationId) => {
     try {
       await deleteNotification(notificationId);
-      
+
       // Update local state - remove the deleted notification
       setNotifications(prev =>
         prev.filter(n => n.id !== notificationId)
       );
+
+      // Update bell icon count
+      if (onNotificationChange) {
+        onNotificationChange();
+      }
     } catch (err) {
       console.error('Error deleting notification:', err);
       setError('Failed to delete notification: ' + err.message);
+    }
+  };
+
+  const deleteAllNotificationsHandler = async () => {
+    try {
+      // Show confirmation dialog
+      const confirmDelete = window.confirm(
+        'Are you sure you want to delete ALL notifications? This action cannot be undone.'
+      );
+
+      if (!confirmDelete) return;
+
+      await deleteAllNotifications();
+
+      // Clear all notifications from local state
+      setNotifications([]);
+
+      // Update bell icon count
+      if (onNotificationChange) {
+        onNotificationChange();
+      }
+
+      console.log('✅ All notifications deleted successfully');
+    } catch (err) {
+      console.error('Error deleting all notifications:', err);
+      setError('Failed to delete all notifications: ' + err.message);
     }
   };
 
@@ -234,6 +275,12 @@ const Notifications = ({ active }) => {
               Mark All Read
             </button>
           )}
+          {notifications.length > 0 && (
+            <button onClick={deleteAllNotificationsHandler} className="btn btn-danger">
+              <i className="fas fa-trash-alt"></i>
+              Delete All
+            </button>
+          )}
         </div>
       </div>
 
@@ -282,13 +329,6 @@ const Notifications = ({ active }) => {
             <i className="fas fa-bell-slash"></i>
             <h3>No notifications</h3>
             <p>You're all caught up! No notifications to show.</p>
-            <div style={{ marginTop: '15px', fontSize: '12px', color: '#666', background: '#fff3cd', padding: '10px', border: '1px solid #ffeaa7', borderRadius: '4px' }}>
-              <strong>Troubleshooting:</strong><br/>
-              • Check browser console for API errors<br/>
-              • Verify you're logged in as admin<br/>
-              • Check if backend is running<br/>
-              • Look for CORS or network issues
-            </div>
           </div>
         ) : (
           notifications.map(notification => (

@@ -617,6 +617,13 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
                             updated_indicators=0  # Feed consumption typically adds new indicators
                         )
                         logger.info(f"Added feed consumption to batch notification service: {feed.name} (+{indicator_count} indicators)")
+
+                        # Trigger frontend auto-refresh for feed consumption
+                        from django.core.cache import cache
+                        from django.utils import timezone
+                        cache.set('indicators_updated', timezone.now().isoformat(), timeout=300)
+                        cache.set('feeds_updated', timezone.now().isoformat(), timeout=300)
+                        logger.info(f"🔄 Triggered frontend refresh after feed consumption: {feed.name} (+{indicator_count} indicators)")
                     except Exception as e:
                         logger.error(f"Error adding feed consumption to batch notification service: {e}")
                         # Don't fail the request if notification fails
@@ -1468,6 +1475,11 @@ def indicators_list(request):
                     'source': 'Manual Entry'
                 }
             )
+
+            # Trigger frontend auto-refresh for new indicator
+            from django.core.cache import cache
+            cache.set('indicators_updated', timezone.now().isoformat(), timeout=300)
+            logger.info("🔄 Triggered frontend indicator refresh after manual indicator creation")
             
             # Format response
             feed_name = 'Manual Entry'
@@ -1763,7 +1775,7 @@ def indicators_bulk_import(request):
             indicator_type = str(indicator_data['type']).lower().strip()
             validation_patterns = {
                 'ip': r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$',
-                'domain': r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$',
+                'domain': r'^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.?$',
                 'url': r'^https?://[^\s/$.?#].[^\s]*$',
                 'file_hash': r'^[a-fA-F0-9]{32}$|^[a-fA-F0-9]{40}$|^[a-fA-F0-9]{64}$|^[a-fA-F0-9]{128}$',  # MD5, SHA1, SHA256, SHA512
                 'email': r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -1895,6 +1907,12 @@ def indicators_bulk_import(request):
                     'total_attempted': len(indicators_data)
                 }
             )
+
+            # Trigger frontend auto-refresh for bulk imported indicators
+            from django.core.cache import cache
+            from django.utils import timezone
+            cache.set('indicators_updated', timezone.now().isoformat(), timeout=300)
+            logger.info(f"🔄 Triggered frontend indicator refresh after bulk import of {len(created_indicators)} indicators")
         
         return Response({
             'success': True,

@@ -11,6 +11,7 @@ urlpatterns = [
     path('<uuid:notification_id>/mark-read/', alerts_views.mark_notification_read, name='alerts-mark-read'),
     path('<uuid:notification_id>/delete/', alerts_views.delete_notification, name='alerts-delete'),
     path('mark-all-read/', alerts_views.mark_all_notifications_read, name='alerts-mark-all-read'),
+    path('delete-all/', alerts_views.delete_all_notifications, name='alerts-delete-all'),
     
     # Email alert endpoints
     path('threat/', alerts_views.send_threat_alert, name='alerts-send-threat'),
