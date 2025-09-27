@@ -112,13 +112,17 @@ class AssetBasedAlertService:
                 matched_assets = self._correlate_indicator_with_assets(indicator, assets)
 
                 if matched_assets:
-                    alert = self._generate_custom_alert(
-                        indicator=indicator,
-                        matched_assets=matched_assets,
-                        organization=organization
-                    )
-                    if alert:
-                        alerts.append(alert)
+                    # Check for duplicate alerts before generating new ones
+                    if not self._is_duplicate_alert(indicator, matched_assets, organization):
+                        alert = self._generate_custom_alert(
+                            indicator=indicator,
+                            matched_assets=matched_assets,
+                            organization=organization
+                        )
+                        if alert:
+                            alerts.append(alert)
+                    else:
+                        logger.debug(f"Skipping duplicate alert for indicator {indicator.id} targeting assets {[a.name for a in matched_assets]}")
 
             logger.info(f"Generated {len(alerts)} alerts for organization {organization.name}")
             return alerts
@@ -369,6 +373,152 @@ class AssetBasedAlertService:
         except Exception as e:
             logger.warning(f"Error checking software match: {e}")
             return False
+
+    def _is_duplicate_alert(self, indicator: Indicator, matched_assets: List[AssetInventory],
+                          organization: Organization, lookback_hours: int = 6) -> bool:
+        """
+        Check if a similar alert already exists for this indicator/asset combination.
+
+        Args:
+            indicator: The indicator to check
+            matched_assets: Assets that would be included in the alert
+            organization: Organization to check within
+            lookback_hours: How many hours back to check for duplicates (default 6)
+
+        Returns:
+            True if a similar alert already exists, False otherwise
+        """
+        try:
+            # Define the time window for checking duplicates
+            cutoff_time = timezone.now() - timedelta(hours=lookback_hours)
+
+            # Get asset IDs for comparison
+            asset_ids = [asset.id for asset in matched_assets]
+
+            # Check for existing alerts that:
+            # 1. Are for the same organization
+            # 2. Were created within the lookback window
+            # 3. Have similar indicator pattern/type
+            # 4. Target overlapping assets (at least 50% overlap)
+            existing_alerts = CustomAlert.objects.filter(
+                organization=organization,
+                detected_at__gte=cutoff_time,
+                alert_type='infrastructure_targeted',
+                status__in=['new', 'investigating', 'acknowledged']  # Don't check resolved alerts
+            ).prefetch_related('matched_assets', 'source_indicators')
+
+            for alert in existing_alerts:
+                # Check if the source indicators are similar (same type and pattern)
+                for source_indicator in alert.source_indicators.all():
+                    if (source_indicator.type == indicator.type and
+                        self._indicators_are_similar(source_indicator, indicator)):
+
+                        # Check asset overlap - if more than 50% of assets overlap, consider it duplicate
+                        alert_asset_ids = [asset.id for asset in alert.matched_assets.all()]
+                        overlap = set(asset_ids) & set(alert_asset_ids)
+                        overlap_percentage = len(overlap) / max(len(asset_ids), 1)
+
+                        if overlap_percentage >= 0.5:  # 50% or more asset overlap
+                            logger.debug(f"Found duplicate alert {alert.alert_id} with {overlap_percentage:.1%} asset overlap")
+                            return True
+
+            return False
+
+        except Exception as e:
+            logger.error(f"Error checking for duplicate alerts: {e}")
+            # If there's an error, err on the side of allowing the alert
+            return False
+
+    def _indicators_are_similar(self, indicator1: Indicator, indicator2: Indicator) -> bool:
+        """
+        Check if two indicators are similar enough to be considered duplicates.
+
+        Args:
+            indicator1: First indicator
+            indicator2: Second indicator
+
+        Returns:
+            True if indicators are similar, False otherwise
+        """
+        try:
+            # Same type is required
+            if indicator1.type != indicator2.type:
+                return False
+
+            # Get indicator patterns/values
+            pattern1 = getattr(indicator1, 'pattern', '') or getattr(indicator1, 'value', '')
+            pattern2 = getattr(indicator2, 'pattern', '') or getattr(indicator2, 'value', '')
+
+            # For exact matches
+            if pattern1 == pattern2:
+                return True
+
+            # For domain indicators, check if they're subdomains of each other
+            if indicator1.type == 'domain':
+                return self._domains_are_similar(pattern1, pattern2)
+
+            # For IP indicators, check if they're in similar ranges
+            if indicator1.type in ['ip', 'ipv4-addr', 'ipv6-addr']:
+                return self._ips_are_similar(pattern1, pattern2)
+
+            # For other types, require exact match
+            return pattern1 == pattern2
+
+        except Exception as e:
+            logger.error(f"Error comparing indicators: {e}")
+            return False
+
+    def _domains_are_similar(self, domain1: str, domain2: str) -> bool:
+        """Check if two domains are similar (e.g., subdomains of each other)."""
+        try:
+            # Remove any leading/trailing whitespace and convert to lowercase
+            d1 = domain1.strip().lower()
+            d2 = domain2.strip().lower()
+
+            # Exact match
+            if d1 == d2:
+                return True
+
+            # Check if one is a subdomain of the other
+            # e.g., "sub.example.com" and "example.com" should be considered similar
+            if d1.endswith('.' + d2) or d2.endswith('.' + d1):
+                return True
+
+            # Check if they share the same base domain (last 2 parts)
+            parts1 = d1.split('.')
+            parts2 = d2.split('.')
+
+            if len(parts1) >= 2 and len(parts2) >= 2:
+                base1 = '.'.join(parts1[-2:])
+                base2 = '.'.join(parts2[-2:])
+                return base1 == base2
+
+            return False
+
+        except Exception:
+            return False
+
+    def _ips_are_similar(self, ip1: str, ip2: str) -> bool:
+        """Check if two IP addresses/ranges are similar or overlapping."""
+        try:
+            # Try to parse as IP networks (handles both single IPs and CIDR ranges)
+            try:
+                net1 = ipaddress.ip_network(ip1, strict=False)
+                net2 = ipaddress.ip_network(ip2, strict=False)
+
+                # Check if networks overlap
+                return net1.overlaps(net2) or net2.overlaps(net1)
+            except ValueError:
+                # If parsing as networks fails, try as individual addresses
+                addr1 = ipaddress.ip_address(ip1)
+                addr2 = ipaddress.ip_address(ip2)
+
+                # For individual IPs, they must be exact matches
+                return addr1 == addr2
+
+        except Exception:
+            # If all parsing fails, fall back to string comparison
+            return ip1.strip() == ip2.strip()
 
     def _generate_custom_alert(self, indicator: Indicator, matched_assets: List[AssetInventory],
                              organization: Organization) -> Optional[CustomAlert]:

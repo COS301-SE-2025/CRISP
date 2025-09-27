@@ -1493,3 +1493,50 @@ export const addSOCIncidentComment = async (incidentId, comment) => {
   return await response.json();
 };
 
+// Sync API Functions for real-time updates
+export const checkUpdates = async () => {
+  const response = await fetch(`${API_BASE_URL}/api/sync/check-updates/`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to check updates');
+  }
+
+  return await response.json();
+};
+
+export const markUpdateSeen = async (updateType, timestamp) => {
+  const response = await fetch(`${API_BASE_URL}/api/sync/mark-seen/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      update_type: updateType,
+      timestamp: timestamp
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to mark update as seen');
+  }
+
+  return await response.json();
+};
+
+export const getLastSeen = async () => {
+  const response = await fetch(`${API_BASE_URL}/api/sync/last-seen/`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to get last seen timestamps');
+  }
+
+  return await response.json();
+};
+

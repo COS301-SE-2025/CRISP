@@ -25,7 +25,7 @@ from core.api.threat_feed_views import (
     ttp_export_csv, ttp_export_stix, virustotal_sync  # New plain Django export views and VirusTotal sync
 )
 from core.api.ttp_views import TTPExportView, MITREMatrixView
-from core.api import reports_api
+from core.api import reports_api, sync_api
 
 # Set up REST API router
 router = routers.DefaultRouter()
@@ -179,6 +179,13 @@ asset_urlpatterns = [
     path('clear-demo-data/', asset_api.clear_demo_data, name='clear_demo_data'),
 ]
 
+# Sync URLs
+sync_urlpatterns = [
+    path('check-updates/', sync_api.check_updates, name='sync_check_updates'),
+    path('mark-seen/', sync_api.mark_update_seen, name='sync_mark_seen'),
+    path('last-seen/', sync_api.get_last_seen, name='sync_last_seen'),
+]
+
 # Main URL patterns
 urlpatterns = [
     path('', status_view, name='core-status'),
@@ -189,6 +196,7 @@ urlpatterns = [
     path('ttps/', include(ttp_urlpatterns)), # TTP URLs
     path('reports/', include(reports_urlpatterns)), # Reports URLs
     path('assets/', include(asset_urlpatterns)), # Asset Management URLs (WOW Factor #1)
+    path('sync/', include(sync_urlpatterns)), # Sync URLs for real-time updates
     path('soc/', include('soc.urls')), # SOC Management URLs
     path('', include(threat_feed_urlpatterns)), # Threat Feed URLs (no prefix, as they are already under 'api/' in crisp_unified/urls.py)
 ]

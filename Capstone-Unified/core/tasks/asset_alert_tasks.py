@@ -92,6 +92,11 @@ def continuous_asset_monitoring(self, hours_back=1):
 
         logger.info(f"Continuous asset monitoring completed. Generated {len(generated_alerts)} alerts from {len(indicators_list)} indicators")
 
+        # Trigger frontend updates if new indicators were processed
+        if len(indicators_list) > 0:
+            cache.set('indicators_updated', timezone.now().isoformat(), timeout=300)
+            logger.info("🔄 Triggered frontend indicator refresh")
+
         return {
             'status': 'completed',
             'indicators_processed': len(indicators_list),

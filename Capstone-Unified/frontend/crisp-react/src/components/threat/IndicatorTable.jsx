@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNotifications } from '../enhanced/NotificationManager.jsx';
+import { getIndicators, checkUpdates, markUpdateSeen } from '../../api.js';
 
 const IndicatorTable = () => {
   const { showError } = useNotifications();
@@ -11,103 +12,145 @@ const IndicatorTable = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
   const [currentPage, setCurrentPage] = useState(1);
-  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true); // Enable auto-refresh by default
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [selectedIndicators, setSelectedIndicators] = useState(new Set());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastSyncCheck, setLastSyncCheck] = useState(null);
   const itemsPerPage = 20;
 
   useEffect(() => {
     fetchIndicators();
     // Clear selections when filter or search changes
     setSelectedIndicators(new Set());
+    // Reset to first page when filter changes
+    setCurrentPage(1);
   }, [filter, searchTerm]);
 
-  // Auto-refresh every 30 seconds when enabled
+  // Check for updates every 10 seconds when enabled (smart syncing)
   useEffect(() => {
     let interval;
     if (autoRefresh) {
-      interval = setInterval(() => {
-        fetchIndicators();
-        setLastRefresh(new Date());
-      }, 30000);
+      interval = setInterval(async () => {
+        try {
+          const updateData = await checkUpdates();
+
+          if (updateData.success && updateData.updates.indicators_updated) {
+            const lastUpdate = updateData.updates.indicators_updated;
+
+            // Only refresh if there's a new update since our last check
+            if (!lastSyncCheck || new Date(lastUpdate) > new Date(lastSyncCheck)) {
+              console.log('🔄 New indicators detected, refreshing table...');
+              fetchIndicators(false); // Silent refresh
+              setLastRefresh(new Date());
+              setLastSyncCheck(lastUpdate);
+
+              // Mark this update as seen
+              await markUpdateSeen('indicators_updated', lastUpdate);
+            }
+          }
+        } catch (error) {
+          // Fallback to regular interval refresh if sync API fails
+          console.warn('Sync check failed, falling back to regular refresh:', error);
+          fetchIndicators(false);
+          setLastRefresh(new Date());
+        }
+      }, 10000); // 10 seconds for smart checking
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [autoRefresh, filter, searchTerm]);
+  }, [autoRefresh, filter, searchTerm, lastSyncCheck]);
 
   // Clear selections when page changes
   useEffect(() => {
     setSelectedIndicators(new Set());
   }, [currentPage]);
 
-  // Listen for feed consumption completion events
+  // Listen for feed consumption completion events and asset monitoring updates
   useEffect(() => {
     const handleFeedUpdate = (event) => {
-      // Refresh indicators when feed consumption completes
-      fetchIndicators();
+      // Refresh indicators when feed consumption completes or asset monitoring runs
+      fetchIndicators(false); // Silent refresh
       setLastRefresh(new Date());
     };
 
     // Listen for custom events from other components
     window.addEventListener('feedConsumptionComplete', handleFeedUpdate);
     window.addEventListener('indicatorsUpdated', handleFeedUpdate);
+    window.addEventListener('assetMonitoringComplete', handleFeedUpdate);
+    window.addEventListener('newIndicatorDetected', handleFeedUpdate);
 
     return () => {
       window.removeEventListener('feedConsumptionComplete', handleFeedUpdate);
       window.removeEventListener('indicatorsUpdated', handleFeedUpdate);
+      window.removeEventListener('assetMonitoringComplete', handleFeedUpdate);
+      window.removeEventListener('newIndicatorDetected', handleFeedUpdate);
     };
   }, []);
 
-  const fetchIndicators = async () => {
+  const fetchIndicators = async (showLoading = true) => {
     try {
-      setLoading(true);
-
-      // Fetch indicators (now includes both regular and shared indicators with metadata)
-      const indicatorsResponse = await fetch('/api/indicators/', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(localStorage.getItem('token') && {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          })
-        }
-      });
-
-      if (!indicatorsResponse.ok) {
-        throw new Error(`HTTP error! status: ${indicatorsResponse.status}`);
+      if (showLoading) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
       }
 
-      const indicatorsData = await indicatorsResponse.json();
+      // Build query parameters for filtering
+      const queryParams = {
+        limit: 500, // Get more indicators for better filtering
+        ordering: '-created_at', // Newest first
+      };
 
-      // Debug: Log the API response to see what we're getting
+      // Add specific filters
+      if (filter === 'critical') {
+        queryParams.severity = 'critical';
+      } else if (filter === 'IP Address') {
+        queryParams.type = 'ip';
+      } else if (filter === 'Domain') {
+        queryParams.type = 'domain';
+      } else if (filter === 'File Hash') {
+        queryParams.type = 'file_hash';
+      }
+
+      // Add search term
+      if (searchTerm) {
+        queryParams.search = searchTerm;
+      }
+
+      console.log('🔍 Fetching indicators with params:', queryParams);
+
+      // Use the proper API function
+      const indicatorsData = await getIndicators(queryParams);
+
       console.log('📡 Indicators API response:', indicatorsData);
 
       // Handle different response formats for indicators
-      let indicatorsList = Array.isArray(indicatorsData) ? indicatorsData : indicatorsData.results || indicatorsData.indicators || [];
+      let indicatorsList = Array.isArray(indicatorsData) ? indicatorsData :
+                          indicatorsData.results || indicatorsData.indicators || indicatorsData.data || [];
 
       // Debug: Log the first indicator to see its structure
       if (indicatorsList.length > 0) {
         console.log('🔍 First indicator structure:', indicatorsList[0]);
-        console.log('🔗 First indicator sharing data:', indicatorsList[0].sharing);
       }
 
-      // Transform indicators (now includes both regular and shared with metadata)
+      // Transform indicators to consistent format
       const allIndicators = indicatorsList.map(indicator => ({
-        id: indicator.id,
-        type: indicator.indicator_type || indicator.type || 'Unknown',
+        id: indicator.id || indicator.uuid,
+        type: indicator.type || indicator.indicator_type || 'Unknown',
         value: indicator.value || indicator.indicator_value || '',
         threat_type: indicator.threat_type || 'Unknown',
         confidence: indicator.confidence || 'medium',
         severity: indicator.severity || 'medium',
-        source: indicator.source || indicator.feed_name || 'Unknown',
+        source: indicator.source || indicator.threat_feed?.name || indicator.feed_name || 'Unknown',
         sharing: indicator.sharing || { is_shared: false },
         created_at: indicator.created_at || indicator.timestamp || new Date().toISOString(),
         first_seen: indicator.first_seen || indicator.created_at || new Date().toISOString(),
         last_seen: indicator.last_seen || indicator.created_at || new Date().toISOString(),
         tags: indicator.tags || [],
-        description: indicator.description || '',
+        description: indicator.description || indicator.name || '',
         ttps: indicator.ttps || [],
         false_positive_score: indicator.false_positive_score || 0,
         is_shared: indicator.sharing?.is_shared || false,
@@ -120,19 +163,15 @@ const IndicatorTable = () => {
 
       let filteredIndicators = [...allIndicators];
 
-      // Apply type filter
+      // Apply client-side type filter if not already applied in API
       if (filter === 'shared') {
         filteredIndicators = filteredIndicators.filter(i => i.is_shared);
       } else if (filter === 'own') {
         filteredIndicators = filteredIndicators.filter(i => !i.is_shared);
-      } else if (filter !== 'all') {
-        filteredIndicators = filteredIndicators.filter(i =>
-          i.type === filter || i.threat_type === filter || i.confidence === filter || i.severity === filter
-        );
       }
 
-      // Apply search filter
-      if (searchTerm) {
+      // Apply client-side search filter if not already applied in API
+      if (searchTerm && !queryParams.search) {
         filteredIndicators = filteredIndicators.filter(i =>
           i.value.toLowerCase().includes(searchTerm.toLowerCase()) ||
           i.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -141,11 +180,26 @@ const IndicatorTable = () => {
         );
       }
 
+      console.log(`📊 Setting ${filteredIndicators.length} indicators (${sharedIndicators.length} shared)`);
       setIndicators(filteredIndicators);
+
+      // Clear error if fetch was successful
+      if (error) {
+        setError(null);
+      }
+
     } catch (err) {
-      setError(err.message);
+      console.error('❌ Error fetching indicators:', err);
+      if (showLoading) {
+        setError(err.message);
+      }
+      // Don't show error for silent refreshes to avoid UI disruption
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      } else {
+        setRefreshing(false);
+      }
     }
   };
 
@@ -330,24 +384,26 @@ const IndicatorTable = () => {
             <button
               className={`btn btn-outline ${autoRefresh ? 'active' : ''}`}
               onClick={() => setAutoRefresh(!autoRefresh)}
-              title={autoRefresh ? 'Disable auto-refresh' : 'Enable auto-refresh'}
+              title={autoRefresh ? 'Auto-refresh enabled (every 15s) - Click to disable' : 'Auto-refresh disabled - Click to enable'}
             >
               <i className={`fas fa-sync-alt ${autoRefresh ? 'fa-spin' : ''}`}></i>
-              Auto
+              {autoRefresh ? 'Auto ON' : 'Auto OFF'}
             </button>
             <button
               className="btn btn-outline"
               onClick={() => {
-                fetchIndicators();
+                fetchIndicators(true);
                 setLastRefresh(new Date());
               }}
-              title="Manual refresh"
+              title="Manual refresh now"
             >
               <i className="fas fa-refresh"></i>
               Refresh
             </button>
             <span className="last-refresh">
               Last: {lastRefresh.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+              {autoRefresh && <small style={{display: 'block', color: '#28a745'}}>Auto: 15s</small>}
+              {refreshing && <small style={{display: 'block', color: '#ffc107'}}>Syncing...</small>}
             </span>
           </div>
           <button className="btn btn-primary">
