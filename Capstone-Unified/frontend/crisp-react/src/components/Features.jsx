@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import ElectricBorder from './ElectricBorder';
 import GradientText from './GradientText';
 
 gsap.registerPlugin(ScrollTrigger);

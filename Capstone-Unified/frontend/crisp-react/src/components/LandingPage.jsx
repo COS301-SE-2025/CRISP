@@ -5,6 +5,7 @@ import Features from './Features';
 import Stats from './Stats';
 import CTA from './CTA';
 import Footer from './Footer';
+import ShapeBlur from './ShapeBlur';
 
 function LandingPage() {
   return (
@@ -50,7 +51,7 @@ function LandingPage() {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 2rem 30px;
+            padding: 1.25rem 30px;
           }
 
           .logo {
@@ -147,7 +148,7 @@ function LandingPage() {
           /* Hero Section */
           .hero {
             min-height: 100vh;
-            padding: 80px 0;
+            padding: 120px 0 80px;
             background: linear-gradient(135deg, #0a0b0d 0%, #1a1b1e 100%);
             position: relative;
             overflow: hidden;
@@ -170,21 +171,22 @@ function LandingPage() {
           .hero-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 4rem;
+            gap: 6rem;
             align-items: center;
             position: relative;
             z-index: 1;
             width: 100%;
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 0 20px;
+            padding: 0 30px;
           }
 
           .hero-title {
-            font-size: 3.5rem;
+            font-size: 3.2rem;
             font-weight: 800;
-            line-height: 1.2;
-            margin-bottom: 1.5rem;
+            line-height: 1.1;
+            margin-bottom: 2rem;
+            letter-spacing: -0.02em;
           }
 
           .highlight {
@@ -195,33 +197,36 @@ function LandingPage() {
           }
 
           .hero-description {
-            font-size: 1.25rem;
+            font-size: 1.2rem;
             color: #b0b0b0;
-            margin-bottom: 2rem;
-            line-height: 1.6;
+            margin-bottom: 2.5rem;
+            line-height: 1.7;
+            max-width: 90%;
           }
 
           .hero-actions {
             display: flex;
-            gap: 1rem;
+            gap: 1.5rem;
             flex-wrap: wrap;
+            align-items: center;
           }
 
           /* Dashboard Preview */
           .dashboard-preview {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 1.5rem;
+            border-radius: 16px;
+            padding: 2rem;
             backdrop-filter: blur(10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
           }
 
           .dashboard-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1.25rem;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
           }
 
@@ -257,17 +262,18 @@ function LandingPage() {
           .dashboard-stats {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
+            gap: 1.5rem;
           }
 
           .stat-card {
             display: flex;
             align-items: center;
-            gap: 1rem;
-            padding: 1rem;
+            gap: 1.25rem;
+            padding: 1.25rem;
             background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
+            border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
           }
 
           .dashboard-preview .stat-icon {
@@ -301,9 +307,10 @@ function LandingPage() {
 
           /* Stats Section */
           .stats {
-            padding: 100px 0;
+            padding: 120px 0;
             background: linear-gradient(180deg, #0a0b0d 0%, #1a1b1e 100%);
             position: relative;
+            overflow: hidden;
           }
 
           .stats::before {
@@ -324,16 +331,18 @@ function LandingPage() {
 
           .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2.5rem;
+            max-width: 1200px;
+            margin: 0 auto;
           }
 
           .stat-item {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            padding: 2.5rem 2rem;
+            border-radius: 20px;
+            padding: 3rem 2.5rem;
             text-align: center;
             transition: all 0.3s ease;
           }
@@ -345,7 +354,7 @@ function LandingPage() {
           }
 
           .stat-item .stat-icon {
-            margin: 0 auto 1.5rem;
+            margin: 0 auto 2rem;
             color: #4285f4;
           }
 
@@ -355,28 +364,34 @@ function LandingPage() {
           }
 
           .stat-item .stat-number {
-            font-size: 2.8rem;
+            font-size: 3rem;
             font-weight: 700;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
             color: #ffffff;
+            letter-spacing: -0.02em;
           }
 
           .stat-item .stat-label {
-            font-size: 1rem;
+            font-size: 1.1rem;
             color: #b0b0b0;
             line-height: 1.4;
+            font-weight: 500;
           }
 
           /* Features Section */
           .features-new {
-            padding: 100px 0;
+            padding: 120px 0;
             background: #0a0b0d;
             position: relative;
+            overflow: hidden;
           }
 
           .features-header {
             text-align: center;
-            margin-bottom: 4rem;
+            margin-bottom: 5rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
           }
 
           .header-badge {
@@ -397,10 +412,11 @@ function LandingPage() {
           }
 
           .features-title {
-            font-size: 3rem;
+            font-size: 2.8rem;
             font-weight: 800;
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
             line-height: 1.2;
+            letter-spacing: -0.02em;
           }
 
           .title-subtitle {
@@ -412,15 +428,17 @@ function LandingPage() {
           .features-description {
             font-size: 1.2rem;
             color: #b0b0b0;
-            max-width: 700px;
+            max-width: 600px;
             margin: 0 auto 3rem;
-            line-height: 1.6;
+            line-height: 1.7;
           }
 
           .features-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2.5rem;
+            max-width: 1200px;
+            margin: 0 auto;
           }
 
           .feature-card-new {
@@ -436,12 +454,12 @@ function LandingPage() {
           }
 
           .feature-content {
-            padding: 2.5rem 2rem;
+            padding: 3rem 2.5rem;
             height: 100%;
             position: relative;
             overflow: hidden;
             background: #1a1b1e;
-            border-radius: 15px;
+            border-radius: 16px;
           }
 
           .feature-background {
@@ -459,26 +477,29 @@ function LandingPage() {
           }
 
           .feature-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1.5rem;
+            font-size: 2.8rem;
+            margin-bottom: 2rem;
             display: block;
+            color: #4285f4;
           }
 
           .feature-title {
-            font-size: 1.4rem;
+            font-size: 1.5rem;
             font-weight: 600;
-            margin-bottom: 1rem;
+            margin-bottom: 1.25rem;
             color: #ffffff;
+            letter-spacing: -0.01em;
           }
 
           .feature-description {
             color: #b0b0b0;
-            line-height: 1.6;
+            line-height: 1.7;
+            font-size: 1rem;
           }
 
           /* CTA Section */
           .cta {
-            padding: 80px 0;
+            padding: 100px 0;
             background: linear-gradient(135deg, #4285f4, #34a853);
             text-align: center;
             display: flex;
@@ -494,26 +515,28 @@ function LandingPage() {
           }
 
           .cta-content h2 {
-            font-size: 2.5rem;
+            font-size: 2.8rem;
             font-weight: 700;
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
             color: #ffffff;
+            letter-spacing: -0.02em;
           }
 
           .cta-content p {
-            font-size: 1.2rem;
-            margin-bottom: 2rem;
+            font-size: 1.25rem;
+            margin-bottom: 2.5rem;
             color: rgba(255, 255, 255, 0.9);
-            max-width: 600px;
+            max-width: 650px;
             margin-left: auto;
             margin-right: auto;
+            line-height: 1.6;
           }
 
           .cta-actions {
             display: flex;
-            gap: 1rem;
+            gap: 1.5rem;
             justify-content: center;
-            margin-bottom: 2rem;
+            margin-bottom: 3rem;
             flex-wrap: wrap;
           }
 
@@ -534,7 +557,7 @@ function LandingPage() {
 
           .cta-features {
             display: flex;
-            gap: 2rem;
+            gap: 3rem;
             justify-content: center;
             flex-wrap: wrap;
           }
@@ -553,15 +576,18 @@ function LandingPage() {
           /* Footer */
           .footer {
             background: #0a0b0d;
-            padding: 60px 0 20px;
+            padding: 80px 0 30px;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
           }
 
           .footer-content {
             display: grid;
             grid-template-columns: 2fr 1fr 1fr 1fr;
-            gap: 3rem;
-            margin-bottom: 2rem;
+            gap: 4rem;
+            margin-bottom: 3rem;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
           }
 
           .footer-logo {
@@ -578,8 +604,9 @@ function LandingPage() {
 
           .footer-description {
             color: #b0b0b0;
-            margin-bottom: 1.5rem;
-            line-height: 1.6;
+            margin-bottom: 2rem;
+            line-height: 1.7;
+            max-width: 300px;
           }
 
           .footer-social {
@@ -655,6 +682,23 @@ function LandingPage() {
             color: #4285f4;
           }
 
+          /* Shape Blur Effects */
+          .shape-blur-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+          }
+
+          .stats .container,
+          .features-new .container {
+            position: relative;
+            z-index: 2;
+          }
+
           /* Responsive Design */
           @media (max-width: 768px) {
             .nav {
@@ -688,46 +732,66 @@ function LandingPage() {
             
             .hero {
               min-height: 100vh;
-              padding: 100px 0 60px;
+              padding: 120px 0 80px;
             }
-            
+
             .hero-container {
               grid-template-columns: 1fr;
-              gap: 2rem;
+              gap: 3rem;
               text-align: center;
+              padding: 0 20px;
             }
-            
+
             .hero-title {
               font-size: 2.5rem;
+              margin-bottom: 1.5rem;
+            }
+
+            .hero-description {
+              max-width: 100%;
+              margin-bottom: 2rem;
             }
             
             .stats {
-              min-height: 50vh;
-              padding: 60px 0;
+              padding: 80px 0;
             }
-            
-            .features {
-              min-height: auto;
-              padding: 60px 0;
+
+            .stats-grid {
+              gap: 2rem;
+              grid-template-columns: 1fr;
+              max-width: 400px;
             }
-            
+
+            .stat-item {
+              padding: 2.5rem 2rem;
+            }
+
+            .features-new {
+              padding: 80px 0;
+            }
+
+            .features-header {
+              margin-bottom: 4rem;
+            }
+
+            .features-grid {
+              grid-template-columns: 1fr;
+              gap: 2rem;
+            }
+
             .cta {
-              min-height: 50vh;
-              padding: 60px 0;
+              padding: 80px 0;
             }
             
             .dashboard-stats {
               grid-template-columns: 1fr;
+              gap: 1rem;
             }
-            
-            .features-grid {
-              grid-template-columns: 1fr;
-              max-width: 100%;
-            }
-            
+
             .footer-content {
               grid-template-columns: 1fr;
-              gap: 2rem;
+              gap: 3rem;
+              margin-bottom: 2rem;
             }
             
             .footer-legal {

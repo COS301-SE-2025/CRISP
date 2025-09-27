@@ -157,15 +157,7 @@ function LandingPage() {
           }
 
           .hero::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><defs><radialGradient id="grad" cx="50%" cy="50%" r="50%"><stop offset="0%" style="stop-color:%234285f4;stop-opacity:0.1" /><stop offset="100%" style="stop-color:%234285f4;stop-opacity:0" /></radialGradient></defs><circle cx="500" cy="500" r="500" fill="url(%23grad)" /></svg>') no-repeat center;
-            background-size: cover;
-            opacity: 0.5;
+            display: none;
           }
 
           .hero-container {

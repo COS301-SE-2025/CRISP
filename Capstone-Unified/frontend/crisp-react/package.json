@@ -22,9 +22,15 @@
     "@fortawesome/fontawesome-free": "^6.7.2",
     "d3": "^7.9.0",
     "feather-icons": "^4.29.2",
+    "framer-motion": "^12.23.22",
+    "gsap": "^3.13.0",
+    "ogl": "^1.0.11",
     "react": "^19.1.0",
+    "react-countup": "^6.5.3",
     "react-dom": "^19.1.0",
-    "react-router-dom": "^6.28.0"
+    "react-intersection-observer": "^9.16.0",
+    "react-router-dom": "^6.28.0",
+    "three": "^0.180.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",

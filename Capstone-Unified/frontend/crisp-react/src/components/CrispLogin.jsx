@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import RippleGrid from './RippleGrid';
 
 function CrispLogin({ onLoginSuccess }) {
   const [username, setUsername] = useState('');
@@ -99,6 +100,8 @@ function CrispLogin({ onLoginSuccess }) {
             overflow: hidden;
           }
           
+          /* Disabled old background - replaced with RippleGrid */
+          /*
           .login-left::before {
             content: '';
             position: absolute;
@@ -110,6 +113,7 @@ function CrispLogin({ onLoginSuccess }) {
             background-blend-mode: overlay;
             opacity: 0.3;
           }
+          */
           
           .brand-info {
             position: relative;
@@ -330,6 +334,26 @@ function CrispLogin({ onLoginSuccess }) {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
           }
+
+          /* RippleGrid Background Effect */
+          .ripple-grid-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            /* DEBUG: Add visible background to check positioning */
+            /* background: rgba(255, 0, 0, 0.1); */
+          }
+
+          .brand-info {
+            position: relative;
+            z-index: 2;
+            max-width: 700px;
+            margin: 0 auto;
+          }
           
           /* Responsive Design */
           @media (max-width: 992px) {
@@ -379,6 +403,23 @@ function CrispLogin({ onLoginSuccess }) {
       <div className="login-page">
         <div className="login-content">
           <div className="login-left">
+            <div className="ripple-grid-bg">
+              <RippleGrid
+                gridColor="#ffffff"
+                rippleIntensity={0.1}
+                gridSize={30}
+                gridThickness={20}
+                fadeDistance={2.0}
+                vignetteStrength={1.0}
+                glowIntensity={0.3}
+                opacity={0.8}
+                mouseInteraction={true}
+                mouseInteractionRadius={1.0}
+              />
+            </div>
+
+            {/* Temporary fallback - animated CSS grid lines */}
+            <div className="css-grid-fallback"></div>
             <div className="brand-info">
               <div className="logo-container">
                 <i className="fas fa-shield-alt brand-logo"></i>
