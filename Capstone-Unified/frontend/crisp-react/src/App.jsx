@@ -3194,6 +3194,42 @@ function ThreatFeeds({
         });
 
         if (result.success) {
+          // Handle different task statuses
+          const taskStatus = result.task_status;
+
+          if (taskStatus === 'completed_or_expired' || taskStatus === 'success' || taskStatus === 'failure') {
+            // Task already completed - just clean up the UI
+            setFeedProgress(prev => ({
+              ...prev,
+              [feedId]: {
+                stage: 'Completed',
+                message: result.message || 'Task was already completed',
+                percentage: 100,
+                completed: true
+              }
+            }));
+
+            // Remove from consuming feeds
+            setConsumingFeeds(prev => prev.filter(id => id !== feedId));
+
+            showSuccess(
+              'Task Status Updated',
+              result.message || 'Task was already completed'
+            );
+
+            // Clean up progress after a short delay
+            setTimeout(() => {
+              setFeedProgress(prev => {
+                const newProgress = { ...prev };
+                delete newProgress[feedId];
+                return newProgress;
+              });
+            }, 3000);
+
+            // Refresh feeds to update status
+            await fetchThreatFeeds();
+            return;
+          }
           // Update progress to show cancellation
           setFeedProgress(prev => ({
             ...prev,

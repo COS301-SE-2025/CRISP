@@ -714,18 +714,84 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
         try:
             from django.core.cache import cache
             from settings.celery import app as celery_app
-            
+            from celery.result import AsyncResult
+
             mode = request.data.get('mode', 'stop_now')  # 'stop_now' or 'cancel_job'
-            
+
             # Get task details from cache
             task_key = f"task_status_{task_id}"
             cached_status = cache.get(task_key)
-            
+
             if not cached_status:
+                # Task not in cache - check if it's a Celery task that's still running
+                try:
+                    task_result = AsyncResult(task_id, app=celery_app)
+
+                    # If task is already completed/failed/revoked, reset any stuck feeds and return success
+                    if task_result.state in ['SUCCESS', 'FAILURE', 'REVOKED', 'RETRY']:
+                        # Reset any feeds stuck with this task_id
+                        try:
+                            from core.models.models import ThreatFeed
+                            stuck_feeds = ThreatFeed.objects.filter(current_task_id=task_id, consumption_status='running')
+                            for feed in stuck_feeds:
+                                logger.info(f"Resetting stuck feed {feed.name} (ID: {feed.id}) with completed task {task_id}")
+                                feed.stop_consumption()
+                        except Exception as e:
+                            logger.warning(f"Could not reset stuck feeds with task_id {task_id}: {str(e)}")
+
+                        return Response({
+                            'success': True,
+                            'message': f'Task {task_id} was already {task_result.state.lower()}',
+                            'task_status': task_result.state.lower()
+                        })
+
+                    # If task is pending or running, try to revoke it and reset any stuck feeds
+                    if task_result.state in ['PENDING', 'STARTED']:
+                        try:
+                            celery_app.control.revoke(task_id, terminate=True)
+                            logger.info(f"Revoked orphaned Celery task {task_id}")
+                        except Exception as e:
+                            logger.warning(f"Could not revoke orphaned Celery task {task_id}: {str(e)}")
+
+                        # Reset any feeds stuck with this task_id
+                        try:
+                            from core.models.models import ThreatFeed
+                            stuck_feeds = ThreatFeed.objects.filter(current_task_id=task_id, consumption_status='running')
+                            logger.info(f"DEBUG: Found {stuck_feeds.count()} stuck feeds for task {task_id}")
+                            for feed in stuck_feeds:
+                                logger.info(f"Resetting stuck feed {feed.name} (ID: {feed.id}) with pending/started task {task_id}")
+                                feed.stop_consumption()
+                                logger.info(f"Feed {feed.name} reset - new status: {feed.consumption_status}, task_id: {feed.current_task_id}")
+                        except Exception as e:
+                            logger.warning(f"Could not reset stuck feeds with task_id {task_id}: {str(e)}")
+                            import traceback
+                            logger.warning(f"Traceback: {traceback.format_exc()}")
+
+                        return Response({
+                            'success': True,
+                            'message': f'Task {task_id} cancellation requested (task was not in progress tracking)',
+                            'task_status': 'cancelled'
+                        })
+
+                except Exception as e:
+                    logger.warning(f"Could not check Celery task status for {task_id}: {str(e)}")
+
+                # Task not found anywhere - likely completed and expired from cache
+                # Try to find and reset any feeds that might be stuck with this task_id
+                try:
+                    from core.models.models import ThreatFeed
+                    stuck_feeds = ThreatFeed.objects.filter(current_task_id=task_id, consumption_status='running')
+                    for feed in stuck_feeds:
+                        logger.info(f"Resetting stuck feed {feed.name} (ID: {feed.id}) with orphaned task {task_id}")
+                        feed.stop_consumption()  # This will reset the status and clear current_task_id
+                except Exception as e:
+                    logger.warning(f"Could not reset stuck feeds with task_id {task_id}: {str(e)}")
+
                 return Response({
-                    'success': False,
-                    'error': 'Task not found or already completed'
-                }, status=status.HTTP_404_NOT_FOUND)
+                    'success': True,
+                    'message': 'Task not found or already completed',
+                    'task_status': 'completed_or_expired'
+                })
             
             feed_id = cached_status.get('feed_id')
             if not feed_id:
