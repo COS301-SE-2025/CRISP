@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client'; // Add proper import for createRoot
+import feather from 'feather-icons'; // Import feather icons
 import './crisp_help.css';
 import Construction from './construction.jsx'; // Ensure lowercase to match actual filename
 
@@ -11,27 +12,19 @@ function CrispHelp({ isOpen, onClose, onNavigate }) {
   // Initialize Feather icons when component mounts
   useEffect(() => {
     if (isOpen) {
-      // Load Feather icons script if not already loaded
-      if (!window.feather) {
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.29.0/feather.min.js';
-        script.onload = () => {
-          if (window.feather) {
-            window.feather.replace();
-          }
-        };
-        document.head.appendChild(script);
-      } else {
-        // If already loaded, just replace the icons
-        setTimeout(() => window.feather.replace(), 100);
-      }
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        feather.replace();
+      }, 10);
     }
   }, [isOpen, activeTab]);
 
   // Re-run feather.replace() when content changes
   useEffect(() => {
-    if (window.feather && isOpen) {
-      setTimeout(() => window.feather.replace(), 100);
+    if (isOpen) {
+      setTimeout(() => {
+        feather.replace();
+      }, 10);
     }
   }, [expandedFAQ, searchQuery, isOpen]);
 

@@ -6,6 +6,7 @@ import Construction from './construction.jsx'; // Import construction component
 import ChangePassword from './components/ChangePassword.jsx'; // Import change password component
 import LoadingSpinner from './components/LoadingSpinner.jsx'; // Import loading spinner
 import { useNotifications } from './components/enhanced/NotificationManager.jsx';
+import feather from 'feather-icons'; // Import feather icons
 import './crisp_login.css'; // Import CSS styles
 
 // Login Component that works with the AuthWrapper in main.jsx
@@ -19,8 +20,10 @@ function CrispLogin({ onLoginSuccess, switchView }) {
   const [showConstruction, setShowConstruction] = useState(false); // State for construction page
   const [showChangePassword, setShowChangePassword] = useState(false); // State for change password modal
 
-  // Removed Feather icons loading to fix CSP violations
-  // Icons are now handled using inline SVG or CSS classes
+  // Initialize Feather icons after component mounts
+  useEffect(() => {
+    feather.replace();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -131,16 +134,6 @@ function CrispLogin({ onLoginSuccess, switchView }) {
           <div className="login-right">
             <div className="login-form-container">
               {/* Help button in top right corner */}
-              <div className="login-header">
-                <button 
-                  className="help-button" 
-                  onClick={openHelp}
-                  title="Help & Support"
-                  type="button"
-                >
-                  <i data-feather="help-circle"></i>
-                </button>
-              </div>
 
               <h2>Welcome Back</h2>
               <p className="subtitle">Sign in to your account</p>
