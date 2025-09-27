@@ -272,7 +272,10 @@ class ReportsService:
                         'severity': getattr(ind, 'severity', 'medium'),
                         'first_seen': getattr(ind, 'first_seen', ind.created_at).isoformat() if hasattr(ind, 'first_seen') else ind.created_at.isoformat(),
                         'created_at': ind.created_at.isoformat(),
-                        'source': getattr(ind, 'source', 'Internal')
+                        'source': getattr(ind, 'source', 'Internal'),
+                        'target_organization': self._extract_target_organization(ind.threat_feed.name) if hasattr(ind, 'threat_feed') and ind.threat_feed else 'General',
+                        'threat_feed': {'name': ind.threat_feed.name} if hasattr(ind, 'threat_feed') and ind.threat_feed else {'name': 'AlienVault OTX'},
+                        'hash_type': getattr(ind, 'hash_type', None)
                     } for ind in indicators
                 ],
                 'ttps': [
@@ -444,11 +447,6 @@ class ReportsService:
             ttp.mitre_technique_id for ttp in ttps if ttp.mitre_technique_id
         ]))
         
-        # Determine severity based on indicators and TTPs
-        high_severity_indicators = sum(1 for ind in indicators if getattr(ind, 'severity', 'medium').lower() in ['high', 'critical'])
-        severity = 'High' if high_severity_indicators > len(indicators) * 0.3 else 'Medium'
-        if len(indicators) == 0:
-            severity = 'Low'
         
         return [
             {
@@ -464,8 +462,8 @@ class ReportsService:
                 'value': str(unique_techniques)
             },
             {
-                'label': 'Severity',
-                'value': severity
+                'label': 'Threat Types',
+                'value': str(len(set([ind.type for ind in indicators if ind.type])))
             }
         ]
     
@@ -559,6 +557,22 @@ class ReportsService:
         # In production, this would track actual view counts
         import random
         return random.randint(50, 300)
+
+    def _extract_target_organization(self, threat_feed_name: str) -> str:
+        """Extract target organization from threat feed name."""
+        if not threat_feed_name or 'Demo' not in threat_feed_name:
+            return 'General'
+
+        # Extract organization name from feed names like:
+        # "Banking Trojan Campaign 2025 - ABSA Bank Demo"
+        # "Education Ransomware Campaign 2025 - University of Cape Town Demo"
+        try:
+            if ' - ' in threat_feed_name and 'Demo' in threat_feed_name:
+                org_part = threat_feed_name.split(' - ')[-1]
+                return org_part.replace(' Demo', '').strip()
+            return 'General'
+        except Exception:
+            return 'General'
     
     def generate_financial_sector_analysis(self, start_date: Optional[datetime] = None,
                                           end_date: Optional[datetime] = None,
@@ -630,7 +644,10 @@ class ReportsService:
                         'severity': getattr(ind, 'severity', 'medium'),
                         'first_seen': getattr(ind, 'first_seen', ind.created_at).isoformat() if hasattr(ind, 'first_seen') else ind.created_at.isoformat(),
                         'created_at': ind.created_at.isoformat(),
-                        'source': getattr(ind, 'source', 'Internal')
+                        'source': getattr(ind, 'source', 'Internal'),
+                        'target_organization': self._extract_target_organization(ind.threat_feed.name) if hasattr(ind, 'threat_feed') and ind.threat_feed else 'General',
+                        'threat_feed': {'name': ind.threat_feed.name} if hasattr(ind, 'threat_feed') and ind.threat_feed else {'name': 'AlienVault OTX'},
+                        'hash_type': getattr(ind, 'hash_type', None)
                     } for ind in indicators
                 ],
                 'ttps': [
@@ -757,7 +774,10 @@ class ReportsService:
                         'severity': getattr(ind, 'severity', 'medium'),
                         'first_seen': getattr(ind, 'first_seen', ind.created_at).isoformat() if hasattr(ind, 'first_seen') else ind.created_at.isoformat(),
                         'created_at': ind.created_at.isoformat(),
-                        'source': getattr(ind, 'source', 'Internal')
+                        'source': getattr(ind, 'source', 'Internal'),
+                        'target_organization': self._extract_target_organization(ind.threat_feed.name) if hasattr(ind, 'threat_feed') and ind.threat_feed else 'General',
+                        'threat_feed': {'name': ind.threat_feed.name} if hasattr(ind, 'threat_feed') and ind.threat_feed else {'name': 'AlienVault OTX'},
+                        'hash_type': getattr(ind, 'hash_type', None)
                     } for ind in indicators
                 ],
                 'ttps': [
@@ -838,11 +858,6 @@ class ReportsService:
             ttp.mitre_technique_id for ttp in ttps if ttp.mitre_technique_id
         ]))
         
-        # Determine severity based on indicators and TTPs
-        high_severity_indicators = sum(1 for ind in indicators if getattr(ind, 'severity', 'medium').lower() in ['high', 'critical'])
-        severity = 'High' if high_severity_indicators > len(indicators) * 0.3 else 'Medium'
-        if len(indicators) == 0:
-            severity = 'Low'
         
         # Sector-specific label for organizations
         if sector_name.lower() == 'financial':
@@ -866,8 +881,8 @@ class ReportsService:
                 'value': str(unique_techniques)
             },
             {
-                'label': 'Severity',
-                'value': severity
+                'label': 'Threat Types',
+                'value': str(len(set([ind.type for ind in indicators if ind.type])))
             }
         ]
     

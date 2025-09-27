@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import TrendVisualization from './TrendVisualization';
-import ThreatPatternChart from './ThreatPatternChart';
 
 const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
   const [fullReportData, setFullReportData] = useState(null);
@@ -72,9 +70,195 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
       return;
     }
 
-    // For now, open print dialog which can save as PDF
-    // TODO: Implement proper PDF generation with report data
-    window.print();
+    const reportData = fullReportData || report;
+
+    // Generate a comprehensive PDF-ready view with all report data
+    const printWindow = window.open('', '_blank');
+
+    // Create comprehensive PDF content
+    const pdfContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${reportData.title || report?.title}</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background: white;
+            color: black;
+            line-height: 1.6;
+            font-size: 12px;
+          }
+          .report-header {
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+          }
+          .report-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0 0 10px 0;
+            color: #333;
+          }
+          .report-meta {
+            color: #666;
+            font-size: 14px;
+          }
+          .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin: 30px 0;
+          }
+          .stat-card {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+          }
+          .stat-number {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+          }
+          .stat-label {
+            font-size: 10px;
+            color: #666;
+            text-transform: uppercase;
+          }
+          .section {
+            margin: 30px 0;
+            page-break-inside: avoid;
+          }
+          .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+          }
+          .ioc-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 10px;
+          }
+          .ioc-table th,
+          .ioc-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+          }
+          .ioc-table th {
+            background: #f8f9fa;
+            font-weight: bold;
+          }
+          .ioc-value {
+            font-family: monospace;
+            word-break: break-all;
+            max-width: 200px;
+          }
+          .chart-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+          }
+          .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            color: #666;
+            font-size: 10px;
+          }
+          @media print {
+            body { margin: 20px; font-size: 11px; }
+            .stats-grid { page-break-inside: avoid; }
+            .section { page-break-inside: avoid; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="report-header">
+          <div class="report-title">${reportData.title || report?.title}</div>
+          <div class="report-meta">
+            Generated: ${report?.date || new Date().toLocaleDateString()} |
+            Sector: ${reportData.sector_focus || 'General'}
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          ${(reportData.statistics || report?.stats || []).map(stat => `
+            <div class="stat-card">
+              <div class="stat-number">${stat.value}</div>
+              <div class="stat-label">${stat.label}</div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="section">
+          <div class="section-title">Summary</div>
+          <p>${reportData.description || report?.description}</p>
+        </div>
+
+        ${reportData.indicators && reportData.indicators.length > 0 ? `
+          <div class="section">
+            <div class="section-title">Indicators of Compromise (IOCs) - Sample</div>
+            <table class="ioc-table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Value</th>
+                  <th>Target Organization</th>
+                  <th>First Seen</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${reportData.indicators.slice(0, 20).map(ioc => `
+                  <tr>
+                    <td>${ioc.type?.toUpperCase() || 'UNKNOWN'}</td>
+                    <td class="ioc-value">${ioc.value || 'N/A'}</td>
+                    <td>${ioc.target_organization || 'General'}</td>
+                    <td>${new Date(ioc.first_seen || ioc.created_at).toLocaleDateString()}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            <p><em>Showing 20 of ${reportData.indicators.length} total indicators</em></p>
+          </div>
+        ` : ''}
+
+        <div class="chart-section">
+          <div class="section-title">Threat Type Distribution</div>
+          <p>This report analyzed ${reportData.indicators?.length || 0} threat indicators across multiple types:</p>
+          <ul>
+            <li><strong>Domains:</strong> Primary threat vector detected</li>
+            <li><strong>File Hashes:</strong> Malicious files identified</li>
+            <li><strong>IP Addresses:</strong> Malicious infrastructure</li>
+            <li><strong>URLs:</strong> Malicious web resources</li>
+          </ul>
+        </div>
+
+        <div class="footer">
+          <p>CRISP - Cyber Threat Intelligence Report</p>
+          <p>Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+          <p>This report contains ${reportData.indicators?.length || 0} indicators and ${reportData.ttps?.length || 0} TTPs</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(pdfContent);
+    printWindow.document.close();
+
+    // Wait for content to load, then trigger print
+    setTimeout(() => {
+      printWindow.focus();
+      printWindow.print();
+    }, 500);
   };
 
   if (!isOpen) return null;
@@ -126,34 +310,12 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
                     </div>
                   ))}
                 </div>
-                <div className="overview-description">
-                  <h3>Executive Summary</h3>
-                  <p>{report?.description || fullReportData?.description}</p>
-                </div>
               </div>
 
               {/* IOC Breakdown Section */}
               {fullReportData && fullReportData.indicators && (
                 <div className="ioc-breakdown-section">
                   <h3>Indicators of Compromise (IOCs)</h3>
-                  <div className="ioc-stats-grid">
-                    <div className="ioc-stat-card">
-                      <div className="ioc-stat-number">{fullReportData.indicators.length}</div>
-                      <div className="ioc-stat-label">Total IOCs</div>
-                    </div>
-                    <div className="ioc-stat-card">
-                      <div className="ioc-stat-number">
-                        {fullReportData.indicators.filter(ioc => ioc.severity === 'high' || ioc.severity === 'critical').length}
-                      </div>
-                      <div className="ioc-stat-label">High/Critical Severity</div>
-                    </div>
-                    <div className="ioc-stat-card">
-                      <div className="ioc-stat-number">
-                        {[...new Set(fullReportData.indicators.map(ioc => ioc.type))].length}
-                      </div>
-                      <div className="ioc-stat-label">IOC Types</div>
-                    </div>
-                  </div>
 
                   <div className="ioc-details">
                     <h4>IOC Details</h4>
@@ -163,9 +325,9 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
                           <tr>
                             <th>Type</th>
                             <th>Value</th>
-                            <th>Severity</th>
-                            <th>First Seen</th>
                             <th>Source</th>
+                            <th>Hash Type</th>
+                            <th>Target Organization</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -178,12 +340,26 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
                               </td>
                               <td className="ioc-value">{ioc.value || 'N/A'}</td>
                               <td>
-                                <span className={`severity-badge ${ioc.severity || 'medium'}`}>
-                                  {(ioc.severity || 'medium').toUpperCase()}
+                                <span className={`source-badge`}>
+                                  {ioc.threat_feed?.name || ioc.source || 'AlienVault OTX'}
                                 </span>
                               </td>
-                              <td>{new Date(ioc.first_seen || ioc.created_at).toLocaleDateString()}</td>
-                              <td>{ioc.source || 'Internal'}</td>
+                              <td>
+                                {ioc.hash_type ? (
+                                  <span className={`hash-type-badge ${ioc.hash_type}`}>
+                                    {ioc.hash_type.toUpperCase()}
+                                  </span>
+                                ) : (
+                                  <span className="hash-type-badge none">N/A</span>
+                                )}
+                              </td>
+                              <td>
+                                <span className={`target-org-badge ${
+                                  ioc.target_organization === 'General' ? 'general' : 'targeted'
+                                }`}>
+                                  {ioc.target_organization || 'General'}
+                                </span>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -469,51 +645,79 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
                 </div>
               )}
 
-              {/* Visualizations Section */}
-              {fullReportData && (
-                <div className="visualizations-section">
-                  <h3>Analytics & Trends</h3>
-                  
-                  {/* Temporal Trends Chart */}
-                  {fullReportData.temporal_trends && fullReportData.temporal_trends.length > 0 && (
-                    <div className="chart-container">
-                      <TrendVisualization 
-                        temporalTrends={fullReportData.temporal_trends}
-                        title="Temporal Threat Trends"
-                      />
-                    </div>
-                  )}
+              {/* Key Metrics Visualization */}
+              {fullReportData && (fullReportData.indicators || fullReportData.ttps) && (
+                <div className="key-metrics-section">
+                  <h3>Threat Intelligence Overview</h3>
 
-                  {/* Threat Patterns Chart */}
-                  {fullReportData.threat_patterns && (
-                    <div className="chart-container">
-                      <ThreatPatternChart 
-                        threatPatterns={fullReportData.threat_patterns}
-                        title="Threat Pattern Distribution"
-                      />
-                    </div>
-                  )}
+                  <div className="metrics-chart-container">
+                    <div className="metrics-chart">
+                      <h4>Threat Indicator Distribution by Type</h4>
+                      <div className="threat-type-chart">
+                        {(() => {
+                          if (!fullReportData.indicators || fullReportData.indicators.length === 0) {
+                            return <div className="no-data">No threat indicators available</div>;
+                          }
 
-                  {/* Trust Insights */}
-                  {fullReportData.trust_insights && (
-                    <div className="trust-insights">
-                      <h4>Trust Network Analysis</h4>
-                      <div className="trust-metrics">
-                        <div className="trust-metric">
-                          <span className="metric-label">Total Relationships:</span>
-                          <span className="metric-value">{fullReportData.trust_insights.total_relationships || 0}</span>
-                        </div>
-                        <div className="trust-metric">
-                          <span className="metric-label">Internal Relationships:</span>
-                          <span className="metric-value">{fullReportData.trust_insights.internal_relationships || 0}</span>
-                        </div>
-                        <div className="trust-metric">
-                          <span className="metric-label">External Relationships:</span>
-                          <span className="metric-value">{fullReportData.trust_insights.external_relationships || 0}</span>
-                        </div>
+                          const typeCounts = fullReportData.indicators.reduce((acc, indicator) => {
+                            const type = indicator.type || 'unknown';
+                            acc[type] = (acc[type] || 0) + 1;
+                            return acc;
+                          }, {});
+
+                          const total = Object.values(typeCounts).reduce((sum, count) => sum + count, 0);
+                          const typeColors = {
+                            domain: '#2196f3',
+                            file_hash: '#f44336',
+                            ip: '#ff9800',
+                            url: '#9c27b0',
+                            email: '#4caf50',
+                            other: '#607d8b',
+                            unknown: '#757575'
+                          };
+
+                          const typeLabels = {
+                            domain: 'Malicious Domains',
+                            file_hash: 'File Hashes',
+                            ip: 'IP Addresses',
+                            url: 'URLs',
+                            email: 'Email Addresses',
+                            other: 'Other Indicators',
+                            unknown: 'Unknown Type'
+                          };
+
+                          return (
+                            <div className="threat-type-bars">
+                              {Object.entries(typeCounts)
+                                .sort(([,a], [,b]) => b - a)
+                                .map(([type, count]) => {
+                                const percentage = total > 0 ? (count / total) * 100 : 0;
+                                return (
+                                  <div key={type} className="threat-type-bar-item">
+                                    <div className="threat-type-label">
+                                      <span className="threat-type-name">{typeLabels[type] || type.toUpperCase()}</span>
+                                      <span className="threat-type-count">{count.toLocaleString()}</span>
+                                    </div>
+                                    <div className="threat-type-bar">
+                                      <div
+                                        className="threat-type-fill"
+                                        style={{
+                                          width: `${percentage}%`,
+                                          backgroundColor: typeColors[type] || '#757575'
+                                        }}
+                                      />
+                                    </div>
+                                    <span className="threat-type-percentage">{percentage.toFixed(1)}%</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
-                  )}
+                  </div>
+
 
                 </div>
               )}
@@ -885,6 +1089,92 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
           background: #dc3545;
         }
 
+        .confidence-badge {
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          font-weight: 600;
+          color: white;
+        }
+
+        .confidence-badge.high {
+          background: #28a745;
+        }
+
+        .confidence-badge.medium {
+          background: #ffc107;
+          color: #212529;
+        }
+
+        .confidence-badge.low {
+          background: #dc3545;
+        }
+
+        .target-org-badge {
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          font-weight: 600;
+          color: white;
+        }
+
+        .target-org-badge.general {
+          background: #6c757d;
+        }
+
+        .target-org-badge.targeted {
+          background: #dc3545;
+          animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+          0% { opacity: 1; }
+          50% { opacity: 0.7; }
+          100% { opacity: 1; }
+        }
+
+        .source-badge {
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          font-weight: 600;
+          background: #17a2b8;
+          color: white;
+        }
+
+        .hash-type-badge {
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          font-weight: 600;
+          color: white;
+        }
+
+        .hash-type-badge.sha1 {
+          background: #28a745;
+        }
+
+        .hash-type-badge.sha256 {
+          background: #007bff;
+        }
+
+        .hash-type-badge.md5 {
+          background: #ffc107;
+          color: #212529;
+        }
+
+        .hash-type-badge.sha512 {
+          background: #6f42c1;
+        }
+
+        .hash-type-badge.none {
+          background: #6c757d;
+        }
+
+        .ioc-value {
+          background: white !important;
+        }
+
         .ioc-table-footer {
           padding: 16px;
           background: #f8f9fa;
@@ -896,6 +1186,155 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
           margin: 0;
           color: #666;
           font-size: 14px;
+        }
+
+        /* Enhanced IOC Cards Styles */
+        .ioc-cards-container {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+          gap: 20px;
+          margin-bottom: 20px;
+        }
+
+        .ioc-card {
+          background: white;
+          border: 1px solid #e9ecef;
+          border-radius: 12px;
+          padding: 20px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+          transition: all 0.2s;
+        }
+
+        .ioc-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .ioc-card-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 16px;
+        }
+
+        .confidence-score {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+        }
+
+        .confidence-label {
+          font-size: 11px;
+          color: #666;
+          margin-bottom: 2px;
+        }
+
+        .confidence-value {
+          font-size: 14px;
+          font-weight: 600;
+          padding: 2px 6px;
+          border-radius: 4px;
+        }
+
+        .confidence-value.high {
+          background: #d4edda;
+          color: #155724;
+        }
+
+        .confidence-value.medium {
+          background: #fff3cd;
+          color: #856404;
+        }
+
+        .confidence-value.low {
+          background: #f8d7da;
+          color: #721c24;
+        }
+
+        .ioc-value-section {
+          margin-bottom: 12px;
+          padding: 12px;
+          background: #f8f9fa;
+          border-radius: 8px;
+        }
+
+        .ioc-value-label {
+          font-size: 11px;
+          font-weight: 600;
+          color: #666;
+          margin-bottom: 4px;
+          text-transform: uppercase;
+        }
+
+        .ioc-value {
+          font-family: 'Courier New', monospace;
+          font-size: 13px;
+          color: #333;
+          word-break: break-all;
+          line-height: 1.4;
+        }
+
+        .ioc-description {
+          margin-bottom: 12px;
+          padding: 10px;
+          background: #fff8e1;
+          border-left: 3px solid #ffc107;
+          border-radius: 0 6px 6px 0;
+        }
+
+        .ioc-description-label {
+          font-size: 11px;
+          font-weight: 600;
+          color: #856404;
+          margin-bottom: 4px;
+          text-transform: uppercase;
+        }
+
+        .ioc-description-text {
+          font-size: 12px;
+          color: #333;
+          line-height: 1.4;
+        }
+
+        .ioc-metadata {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+          border-top: 1px solid #f1f3f4;
+          padding-top: 12px;
+        }
+
+        .ioc-meta-item {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .meta-label {
+          font-size: 10px;
+          font-weight: 600;
+          color: #666;
+          text-transform: uppercase;
+        }
+
+        .meta-value {
+          font-size: 12px;
+          color: #333;
+        }
+
+        .ioc-summary-footer {
+          text-align: center;
+          padding: 16px;
+          background: #f8f9fa;
+          border-radius: 8px;
+          border: 1px solid #e9ecef;
+        }
+
+        .ioc-summary-footer p {
+          margin: 0;
+          color: #666;
+          font-size: 13px;
+          font-weight: 500;
         }
 
         .ttp-analysis-section {
@@ -1622,6 +2061,118 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
           font-size: 13px;
           border-top: 1px solid #f1f3f4;
           margin-top: 8px;
+        }
+
+        /* Key Metrics Section Styles */
+        .key-metrics-section {
+          background: white;
+          border-radius: 12px;
+          padding: 24px;
+          margin-bottom: 20px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          width: 100% !important;
+          box-sizing: border-box !important;
+        }
+
+        .key-metrics-section h3 {
+          margin: 0 0 20px 0;
+          color: #333;
+          font-size: 18px;
+          font-weight: 600;
+        }
+
+        .metrics-chart-container {
+          width: 100%;
+          display: flex;
+          justify-content: center;
+        }
+
+        .metrics-chart {
+          width: 100%;
+          max-width: 600px;
+          background: white;
+          border-radius: 12px;
+          padding: 20px;
+          border: 1px solid #e9ecef;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .metrics-chart h4 {
+          margin: 0 0 20px 0;
+          color: #333;
+          font-size: 16px;
+          font-weight: 600;
+          text-align: center;
+        }
+
+        .threat-type-chart {
+          width: 100%;
+        }
+
+        .threat-type-bars {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          width: 100%;
+        }
+
+        .threat-type-bar-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          width: 100%;
+        }
+
+        .threat-type-label {
+          display: flex;
+          flex-direction: column;
+          min-width: 120px;
+          text-align: left;
+        }
+
+        .threat-type-name {
+          font-size: 12px;
+          font-weight: 600;
+          color: #333;
+        }
+
+        .threat-type-count {
+          font-size: 11px;
+          color: #666;
+        }
+
+        .threat-type-bar {
+          flex: 1;
+          height: 20px;
+          background: #f1f3f4;
+          border-radius: 10px;
+          overflow: hidden;
+          position: relative;
+        }
+
+        .threat-type-fill {
+          height: 100%;
+          border-radius: 10px;
+          transition: width 0.3s ease;
+          position: relative;
+        }
+
+        .threat-type-percentage {
+          font-size: 12px;
+          font-weight: 600;
+          color: #333;
+          min-width: 40px;
+          text-align: right;
+        }
+
+        .no-data {
+          text-align: center;
+          color: #666;
+          font-style: italic;
+          padding: 40px 20px;
+          background: #f8f9fa;
+          border-radius: 8px;
+          border: 1px solid #e9ecef;
         }
       `}</style>
     </div>

@@ -48,6 +48,8 @@ def education_sector_analysis(request):
         end_date_str = request.GET.get('end_date')
         organization_ids_str = request.GET.get('organization_ids')
         report_format = request.GET.get('format', 'json')
+        persist_param = request.GET.get('persist', 'false').lower() == 'true'
+        persist_param = request.GET.get('persist', 'false').lower() == 'true'
         
         # Parse dates
         start_date = None
@@ -105,7 +107,7 @@ def education_sector_analysis(request):
             organization_ids=organization_ids,
             generated_by=request.user,
             organization=education_org,
-            persist=True
+            persist=persist_param
         )
         
         # Format response based on requested format
@@ -169,6 +171,7 @@ def financial_sector_analysis(request):
         end_date_str = request.GET.get('end_date')
         organization_ids_str = request.GET.get('organization_ids')
         report_format = request.GET.get('format', 'json')
+        persist_param = request.GET.get('persist', 'false').lower() == 'true'
         
         # Parse dates
         start_date = None
@@ -224,7 +227,7 @@ def financial_sector_analysis(request):
             organization_ids=organization_ids,
             generated_by=request.user,
             organization=financial_org,
-            persist=True
+            persist=persist_param
         )
         
         # Format response based on requested format
@@ -287,6 +290,7 @@ def government_sector_analysis(request):
         end_date_str = request.GET.get('end_date')
         organization_ids_str = request.GET.get('organization_ids')
         report_format = request.GET.get('format', 'json')
+        persist_param = request.GET.get('persist', 'false').lower() == 'true'
         
         # Parse dates
         start_date = None
@@ -342,7 +346,7 @@ def government_sector_analysis(request):
             organization_ids=organization_ids,
             generated_by=request.user,
             organization=government_org,
-            persist=True
+            persist=persist_param
         )
         
         # Format response based on requested format

@@ -17,6 +17,8 @@ const Reports = ({ active = true }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('date');
   const [viewMode, setViewMode] = useState('grid');
+  const [savingReportId, setSavingReportId] = useState(null);
+  const [exportingReportId, setExportingReportId] = useState(null);
 
   useEffect(() => {
     fetchReports();
@@ -83,8 +85,8 @@ const Reports = ({ active = true }) => {
             const statistics = reportData.statistics || [];
 
 
-            // Get key metrics from real data or create reasonable defaults
-            const severity = statistics.find(s => s.label === 'Severity')?.value || 'Medium';
+            // Get key metrics from real data
+            const threatTypes = parseInt(statistics.find(s => s.label === 'Threat Types')?.value || '0');
             const iocCount = parseInt(statistics.find(s => s.label.includes('IoC'))?.value || '0');
             const orgCount = parseInt(statistics.find(s =>
               s.label.includes('Organizations') ||
@@ -111,7 +113,7 @@ const Reports = ({ active = true }) => {
               view_count: report.view_count,
               description: report.description || `Analysis report for ${report.report_type.replace('_', ' ')} sector`,
               stats: reportStats,
-              severity: severity,
+              threatTypes: threatTypes,
               threatLevel: iocCount > 40 ? 'High' : iocCount > 20 ? 'Medium' : 'Low',
               organizationsAnalyzed: orgCount,
               lastUpdated: report.updated_at,
@@ -124,6 +126,8 @@ const Reports = ({ active = true }) => {
               organization: report.organization,
               age_days: report.age_days,
               isPersistent: true, // Mark as persistent report
+              isSaved: true, // Already saved to database
+              isTemporary: false,
               reportData: reportData // Include full report data for detail view
             };
           });
@@ -235,8 +239,49 @@ const Reports = ({ active = true }) => {
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
-          // Refresh the reports list to show the new report
-          await fetchReports();
+          // Since persistence is disabled, create a temporary report object
+          const reportData = data.report;
+          const statistics = reportData.statistics || [];
+
+          // Extract stats like the persistent reports do
+          const threatTypes = parseInt(statistics.find(s => s.label === 'Threat Types')?.value || '0');
+          const iocCount = parseInt(statistics.find(s => s.label.includes('IoC'))?.value || '0');
+          const orgCount = parseInt(statistics.find(s =>
+            s.label.includes('Organizations') ||
+            s.label.includes('Institutions') ||
+            s.label.includes('Affected') ||
+            s.label.includes('Targeted')
+          )?.value || '0');
+          const ttpCount = parseInt(statistics.find(s => s.label.includes('TTP'))?.value || '0');
+
+          const tempReport = {
+            id: `temp-${Date.now()}`,
+            title: reportData.title,
+            type: reportData.type,
+            created_at: new Date().toISOString(),
+            date: new Date().toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            }),
+            views: reportData.views || 0,
+            view_count: reportData.views || 0,
+            description: reportData.description,
+            stats: statistics,
+            threatTypes: threatTypes,
+            threatLevel: iocCount > 40 ? 'High' : iocCount > 20 ? 'Medium' : 'Low',
+            organizationsAnalyzed: orgCount,
+            lastUpdated: new Date().toISOString(),
+            sector: reportData.sector_focus || 'general',
+            generated_by: { username: 'current-user', first_name: 'Current', last_name: 'User' },
+            fullData: reportData,
+            isSaved: false,
+            isTemporary: true,
+            reportType: reportType
+          };
+
+          // Add the temp report to the current reports list
+          setReports(prevReports => [tempReport, ...prevReports]);
           return data;
         }
       }
@@ -264,7 +309,190 @@ const Reports = ({ active = true }) => {
     }
   };
 
-  // No need for formatting functions since stats are already formatted in the data
+  // Save a temporary report to the database
+  const saveReport = async (report) => {
+    try {
+      setSavingReportId(report.id);
+      const token = localStorage.getItem('crisp_auth_token');
+
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const endpoints = {
+        'education': '/api/reports/education-sector-analysis/',
+        'financial': '/api/reports/financial-sector-analysis/',
+        'government': '/api/reports/government-sector-analysis/'
+      };
+
+      const endpoint = endpoints[report.reportType];
+      if (!endpoint) {
+        throw new Error('Invalid report type');
+      }
+
+      // Make API call with persist=True by adding query parameter
+      const response = await fetch(`http://localhost:8000${endpoint}?persist=true`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          // Update the report in the list to mark it as saved
+          setReports(prevReports =>
+            prevReports.map(r =>
+              r.id === report.id
+                ? { ...r, isSaved: true, isTemporary: false, id: data.report.id || r.id }
+                : r
+            )
+          );
+
+          // Refresh reports list to include the newly saved report from database
+          await fetchReports();
+          return data;
+        }
+      }
+
+      throw new Error('Failed to save report');
+    } catch (error) {
+      console.error('Error saving report:', error);
+      setError(error.message);
+      throw error;
+    } finally {
+      setSavingReportId(null);
+    }
+  };
+
+  // Export report as PDF
+  const exportReportPDF = async (report) => {
+    try {
+      setExportingReportId(report.id);
+
+      // Generate a clean PDF-ready view of the report
+      const printWindow = window.open('', '_blank');
+
+      // Create PDF-optimized HTML content
+      const pdfContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>${report.title}</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              margin: 40px;
+              background: white;
+              color: black;
+              line-height: 1.6;
+            }
+            .report-header {
+              border-bottom: 2px solid #333;
+              padding-bottom: 20px;
+              margin-bottom: 30px;
+            }
+            .report-title {
+              font-size: 24px;
+              font-weight: bold;
+              margin: 0 0 10px 0;
+              color: #333;
+            }
+            .report-meta {
+              color: #666;
+              font-size: 14px;
+            }
+            .stats-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 20px;
+              margin: 30px 0;
+            }
+            .stat-card {
+              border: 1px solid #ddd;
+              padding: 15px;
+              border-radius: 8px;
+              text-align: center;
+            }
+            .stat-number {
+              font-size: 24px;
+              font-weight: bold;
+              color: #333;
+            }
+            .stat-label {
+              font-size: 12px;
+              color: #666;
+              text-transform: uppercase;
+            }
+            .description {
+              background: #f8f9fa;
+              padding: 20px;
+              border-radius: 8px;
+              margin: 20px 0;
+            }
+            .footer {
+              margin-top: 40px;
+              padding-top: 20px;
+              border-top: 1px solid #ddd;
+              text-align: center;
+              color: #666;
+              font-size: 12px;
+            }
+            @media print {
+              body { margin: 20px; }
+              .stats-grid { page-break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="report-header">
+            <div class="report-title">${report.title}</div>
+            <div class="report-meta">
+              Generated: ${report.date} |
+              Created by: ${typeof report.generated_by === 'object' && report.generated_by
+                ? `${report.generated_by.first_name} ${report.generated_by.last_name}`
+                : report.generated_by || 'System'}
+            </div>
+          </div>
+
+          <div class="stats-grid">
+            ${(report.stats || []).map(stat => `
+              <div class="stat-card">
+                <div class="stat-number">${stat.value}</div>
+                <div class="stat-label">${stat.label}</div>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="description">
+            <h3>Summary</h3>
+            <p>${report.description}</p>
+          </div>
+
+          <div class="footer">
+            <p>CRISP - Cyber Threat Intelligence Report</p>
+            <p>Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+          </div>
+        </body>
+        </html>
+      `;
+
+      printWindow.document.write(pdfContent);
+      printWindow.document.close();
+
+      // Wait a bit for content to load, then trigger print
+      setTimeout(() => {
+        printWindow.focus();
+        printWindow.print();
+      }, 500);
+
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+    } finally {
+      setTimeout(() => setExportingReportId(null), 1000);
+    }
+  };
 
   const viewReport = (report) => {
     setSelectedReport(report);
@@ -504,7 +732,11 @@ const Reports = ({ active = true }) => {
                         month: 'short',
                         day: 'numeric'
                       })}</span>
-                      <span><i className="fas fa-user"></i> {report.generated_by || 'System'}</span>
+                      <span><i className="fas fa-user"></i> {
+                        typeof report.generated_by === 'object' && report.generated_by
+                          ? `${report.generated_by.first_name} ${report.generated_by.last_name}`
+                          : report.generated_by || 'System'
+                      }</span>
                     </div>
                   </div>
                 </div>
@@ -525,8 +757,37 @@ const Reports = ({ active = true }) => {
                     >
                       <i className="fas fa-eye"></i> View Report
                     </button>
-                    <button className="btn btn-outline btn-sm" disabled>
-                      <i className="fas fa-file-pdf"></i> Export PDF
+                    {report.isTemporary && !report.isSaved && (
+                      <button
+                        className="btn btn-success btn-sm"
+                        onClick={() => saveReport(report)}
+                        disabled={savingReportId === report.id}
+                      >
+                        {savingReportId === report.id ? (
+                          <>
+                            <i className="fas fa-spinner fa-spin"></i> Saving...
+                          </>
+                        ) : (
+                          <>
+                            <i className="fas fa-save"></i> Save Report
+                          </>
+                        )}
+                      </button>
+                    )}
+                    <button
+                      className="btn btn-outline btn-sm"
+                      onClick={() => exportReportPDF(report)}
+                      disabled={exportingReportId === report.id}
+                    >
+                      {exportingReportId === report.id ? (
+                        <>
+                          <i className="fas fa-spinner fa-spin"></i> Exporting...
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-file-pdf"></i> Export PDF
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -852,6 +1113,23 @@ const Reports = ({ active = true }) => {
 
         .btn-outline:hover {
           background: #f8f9fa;
+        }
+
+        .btn-success {
+          background: #28a745;
+          border: 1px solid #28a745;
+          color: white;
+        }
+
+        .btn-success:hover {
+          background: #218838;
+          border-color: #1e7e34;
+        }
+
+        .btn-success:disabled {
+          background: #6c757d;
+          border-color: #6c757d;
+          cursor: not-allowed;
         }
 
         .btn-sm {
