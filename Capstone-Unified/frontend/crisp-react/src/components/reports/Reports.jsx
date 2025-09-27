@@ -582,15 +582,14 @@ const Reports = ({ active = true }) => {
       switch (sortBy) {
         case 'date':
           return new Date(b.lastUpdated || b.created_at) - new Date(a.lastUpdated || a.created_at);
-        case 'severity':
-          const severityOrder = { 'Critical': 4, 'High': 3, 'Medium': 2, 'Low': 1 };
-          return (severityOrder[b.severity] || 0) - (severityOrder[a.severity] || 0);
-        case 'views':
-          return (b.views || b.view_count || 0) - (a.views || a.view_count || 0);
         case 'title':
           return a.title.localeCompare(b.title);
-        case 'type':
-          return a.type.localeCompare(b.type);
+        case 'sector':
+          return (a.sector || a.sector_focus || '').localeCompare(b.sector || b.sector_focus || '');
+        case 'indicators':
+          return (b.total_indicators || 0) - (a.total_indicators || 0);
+        case 'ttps':
+          return (b.total_ttps || 0) - (a.total_ttps || 0);
         default:
           return 0;
       }
@@ -631,9 +630,6 @@ const Reports = ({ active = true }) => {
           <p className="page-subtitle">Access and manage comprehensive threat reports</p>
         </div>
         <div className="action-buttons">
-          <button className="btn btn-outline">
-            <i className="fas fa-filter"></i> Filter
-          </button>
           <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
             <i className="fas fa-plus"></i> Create New Report
           </button>
@@ -642,18 +638,6 @@ const Reports = ({ active = true }) => {
 
       <div className="filters-section">
         <div className="filters-grid">
-          <div className="filter-group">
-            <label className="filter-label">Report Type</label>
-            <div className="filter-control">
-              <select value={filter} onChange={(e) => setFilter(e.target.value)}>
-                <option value="all">All Types</option>
-                <option value="sector">Sector Analysis</option>
-                <option value="education">Education Analysis</option>
-                <option value="financial">Financial Analysis</option>
-                <option value="government">Government Analysis</option>
-              </select>
-            </div>
-          </div>
           <div className="filter-group">
             <label className="filter-label">Sector Focus</label>
             <div className="filter-control">
@@ -682,6 +666,7 @@ const Reports = ({ active = true }) => {
             <div className="filter-control">
               <input
                 type="text"
+                className="search-input"
                 placeholder="Search reports..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -694,9 +679,9 @@ const Reports = ({ active = true }) => {
               <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
                 <option value="date">Date Created</option>
                 <option value="title">Report Title</option>
-                <option value="severity">Severity Level</option>
-                <option value="views">View Count</option>
-                <option value="type">Report Type</option>
+                <option value="sector">Sector</option>
+                <option value="indicators">Indicator Count</option>
+                <option value="ttps">TTP Count</option>
               </select>
             </div>
           </div>
@@ -1442,6 +1427,8 @@ const Reports = ({ active = true }) => {
           border: 2px solid #e9ecef;
           border-radius: 8px;
           font-size: 14px;
+          color: #333 !important;
+          background: white !important;
           transition: var(--transition);
         }
 
@@ -1449,6 +1436,11 @@ const Reports = ({ active = true }) => {
           outline: none;
           border-color: var(--secondary-blue);
           box-shadow: 0 0 0 3px rgba(90, 159, 212, 0.1);
+          color: #333 !important;
+        }
+
+        .search-input::placeholder {
+          color: #6c757d !important;
         }
 
         .filter-controls {
