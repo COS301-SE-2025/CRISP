@@ -854,6 +854,10 @@ function Header({
                     <i className="fas fa-cog"></i>
                     <span>Account Settings</span>
                   </button>
+                  <button className="menu-item" onClick={() => {setShowUserMenu(false); showPage('asset-management');}} type="button">
+                    <i className="fas fa-shield-alt"></i>
+                    <span>Asset Alerts</span>
+                  </button>
                   <div className="menu-divider"></div>
                   <div className="menu-item-submenu">
                     <button className="menu-item" onClick={() => setShowManagementSubmenu(!showManagementSubmenu)} type="button">
@@ -978,14 +982,6 @@ function MainNav({ activePage, showPage, user, onLogout, isAdmin }) {
               <i className="fas fa-file-alt"></i> Reports
             </a>
           </li>
-          <li>
-            <a
-              onClick={() => showPage('asset-management')}
-              className={activePage === 'asset-management' ? 'active' : ''}
-            >
-              <i className="fas fa-shield-alt"></i> Asset Alerts
-            </a>
-          </li>
           {/* SOC Features - Only for BlueVisionAdmin */}
           {user?.role === 'BlueVisionAdmin' && (
             <>
@@ -995,14 +991,6 @@ function MainNav({ activePage, showPage, user, onLogout, isAdmin }) {
                   className={activePage === 'soc-dashboard' ? 'active' : ''}
                 >
                   <i className="fas fa-eye"></i> SOC Dashboard
-                </a>
-              </li>
-              <li>
-                <a
-                  onClick={() => showPage('soc-incidents')}
-                  className={activePage === 'soc-incidents' ? 'active' : ''}
-                >
-                  <i className="fas fa-exclamation-circle"></i> Incidents
                 </a>
               </li>
             </>
