@@ -1027,7 +1027,8 @@ function Dashboard({ active, showPage, user }) {
     ttps: 0,
     status: 'loading'
   });
-  
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+
   // State for connected organizations
   const [connectedOrganizations, setConnectedOrganizations] = useState([]);
   const [organizationsLoading, setOrganizationsLoading] = useState(false);
@@ -1124,6 +1125,9 @@ function Dashboard({ active, showPage, user }) {
     }
   }, [chartFilters, active]);
 
+  // Dashboard stats are refreshed via RefreshManager subscription above
+  // No separate interval needed to avoid conflicts
+
   // Auto-refresh system health every 5 minutes - only if user is authenticated
   useEffect(() => {
     if (!active) return;
@@ -1142,26 +1146,34 @@ function Dashboard({ active, showPage, user }) {
   }, [active]);
   
   const fetchDashboardData = async () => {
-    const feedsData = await api.get('/api/threat-feeds/');
-    if (feedsData) {
-      let totalIndicators = 0;
-      let totalTTPs = 0;
-      
-      // Get indicator and TTP counts from all feeds
-      for (const feed of (feedsData.results || [])) {
-        const feedStatus = await api.get(`/api/threat-feeds/${feed.id}/status/`);
-        if (feedStatus) {
-          totalIndicators += feedStatus.indicator_count || 0;
-          totalTTPs += feedStatus.ttp_count || 0;
-        }
+    try {
+      setDashboardLoading(true);
+      console.log('🔄 Fetching optimized dashboard data...');
+      const response = await api.get('/api/dashboard-stats/');
+
+      if (response && response.success && response.data) {
+        console.log(`📈 Dashboard stats loaded: ${response.data.indicators} indicators, ${response.data.ttps} TTPs, ${response.data.threat_feeds} feeds`);
+
+        setDashboardStats({
+          threat_feeds: response.data.threat_feeds,
+          indicators: response.data.indicators,
+          ttps: response.data.ttps,
+          status: response.data.status
+        });
+      } else {
+        throw new Error('Invalid dashboard stats response');
       }
-      
+    } catch (error) {
+      console.error('❌ Error fetching dashboard data:', error);
+      // Fallback to showing offline status
       setDashboardStats({
-        threat_feeds: feedsData.count || 0,
-        indicators: totalIndicators,
-        ttps: totalTTPs,
-        status: 'active'
+        threat_feeds: 0,
+        indicators: 0,
+        ttps: 0,
+        status: 'offline'
       });
+    } finally {
+      setDashboardLoading(false);
     }
   };
 
@@ -1256,7 +1268,10 @@ function Dashboard({ active, showPage, user }) {
       if (response && response.success) {
         setChartData(response.data);
         setChartSummary(response.summary);
-        
+
+        // Chart updated successfully
+        console.log('📊 Chart updated successfully');
+
         // Redraw chart with new data
         if (chartRef.current) {
           createThreatActivityChart(response.data, response.summary);
@@ -2048,7 +2063,11 @@ function Dashboard({ active, showPage, user }) {
             <span>Active IoCs</span>
           </div>
           <div className="stat-value">
-            {dashboardStats.indicators || 0}
+            {dashboardLoading ? (
+              <i className="fas fa-spinner fa-spin" style={{color: '#0056b3'}}></i>
+            ) : (
+              dashboardStats.indicators || 0
+            )}
           </div>
           <div className="stat-change increase">
             <span><i className="fas fa-arrow-up"></i></span>
@@ -2061,7 +2080,11 @@ function Dashboard({ active, showPage, user }) {
             <span>TTPs</span>
           </div>
           <div className="stat-value">
-            {dashboardStats.ttps || 0}
+            {dashboardLoading ? (
+              <i className="fas fa-spinner fa-spin" style={{color: '#0056b3'}}></i>
+            ) : (
+              dashboardStats.ttps || 0
+            )}
           </div>
           <div className="stat-change increase">
             <span><i className="fas fa-arrow-up"></i></span>
@@ -2074,7 +2097,11 @@ function Dashboard({ active, showPage, user }) {
             <span>Threat Feeds</span>
           </div>
           <div className="stat-value">
-            {dashboardStats.threat_feeds || 0}
+            {dashboardLoading ? (
+              <i className="fas fa-spinner fa-spin" style={{color: '#0056b3'}}></i>
+            ) : (
+              dashboardStats.threat_feeds || 0
+            )}
           </div>
           <div className="stat-change increase">
             <span><i className="fas fa-arrow-up"></i></span>
@@ -2087,7 +2114,11 @@ function Dashboard({ active, showPage, user }) {
             <span>Platform Status</span>
           </div>
           <div className="stat-value">
-            {dashboardStats.status === 'active' ? 'Online' : 'Offline'}
+            {dashboardLoading ? (
+              <i className="fas fa-spinner fa-spin" style={{color: '#0056b3'}}></i>
+            ) : (
+              dashboardStats.status === 'active' ? 'Online' : 'Offline'
+            )}
           </div>
           <div className="stat-change">
             <span><i className="fas fa-circle" style={{color: dashboardStats.status === 'active' ? '#28a745' : '#dc3545'}}></i></span>
@@ -2943,8 +2974,8 @@ function ThreatFeeds({
 
     // Only start polling if we have loaded data
     if (threatFeeds.length > 0) {
-      // Check for running feeds every 5 seconds
-      intervalId = setInterval(checkRunningFeeds, 5000);
+      // Check for running feeds every 10 seconds to reduce API load
+      intervalId = setInterval(checkRunningFeeds, 10000);
       console.log('📡 Started polling for running feed status updates');
     }
 
@@ -3169,7 +3200,8 @@ function ThreatFeeds({
       
       // Update feedProgress state with consumption status
       const progressUpdates = {};
-      
+      const completedFeeds = []; // Track feeds that just completed
+
       statusResults.forEach(({ feedId, status }) => {
         if (status && status.success) {
           console.log(`🔍 Feed ${feedId} status recovery:`, {
@@ -3179,6 +3211,36 @@ function ThreatFeeds({
             can_be_resumed: status.can_be_resumed,
             is_consuming: status.is_consuming
           });
+
+          // Check if feed just completed (was running/consuming, now idle)
+          const wasConsuming = consumingFeeds.includes(feedId);
+          const isNowIdle = status.consumption_status === 'idle' && !status.is_consuming && !status.current_task_id;
+
+          // Also check for other completion indicators
+          const hasNoActiveTask = !status.current_task_id || status.current_task_id === null;
+          const notCurrentlyConsuming = !status.is_consuming;
+          const statusIndicatesCompletion = status.consumption_status === 'idle' ||
+                                          status.consumption_status === 'completed' ||
+                                          status.consumption_status === 'finished';
+
+          console.log(`🔍 Feed ${feedId} completion check:`, {
+            wasConsuming,
+            currentStatus: status.consumption_status,
+            isConsuming: status.is_consuming,
+            taskId: status.current_task_id,
+            isNowIdle,
+            hasNoActiveTask,
+            notCurrentlyConsuming,
+            statusIndicatesCompletion
+          });
+
+          if (wasConsuming && (isNowIdle || (hasNoActiveTask && notCurrentlyConsuming && statusIndicatesCompletion))) {
+            console.log(`🎉 Feed ${feedId} just completed! Triggering completion actions...`);
+            completedFeeds.push({ feedId, feedName: feeds.find(f => f.id === feedId)?.name || `Feed ${feedId}` });
+
+            // Also remove from consuming feeds list to prevent duplicate detection
+            setConsumingFeeds(prev => prev.filter(id => id !== feedId));
+          }
           
           progressUpdates[feedId] = {
             ...feedProgress[feedId],
@@ -3226,6 +3288,42 @@ function ThreatFeeds({
           ...progressUpdates
         }));
         console.log(`✅ Updated status for ${Object.keys(progressUpdates).length} feeds`);
+      }
+
+      // Handle completed feeds - trigger notifications and dashboard refresh
+      if (completedFeeds.length > 0) {
+        console.log(`🎉 Processing ${completedFeeds.length} completed feeds...`);
+
+        for (const { feedId, feedName } of completedFeeds) {
+          // Show completion notification
+          const notificationText = `Feed "${feedName}" consumption completed successfully!`;
+          showSuccess('🎉 Feed Consumption Completed!', notificationText);
+
+          // Also show browser notification if permission granted
+          if (Notification.permission === 'granted') {
+            new Notification('CRISP - Feed Consumption Completed', {
+              body: notificationText,
+              icon: '/favicon.ico',
+              tag: 'feed-completion'
+            });
+          } else if (Notification.permission !== 'denied') {
+            // Request permission for future notifications
+            Notification.requestPermission();
+          }
+
+          // Trigger refresh of all related components
+          refreshManager.triggerRelated('threat-feeds', 'feed_consumption_completed');
+          refreshManager.triggerRefresh(['dashboard', 'notifications'], 'feed_completion_detected');
+
+          // Force immediate dashboard data refresh to update stats
+          console.log('🔄 Force refreshing dashboard stats after feed completion');
+          try {
+            await fetchDashboardData();
+            console.log('✅ Dashboard stats refreshed successfully');
+          } catch (error) {
+            console.warn('⚠️ Dashboard stats refresh failed:', error);
+          }
+        }
       }
 
       // Clean up stuck feeds that are in "cancelling" state
@@ -3378,12 +3476,7 @@ function ThreatFeeds({
                   // Remove from consuming feeds
                   setConsumingFeeds(prev => prev.filter(id => id !== feedId));
 
-                  showSuccess(
-                    'Task Cancelled',
-                    mode === 'stop_now' ?
-                      `Task stopped successfully. Data has been preserved.` :
-                      'Task cancelled successfully and recent data was removed.'
-                  );
+                  // Notification will be shown by task polling completion
 
                   // Clean up progress after a delay
                   setTimeout(() => {
@@ -3516,12 +3609,7 @@ function ThreatFeeds({
           // Remove from consuming feeds
           setConsumingFeeds(prev => prev.filter(id => id !== feedId));
           
-          showSuccess(
-            'Feed Consumption Cancelled',
-            mode === 'stop_now' ?
-              `Feed consumption stopped. ${result.indicators_kept || 0} indicators were kept.` :
-              'Feed consumption cancelled and all data was removed.'
-          );
+          // Notification will be shown by task polling completion
 
           // Refresh feeds to update counts
           await fetchThreatFeeds();
@@ -3831,13 +3919,35 @@ function ThreatFeeds({
           }));
 
           // Show success notification
-          showSuccess('Feed Consumption Completed', `Successfully processed ${result.indicators || 0} indicators and ${result.ttps || 0} TTPs`);
+          const notificationText = `Successfully processed ${result.indicators || 0} indicators and ${result.ttps || 0} TTPs from ${feed.name}`;
+          showSuccess('🎉 Feed Consumption Completed!', notificationText);
+
+          // Also show browser notification if permission granted
+          if (Notification.permission === 'granted') {
+            new Notification('CRISP - Feed Consumption Completed', {
+              body: notificationText,
+              icon: '/favicon.ico',
+              tag: 'feed-completion'
+            });
+          } else if (Notification.permission !== 'denied') {
+            // Request permission for future notifications
+            Notification.requestPermission();
+          }
 
           // Trigger refresh of all related components after completion
           refreshManager.triggerRelated('threat-feeds', 'feed_consumption_completed');
 
-          // Also trigger dashboard directly to ensure it refreshes
-          refreshManager.triggerRefresh(['dashboard'], 'feed_consumption_completed_direct');
+          // Also trigger dashboard and notifications directly to ensure they refresh
+          refreshManager.triggerRefresh(['dashboard', 'notifications'], 'feed_consumption_completed_direct');
+
+          // Force immediate dashboard data refresh to update Active IoCs count
+          console.log('🔄 Force refreshing dashboard stats after feed consumption');
+          try {
+            await fetchDashboardData();
+            console.log('✅ Dashboard stats refreshed successfully');
+          } catch (error) {
+            console.warn('⚠️ Dashboard stats refresh failed:', error);
+          }
 
           // Remove from consuming after showing completion
           const completionTimeout = setTimeout(() => {

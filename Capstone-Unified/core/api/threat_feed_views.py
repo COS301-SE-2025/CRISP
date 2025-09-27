@@ -6061,3 +6061,51 @@ def virustotal_sync(request):
             'error': 'Failed to sync VirusTotal feeds',
             'details': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def dashboard_stats_api(request):
+    """
+    Fast dashboard stats endpoint that returns aggregated data in a single call.
+    Replaces the need for multiple individual feed status API calls.
+    """
+    try:
+        logger.info("Fetching optimized dashboard stats...")
+
+        # Get active feeds with their counts in a single query
+        from django.db.models import Sum, Count
+        from core.models.models import ThreatFeed, Indicator, TTPData
+
+        # Get feed count
+        feed_count = ThreatFeed.objects.filter(is_active=True).count()
+
+        # Get total indicators and TTPs from active feeds in single queries
+        total_indicators = Indicator.objects.filter(
+            threat_feed__is_active=True
+        ).count()
+
+        total_ttps = TTPData.objects.filter(
+            threat_feed__is_active=True
+        ).count()
+
+        logger.info(f"Dashboard stats: {feed_count} feeds, {total_indicators} indicators, {total_ttps} TTPs")
+
+        return Response({
+            'success': True,
+            'data': {
+                'threat_feeds': feed_count,
+                'indicators': total_indicators,
+                'ttps': total_ttps,
+                'status': 'active'
+            },
+            'timestamp': timezone.now().isoformat()
+        })
+
+    except Exception as e:
+        logger.error(f"Dashboard stats API error: {str(e)}")
+        return Response({
+            'success': False,
+            'error': 'Failed to fetch dashboard stats',
+            'details': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

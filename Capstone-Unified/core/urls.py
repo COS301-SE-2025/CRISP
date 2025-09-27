@@ -22,7 +22,7 @@ from core.api.threat_feed_views import (
     ttp_technique_trends, ttp_feed_comparison, ttp_seasonal_patterns,
     ttp_clear_aggregation_cache, ttp_filter_options, ttp_advanced_search,
     ttp_search_suggestions, ttp_matrix_cell_details, ttp_technique_details,
-    ttp_export_csv, ttp_export_stix, virustotal_sync  # New plain Django export views and VirusTotal sync
+    ttp_export_csv, ttp_export_stix, virustotal_sync, dashboard_stats_api  # New plain Django export views and VirusTotal sync
 )
 from core.api.ttp_views import TTPExportView, MITREMatrixView
 from core.api import reports_api, sync_api
@@ -146,6 +146,7 @@ threat_feed_urlpatterns = [
     path('threat-activity-chart/', threat_activity_chart_data, name='threat-activity-chart'),
     path('system-health/', system_health, name='system-health'),
     path('recent-activities/', recent_activities, name='recent-activities'),
+    path('dashboard-stats/', dashboard_stats_api, name='dashboard-stats'),  # Fast dashboard stats endpoint
     path('virustotal/sync/', virustotal_sync, name='virustotal-sync'),  # VirusTotal sync endpoint
 ]
 
