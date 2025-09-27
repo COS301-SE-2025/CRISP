@@ -513,21 +513,20 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
                         </div>
                         <div className="sector-details">
                           <div className="sector-metric">
-                            <span className="metric-label">Primary Risk Level:</span>
-                            <span className={`risk-level ${
-                              (fullReportData.indicators?.filter(ioc =>
-                                ioc.severity === 'critical'
-                              ).length || 0) > 5 ? 'critical' :
-                              (fullReportData.indicators?.filter(ioc =>
-                                ioc.severity === 'high'
-                              ).length || 0) > 10 ? 'high' : 'medium'
-                            }`}>
-                              {(fullReportData.indicators?.filter(ioc =>
-                                ioc.severity === 'critical'
-                              ).length || 0) > 5 ? 'Critical' :
-                              (fullReportData.indicators?.filter(ioc =>
-                                ioc.severity === 'high'
-                              ).length || 0) > 10 ? 'High' : 'Medium'}
+                            <span className="metric-label">Primary Threat Type:</span>
+                            <span className="metric-value">
+                              {(() => {
+                                if (!fullReportData.indicators || fullReportData.indicators.length === 0) {
+                                  return 'No threats detected';
+                                }
+                                const typeCounts = fullReportData.indicators.reduce((acc, indicator) => {
+                                  const type = indicator.type || 'unknown';
+                                  acc[type] = (acc[type] || 0) + 1;
+                                  return acc;
+                                }, {});
+                                const topType = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0];
+                                return topType ? `${topType[0]} (${topType[1]} indicators)` : 'Unknown';
+                              })()}
                             </span>
                           </div>
                           <div className="sector-metric">
