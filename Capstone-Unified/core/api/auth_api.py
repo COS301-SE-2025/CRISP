@@ -279,26 +279,44 @@ def update_profile(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def change_password(request):
     """
     Change user password
     
     POST /api/auth/change-password/
     Body: {
+        "username": "string",
         "current_password": "string",
         "new_password": "string"
     }
     """
     try:
-        user = request.user
+        username = request.data.get('username')
         current_password = request.data.get('current_password')
         new_password = request.data.get('new_password')
         
-        if not current_password or not new_password:
+        if not username or not current_password or not new_password:
             return Response({
                 'success': False,
-                'message': 'Both current and new passwords are required'
+                'message': 'Username, current password, and new password are required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get user by username
+        try:
+            user = CustomUser.objects.get(username=username, is_active=True)
+        except CustomUser.DoesNotExist:
+            # Log failed password change attempt
+            AuthenticationLog.log_authentication_event(
+                username=username,
+                action='password_change',
+                success=False,
+                failure_reason='User not found',
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            return Response({
+                'success': False,
+                'message': 'Invalid username or current password'
             }, status=status.HTTP_400_BAD_REQUEST)
         
         # Verify current password
