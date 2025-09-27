@@ -511,13 +511,22 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
                         from core.tasks.taxii_tasks import consume_feed_task
 
                         # Check if feed is actively running (allow starting fresh consumption even if previously paused)
-                        if feed.consumption_status == 'running':
-                            return Response({
-                                "error": f"Feed consumption is already running. Use pause endpoint to control it.",
-                                "current_status": feed.consumption_status,
-                                "can_be_paused": feed.can_be_paused(),
-                                "can_be_resumed": feed.can_be_resumed()
-                            }, status=status.HTTP_400_BAD_REQUEST)
+                        # Use atomic update to prevent race conditions
+                        from django.db import transaction
+                        with transaction.atomic():
+                            # Refresh feed status from database
+                            feed.refresh_from_db()
+                            if feed.consumption_status in ['running', 'starting']:
+                                return Response({
+                                    "error": f"Feed consumption is already running or starting. Use pause endpoint to control it.",
+                                    "current_status": feed.consumption_status,
+                                    "can_be_paused": feed.can_be_paused(),
+                                    "can_be_resumed": feed.can_be_resumed()
+                                }, status=status.HTTP_400_BAD_REQUEST)
+
+                            # Immediately mark as starting to prevent other requests
+                            feed.consumption_status = 'starting'
+                            feed.save(update_fields=['consumption_status'])
 
                         # Reset paused state for fresh consumption
                         if feed.consumption_status == 'paused':
