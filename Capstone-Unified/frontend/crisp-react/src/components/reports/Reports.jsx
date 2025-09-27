@@ -813,21 +813,6 @@ const Reports = ({ active = true }) => {
                       </button>
                     )}
                     <button
-                      className="btn btn-outline btn-sm"
-                      onClick={() => exportReportPDF(report)}
-                      disabled={exportingReportId === report.id}
-                    >
-                      {exportingReportId === report.id ? (
-                        <>
-                          <i className="fas fa-spinner fa-spin"></i> Exporting...
-                        </>
-                      ) : (
-                        <>
-                          <i className="fas fa-file-pdf"></i> Export PDF
-                        </>
-                      )}
-                    </button>
-                    <button
                       className="btn btn-danger btn-sm"
                       onClick={() => showDeleteConfirmation(report)}
                       disabled={deletingReportId === report.id}
