@@ -435,6 +435,7 @@ class StixTaxiiService:
         Returns:
             Tuple of (indicator_count, ttp_count, stats)
         """
+        feed_obj = None
         try:
             # Check permissions
             self.access_control.require_permission(user, 'can_manage_threat_feeds')
@@ -449,6 +450,8 @@ class StixTaxiiService:
             
             if not feed_obj:
                 raise ValueError("Threat feed not found")
+
+            feed_obj.start_consumption(task_id="some_task_id")
             
             # Check if user can access this feed
             if not self._can_access_feed(user, feed_obj):
@@ -550,6 +553,8 @@ class StixTaxiiService:
             
         except Exception as e:
             logger.error(f"Error consuming STIX feed with user context: {str(e)}")
+            if feed_obj:
+                feed_obj.stop_consumption(error_message=str(e))
             self.audit_service.log_security_event(
                 action='threat_feed_consumption_failed',
                 user=user,
@@ -558,6 +563,9 @@ class StixTaxiiService:
                 additional_data={'feed_id': str(threat_feed)}
             )
             return 0, 0, {'errors': 1}
+        finally:
+            if feed_obj and feed_obj.consumption_status == 'running':
+                feed_obj.stop_consumption()
     
     def _can_update_threat_data(self, user: CustomUser, threat_object) -> bool:
         """

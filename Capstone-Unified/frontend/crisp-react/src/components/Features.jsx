@@ -147,7 +147,11 @@ function Features() {
                     className="feature-background"
                     style={{ background: feature.gradient }}
                   />
-              </div>
+                  <div className="feature-icon">{feature.icon}</div>
+                  <h3 className="feature-title">{feature.title}</h3>
+                  <p className="feature-description">{feature.description}</p>
+                </div>
+              </ElectricBorder>
             </motion.div>
           ))}
         </motion.div>

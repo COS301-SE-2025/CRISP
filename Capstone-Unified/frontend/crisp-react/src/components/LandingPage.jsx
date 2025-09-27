@@ -50,7 +50,7 @@ function LandingPage() {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1rem 20px;
+            padding: 1.5rem 20px;
           }
 
           .logo {
@@ -59,13 +59,13 @@ function LandingPage() {
             text-decoration: none;
             color: #ffffff;
             font-weight: bold;
-            font-size: 1.5rem;
+            font-size: 1.8rem;
           }
 
           .logo-icon {
             margin-right: 0.5rem;
             color: #4285f4;
-            font-size: 1.8rem;
+            font-size: 2rem;
           }
 
           .nav {
@@ -81,7 +81,8 @@ function LandingPage() {
           .nav-links a {
             color: #ffffff;
             text-decoration: none;
-            font-weight: 500;
+            font-weight: 600;
+            font-size: 1.1rem;
             transition: color 0.3s ease;
           }
 

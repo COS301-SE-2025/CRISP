@@ -1,0 +1,44 @@
+.electric-border {
+  position: relative;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  overflow: hidden;
+  padding: 1px;
+}
+
+.electric-border::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0%,
+    transparent 50%,
+    #4285f4 50.1%,
+    #34a853 60%,
+    #fbbc04 70%,
+    #ea4335 80%,
+    #9c27b0 90%,
+    #00bcd4 100%
+  );
+  animation: rotate 4s linear infinite;
+}
+
+.electric-border > * {
+  position: relative;
+  z-index: 1;
+  background: #1a1b1e;
+  border-radius: 15px;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
