@@ -838,77 +838,78 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=True, methods=['post'])
+    def reset_feed_status(self, request, pk=None):
+        """Reset a stuck feed to idle status."""
+        try:
+            feed = get_object_or_404(ThreatFeed, pk=pk)
+
+            # Reset the feed status
+            old_status = feed.consumption_status
+            old_task_id = feed.current_task_id
+
+            feed.stop_consumption()
+
+            logger.info(f"Reset feed {feed.name} (ID: {feed.id}) from status '{old_status}' with task_id '{old_task_id}' to 'idle'")
+
+            return Response({
+                'success': True,
+                'message': f'Feed {feed.name} has been reset to idle status',
+                'old_status': old_status,
+                'old_task_id': old_task_id,
+                'new_status': feed.consumption_status
+            })
+
+        except Exception as e:
+            logger.error(f"Error resetting feed {pk}: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['post'])
     def pause_consumption(self, request, pk=None):
         """Pause consumption of a specific threat feed."""
         try:
             feed = get_object_or_404(ThreatFeed, pk=pk)
-            
+
             from django.core.cache import cache
             from django.utils import timezone
-            
-            # Check if there's an active task for this feed
-            active_task_found = False
-            
-            # Method 1: Check database status (existing logic)
-            can_pause_db = feed.can_be_paused()
-            
-            # Method 2: Check for recent task status in cache
-            # The consume_feed_task sets cache entries like "task_status_{task_id}"
-            # We'll look for any that match our feed_id and are active
-            try:
-                from django.conf import settings
-                cache_keys_to_check = []
-                
-                # Since we can't reliably enumerate cache keys, we'll check recent task IDs
-                # from the last consume request if available
-                
-                # Check if there's already a pause signal for this feed
-                pause_key = f"pause_consumption_{feed.id}"
-                existing_pause_signal = cache.get(pause_key)
-                
-                if existing_pause_signal:
-                    # There's already a pause request pending
-                    logger.info(f"Pause already requested for feed {feed.id}")
+
+            # Check if feed is actually capable of being paused
+            if not feed.can_be_paused():
+                # If feed says it's running but has no task_id, it's probably stuck
+                if feed.consumption_status == 'running' and not feed.current_task_id:
+                    logger.warning(f"Feed {feed.id} appears stuck in 'running' status with no task_id. Resetting to idle.")
+                    feed.stop_consumption()
                     return Response({
-                        'success': True,
-                        'message': f'Pause already requested for feed "{feed.name}". The task will pause at the next checkpoint.',
-                        'feed_id': str(feed.id),
-                        'current_status': feed.consumption_status,
-                        'already_requested': True
-                    })
-                else:
-                    # Check if feed was consuming very recently (within last 2 minutes)
-                    # This handles the race condition where DB hasn't been updated yet
-                    if hasattr(feed, 'last_sync') and feed.last_sync:
-                        recent_threshold = timezone.now() - timezone.timedelta(minutes=2)
-                        if feed.last_sync >= recent_threshold:
-                            logger.info(f"Feed {feed.id} was active recently, allowing pause attempt")
-                            active_task_found = True
-                    
-                    # Final fallback: If this is a consume-capable feed, allow pause attempt
-                    # The task itself will determine if it can actually be paused
-                    if feed.is_external and feed.taxii_server_url and feed.taxii_collection_id:
-                        active_task_found = True
-                        logger.info(f"External feed {feed.id} is consume-capable, allowing pause attempt")
-                        
-            except Exception as e:
-                logger.warning(f"Error checking for active tasks: {e}")
-                # Be conservative - only allow if DB says it's pausable
-                active_task_found = False
-            
-            # Allow pause if either DB status allows it OR we found an active task
-            if not can_pause_db and not active_task_found:
+                        'success': False,
+                        'error': 'Feed was stuck in running status and has been reset to idle. Please try consuming again.',
+                        'reset_performed': True
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
                 return Response({
                     'success': False,
-                    'error': f'Feed consumption cannot be paused. Current status: {feed.consumption_status}',
+                    'error': f'Feed cannot be paused. Current status: {feed.consumption_status}',
                     'current_status': feed.consumption_status,
                     'current_task_id': feed.current_task_id,
-                    'can_be_paused': feed.can_be_paused(),
-                    'can_be_resumed': feed.can_be_resumed(),
-                    'is_consuming': feed.is_consuming(),
-                    'active_task_found': active_task_found
+                    'can_be_paused': feed.can_be_paused()
                 }, status=status.HTTP_400_BAD_REQUEST)
-            
+
+            # Check if there's already a pause signal for this feed
+            pause_key = f"pause_consumption_{feed.id}"
+            existing_pause_signal = cache.get(pause_key)
+
+            if existing_pause_signal:
+                # There's already a pause request pending
+                logger.info(f"Pause already requested for feed {feed.id}")
+                return Response({
+                    'success': True,
+                    'message': f'Pause already requested for feed "{feed.name}". The task will pause at the next checkpoint.',
+                    'feed_id': str(feed.id),
+                    'current_status': feed.consumption_status,
+                    'already_requested': True
+                })
+
             # Set pause flag in cache for the running task to check
             pause_key = f"pause_consumption_{feed.id}"
             cache.set(pause_key, {
@@ -916,9 +917,9 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
                 'requested_at': timezone.now().isoformat(),
                 'user_id': request.user.id if hasattr(request, 'user') else None
             }, timeout=3600)  # 1 hour timeout
-            
+
             logger.info(f"Pause requested for feed {feed.name} (ID: {feed.id})")
-            
+
             return Response({
                 'success': True,
                 'message': f'Pause requested for feed "{feed.name}". The task will pause at the next checkpoint.',

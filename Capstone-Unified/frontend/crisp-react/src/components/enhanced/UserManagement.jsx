@@ -3,6 +3,7 @@ import { getUsersList, createUser, updateUser, deactivateUser, reactivateUser, d
 import LoadingSpinner from './LoadingSpinner.jsx';
 import ConfirmationModal from './ConfirmationModal.jsx';
 import Pagination from './Pagination.jsx';
+import refreshManager from '../../utils/RefreshManager.js';
 
 // Import alias for the API to avoid conflicts
 import * as api from '../../api.js';
@@ -89,6 +90,20 @@ const UserManagement = ({ active = true, initialSection = null, navigationState,
       setCurrentUser(user);
       loadUsers();
       loadOrganizations();
+
+      // Subscribe to RefreshManager for cross-component updates
+      refreshManager.subscribe('users', () => {
+        console.log('🔄 RefreshManager: Refreshing user data');
+        loadUsers();
+        loadOrganizations();
+      }, {
+        backgroundRefresh: true,
+        isVisible: () => active
+      });
+
+      return () => {
+        refreshManager.unsubscribe('users');
+      };
     }
   }, [active]);
 
@@ -486,6 +501,10 @@ const UserManagement = ({ active = true, initialSection = null, navigationState,
           setOperationLoading(true);
           await new Promise(resolve => setTimeout(resolve, 800));
           await api.deleteUserPermanently(userId, 'Deleted by admin');
+
+          // Trigger refresh of related components after user deletion
+          refreshManager.triggerRelated('users', 'user_deleted');
+
           loadUsers();
           // Ensure actions popup is closed after successful deletion
           setShowActionsPopup(false);
@@ -552,6 +571,14 @@ const UserManagement = ({ active = true, initialSection = null, navigationState,
           }
           setShowModal(false);
           setError(null); // Clear any previous errors
+
+          // Trigger refresh of related components after user operation
+          if (modalMode === 'add') {
+            refreshManager.triggerRelated('users', 'user_created');
+          } else {
+            refreshManager.triggerRelated('users', 'user_updated');
+          }
+
           console.log('About to reload users...');
           await loadUsers();
           console.log('Users reloaded successfully');

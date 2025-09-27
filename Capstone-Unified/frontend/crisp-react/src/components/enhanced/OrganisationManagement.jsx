@@ -3,6 +3,7 @@ import { getOrganizations, createOrganization, updateOrganization, deactivateOrg
 import LoadingSpinner from './LoadingSpinner.jsx';
 import ConfirmationModal from './ConfirmationModal.jsx';
 import Pagination from './Pagination.jsx';
+import refreshManager from '../../utils/RefreshManager.js';
 
 import * as api from '../../api.js';
 
@@ -136,6 +137,21 @@ const OrganisationManagement = ({ active = true, initialSection = null, navigati
       loadOrganizationTypes();
       loadTrustRelationships();
       loadTrustGroups();
+
+      // Subscribe to RefreshManager for cross-component updates
+      refreshManager.subscribe('organizations', () => {
+        console.log('🔄 RefreshManager: Refreshing organization data');
+        loadOrganizations();
+        loadTrustRelationships();
+        loadTrustGroups();
+      }, {
+        backgroundRefresh: true,
+        isVisible: () => active
+      });
+
+      return () => {
+        refreshManager.unsubscribe('organizations');
+      };
     }
   }, [active]);
 

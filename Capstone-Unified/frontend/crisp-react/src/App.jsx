@@ -221,16 +221,19 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
 
     switch (preset) {
       case 'last24h':
-        setConsumptionParams({ days_back: 1, block_limit: 50 }); // Optimized for speed
+        setConsumptionParams({ days_back: 1, block_limit: 50 }); // Last 24 hours
+        break;
+      case 'lasthour':
+        setConsumptionParams({ days_back: 1, block_limit: 25 }); // Last hour equivalent (1 day with light data)
         break;
       case 'lastweek':
-        setConsumptionParams({ days_back: 7, block_limit: 100 }); // Optimized for speed
+        setConsumptionParams({ days_back: 7, block_limit: 100 }); // Last week
         break;
       case 'lastmonth':
-        setConsumptionParams({ days_back: 30, block_limit: 150 }); // Optimized for speed
+        setConsumptionParams({ days_back: 30, block_limit: 150 }); // Last month
         break;
       case 'allavailable':
-        setConsumptionParams({ days_back: 365, block_limit: 200 }); // Optimized for speed
+        setConsumptionParams({ days_back: 365, block_limit: 200 }); // Last year
         break;
       default: // custom
         break;
@@ -243,8 +246,8 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
     let validatedValue = value;
 
     if (param === 'days_back') {
-      // Ensure days_back is between 1 and 365
-      validatedValue = Math.max(1, Math.min(365, value));
+      // Ensure days_back is between 1 and 1095 (3 years) - backend requires whole days
+      validatedValue = Math.max(1, Math.min(1095, Math.round(value)));
     } else if (param === 'block_limit') {
       // Ensure block_limit is between 1 and 200 (optimized for performance)
       validatedValue = Math.max(1, Math.min(200, value));
@@ -485,8 +488,15 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
       'ioc-management': ['indicators'],
       'threat-feeds': ['threat-feeds', 'indicators'],
       'asset-management': ['assets', 'alerts'],
-      'dashboard': ['dashboard', 'chart-data'],
-      'notifications': ['notifications']
+      'dashboard': ['dashboard', 'indicators', 'threat-feeds'], // Dashboard needs fresh indicators and threat feed data
+      'notifications': ['notifications'],
+      'ttp-analysis': ['ttp-analysis'],
+      'user-management': ['users'],
+      'organisation-management': ['organizations'],
+      'trust-management': ['trust-management'],
+      'reports': ['reports'],
+      'soc-dashboard': ['soc-dashboard'],
+      'soc-incidents': ['soc-incidents']
     };
 
     const refreshKeys = pageRefreshMap[pageId];
@@ -2928,9 +2938,49 @@ function ThreatFeeds({
     };
   }, []);
 
+  // Automatic polling for running feeds - refreshes UI when consumption completes
+  useEffect(() => {
+    let intervalId = null;
+
+    const checkRunningFeeds = () => {
+      // Check if any feeds are currently running
+      const hasRunningFeeds = threatFeeds.some(feed =>
+        feed.status?.consumption_status === 'running' ||
+        feed.status?.is_consuming ||
+        feed.status?.current_task_id
+      );
+
+      if (hasRunningFeeds) {
+        console.log('🔄 Found running feeds, refreshing status...');
+        fetchThreatFeeds();
+      }
+    };
+
+    // Only start polling if we have loaded data
+    if (threatFeeds.length > 0) {
+      // Check for running feeds every 5 seconds
+      intervalId = setInterval(checkRunningFeeds, 5000);
+      console.log('📡 Started polling for running feed status updates');
+    }
+
+    // Cleanup interval when component unmounts or dependencies change
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        console.log('🛑 Stopped polling for feed status updates');
+      }
+    };
+  }, [threatFeeds]); // Re-run when threatFeeds changes
+
   // Expose clearCachedState to parent component for manual refresh
   useEffect(() => {
     window.clearThreatFeedsCache = clearCachedState;
+
+    // Also expose manual refresh all for debugging
+    window.refreshAllComponents = () => {
+      console.log('🔄 Manual refresh triggered for all components');
+      refreshManager.refreshAll();
+    };
   }, [clearCachedState]);
   const [feedToDelete, setFeedToDelete] = useState(null);
   const [deletingFeed, setDeletingFeed] = useState(false);
@@ -2952,6 +3002,21 @@ function ThreatFeeds({
     if (active && !hasLoadedData) {
       console.log('🔄 ThreatFeeds: Fetching data...');
       fetchThreatFeeds();
+    }
+
+    // Subscribe to RefreshManager for cross-component updates
+    if (active) {
+      refreshManager.subscribe('threat-feeds', () => {
+        console.log('🔄 RefreshManager: Refreshing threat feeds data');
+        fetchThreatFeeds();
+      }, {
+        backgroundRefresh: true,
+        isVisible: () => active
+      });
+
+      return () => {
+        refreshManager.unsubscribe('threat-feeds');
+      };
     }
   }, [active, hasLoadedData]);
 
@@ -3143,11 +3208,16 @@ function ThreatFeeds({
             message: status.current_task_id ? `Task ID: ${status.current_task_id}` : ''
           };
           
-          // If feed is consuming, make sure it's in the consuming feeds array
-          if (status.is_consuming && status.consumption_status !== 'paused') {
+          // More strict consumption detection - only consider consuming if:
+          // 1. has an active task ID, OR
+          // 2. status explicitly says is_consuming AND consumption_status is 'running'
+          const isActivelyConsuming = (status.current_task_id && status.current_task_id !== null) ||
+                                     (status.is_consuming && status.consumption_status === 'running');
+
+          if (isActivelyConsuming && status.consumption_status !== 'paused') {
             setConsumingFeeds(prev => {
               if (!prev.includes(feedId)) {
-                console.log(`➕ Adding feed ${feedId} to consuming feeds (status: ${status.consumption_status})`);
+                console.log(`➕ Adding feed ${feedId} to consuming feeds (task_id: ${status.current_task_id}, status: ${status.consumption_status})`);
                 return [...prev, feedId];
               }
               return prev;
@@ -3156,7 +3226,7 @@ function ThreatFeeds({
             // If feed is not consuming or is paused, remove from consuming feeds
             setConsumingFeeds(prev => {
               if (prev.includes(feedId)) {
-                console.log(`➖ Removing feed ${feedId} from consuming feeds (status: ${status.consumption_status})`);
+                console.log(`➖ Removing feed ${feedId} from consuming feeds (task_id: ${status.current_task_id}, status: ${status.consumption_status})`);
                 return prev.filter(id => id !== feedId);
               }
               return prev;
@@ -3172,6 +3242,55 @@ function ThreatFeeds({
         }));
         console.log(`✅ Updated status for ${Object.keys(progressUpdates).length} feeds`);
       }
+
+      // Clean up stuck feeds that are in "cancelling" state
+      const checkStuckFeeds = async () => {
+        const stuckFeeds = Object.keys(feedProgress).filter(feedId => {
+          const progress = feedProgress[feedId];
+          return progress?.cancelling && progress?.taskId;
+        });
+
+        if (stuckFeeds.length > 0) {
+          console.log(`🔍 Found ${stuckFeeds.length} stuck cancelling feeds, checking their status...`);
+
+          for (const feedId of stuckFeeds) {
+            const progress = feedProgress[feedId];
+            try {
+              const taskStatus = await api.get(`/api/threat-feeds/task-status/${progress.taskId}/`);
+              console.log(`Task ${progress.taskId} for feed ${feedId} status:`, taskStatus.status);
+
+              if (taskStatus.success && (taskStatus.status === 'pending' || taskStatus.status === 'revoked' || taskStatus.status === 'cancelled')) {
+                console.log(`🧹 Cleaning up stuck feed ${feedId} - task status: ${taskStatus.status}`);
+
+                setFeedProgress(prev => {
+                  const newProgress = { ...prev };
+                  delete newProgress[feedId];
+                  return newProgress;
+                });
+
+                setConsumingFeeds(prev => prev.filter(id => id.toString() !== feedId));
+
+                showSuccess('Stuck Task Cleaned', `Removed stuck cancellation for feed ${feedId}`);
+              }
+            } catch (error) {
+              console.error(`Error checking stuck task ${progress.taskId}:`, error);
+              // If we can't check the task, assume it's dead and clean it up
+              console.log(`🧹 Force cleaning up unreachable task for feed ${feedId}`);
+
+              setFeedProgress(prev => {
+                const newProgress = { ...prev };
+                delete newProgress[feedId];
+                return newProgress;
+              });
+
+              setConsumingFeeds(prev => prev.filter(id => id.toString() !== feedId));
+            }
+          }
+        }
+      };
+
+      // Run the stuck feed cleanup
+      checkStuckFeeds();
       
       
     } catch (error) {
@@ -3246,13 +3365,17 @@ function ThreatFeeds({
           const pollInterval = setInterval(async () => {
             try {
               const statusResult = await api.get(`/api/threat-feeds/task-status/${taskId}/`);
-              
+              console.log(`Polling task ${taskId} status:`, statusResult);
+
               if (statusResult.success) {
                 const taskStatus = statusResult.status;
-                
-                if (taskStatus === 'cancelled' || taskStatus === 'cancelled_with_cleanup' || taskStatus === 'cancelled_keep_data') {
+
+                // Check for any cancelled/completed status
+                if (taskStatus === 'cancelled' || taskStatus === 'cancelled_with_cleanup' || taskStatus === 'cancelled_keep_data' ||
+                    taskStatus === 'cancelling' || taskStatus === 'revoked' || taskStatus === 'stopped' ||
+                    taskStatus === 'success' || taskStatus === 'failure' || taskStatus === 'completed' || taskStatus === 'pending') {
                   clearInterval(pollInterval);
-                  
+
                   // Update final status
                   setFeedProgress(prev => ({
                     ...prev,
@@ -3284,17 +3407,104 @@ function ThreatFeeds({
                       delete newProgress[feedId];
                       return newProgress;
                     });
-                  }, 5000);
+                  }, 3000);
+
+                  // Refresh feeds to update status
+                  await fetchThreatFeeds();
                 }
+              } else {
+                // If task not found, consider it cancelled
+                console.log(`Task ${taskId} not found, considering cancelled`);
+                clearInterval(pollInterval);
+
+                // Update final status
+                setFeedProgress(prev => ({
+                  ...prev,
+                  [feedId]: {
+                    stage: 'Cancelled',
+                    message: 'Task cancelled',
+                    percentage: 100,
+                    completed: true
+                  }
+                }));
+
+                // Remove from consuming feeds
+                setConsumingFeeds(prev => prev.filter(id => id !== feedId));
+
+                showSuccess('Task Cancelled', 'Task cancellation completed');
+
+                // Trigger refresh of related components after cancellation
+                refreshManager.triggerRelated('threat-feeds', 'feed_cancelled');
+
+                // Clean up progress after a delay
+                setTimeout(() => {
+                  setFeedProgress(prev => {
+                    const newProgress = { ...prev };
+                    delete newProgress[feedId];
+                    return newProgress;
+                  });
+                }, 3000);
+
+                // Refresh feeds to update status
+                await fetchThreatFeeds();
               }
             } catch (error) {
               console.error('Error polling task status:', error);
+              // After 3 failed polls, consider task cancelled
               clearInterval(pollInterval);
+
+              // Update final status
+              setFeedProgress(prev => ({
+                ...prev,
+                [feedId]: {
+                  stage: 'Cancelled',
+                  message: 'Task cancelled (polling failed)',
+                  percentage: 100,
+                  completed: true
+                }
+              }));
+
+              // Remove from consuming feeds
+              setConsumingFeeds(prev => prev.filter(id => id !== feedId));
+
+              showSuccess('Task Cancelled', 'Task cancellation completed');
+
+              // Clean up progress after a delay
+              setTimeout(() => {
+                setFeedProgress(prev => {
+                  const newProgress = { ...prev };
+                  delete newProgress[feedId];
+                  return newProgress;
+                });
+              }, 3000);
+
+              await fetchThreatFeeds();
             }
           }, 2000); // Poll every 2 seconds
 
-          // Clear polling after 30 seconds max
-          setTimeout(() => clearInterval(pollInterval), 30000);
+          // Clear polling after 15 seconds max
+          setTimeout(() => {
+            clearInterval(pollInterval);
+            // Force cleanup if still polling
+            setFeedProgress(prev => ({
+              ...prev,
+              [feedId]: {
+                stage: 'Cancelled',
+                message: 'Task cancelled (timeout)',
+                percentage: 100,
+                completed: true
+              }
+            }));
+            setConsumingFeeds(prev => prev.filter(id => id !== feedId));
+            showSuccess('Task Cancelled', 'Task cancellation completed');
+            setTimeout(() => {
+              setFeedProgress(prev => {
+                const newProgress = { ...prev };
+                delete newProgress[feedId];
+                return newProgress;
+              });
+            }, 3000);
+          }, 15000);
         }
       } else {
         // Fallback to old cancellation method for non-task feeds
@@ -3374,7 +3584,10 @@ function ThreatFeeds({
         }));
 
         showSuccess('Feed Paused', response.message);
-        
+
+        // Trigger refresh of related components after pause
+        refreshManager.triggerRelated('threat-feeds', 'feed_paused');
+
         // Clear the recent operation tracking after 2 seconds
         setTimeout(() => {
           setRecentPauseOperations(prev => {
@@ -3440,7 +3653,10 @@ function ThreatFeeds({
         }));
 
         showSuccess('Feed Resumed', response.message);
-        
+
+        // Trigger refresh of related components after resume
+        refreshManager.triggerRelated('threat-feeds', 'feed_resumed');
+
         // Clear the recent operation tracking after 2 seconds
         setTimeout(() => {
           setRecentPauseOperations(prev => {
@@ -3591,16 +3807,25 @@ function ThreatFeeds({
             { autoCloseDelay: 8000 }
           );
 
+          // Trigger refresh of all related components immediately
+          refreshManager.triggerRelated('threat-feeds', 'feed_consumption_started');
 
-          // Remove from consuming feeds immediately since it's async
+          // Start polling for background status instead of removing
           setTimeout(() => {
+            console.log(`🔄 Starting background status polling for feed ${feedId}`);
+            // Trigger immediate status refresh to show running state
+            fetchThreatFeeds();
+            // Also trigger related component refresh
+            refreshManager.triggerRelated('threat-feeds', 'feed_status_update');
+
+            // Remove from temporary consuming state but keep monitoring real status
             setConsumingFeeds(prev => prev.filter(id => id !== feedId));
             setFeedProgress(prev => {
               const newProgress = { ...prev };
               delete newProgress[feedId];
               return newProgress;
             });
-          }, 3000); // Show for 3 seconds then remove
+          }, 2000); // Short delay then start monitoring real status
 
           return; // Exit early for async processing
         }
@@ -3623,7 +3848,13 @@ function ThreatFeeds({
 
           // Show success notification
           showSuccess('Feed Consumption Completed', `Successfully processed ${result.indicators || 0} indicators and ${result.ttps || 0} TTPs`);
-          
+
+          // Trigger refresh of all related components after completion
+          refreshManager.triggerRelated('threat-feeds', 'feed_consumption_completed');
+
+          // Also trigger dashboard directly to ensure it refreshes
+          refreshManager.triggerRefresh(['dashboard'], 'feed_consumption_completed_direct');
+
           // Remove from consuming after showing completion
           const completionTimeout = setTimeout(() => {
             setConsumingFeeds(prev => prev.filter(id => id !== feedId));
@@ -3876,6 +4107,10 @@ function ThreatFeeds({
 
         // Trigger refresh of related components after feed deletion
         refreshManager.triggerRelated('threat-feeds', 'feed_deleted');
+
+        // Also trigger dashboard directly to ensure it refreshes
+        refreshManager.triggerRefresh(['dashboard'], 'feed_deleted_direct');
+
         console.log('✅ Threat feeds list refreshed after deletion and related components updated');
 
         // Close modal
@@ -4189,18 +4424,41 @@ function ThreatFeeds({
           {/* Individual Filter Controls */}
           <div className="filter-controls">
             <div className="param-group">
-              <label className="param-label">Days Back:</label>
+              <label className="param-label">Time Range:</label>
               <select
                 value={consumptionParams.days_back}
                 onChange={(e) => handleParamChange('days_back', parseInt(e.target.value))}
                 className="param-select"
               >
-                <option value={1}>1 day</option>
-                <option value={7}>1 week</option>
-                <option value={30}>1 month</option>
-                <option value={90}>3 months</option>
-                <option value={180}>6 months</option>
-                <option value={365}>1 year</option>
+                <optgroup label="Hours (Recent Data)">
+                  <option value={1}>1 hour (uses 1 day filter)</option>
+                  <option value={1}>3 hours (uses 1 day filter)</option>
+                  <option value={1}>6 hours (uses 1 day filter)</option>
+                  <option value={1}>12 hours (uses 1 day filter)</option>
+                </optgroup>
+                <optgroup label="Days">
+                  <option value={1}>1 day (last 24 hours)</option>
+                  <option value={2}>2 days</option>
+                  <option value={3}>3 days</option>
+                  <option value={5}>5 days</option>
+                </optgroup>
+                <optgroup label="Weeks">
+                  <option value={7}>1 week</option>
+                  <option value={14}>2 weeks</option>
+                  <option value={21}>3 weeks</option>
+                </optgroup>
+                <optgroup label="Months">
+                  <option value={30}>1 month (30 days)</option>
+                  <option value={60}>2 months</option>
+                  <option value={90}>3 months</option>
+                  <option value={120}>4 months</option>
+                  <option value={180}>6 months</option>
+                </optgroup>
+                <optgroup label="Extended">
+                  <option value={365}>1 year</option>
+                  <option value={730}>2 years</option>
+                  <option value={1095}>3 years</option>
+                </optgroup>
               </select>
             </div>
             <div className="param-group">
@@ -8361,6 +8619,9 @@ function TTPAnalysis({ active }) {
         // Show success message
         showSuccess('TTP Updated', 'TTP updated successfully');
 
+        // Trigger refresh of related components after TTP update
+        refreshManager.triggerRefresh(['dashboard', 'threat-analysis'], 'ttp_updated');
+
         // Refresh all TTP-related data to reflect changes immediately
         await Promise.all([
           fetchTTPData(), // Main TTP list
@@ -8811,7 +9072,10 @@ function TTPAnalysis({ active }) {
         // Remove the deleted TTP from the local state
         setTtpData(prevData => prevData.filter(ttp => ttp.id !== ttpId));
         showSuccess('TTP Deleted', 'TTP deleted successfully');
-        
+
+        // Trigger refresh of related components after TTP deletion
+        refreshManager.triggerRefresh(['dashboard', 'threat-analysis'], 'ttp_deleted');
+
         // Refresh trends data to reflect deletion
         fetchTTPTrendsData();
       } else {

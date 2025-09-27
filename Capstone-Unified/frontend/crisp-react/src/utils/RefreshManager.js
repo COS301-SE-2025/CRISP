@@ -85,13 +85,16 @@ class RefreshManager {
   async triggerRefresh(keys, reason = 'user_action') {
     if (!Array.isArray(keys)) keys = [keys];
 
-    console.log(`RefreshManager: Triggering refresh for [${keys.join(', ')}] - ${reason}`);
+    console.log(`🔄 RefreshManager: Triggering refresh for [${keys.join(', ')}] - ${reason}`);
 
     for (const key of keys) {
       const subscriber = this.subscribers.get(key);
       if (subscriber) {
+        console.log(`✅ RefreshManager: Refreshing '${key}'`);
         await this.safeRefresh(subscriber);
         subscriber.lastRefresh = Date.now();
+      } else {
+        console.warn(`⚠️ RefreshManager: No subscriber found for '${key}' (available: [${Array.from(this.subscribers.keys()).join(', ')}])`);
       }
     }
   }
@@ -99,20 +102,23 @@ class RefreshManager {
   // Refresh related components after data changes
   async triggerRelated(triggerKey, reason = 'data_change') {
     const relatedKeys = this.getRelatedComponents(triggerKey);
+    console.log(`🔄 RefreshManager: triggerRelated('${triggerKey}') -> [${relatedKeys.join(', ')}]`);
     if (relatedKeys.length > 0) {
       await this.triggerRefresh(relatedKeys, reason);
+    } else {
+      console.warn(`⚠️ RefreshManager: No related components found for '${triggerKey}'`);
     }
   }
 
   getRelatedComponents(triggerKey) {
     // Define component relationships
     const relationships = {
-      'threat-feeds': ['indicators', 'dashboard', 'notifications'],
-      'indicators': ['dashboard', 'threat-analysis'],
-      'organizations': ['users', 'trust-management'],
-      'users': ['notifications', 'trust-management'],
-      'assets': ['alerts', 'dashboard'],
-      'alerts': ['dashboard', 'notifications']
+      'threat-feeds': ['indicators', 'dashboard', 'notifications', 'assets'],
+      'indicators': ['dashboard', 'threat-analysis', 'assets'],
+      'organizations': ['users', 'trust-management', 'notifications'],
+      'users': ['notifications', 'trust-management', 'organizations'],
+      'assets': ['alerts', 'dashboard', 'notifications', 'threat-feeds'],
+      'alerts': ['dashboard', 'notifications', 'assets']
     };
 
     return relationships[triggerKey] || [];

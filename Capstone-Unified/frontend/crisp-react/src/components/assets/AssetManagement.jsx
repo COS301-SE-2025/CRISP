@@ -5,6 +5,7 @@ import LoadingSpinner from '../enhanced/LoadingSpinner';
 import NotificationToast from '../enhanced/NotificationToast';
 import ConfirmationModal from '../enhanced/ConfirmationModal';
 import { useNotifications } from '../enhanced/NotificationManager.jsx';
+import refreshManager from '../../utils/RefreshManager.js';
 
 
 
@@ -488,6 +489,19 @@ const AssetManagement = ({ active }) => {
   useEffect(() => {
     if (active) {
       fetchData();
+
+      // Subscribe to RefreshManager for cross-component updates
+      refreshManager.subscribe('assets', () => {
+        console.log('🔄 RefreshManager: Refreshing asset data');
+        fetchData();
+      }, {
+        backgroundRefresh: true,
+        isVisible: () => active
+      });
+
+      return () => {
+        refreshManager.unsubscribe('assets');
+      };
     }
   }, [active]);
 
@@ -541,6 +555,10 @@ const AssetManagement = ({ active }) => {
     try {
       await triggerAssetCorrelation();
       showNotification('Asset correlation triggered successfully! New alerts will be generated based on your asset inventory.', 'success');
+
+      // Trigger refresh of related components after correlation
+      refreshManager.triggerRelated('assets', 'asset_correlation_triggered');
+
       setTimeout(() => {
         fetchData();
       }, 2000); // 2 second delay
@@ -587,6 +605,10 @@ const AssetManagement = ({ active }) => {
         result = await updateAsset(editingAsset.id, assetData);
         if (result && result.success !== false) {
           showNotification(`Asset "${assetData.name}" updated successfully.`, 'success');
+
+          // Trigger refresh of related components after asset update
+          refreshManager.triggerRelated('assets', 'asset_updated');
+
           fetchData();
           handleCloseAssetModal();
         } else {
@@ -596,6 +618,10 @@ const AssetManagement = ({ active }) => {
         result = await createAsset(assetData);
         if (result && result.data) {
           showNotification(`Asset "${assetData.name}" created successfully.`, 'success');
+
+          // Trigger refresh of related components after asset creation
+          refreshManager.triggerRelated('assets', 'asset_created');
+
           setAssets(prevAssets => [result.data, ...prevAssets]);
           handleCloseAssetModal();
         } else {
@@ -629,6 +655,10 @@ const AssetManagement = ({ active }) => {
 
           if (result && result.success !== false) {
             showNotification(`Asset "${asset.name}" deleted successfully.`, 'success');
+
+            // Trigger refresh of related components after asset deletion
+            refreshManager.triggerRelated('assets', 'asset_deleted');
+
             // Remove the asset from state immediately for better UX
             setAssets(prevAssets => prevAssets.filter(a => a.id !== asset.id));
             // Refresh data to ensure consistency

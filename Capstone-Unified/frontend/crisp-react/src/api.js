@@ -1348,6 +1348,20 @@ export const resumeFeedConsumption = async (feedId) => {
   return await response.json();
 };
 
+export const resetFeedStatus = async (feedId) => {
+  const response = await fetch(`${API_BASE_URL}/api/threat-feeds/${feedId}/reset_feed_status/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to reset feed status');
+  }
+
+  return await response.json();
+};
+
 export const getFeedConsumptionStatus = async (feedId) => {
   const response = await fetch(`${API_BASE_URL}/api/threat-feeds/${feedId}/consumption_status/`, {
     method: 'GET',
