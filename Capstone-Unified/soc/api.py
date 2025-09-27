@@ -1017,31 +1017,149 @@ def mitre_tactics(request):
 @permission_classes([IsAuthenticated])
 def threat_intelligence(request):
     """
-    Get threat intelligence summary for SOC dashboard
+    Get enhanced threat intelligence summary for SOC dashboard with IOC integration
     """
     try:
-        from core.models.models import ThreatFeed, Indicator
+        from core.models.models import ThreatFeed, Indicator, TTPData
+        from django.db.models import Count, Q
+        
+        organization = request.user.organization
         
         # Get threat intelligence metrics
         active_feeds = ThreatFeed.objects.filter(is_active=True).count()
-        total_iocs = Indicator.objects.count()
         
-        # Recent updates
-        recent_indicators = Indicator.objects.filter(
+        # Filter IOCs based on user organization and trust relationships
+        if request.user.is_superuser or request.user.role == 'BlueVisionAdmin':
+            indicators_qs = Indicator.objects.all()
+        else:
+            # Get indicators accessible to user's organization through trust relationships
+            if organization:
+                indicators_qs = Indicator.objects.filter(
+                    Q(threat_feed__owner=organization) |
+                    Q(threat_feed__is_public=True) |
+                    Q(threat_feed__isnull=True)  # Public indicators
+                ).distinct()
+            else:
+                indicators_qs = Indicator.objects.none()
+        
+        total_iocs = indicators_qs.count()
+        
+        # Recent IOC updates (last 24 hours)
+        recent_indicators = indicators_qs.filter(
             created_at__gte=timezone.now() - timedelta(hours=24)
         ).count()
+        
+        # High confidence IOCs
+        high_confidence_iocs = indicators_qs.filter(confidence__gte=80).count()
+        
+        # IOC type breakdown
+        ioc_types = indicators_qs.values('type').annotate(count=Count('type')).order_by('-count')[:5]
+        
+        # Recent high-priority IOCs
+        recent_critical_iocs = []
+        for ioc in indicators_qs.filter(
+            confidence__gte=85,
+            created_at__gte=timezone.now() - timedelta(days=7)
+        ).order_by('-created_at')[:10]:
+            recent_critical_iocs.append({
+                'id': str(ioc.id),
+                'type': ioc.type,
+                'value': ioc.value[:50] + '...' if len(ioc.value) > 50 else ioc.value,
+                'confidence': ioc.confidence,
+                'source': ioc.threat_feed.name if ioc.threat_feed else 'Manual Entry',
+                'created_at': ioc.created_at.isoformat()
+            })
+        
+        # TTP correlation
+        try:
+            ttps_count = TTPData.objects.count()
+            recent_ttps = TTPData.objects.filter(
+                created_at__gte=timezone.now() - timedelta(days=7)
+            ).count()
+        except Exception as e:
+            logger.error(f"Error fetching TTP data: {str(e)}")
+            ttps_count = 0
+            recent_ttps = 0
+        
+        # Feed status summary
+        feed_status = []
+        try:
+            for feed in ThreatFeed.objects.filter(is_active=True)[:5]:
+                try:
+                    indicator_count = feed.indicators.count()
+                except Exception as e:
+                    logger.warning(f"Error counting indicators for feed {feed.name}: {str(e)}")
+                    indicator_count = 0
+                    
+                feed_status.append({
+                    'name': feed.name,
+                    'status': feed.consumption_status,
+                    'last_update': feed.last_sync.isoformat() if feed.last_sync else None,
+                    'indicator_count': indicator_count
+                })
+        except Exception as e:
+            logger.error(f"Error fetching feed status: {str(e)}")
+            feed_status = []
+        
+        # Threat trends analysis
+        week_ago = timezone.now() - timedelta(days=7)
+        current_week_iocs = indicators_qs.filter(created_at__gte=week_ago).count()
+        previous_week_iocs = indicators_qs.filter(
+            created_at__gte=week_ago - timedelta(days=7),
+            created_at__lt=week_ago
+        ).count()
+        
+        ioc_trend = 'stable'
+        ioc_change = 0
+        if previous_week_iocs > 0:
+            ioc_change = ((current_week_iocs - previous_week_iocs) / previous_week_iocs) * 100
+            if ioc_change > 10:
+                ioc_trend = 'increasing'
+            elif ioc_change < -10:
+                ioc_trend = 'decreasing'
         
         intel_data = {
             'feeds_active': active_feeds,
             'iocs_count': total_iocs,
             'recent_iocs_24h': recent_indicators,
-            'confidence': 'High',
+            'high_confidence_iocs': high_confidence_iocs,
+            'ttps_count': ttps_count,
+            'recent_ttps': recent_ttps,
+            'confidence': 'High' if high_confidence_iocs > total_iocs * 0.7 else 'Medium',
             'last_update': timezone.now().isoformat(),
-            'threat_level': 'Medium',
+            'threat_level': 'High' if recent_indicators > 50 else 'Medium' if recent_indicators > 20 else 'Low',
+            'ioc_trend': {
+                'direction': ioc_trend,
+                'change_percentage': round(ioc_change, 1),
+                'current_week': current_week_iocs,
+                'previous_week': previous_week_iocs
+            },
+            'ioc_types_breakdown': [
+                {
+                    'type': item['type'],
+                    'count': item['count'],
+                    'percentage': round((item['count'] / total_iocs) * 100, 1) if total_iocs > 0 else 0
+                }
+                for item in ioc_types
+            ],
+            'recent_critical_iocs': recent_critical_iocs,
+            'feed_status': feed_status,
             'trending_threats': [
-                {'name': 'Phishing Campaigns', 'increase': '15%'},
-                {'name': 'Ransomware Activity', 'increase': '8%'},
-                {'name': 'Supply Chain Attacks', 'increase': '12%'}
+                {
+                    'name': 'Malware IOCs',
+                    'count': indicators_qs.filter(type='file_hash').count(),
+                    'trend': 'increasing' if current_week_iocs > previous_week_iocs else 'stable'
+                },
+                {
+                    'name': 'Network IOCs',
+                    'count': indicators_qs.filter(type__in=['ip', 'domain', 'url']).count(),
+                    'trend': 'increasing'
+                },
+                {
+                    'name': 'Email Threats',
+                    'count': indicators_qs.filter(type='email').count(),
+                    'trend': 'stable'
+                }
             ]
         }
         
@@ -1055,4 +1173,189 @@ def threat_intelligence(request):
         return Response({
             'success': False,
             'message': 'Failed to get threat intelligence data'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def live_ioc_alerts(request):
+    """
+    Get live IOC-based alerts for real-time SOC monitoring
+    """
+    try:
+        from core.models.models import Indicator, CustomAlert, AssetInventory
+        from django.db.models import Q
+        
+        organization = request.user.organization
+        
+        # Filter based on user organization
+        if request.user.is_superuser or request.user.role == 'BlueVisionAdmin':
+            alerts_qs = CustomAlert.objects.all()
+        else:
+            alerts_qs = CustomAlert.objects.filter(organization=organization) if organization else CustomAlert.objects.none()
+        
+        # Get recent IOC-based alerts (last 24 hours)
+        recent_alerts = alerts_qs.filter(
+            created_at__gte=timezone.now() - timedelta(hours=24),
+            status__in=['new', 'acknowledged', 'investigating']
+        ).order_by('-created_at')[:20]
+        
+        live_alerts = []
+        for alert in recent_alerts:
+            # Get related IOCs
+            related_iocs = []
+            for indicator in alert.source_indicators.all()[:5]:
+                related_iocs.append({
+                    'type': indicator.type,
+                    'value': indicator.value[:30] + '...' if len(indicator.value) > 30 else indicator.value,
+                    'confidence': indicator.confidence
+                })
+            
+            # Get matched assets
+            matched_assets = []
+            for asset in alert.matched_assets.all()[:3]:
+                matched_assets.append({
+                    'name': asset.name,
+                    'type': asset.asset_type,
+                    'criticality': asset.criticality
+                })
+            
+            live_alerts.append({
+                'id': str(alert.id),
+                'title': alert.title,
+                'description': alert.description,
+                'severity': alert.severity,
+                'alert_type': alert.alert_type,
+                'created_at': alert.created_at.isoformat(),
+                'related_iocs': related_iocs,
+                'matched_assets': matched_assets,
+                'organization': alert.organization.name if alert.organization else 'System',
+                'is_acknowledged': alert.status == 'acknowledged',
+                'threat_score': getattr(alert, 'confidence_score', 0)
+            })
+        
+        # IOC correlation statistics
+        total_active_alerts = alerts_qs.filter(status__in=['new', 'acknowledged', 'investigating']).count()
+        high_severity_alerts = alerts_qs.filter(
+            severity__in=['high', 'critical'],
+            status__in=['new', 'acknowledged', 'investigating']
+        ).count()
+        
+        # Recent IOC matches
+        recent_ioc_matches = Indicator.objects.filter(
+            created_at__gte=timezone.now() - timedelta(hours=1),
+            confidence__gte=70
+        ).count()
+        
+        response_data = {
+            'live_alerts': live_alerts,
+            'statistics': {
+                'total_active_alerts': total_active_alerts,
+                'high_severity_alerts': high_severity_alerts,
+                'recent_ioc_matches': recent_ioc_matches,
+                'alert_rate_24h': len(live_alerts)
+            },
+            'last_updated': timezone.now().isoformat()
+        }
+        
+        return Response({
+            'success': True,
+            'data': response_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in live_ioc_alerts: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to get live IOC alerts'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def ioc_incident_correlation(request):
+    """
+    Get IOC-incident correlation data for SOC analysis
+    """
+    try:
+        from core.models.models import Indicator
+        
+        organization = request.user.organization
+        
+        # Build queryset based on user role
+        if request.user.is_superuser or request.user.role == 'BlueVisionAdmin':
+            incidents_qs = SOCIncident.objects.all()
+        else:
+            incidents_qs = SOCIncident.objects.filter(organization=organization) if organization else SOCIncident.objects.none()
+        
+        # Get incidents with IOC correlations (last 30 days)
+        recent_incidents = incidents_qs.filter(
+            created_at__gte=timezone.now() - timedelta(days=30)
+        ).prefetch_related('related_indicators')
+        
+        correlation_data = []
+        for incident in recent_incidents:
+            if incident.related_indicators.exists():
+                ioc_details = []
+                for ioc in incident.related_indicators.all()[:10]:
+                    ioc_details.append({
+                        'type': ioc.type,
+                        'value': ioc.value[:40] + '...' if len(ioc.value) > 40 else ioc.value,
+                        'confidence': ioc.confidence,
+                        'source': ioc.threat_feed.name if ioc.threat_feed else 'Manual'
+                    })
+                
+                correlation_data.append({
+                    'incident_id': incident.incident_id,
+                    'title': incident.title,
+                    'priority': incident.priority,
+                    'status': incident.status,
+                    'created_at': incident.created_at.isoformat(),
+                    'ioc_count': incident.related_indicators.count(),
+                    'related_iocs': ioc_details
+                })
+        
+        # IOC effectiveness metrics
+        total_incidents_with_iocs = len(correlation_data)
+        total_incidents = recent_incidents.count()
+        correlation_rate = (total_incidents_with_iocs / total_incidents * 100) if total_incidents > 0 else 0
+        
+        # Top IOC types in incidents
+        ioc_type_stats = {}
+        for incident in recent_incidents:
+            for ioc in incident.related_indicators.all():
+                ioc_type = ioc.type
+                if ioc_type not in ioc_type_stats:
+                    ioc_type_stats[ioc_type] = {'count': 0, 'incidents': set()}
+                ioc_type_stats[ioc_type]['count'] += 1
+                ioc_type_stats[ioc_type]['incidents'].add(incident.id)
+        
+        top_ioc_types = [
+            {
+                'type': ioc_type,
+                'count': stats['count'],
+                'incidents_affected': len(stats['incidents'])
+            }
+            for ioc_type, stats in sorted(ioc_type_stats.items(), key=lambda x: x[1]['count'], reverse=True)[:5]
+        ]
+        
+        return Response({
+            'success': True,
+            'data': {
+                'correlations': correlation_data,
+                'statistics': {
+                    'total_incidents': total_incidents,
+                    'incidents_with_iocs': total_incidents_with_iocs,
+                    'correlation_rate': round(correlation_rate, 1),
+                    'top_ioc_types': top_ioc_types
+                },
+                'last_updated': timezone.now().isoformat()
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in ioc_incident_correlation: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to get IOC-incident correlation data'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

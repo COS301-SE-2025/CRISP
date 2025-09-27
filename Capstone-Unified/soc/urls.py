@@ -24,4 +24,8 @@ urlpatterns = [
     path('top-threats/', api.top_threats, name='top_threats'),
     path('mitre-tactics/', api.mitre_tactics, name='mitre_tactics'),
     path('threat-intelligence/', api.threat_intelligence, name='threat_intelligence'),
+    
+    # IOC Integration
+    path('live-ioc-alerts/', api.live_ioc_alerts, name='live_ioc_alerts'),
+    path('ioc-incident-correlation/', api.ioc_incident_correlation, name='ioc_incident_correlation'),
 ]

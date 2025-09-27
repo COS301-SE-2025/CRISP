@@ -20,6 +20,8 @@ const SOCDashboard = ({ active, showPage }) => {
   const [topThreats, setTopThreats] = useState([]);
   const [mitreTactics, setMitreTactics] = useState([]);
   const [threatIntelligence, setThreatIntelligence] = useState(null);
+  const [liveIOCAlerts, setLiveIOCAlerts] = useState([]);
+  const [iocCorrelation, setIOCCorrelation] = useState(null);
 
   useEffect(() => {
     if (active) {
@@ -46,7 +48,9 @@ const SOCDashboard = ({ active, showPage }) => {
         fetchNetworkActivity(),
         fetchTopThreats(),
         fetchMitreTactics(),
-        fetchThreatIntelligence()
+        fetchThreatIntelligence(),
+        fetchLiveIOCAlerts(),
+        fetchIOCCorrelation()
       ]);
     } catch (err) {
       console.error('Error initializing SOC dashboard:', err);
@@ -58,7 +62,7 @@ const SOCDashboard = ({ active, showPage }) => {
   const setupWebSocketConnection = () => {
     try {
       const token = localStorage.getItem('access_token');
-      const wsUrl = `ws://localhost:8000/ws/soc/?token=${token}`;
+      const wsUrl = `ws://${window.location.hostname}:8000/ws/soc/?token=${token}`;
       wsRef.current = new WebSocket(wsUrl);
       
       wsRef.current.onopen = () => {
@@ -209,6 +213,28 @@ const SOCDashboard = ({ active, showPage }) => {
       }
     } catch (err) {
       console.error('Failed to fetch threat intelligence:', err);
+    }
+  };
+
+  const fetchLiveIOCAlerts = async () => {
+    try {
+      const response = await api.getLiveIOCAlerts();
+      if (response?.success && response?.data) {
+        setLiveIOCAlerts(response.data.live_alerts || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch live IOC alerts:', err);
+    }
+  };
+
+  const fetchIOCCorrelation = async () => {
+    try {
+      const response = await api.getIOCIncidentCorrelation();
+      if (response?.success && response?.data) {
+        setIOCCorrelation(response.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch IOC correlation data:', err);
     }
   };
 
@@ -391,6 +417,7 @@ const SOCDashboard = ({ active, showPage }) => {
         {[
           { key: 'overview', label: 'Overview', icon: 'fa-chart-line' },
           { key: 'threats', label: 'Threat Intelligence', icon: 'fa-shield-virus' },
+          { key: 'ioc-alerts', label: 'IOC Alerts', icon: 'fa-exclamation-triangle' },
           { key: 'network', label: 'Network Activity', icon: 'fa-network-wired' },
           { key: 'mitre', label: 'MITRE ATT&CK', icon: 'fa-crosshairs' },
           { key: 'alerts', label: 'Live Alerts', icon: 'fa-bell' }
@@ -850,15 +877,234 @@ const SOCDashboard = ({ active, showPage }) => {
       {/* Tab Content */}
       {activeTab === 'threats' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+          {/* Enhanced Threat Intelligence Summary */}
+          <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+            <div style={{ 
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+              color: 'white', 
+              padding: '1rem', 
+              borderBottom: '1px solid #dee2e6' 
+            }}>
+              <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600' }}>
+                <i className="fas fa-globe" style={{ marginRight: '0.5rem' }}></i>
+                IOC Threat Intelligence
+              </h3>
+            </div>
+            <div style={{ padding: '1.5rem' }}>
+              {threatIntelligence ? (
+                <>
+                  {/* Enhanced Metrics Grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#007bff', marginBottom: '0.5rem' }}>
+                        {threatIntelligence.iocs_count || 0}
+                      </div>
+                      <div style={{ fontSize: '0.875rem', color: '#666' }}>Total IOCs</div>
+                    </div>
+                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#28a745', marginBottom: '0.5rem' }}>
+                        {threatIntelligence.high_confidence_iocs || 0}
+                      </div>
+                      <div style={{ fontSize: '0.875rem', color: '#666' }}>High Confidence</div>
+                    </div>
+                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#ffc107', marginBottom: '0.5rem' }}>
+                        {threatIntelligence.feeds_active || 0}
+                      </div>
+                      <div style={{ fontSize: '0.875rem', color: '#666' }}>Active Feeds</div>
+                    </div>
+                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#dc3545', marginBottom: '0.5rem' }}>
+                        {threatIntelligence.recent_iocs_24h || 0}
+                      </div>
+                      <div style={{ fontSize: '0.875rem', color: '#666' }}>Last 24h</div>
+                    </div>
+                  </div>
+
+                  {/* IOC Trend Analysis */}
+                  {threatIntelligence.ioc_trend && (
+                    <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
+                      <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: '600' }}>IOC Trends</h4>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <span style={{
+                          backgroundColor: threatIntelligence.ioc_trend.direction === 'increasing' ? '#dc3545' : 
+                                         threatIntelligence.ioc_trend.direction === 'decreasing' ? '#28a745' : '#6c757d',
+                          color: 'white',
+                          padding: '0.25rem 0.75rem',
+                          borderRadius: '12px',
+                          fontSize: '0.75rem',
+                          fontWeight: '600',
+                          textTransform: 'capitalize'
+                        }}>
+                          {threatIntelligence.ioc_trend.direction}
+                        </span>
+                        <span style={{ fontSize: '0.875rem' }}>
+                          {threatIntelligence.ioc_trend.change_percentage > 0 ? '+' : ''}{threatIntelligence.ioc_trend.change_percentage}%
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* IOC Types Breakdown */}
+                  {threatIntelligence.ioc_types_breakdown && (
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <h4 style={{ margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: '600' }}>IOC Types</h4>
+                      {threatIntelligence.ioc_types_breakdown.slice(0, 5).map((type, index) => (
+                        <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                          <span style={{ fontSize: '0.875rem', textTransform: 'capitalize' }}>{type.type.replace('_', ' ')}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>{type.count}</span>
+                            <span style={{ fontSize: '0.75rem', color: '#666' }}>({type.percentage}%)</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div style={{ borderTop: '1px solid #dee2e6', paddingTop: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: '0.875rem', color: '#666' }}>Threat Level</div>
+                        <span style={{
+                          backgroundColor: threatIntelligence.threat_level === 'High' ? '#dc3545' : 
+                                         threatIntelligence.threat_level === 'Medium' ? '#ffc107' : '#28a745',
+                          color: 'white',
+                          padding: '0.25rem 0.75rem',
+                          borderRadius: '12px',
+                          fontSize: '0.75rem',
+                          fontWeight: '600'
+                        }}>{threatIntelligence.threat_level}</span>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '0.875rem', color: '#666' }}>Confidence</div>
+                        <span style={{
+                          backgroundColor: '#28a745',
+                          color: 'white',
+                          padding: '0.25rem 0.75rem',
+                          borderRadius: '12px',
+                          fontSize: '0.75rem',
+                          fontWeight: '600'
+                        }}>{threatIntelligence.confidence}</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div style={{ textAlign: 'center', color: '#666', padding: '2rem' }}>
+                  <i className="fas fa-satellite-dish" style={{ fontSize: '3rem', marginBottom: '1rem', color: '#dee2e6' }}></i>
+                  <p>Loading threat intelligence...</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Recent Critical IOCs */}
+          <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+            <div style={{ 
+              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', 
+              color: 'white', 
+              padding: '1rem', 
+              borderBottom: '1px solid #dee2e6' 
+            }}>
+              <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600' }}>
+                <i className="fas fa-exclamation-triangle" style={{ marginRight: '0.5rem' }}></i>
+                Recent Critical IOCs
+              </h3>
+            </div>
+            <div style={{ padding: '1.5rem' }}>
+              {threatIntelligence && threatIntelligence.recent_critical_iocs && threatIntelligence.recent_critical_iocs.length > 0 ? (
+                <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                  {threatIntelligence.recent_critical_iocs.map((ioc, index) => (
+                    <div key={index} style={{ 
+                      padding: '1rem', 
+                      backgroundColor: '#f8f9fa', 
+                      borderRadius: '6px', 
+                      marginBottom: '1rem',
+                      border: '1px solid #e9ecef'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                            <span style={{
+                              backgroundColor: '#007bff',
+                              color: 'white',
+                              padding: '0.125rem 0.5rem',
+                              borderRadius: '8px',
+                              fontSize: '0.7rem',
+                              fontWeight: '600',
+                              textTransform: 'uppercase'
+                            }}>{ioc.type}</span>
+                            <span style={{
+                              backgroundColor: ioc.confidence >= 90 ? '#28a745' : ioc.confidence >= 70 ? '#ffc107' : '#dc3545',
+                              color: 'white',
+                              padding: '0.125rem 0.5rem',
+                              borderRadius: '8px',
+                              fontSize: '0.7rem',
+                              fontWeight: '600'
+                            }}>{ioc.confidence}%</span>
+                          </div>
+                          <div style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.25rem', wordBreak: 'break-all' }}>
+                            {ioc.value}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                            Source: {ioc.source}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#999' }}>
+                        {new Date(ioc.created_at).toLocaleString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', color: '#666', padding: '2rem' }}>
+                  <i className="fas fa-shield-check" style={{ fontSize: '3rem', marginBottom: '1rem', color: '#28a745' }}></i>
+                  <p>No critical IOCs detected recently</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Top Threats */}
           <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
             <div style={{ backgroundColor: '#f8f9fa', padding: '1rem', borderBottom: '1px solid #dee2e6' }}>
               <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600', color: '#333' }}>
                 <i className="fas fa-shield-virus" style={{ marginRight: '0.5rem', color: '#dc3545' }}></i>
-                Top Threats
+                Trending Threats
               </h3>
             </div>
             <div style={{ padding: '1.5rem' }}>
-              {topThreats.length > 0 ? topThreats.map((threat, index) =>
+              {threatIntelligence && threatIntelligence.trending_threats ? (
+                threatIntelligence.trending_threats.map((threat, index) => (
+                  <div key={index} style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    padding: '1rem', 
+                    backgroundColor: '#f8f9fa', 
+                    borderRadius: '6px', 
+                    marginBottom: '1rem',
+                    border: '1px solid #e9ecef'
+                  }}>
+                    <div>
+                      <div style={{ fontWeight: '600', fontSize: '1rem', marginBottom: '0.25rem' }}>{threat.name}</div>
+                      <div style={{ fontSize: '0.875rem', color: '#666' }}>Count: {threat.count}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{
+                        backgroundColor: threat.trend === 'increasing' ? '#dc3545' : '#28a745',
+                        color: 'white',
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '12px',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        textTransform: 'capitalize'
+                      }}>{threat.trend}</span>
+                    </div>
+                  </div>
+                ))
+              ) : topThreats.length > 0 ? topThreats.map((threat, index) =>
                 <div key={index} style={{ 
                   display: 'flex', 
                   justifyContent: 'space-between', 
@@ -893,52 +1139,357 @@ const SOCDashboard = ({ active, showPage }) => {
               )}
             </div>
           </div>
-          <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-            <div style={{ backgroundColor: '#f8f9fa', padding: '1rem', borderBottom: '1px solid #dee2e6' }}>
-              <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600', color: '#333' }}>
-                <i className="fas fa-globe" style={{ marginRight: '0.5rem', color: '#007bff' }}></i>
-                Threat Intelligence Summary
+
+          {/* Feed Status */}
+          {threatIntelligence && threatIntelligence.feed_status && (
+            <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+              <div style={{ backgroundColor: '#f8f9fa', padding: '1rem', borderBottom: '1px solid #dee2e6' }}>
+                <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600', color: '#333' }}>
+                  <i className="fas fa-rss" style={{ marginRight: '0.5rem', color: '#17a2b8' }}></i>
+                  Threat Feed Status
+                </h3>
+              </div>
+              <div style={{ padding: '1.5rem' }}>
+                {threatIntelligence.feed_status.map((feed, index) => (
+                  <div key={index} style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    padding: '0.75rem', 
+                    backgroundColor: '#f8f9fa', 
+                    borderRadius: '6px', 
+                    marginBottom: '0.75rem',
+                    border: '1px solid #e9ecef'
+                  }}>
+                    <div>
+                      <div style={{ fontWeight: '600', fontSize: '0.875rem', marginBottom: '0.25rem' }}>{feed.name}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                        {feed.indicator_count} indicators
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{
+                        backgroundColor: feed.status === 'success' ? '#28a745' : 
+                                       feed.status === 'processing' ? '#ffc107' : '#dc3545',
+                        color: 'white',
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '8px',
+                        fontSize: '0.7rem',
+                        fontWeight: '600',
+                        textTransform: 'uppercase'
+                      }}>{feed.status}</span>
+                      {feed.last_update && (
+                        <div style={{ fontSize: '0.7rem', color: '#666', marginTop: '0.25rem' }}>
+                          {new Date(feed.last_update).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'ioc-alerts' && (
+        <div style={{ marginBottom: '2rem' }}>
+          {/* IOC Alerts Overview */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+            <div style={{
+              background: 'linear-gradient(135deg, #dc3545 0%, #fd7e14 100%)',
+              color: 'white',
+              padding: '1.5rem',
+              borderRadius: '8px',
+              textAlign: 'center',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>
+                <i className="fas fa-exclamation-triangle"></i>
+              </div>
+              <div style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                {liveIOCAlerts.length}
+              </div>
+              <div style={{ fontSize: '1.1rem' }}>Live IOC Alerts</div>
+            </div>
+            
+            <div style={{
+              background: 'linear-gradient(135deg, #ffc107 0%, #fd7e14 100%)',
+              color: 'white',
+              padding: '1.5rem',
+              borderRadius: '8px',
+              textAlign: 'center',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>
+                <i className="fas fa-link"></i>
+              </div>
+              <div style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                {iocCorrelation?.statistics?.correlation_rate || 0}%
+              </div>
+              <div style={{ fontSize: '1.1rem' }}>IOC Correlation Rate</div>
+            </div>
+            
+            <div style={{
+              background: 'linear-gradient(135deg, #007bff 0%, #6f42c1 100%)',
+              color: 'white',
+              padding: '1.5rem',
+              borderRadius: '8px',
+              textAlign: 'center',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>
+                <i className="fas fa-project-diagram"></i>
+              </div>
+              <div style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                {iocCorrelation?.statistics?.incidents_with_iocs || 0}
+              </div>
+              <div style={{ fontSize: '1.1rem' }}>IOC-Linked Incidents</div>
+            </div>
+          </div>
+
+          {/* Live IOC Alerts */}
+          <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden', marginBottom: '2rem' }}>
+            <div style={{ 
+              background: 'linear-gradient(90deg, #dc3545 0%, #fd7e14 100%)', 
+              color: 'white', 
+              padding: '1rem', 
+              borderBottom: '1px solid #dee2e6' 
+            }}>
+              <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600' }}>
+                <i className="fas fa-exclamation-triangle" style={{ marginRight: '0.5rem' }}></i>
+                Live IOC-Based Alerts
               </h3>
             </div>
             <div style={{ padding: '1.5rem' }}>
-              {threatIntelligence ? (
-                <>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
-                      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#007bff', marginBottom: '0.5rem' }}>{threatIntelligence.iocs_count}</div>
-                      <div style={{ fontSize: '0.875rem', color: '#666' }}>IOCs</div>
+              {liveIOCAlerts.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {liveIOCAlerts.map((alert, index) => (
+                    <div key={index} style={{ 
+                      padding: '1.5rem', 
+                      backgroundColor: '#f8f9fa', 
+                      borderRadius: '8px', 
+                      border: '1px solid #e9ecef',
+                      borderLeft: `5px solid ${alert.severity === 'critical' ? '#dc3545' : 
+                                                alert.severity === 'high' ? '#fd7e14' : 
+                                                alert.severity === 'medium' ? '#ffc107' : '#28a745'}`
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                        <div style={{ flex: 1 }}>
+                          <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1.125rem', fontWeight: '600', color: '#333' }}>
+                            {alert.title}
+                          </h4>
+                          <p style={{ margin: '0 0 1rem 0', color: '#666', fontSize: '0.875rem' }}>
+                            {alert.description}
+                          </p>
+                          
+                          {/* Alert Details */}
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <span style={{
+                              backgroundColor: alert.severity === 'critical' ? '#dc3545' : 
+                                             alert.severity === 'high' ? '#fd7e14' : 
+                                             alert.severity === 'medium' ? '#ffc107' : '#28a745',
+                              color: 'white',
+                              padding: '0.25rem 0.75rem',
+                              borderRadius: '12px',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              textTransform: 'uppercase'
+                            }}>
+                              {alert.severity}
+                            </span>
+                            <span style={{
+                              backgroundColor: '#007bff',
+                              color: 'white',
+                              padding: '0.25rem 0.75rem',
+                              borderRadius: '12px',
+                              fontSize: '0.75rem',
+                              fontWeight: '600'
+                            }}>
+                              {alert.alert_type}
+                            </span>
+                            {alert.organization && (
+                              <span style={{
+                                backgroundColor: '#6c757d',
+                                color: 'white',
+                                padding: '0.25rem 0.75rem',
+                                borderRadius: '12px',
+                                fontSize: '0.75rem',
+                                fontWeight: '600'
+                              }}>
+                                {alert.organization}
+                              </span>
+                            )}
+                          </div>
+                          
+                          {/* Related IOCs */}
+                          {alert.related_iocs && alert.related_iocs.length > 0 && (
+                            <div style={{ marginBottom: '1rem' }}>
+                              <h5 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', fontWeight: '600', color: '#495057' }}>
+                                Related IOCs:
+                              </h5>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                {alert.related_iocs.map((ioc, iocIndex) => (
+                                  <div key={iocIndex} style={{
+                                    backgroundColor: 'white',
+                                    border: '1px solid #dee2e6',
+                                    borderRadius: '6px',
+                                    padding: '0.5rem',
+                                    fontSize: '0.75rem'
+                                  }}>
+                                    <div style={{ fontWeight: '600', color: '#007bff', marginBottom: '0.25rem' }}>
+                                      {ioc.type.toUpperCase()}
+                                    </div>
+                                    <div style={{ fontFamily: 'monospace', fontSize: '0.7rem', marginBottom: '0.25rem' }}>
+                                      {ioc.value}
+                                    </div>
+                                    <div style={{ color: '#666' }}>
+                                      Confidence: {ioc.confidence}%
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Matched Assets */}
+                          {alert.matched_assets && alert.matched_assets.length > 0 && (
+                            <div style={{ marginBottom: '1rem' }}>
+                              <h5 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', fontWeight: '600', color: '#495057' }}>
+                                Affected Assets:
+                              </h5>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                {alert.matched_assets.map((asset, assetIndex) => (
+                                  <span key={assetIndex} style={{
+                                    backgroundColor: asset.criticality === 'critical' ? '#dc3545' : 
+                                                   asset.criticality === 'high' ? '#fd7e14' : '#28a745',
+                                    color: 'white',
+                                    padding: '0.25rem 0.75rem',
+                                    borderRadius: '12px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: '600'
+                                  }}>
+                                    {asset.name} ({asset.type})
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div style={{ textAlign: 'right', marginLeft: '1rem' }}>
+                          {alert.is_acknowledged ? (
+                            <span style={{
+                              backgroundColor: '#28a745',
+                              color: 'white',
+                              padding: '0.5rem 1rem',
+                              borderRadius: '6px',
+                              fontSize: '0.875rem',
+                              fontWeight: '600'
+                            }}>
+                              <i className="fas fa-check" style={{ marginRight: '0.5rem' }}></i>
+                              Acknowledged
+                            </span>
+                          ) : (
+                            <button style={{
+                              backgroundColor: '#ffc107',
+                              color: '#212529',
+                              border: 'none',
+                              padding: '0.5rem 1rem',
+                              borderRadius: '6px',
+                              fontSize: '0.875rem',
+                              fontWeight: '600',
+                              cursor: 'pointer'
+                            }}>
+                              <i className="fas fa-eye" style={{ marginRight: '0.5rem' }}></i>
+                              Acknowledge
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div style={{ fontSize: '0.75rem', color: '#999', borderTop: '1px solid #dee2e6', paddingTop: '0.5rem' }}>
+                        Created: {new Date(alert.created_at).toLocaleString()}
+                      </div>
                     </div>
-                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
-                      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#ffc107', marginBottom: '0.5rem' }}>{threatIntelligence.feeds_active}</div>
-                      <div style={{ fontSize: '0.875rem', color: '#666' }}>Active Feeds</div>
-                    </div>
-                  </div>
-                  <div style={{ borderTop: '1px solid #dee2e6', paddingTop: '1rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                      <span style={{ color: '#333' }}>Last Update:</span>
-                      <span style={{ fontSize: '0.875rem', color: '#666' }}>{new Date(threatIntelligence.last_update).toLocaleString()}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: '#333' }}>Confidence Level:</span>
-                      <span style={{
-                        backgroundColor: '#28a745',
-                        color: 'white',
-                        padding: '0.25rem 0.75rem',
-                        borderRadius: '12px',
-                        fontSize: '0.75rem',
-                        fontWeight: '600'
-                      }}>{threatIntelligence.confidence}</span>
-                    </div>
-                  </div>
-                </>
+                  ))}
+                </div>
               ) : (
-                <div style={{ textAlign: 'center', color: '#666', padding: '2rem' }}>
-                  <i className="fas fa-satellite-dish" style={{ fontSize: '3rem', marginBottom: '1rem', color: '#dee2e6' }}></i>
-                  <p>Loading threat intelligence...</p>
+                <div style={{ textAlign: 'center', color: '#666', padding: '3rem' }}>
+                  <i className="fas fa-shield-check" style={{ fontSize: '4rem', marginBottom: '1rem', color: '#28a745' }}></i>
+                  <h4 style={{ margin: '0 0 0.5rem 0', color: '#28a745' }}>No Active IOC Alerts</h4>
+                  <p style={{ margin: '0' }}>All IOC monitoring systems are clear</p>
                 </div>
               )}
             </div>
           </div>
+
+          {/* IOC-Incident Correlation */}
+          {iocCorrelation && (
+            <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+              <div style={{ 
+                background: 'linear-gradient(90deg, #6f42c1 0%, #007bff 100%)', 
+                color: 'white', 
+                padding: '1rem', 
+                borderBottom: '1px solid #dee2e6' 
+              }}>
+                <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600' }}>
+                  <i className="fas fa-project-diagram" style={{ marginRight: '0.5rem' }}></i>
+                  IOC-Incident Correlation Analysis
+                </h3>
+              </div>
+              <div style={{ padding: '1.5rem' }}>
+                {/* Correlation Statistics */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#007bff', marginBottom: '0.5rem' }}>
+                      {iocCorrelation.statistics.total_incidents}
+                    </div>
+                    <div style={{ fontSize: '0.875rem', color: '#666' }}>Total Incidents</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#28a745', marginBottom: '0.5rem' }}>
+                      {iocCorrelation.statistics.incidents_with_iocs}
+                    </div>
+                    <div style={{ fontSize: '0.875rem', color: '#666' }}>With IOCs</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#ffc107', marginBottom: '0.5rem' }}>
+                      {iocCorrelation.statistics.correlation_rate}%
+                    </div>
+                    <div style={{ fontSize: '0.875rem', color: '#666' }}>Correlation Rate</div>
+                  </div>
+                </div>
+
+                {/* Top IOC Types */}
+                {iocCorrelation.statistics.top_ioc_types && (
+                  <div style={{ marginBottom: '2rem' }}>
+                    <h4 style={{ margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: '600' }}>Top IOC Types in Incidents</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                      {iocCorrelation.statistics.top_ioc_types.map((type, index) => (
+                        <div key={index} style={{ 
+                          padding: '1rem', 
+                          backgroundColor: '#f8f9fa', 
+                          borderRadius: '6px', 
+                          border: '1px solid #e9ecef' 
+                        }}>
+                          <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#007bff', marginBottom: '0.5rem' }}>
+                            {type.count}
+                          </div>
+                          <div style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.25rem', textTransform: 'capitalize' }}>
+                            {type.type.replace('_', ' ')}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                            {type.incidents_affected} incidents affected
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
