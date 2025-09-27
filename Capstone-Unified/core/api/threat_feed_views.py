@@ -560,6 +560,7 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
                     stats = service.consume_feed(feed, limit=limit, force_days=force_days, batch_size=batch_size)
 
                     # Update feed status on successful completion
+                    from django.utils import timezone
                     feed.consumption_status = 'idle'
                     feed.last_sync = timezone.now()
                     feed.sync_count = (feed.sync_count or 0) + 1

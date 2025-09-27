@@ -586,9 +586,10 @@ class ThreatFeed(models.Model):
     # Consumption status for pause/resume functionality
     CONSUMPTION_STATUS_CHOICES = [
         ('idle', 'Idle'),
-        ('running', 'Running'), 
+        ('running', 'Running'),
         ('paused', 'Paused'),
         ('stopping', 'Stopping'),
+        ('completed', 'Completed'),
         ('error', 'Error')
     ]
     consumption_status = models.CharField(
@@ -706,7 +707,7 @@ class ThreatFeed(models.Model):
     
     def stop_consumption(self, error_message=None):
         """Mark feed consumption as stopped/idle"""
-        self.consumption_status = 'error' if error_message else 'idle'
+        self.consumption_status = 'error' if error_message else 'completed'
         self.current_task_id = None
         self.paused_at = None
         self.pause_metadata = {}

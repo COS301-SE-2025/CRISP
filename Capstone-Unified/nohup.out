@@ -1,0 +1,41 @@
+✅ Feed notification observer loaded successfully
+INFO Registered STIX creator for type: indicator
+INFO Registered STIX creator for type: attack-pattern
+ 
+ -------------- celery@SaucyLaptop v5.3.4 (emerald-rush)
+--- ***** ----- 
+-- ******* ---- Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39 2025-09-27 14:35:22
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         crisp_unified:0x7d1230f52390
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/0
+- *** --- * --- .> concurrency: 12 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . consume_external_taxii_feeds
+  . consume_feed_task
+  . schedule_taxii_feed_consumption
+  . settings.celery.debug_task
+
+[2025-09-27 14:35:26,279: WARNING/MainProcess] /home/jadyn/.local/lib/python3.12/site-packages/celery/worker/consumer/consumer.py:507: CPendingDeprecationWarning: The broker_connection_retry configuration setting will no longer determine
+whether broker connection retries are made during startup in Celery 6.0 and above.
+If you wish to retain the existing behavior for retrying connections on startup,
+you should set broker_connection_retry_on_startup to True.
+  warnings.warn(
+
+[2025-09-27 14:35:26,302: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-09-27 14:35:26,309: WARNING/MainProcess] /home/jadyn/.local/lib/python3.12/site-packages/celery/worker/consumer/consumer.py:507: CPendingDeprecationWarning: The broker_connection_retry configuration setting will no longer determine
+whether broker connection retries are made during startup in Celery 6.0 and above.
+If you wish to retain the existing behavior for retrying connections on startup,
+you should set broker_connection_retry_on_startup to True.
+  warnings.warn(
+
+[2025-09-27 14:35:26,317: INFO/MainProcess] mingle: searching for neighbors
+[2025-09-27 14:35:27,383: INFO/MainProcess] mingle: all alone
+[2025-09-27 14:35:27,403: INFO/MainProcess] celery@SaucyLaptop ready.
