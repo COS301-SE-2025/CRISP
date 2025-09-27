@@ -323,7 +323,6 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
                       <table className="ioc-table">
                         <thead>
                           <tr>
-                            <th>Type</th>
                             <th>Value</th>
                             <th>Source</th>
                             <th>Hash Type</th>
@@ -333,11 +332,6 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
                         <tbody>
                           {fullReportData.indicators.slice(0, 10).map((ioc, index) => (
                             <tr key={index}>
-                              <td>
-                                <span className={`ioc-type-badge ${ioc.type}`}>
-                                  {ioc.type?.toUpperCase() || 'UNKNOWN'}
-                                </span>
-                              </td>
                               <td className="ioc-value">{ioc.value || 'N/A'}</td>
                               <td>
                                 <span className={`source-badge`}>
