@@ -186,7 +186,7 @@ function CrispLogin({ onLoginSuccess, switchView }) {
               </button>
               
               <div className="login-footer">
-                <p>Don't have an account? Contact <a href="#" className="register-link">BlueVision ITM</a> for account registration.</p>
+                <p>Don't have an account? Contact <a href="https://bitm.co.za/" className="register-link">BlueVision ITM</a> for account registration.</p>
                 <div className="footer-links">
                   <button 
                     className="help-link" 
