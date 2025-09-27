@@ -1317,12 +1317,14 @@ def indicators_list(request):
 
             # Get user's organization
             user_org = getattr(request.user, 'organization', None)
-            
+
             # Check if user is superuser or BlueVisionAdmin
             is_admin = (getattr(request.user, 'is_superuser', False) or
                        getattr(request.user, 'role', '') == 'BlueVisionAdmin')
 
-            logger.info(f"User {request.user.username} role: {request.user.role}, org: {user_org}, is_admin: {is_admin}")
+            user_role = getattr(request.user, 'role', 'anonymous') if request.user.is_authenticated else 'anonymous'
+            username = request.user.username if request.user.is_authenticated else 'anonymous'
+            logger.info(f"User {username} role: {user_role}, org: {user_org}, is_admin: {is_admin}")
 
             if user_org is None and not is_admin:
                 # User has no organization and is not admin, return empty queryset

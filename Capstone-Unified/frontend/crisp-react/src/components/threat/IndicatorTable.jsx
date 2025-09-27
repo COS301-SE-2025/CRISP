@@ -72,7 +72,7 @@ const IndicatorTable = () => {
           setLastRefresh(new Date());
           setRefreshing(false);
         }
-      }, 5000); // Reduced to 5 seconds for faster detection
+      }, 60000); // Reduced to 60 seconds to prevent performance issues
     }
     return () => {
       if (interval) clearInterval(interval);

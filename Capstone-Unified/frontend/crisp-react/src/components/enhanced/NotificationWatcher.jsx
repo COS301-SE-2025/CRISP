@@ -116,8 +116,8 @@ const NotificationWatcher = ({ user }) => {
     // Check immediately on mount
     checkForNewNotifications();
 
-    // Set up polling interval (every 30 seconds)
-    intervalRef.current = setInterval(checkForNewNotifications, 30000);
+    // Set up polling interval (every 2 minutes to reduce server load)
+    intervalRef.current = setInterval(checkForNewNotifications, 120000);
 
     // Cleanup interval on unmount or user change
     return () => {

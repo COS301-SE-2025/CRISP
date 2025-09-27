@@ -87,7 +87,7 @@ const ThreatFeedList = () => {
       const intervalId = setInterval(() => {
         console.log('🔄 Checking status for locally tracked consuming feeds');
         fetchFeeds();
-      }, 10000); // Much more reasonable 10 seconds instead of 3
+      }, 30000); // Reduce to 30 seconds to prevent performance issues
 
       setPollIntervalId(intervalId);
 

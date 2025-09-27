@@ -466,8 +466,8 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
   useEffect(() => {
     fetchUnreadCount(); // Initial fetch
     
-    // Fetch every 30 seconds
-    const interval = setInterval(fetchUnreadCount, 30000);
+    // Fetch every 2 minutes to reduce server load
+    const interval = setInterval(fetchUnreadCount, 120000);
     
     return () => clearInterval(interval);
   }, []);
@@ -925,7 +925,7 @@ function MainNav({ activePage, showPage, user, onLogout, isAdmin }) {
     };
     
     checkStatus();
-    const statusInterval = setInterval(checkStatus, 30000); // Check every 30 seconds
+    const statusInterval = setInterval(checkStatus, 120000); // Check every 2 minutes
     
     return () => clearInterval(statusInterval);
   }, []);
@@ -2974,8 +2974,8 @@ function ThreatFeeds({
 
     // Only start polling if we have loaded data
     if (threatFeeds.length > 0) {
-      // Check for running feeds every 10 seconds to reduce API load
-      intervalId = setInterval(checkRunningFeeds, 10000);
+      // Check for running feeds every 60 seconds to reduce API load and improve performance
+      intervalId = setInterval(checkRunningFeeds, 60000);
       console.log('📡 Started polling for running feed status updates');
     }
 

@@ -39,12 +39,12 @@ class RefreshManager {
   }
 
   startGlobalRefresh() {
-    // Start with more frequent polling for better responsiveness
+    // Reduce polling frequency to prevent performance issues
     this.globalInterval = setInterval(() => {
       if (this.isActive && !this.isProcessing && this.subscribers.size > 0) {
         this.processBackgroundRefresh();
       }
-    }, 10000); // 10 seconds for better responsiveness with threat feed consumption
+    }, 60000); // 60 seconds - much less aggressive polling
   }
 
   async processBackgroundRefresh() {
@@ -69,6 +69,12 @@ class RefreshManager {
 
   async checkRefreshTriggers() {
     try {
+      // Skip backend polling if user is inactive to reduce server load
+      if (!this.isActive) {
+        console.debug('RefreshManager: Skipping trigger check - user inactive');
+        return;
+      }
+
       // Import the API function dynamically to avoid circular dependencies
       const response = await fetch('http://localhost:8000/api/threat-feeds/check_refresh_triggers/', {
         method: 'GET',
@@ -76,6 +82,8 @@ class RefreshManager {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('crisp_auth_token')}`,
         },
+        // Add timeout to prevent hanging requests
+        signal: AbortSignal.timeout(5000)
       });
 
       if (!response.ok) return;
@@ -107,24 +115,25 @@ class RefreshManager {
       ...options
     });
 
-    console.log(`RefreshManager: Subscribed ${key}`);
+    // Reduce console spam for better performance
+    console.debug(`RefreshManager: Subscribed ${key}`);
   }
 
   unsubscribe(key) {
     this.subscribers.delete(key);
-    console.log(`RefreshManager: Unsubscribed ${key}`);
+    console.debug(`RefreshManager: Unsubscribed ${key}`);
   }
 
   // Immediate refresh triggered by user actions
   async triggerRefresh(keys, reason = 'user_action') {
     if (!Array.isArray(keys)) keys = [keys];
 
-    console.log(`🔄 RefreshManager: Triggering refresh for [${keys.join(', ')}] - ${reason}`);
+    console.debug(`🔄 RefreshManager: Triggering refresh for [${keys.join(', ')}] - ${reason}`);
 
     for (const key of keys) {
       const subscriber = this.subscribers.get(key);
       if (subscriber) {
-        console.log(`✅ RefreshManager: Refreshing '${key}'`);
+        console.debug(`✅ RefreshManager: Refreshing '${key}'`);
         await this.safeRefresh(subscriber);
         subscriber.lastRefresh = Date.now();
       } else {
