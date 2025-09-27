@@ -348,13 +348,37 @@ function CrispLogin({ onLoginSuccess }) {
             /* background: rgba(255, 0, 0, 0.1); */
           }
 
+          /* CSS Fallback Grid */
+          .css-grid-fallback {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            background-image:
+              linear-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(255, 255, 255, 0.15) 1px, transparent 1px);
+            background-size: 25px 25px;
+            animation: gridFloat 4s ease-in-out infinite;
+            opacity: 0.8;
+          }
+
+          @keyframes gridFloat {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(2px, -2px); }
+            50% { transform: translate(-1px, 1px); }
+            75% { transform: translate(1px, 2px); }
+          }
+
           .brand-info {
             position: relative;
             z-index: 2;
             max-width: 700px;
             margin: 0 auto;
           }
-          
+
           /* Responsive Design */
           @media (max-width: 992px) {
             .login-content {
