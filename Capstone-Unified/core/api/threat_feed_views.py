@@ -497,44 +497,81 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
 
                 # Check if async processing is requested
                 if request.query_params.get('async', '').lower() == 'true':
-                    from core.tasks.taxii_tasks import consume_feed_task
-                    
-                    # Check if feed is actively running (allow starting fresh consumption even if previously paused)
-                    if feed.consumption_status == 'running':
-                        return Response({
-                            "error": f"Feed consumption is already running. Use pause endpoint to control it.",
-                            "current_status": feed.consumption_status,
-                            "can_be_paused": feed.can_be_paused(),
-                            "can_be_resumed": feed.can_be_resumed()
-                        }, status=status.HTTP_400_BAD_REQUEST)
-                    
-                    # Reset paused state for fresh consumption
-                    if feed.consumption_status == 'paused':
-                        logger.info(f"Resetting paused feed {feed.name} for fresh consumption")
-                        feed.consumption_status = 'idle'
-                        feed.current_task_id = None
-                        feed.paused_at = None
-                        feed.pause_metadata = {}
-                        feed.save(update_fields=['consumption_status', 'current_task_id', 'paused_at', 'pause_metadata'])
-                    
-                    task = consume_feed_task.delay(
-                        feed_id=int(pk),
-                        limit=limit,
-                        force_days=force_days,
-                        batch_size=batch_size
-                    )
-                    
-                    # Update feed status to running
-                    feed.start_consumption(task.id)
-                    
-                    return Response({
-                        "status": "processing",
-                        "message": "Processing started in background",
-                        "task_id": task.id,
-                        "feed_status": feed.consumption_status
-                    })
+                    # Check Redis availability first
+                    redis_available = False
+                    try:
+                        from django.core.cache import cache
+                        cache.get('redis_test')  # Test Redis connection
+                        redis_available = True
+                    except Exception as redis_error:
+                        logger.warning(f"Redis not available for async consumption: {redis_error}")
+                        redis_available = False
 
-                stats = service.consume_feed(feed, limit=limit, force_days=force_days, batch_size=batch_size)
+                    if redis_available:
+                        from core.tasks.taxii_tasks import consume_feed_task
+
+                        # Check if feed is actively running (allow starting fresh consumption even if previously paused)
+                        if feed.consumption_status == 'running':
+                            return Response({
+                                "error": f"Feed consumption is already running. Use pause endpoint to control it.",
+                                "current_status": feed.consumption_status,
+                                "can_be_paused": feed.can_be_paused(),
+                                "can_be_resumed": feed.can_be_resumed()
+                            }, status=status.HTTP_400_BAD_REQUEST)
+
+                        # Reset paused state for fresh consumption
+                        if feed.consumption_status == 'paused':
+                            logger.info(f"Resetting paused feed {feed.name} for fresh consumption")
+                            feed.consumption_status = 'idle'
+                            feed.current_task_id = None
+                            feed.paused_at = None
+                            feed.pause_metadata = {}
+                            feed.save(update_fields=['consumption_status', 'current_task_id', 'paused_at', 'pause_metadata'])
+
+                        try:
+                            task = consume_feed_task.delay(
+                                feed_id=int(pk),
+                                limit=limit,
+                                force_days=force_days,
+                                batch_size=batch_size
+                            )
+
+                            # Update feed status to running
+                            feed.start_consumption(task.id)
+
+                            return Response({
+                                "status": "processing",
+                                "message": "Processing started in background",
+                                "task_id": task.id,
+                                "feed_status": feed.consumption_status
+                            })
+                        except Exception as celery_error:
+                            logger.warning(f"Celery task creation failed: {celery_error}, falling back to sync consumption")
+                            # Fall through to sync consumption
+                    else:
+                        logger.info(f"Redis unavailable, falling back to synchronous consumption for feed {feed.name}")
+                        # Fall through to sync consumption
+
+                # Set feed status to processing for sync consumption
+                feed.consumption_status = 'processing'
+                feed.save(update_fields=['consumption_status'])
+
+                try:
+                    stats = service.consume_feed(feed, limit=limit, force_days=force_days, batch_size=batch_size)
+
+                    # Update feed status on successful completion
+                    feed.consumption_status = 'idle'
+                    feed.last_sync = timezone.now()
+                    feed.sync_count = (feed.sync_count or 0) + 1
+                    feed.last_error = None
+                    feed.save(update_fields=['consumption_status', 'last_sync', 'sync_count', 'last_error'])
+
+                except Exception as consumption_error:
+                    # Update feed status on error
+                    feed.consumption_status = 'idle'
+                    feed.last_error = str(consumption_error)[:500]  # Truncate long errors
+                    feed.save(update_fields=['consumption_status', 'last_error'])
+                    raise  # Re-raise the exception to be handled by outer try-except
             
             # Format response properly for API consumers
             if isinstance(stats, tuple):
