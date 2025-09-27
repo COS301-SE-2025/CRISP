@@ -1,4 +1,5 @@
 import React from 'react';
+import blueVLogo from '/src/assets/BlueV.png';
 
 function Footer() {
   return (
@@ -7,8 +8,8 @@ function Footer() {
         <div className="footer-content">
           <div className="footer-main">
             <div className="footer-logo">
-              <i className="fas fa-shield-alt logo-icon"></i>
-              <span>CRISP</span>
+                            <img src={blueVLogo} alt="BlueV Logo" className="logo-icon" style={{ height: '30px', width: 'auto' }} />
+              
             </div>
             <p className="footer-description">
               Empowering educational institutions with secure, collaborative threat intelligence 

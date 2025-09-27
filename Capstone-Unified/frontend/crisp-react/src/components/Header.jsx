@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import blueVLogo from '/src/assets/BlueV.png';
 
 function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -21,8 +22,8 @@ function Header() {
     <header className="header">
       <div className="container header-container">
         <a href="#" className="logo" onClick={(e) => { e.preventDefault(); navigate('/'); }}>
-          <i className="fas fa-shield-alt logo-icon"></i>
-          <div className="logo-text">CRISP</div>
+                    <img src={blueVLogo} alt="BlueV Logo" className="logo-icon" style={{ height: '40px', width: 'auto' }} />
+          
         </a>
         
         <nav className={`nav ${isMenuOpen ? 'nav-open' : ''}`}>

@@ -136,10 +136,8 @@ function Features() {
               whileHover={{
                 scale: 1.03,
                 y: -8,
-                rotateY: 5,
                 transition: { duration: 0.3 }
               }}
-              style={{ perspective: "1000px" }}
             >
               <ElectricBorder className="feature-border">
                 <div className="feature-content">
@@ -156,133 +154,6 @@ function Features() {
           ))}
         </motion.div>
       </div>
-
-      <style jsx>{`
-        .features {
-          padding: 100px 0;
-          background: linear-gradient(135deg, #0a0b0d 0%, #1a1b1e 100%);
-          position: relative;
-        }
-
-        .features::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: radial-gradient(ellipse at 30% 70%, rgba(52, 168, 83, 0.05) 0%, transparent 70%);
-          pointer-events: none;
-        }
-
-        .container {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 0 20px;
-          position: relative;
-          z-index: 1;
-        }
-
-        .section-header {
-          text-align: center;
-          margin-bottom: 4rem;
-        }
-
-        .section-title {
-          font-size: 3rem;
-          font-weight: 800;
-          margin-bottom: 1rem;
-          color: #ffffff;
-        }
-
-        .highlight {
-          background: linear-gradient(135deg, #4285f4, #34a853);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-
-        .section-description {
-          font-size: 1.2rem;
-          color: #b0b0b0;
-          max-width: 700px;
-          margin: 0 auto;
-          line-height: 1.6;
-        }
-
-        .features-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-          gap: 2rem;
-          max-width: 1100px;
-          margin: 0 auto;
-        }
-
-        .feature-card {
-          position: relative;
-          cursor: pointer;
-        }
-
-        .feature-content {
-          background: rgba(255, 255, 255, 0.05);
-          backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px;
-          padding: 2rem;
-          height: 100%;
-          position: relative;
-          overflow: hidden;
-          transition: all 0.3s ease;
-        }
-
-        .feature-card:hover .feature-content {
-          border-color: rgba(255, 255, 255, 0.2);
-          background: rgba(255, 255, 255, 0.08);
-        }
-
-        .feature-icon {
-          font-size: 3rem;
-          margin-bottom: 1.5rem;
-          display: block;
-        }
-
-        .feature-title {
-          font-size: 1.5rem;
-          font-weight: 700;
-          margin-bottom: 1rem;
-          color: #ffffff;
-        }
-
-        .feature-description {
-          color: #b0b0b0;
-          line-height: 1.6;
-          margin-bottom: 1.5rem;
-        }
-
-        .feature-accent {
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          height: 3px;
-          transform-origin: left;
-        }
-
-        @media (max-width: 768px) {
-          .section-title {
-            font-size: 2.5rem;
-          }
-          
-          .features-grid {
-            grid-template-columns: 1fr;
-            max-width: 100%;
-          }
-          
-          .feature-content {
-            padding: 1.5rem;
-          }
-        }
-      `}</style>
     </section>
   );
 }
