@@ -73,12 +73,12 @@ def get_alerts_list(request):
 
                 # Apply unread filter if needed
                 if unread_only:
-                    # For custom alerts, we'll consider them "unread" if they're new (less than 24 hours old)
-                    # and haven't been resolved/dismissed
+                    # For custom alerts, we'll consider them "unread" if they're new or investigating
+                    # but NOT acknowledged (acknowledged = read)
                     recent_cutoff = timezone.now() - timedelta(hours=24)
                     custom_alerts_query = custom_alerts_query.filter(
                         created_at__gte=recent_cutoff,
-                        status__in=['new', 'acknowledged', 'investigating']
+                        status__in=['new', 'investigating']  # Removed 'acknowledged' from unread filter
                     )
 
                 custom_alerts = custom_alerts_query[:limit//2]  # Get other half
@@ -86,7 +86,8 @@ def get_alerts_list(request):
                 # Serialize custom alerts
                 for alert in custom_alerts:
                     # Determine if alert is "read" based on status
-                    is_read = alert.status in ['resolved', 'false_positive', 'dismissed']
+                    # acknowledged = read, resolved/dismissed = read
+                    is_read = alert.status in ['acknowledged', 'resolved', 'false_positive', 'dismissed']
 
                     alerts.append({
                         'id': str(alert.id),
@@ -200,25 +201,54 @@ def mark_notification_read(request, notification_id):
 @permission_classes([IsAuthenticated])
 def mark_all_notifications_read(request):
     """
-    Mark all notifications as read for the user
+    Mark all notifications as read for the user including custom asset alerts
     Optimized to use bulk update instead of individual queries
     """
     try:
         from .models import Notification
+        from core.models.models import CustomAlert
+        from datetime import timedelta
 
-        # Get unread notifications for the user and update them in bulk
+        total_marked = 0
+
+        # 1. Mark regular notifications as read
         unread_notifications = Notification.get_unread_for_user(request.user)
-        count = unread_notifications.count()
+        notification_count = unread_notifications.count()
 
-        # Bulk update - single database query instead of N queries
         unread_notifications.update(
             is_read=True,
             read_at=timezone.now()
         )
+        total_marked += notification_count
+
+        # 2. Mark custom asset alerts as "acknowledged" (equivalent to read)
+        # Only mark alerts that are in "new" status for the user's organization
+        if hasattr(request.user, 'organization') and request.user.organization:
+            recent_cutoff = timezone.now() - timedelta(hours=24)
+            unread_custom_alerts = CustomAlert.objects.filter(
+                organization=request.user.organization,
+                status='new',  # Only mark "new" alerts as acknowledged
+                created_at__gte=recent_cutoff  # Only recent alerts
+            )
+
+            custom_alert_count = unread_custom_alerts.count()
+            unread_custom_alerts.update(
+                status='acknowledged',
+                updated_at=timezone.now()
+            )
+            total_marked += custom_alert_count
+
+            logger.info(f"Marked {notification_count} notifications and {custom_alert_count} custom alerts as read for user {request.user.username}")
+        else:
+            logger.info(f"Marked {notification_count} notifications as read for user {request.user.username} (no organization for custom alerts)")
 
         return Response({
             'success': True,
-            'message': f'Marked {count} notifications as read'
+            'message': f'Marked {total_marked} notifications as read',
+            'details': {
+                'notifications': notification_count,
+                'custom_alerts': total_marked - notification_count
+            }
         }, status=status.HTTP_200_OK)
 
     except Exception as e:

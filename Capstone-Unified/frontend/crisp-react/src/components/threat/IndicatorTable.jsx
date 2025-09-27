@@ -28,7 +28,7 @@ const IndicatorTable = () => {
     setCurrentPage(1);
   }, [filter, searchTerm]);
 
-  // Check for updates every 10 seconds when enabled (smart syncing)
+  // Check for updates every 5 seconds when enabled (smart syncing)
   useEffect(() => {
     let interval;
     if (autoRefresh) {
@@ -38,25 +38,41 @@ const IndicatorTable = () => {
 
           if (updateData.success && updateData.updates.indicators_updated) {
             const lastUpdate = updateData.updates.indicators_updated;
+            const lastUpdateDate = new Date(lastUpdate);
+            const lastCheckDate = lastSyncCheck ? new Date(lastSyncCheck) : null;
+
+            console.log('🔍 Sync check:', {
+              lastUpdate: lastUpdate,
+              lastSyncCheck: lastSyncCheck,
+              shouldRefresh: !lastCheckDate || lastUpdateDate > lastCheckDate
+            });
 
             // Only refresh if there's a new update since our last check
-            if (!lastSyncCheck || new Date(lastUpdate) > new Date(lastSyncCheck)) {
+            if (!lastCheckDate || lastUpdateDate > lastCheckDate) {
               console.log('🔄 New indicators detected, refreshing table...');
-              fetchIndicators(false); // Silent refresh
+              setRefreshing(true);
+              await fetchIndicators(false); // Silent refresh
               setLastRefresh(new Date());
               setLastSyncCheck(lastUpdate);
+              setRefreshing(false);
 
               // Mark this update as seen
               await markUpdateSeen('indicators_updated', lastUpdate);
+            } else {
+              console.log('📊 No new indicators since last check');
             }
+          } else {
+            console.log('⏸️ No indicators_updated in response:', updateData);
           }
         } catch (error) {
           // Fallback to regular interval refresh if sync API fails
-          console.warn('Sync check failed, falling back to regular refresh:', error);
-          fetchIndicators(false);
+          console.warn('⚠️ Sync check failed, falling back to regular refresh:', error);
+          setRefreshing(true);
+          await fetchIndicators(false);
           setLastRefresh(new Date());
+          setRefreshing(false);
         }
-      }, 10000); // 10 seconds for smart checking
+      }, 5000); // Reduced to 5 seconds for faster detection
     }
     return () => {
       if (interval) clearInterval(interval);
@@ -384,7 +400,7 @@ const IndicatorTable = () => {
             <button
               className={`btn btn-outline ${autoRefresh ? 'active' : ''}`}
               onClick={() => setAutoRefresh(!autoRefresh)}
-              title={autoRefresh ? 'Auto-refresh enabled (every 15s) - Click to disable' : 'Auto-refresh disabled - Click to enable'}
+              title={autoRefresh ? 'Auto-refresh enabled (every 5s) - Click to disable' : 'Auto-refresh disabled - Click to enable'}
             >
               <i className={`fas fa-sync-alt ${autoRefresh ? 'fa-spin' : ''}`}></i>
               {autoRefresh ? 'Auto ON' : 'Auto OFF'}
@@ -402,7 +418,7 @@ const IndicatorTable = () => {
             </button>
             <span className="last-refresh">
               Last: {lastRefresh.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-              {autoRefresh && <small style={{display: 'block', color: '#28a745'}}>Auto: 15s</small>}
+              {autoRefresh && <small style={{display: 'block', color: '#28a745'}}>Auto: 5s</small>}
               {refreshing && <small style={{display: 'block', color: '#ffc107'}}>Syncing...</small>}
             </span>
           </div>
