@@ -39,3 +39,46 @@ you should set broker_connection_retry_on_startup to True.
 [2025-09-27 14:35:26,317: INFO/MainProcess] mingle: searching for neighbors
 [2025-09-27 14:35:27,383: INFO/MainProcess] mingle: all alone
 [2025-09-27 14:35:27,403: INFO/MainProcess] celery@SaucyLaptop ready.
+
+Restarting celery worker (/home/jadyn/.local/bin/celery -A settings worker --loglevel=info)
+✅ Feed notification observer loaded successfully
+INFO Registered STIX creator for type: indicator
+INFO Registered STIX creator for type: attack-pattern
+ 
+ -------------- celery@SaucyLaptop v5.3.4 (emerald-rush)
+--- ***** ----- 
+-- ******* ---- Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39 2025-09-27 16:43:47
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         crisp_unified:0x73dd1af66f00
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/0
+- *** --- * --- .> concurrency: 12 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . consume_external_taxii_feeds
+  . consume_feed_task
+  . schedule_taxii_feed_consumption
+  . settings.celery.debug_task
+
+[2025-09-27 16:43:54,148: WARNING/MainProcess] /home/jadyn/.local/lib/python3.12/site-packages/celery/worker/consumer/consumer.py:507: CPendingDeprecationWarning: The broker_connection_retry configuration setting will no longer determine
+whether broker connection retries are made during startup in Celery 6.0 and above.
+If you wish to retain the existing behavior for retrying connections on startup,
+you should set broker_connection_retry_on_startup to True.
+  warnings.warn(
+
+[2025-09-27 16:43:54,191: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2025-09-27 16:43:54,200: WARNING/MainProcess] /home/jadyn/.local/lib/python3.12/site-packages/celery/worker/consumer/consumer.py:507: CPendingDeprecationWarning: The broker_connection_retry configuration setting will no longer determine
+whether broker connection retries are made during startup in Celery 6.0 and above.
+If you wish to retain the existing behavior for retrying connections on startup,
+you should set broker_connection_retry_on_startup to True.
+  warnings.warn(
+
+[2025-09-27 16:43:54,205: INFO/MainProcess] mingle: searching for neighbors
+[2025-09-27 16:43:55,242: INFO/MainProcess] mingle: all alone
+[2025-09-27 16:43:55,266: INFO/MainProcess] celery@SaucyLaptop ready.

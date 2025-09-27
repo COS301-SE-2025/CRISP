@@ -298,59 +298,313 @@ function LandingPage() {
 
           /* Stats Section */
           .stats {
-            padding: 80px 0;
-            background: rgba(255, 255, 255, 0.02);
+            padding: 120px 0;
+            background: transparent;
             display: flex;
             align-items: center;
-            min-height: 60vh;
+            min-height: 50vh;
+            width: 100vw;
+            margin-left: calc(50% - 50vw);
+            overflow-x: visible;
+            box-sizing: border-box;
           }
 
           .stats .container {
-            width: 100%;
+            width: calc(100vw - 40px);
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 20px;
+            box-sizing: border-box;
           }
 
           .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 1rem;
             justify-items: center;
             align-items: center;
+            width: 100%;
+            max-width: 100%;
+            overflow: visible;
           }
 
           .stat-item {
             text-align: center;
-            padding: 2rem;
+            padding: 1.5rem 0.25rem;
+            transition: transform 0.3s ease;
+            position: relative;
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
+            box-sizing: border-box;
+            overflow: visible;
           }
 
-          .stat-item .stat-icon {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 1rem;
-            background: linear-gradient(135deg, #4285f4, #34a853);
-            border-radius: 50%;
+          .stat-item:hover {
+            transform: translateY(-8px);
+          }
+
+          .stat-item::after,
+          .stat-item::before {
+            display: none !important;
+            content: none !important;
+            border: none !important;
+            background: none !important;
+          }
+
+          /* Aggressively remove any borders or lines that might appear */
+          .stats,
+          .stats *,
+          .stats::before,
+          .stats::after,
+          .stats *::before,
+          .stats *::after {
+            border: none !important;
+            border-top: none !important;
+            border-bottom: none !important;
+            border-left: none !important;
+            border-right: none !important;
+            box-shadow: none !important;
+            outline: none !important;
+            text-decoration: none !important;
+            text-decoration-line: none !important;
+            text-decoration-color: transparent !important;
+            text-decoration-style: none !important;
+            text-underline-offset: 0 !important;
+            -webkit-text-decoration-line: none !important;
+            -webkit-text-decoration: none !important;
+          }
+
+          .stats .stat-item {
+            border: none !important;
+            border-top: none !important;
+            border-bottom: none !important;
+            border-left: none !important;
+            border-right: none !important;
+            box-shadow: none !important;
+            outline: none !important;
+            text-decoration: none !important;
+            position: relative;
+          }
+
+          .stats .stat-item::before,
+          .stats .stat-item::after {
+            display: none !important;
+            content: none !important;
+            border: none !important;
+            background: none !important;
+            height: 0 !important;
+            width: 0 !important;
+          }
+
+          .stats svg,
+          .stats i,
+          .stats .stat-icon,
+          .stats .stat-number,
+          .stats .stat-label {
+            border: none !important;
+            outline: none !important;
+            text-decoration: none !important;
+            text-decoration-line: none !important;
+            background-image: none !important;
+          }
+
+          .stat-item .stat-icon,
+          .stat-item svg {
+            width: 100px !important;
+            height: 100px !important;
+            margin: 0 auto 1.5rem;
+            background: transparent !important;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
-            color: #ffffff;
+            font-size: 3rem;
+            color: #4285f4 !important;
+            stroke: #4285f4 !important;
+            transition: color 0.3s ease, stroke 0.3s ease;
+            border: none !important;
+            outline: none !important;
           }
 
-          .stat-item .stat-number {
-            font-size: 3rem;
-            font-weight: 800;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(135deg, #4285f4, #34a853);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+          .stat-item:hover .stat-icon,
+          .stat-item:hover svg {
+            color: #34a853 !important;
+            stroke: #34a853 !important;
+          }
+
+          .stats .stat-item .stat-number {
+            font-size: clamp(2.5rem, 4vw, 4rem) !important;
+            font-weight: 900 !important;
+            margin-bottom: 1rem !important;
+            background: linear-gradient(135deg, #4285f4, #34a853) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            line-height: 1 !important;
+            color: transparent !important;
+            text-decoration: none !important;
+            border: none !important;
+            white-space: nowrap !important;
+            overflow: visible !important;
           }
 
           .stat-item .stat-label {
-            font-size: 1.1rem;
+            font-size: 1.3rem;
             color: #b0b0b0;
+            font-weight: 500;
+            margin-top: 0.5rem;
+            text-decoration: none !important;
+            text-decoration-line: none !important;
+            border-bottom: none !important;
+          }
+
+          /* Force remove any possible text decoration or underlines */
+          .stats .stat-item,
+          .stats .stat-item * {
+            text-decoration: none !important;
+            text-decoration-line: none !important;
+            text-decoration-color: transparent !important;
+            text-decoration-style: none !important;
+            text-underline-offset: 0 !important;
+            -webkit-text-decoration: none !important;
+            -webkit-text-decoration-line: none !important;
+            border-bottom: none !important;
+            border-bottom-width: 0 !important;
+            border-bottom-style: none !important;
+            border-bottom-color: transparent !important;
+          }
+
+          /* Ensure container and grid have no borders */
+          .stats .container,
+          .stats .stats-grid {
+            border: none !important;
+            border-bottom: none !important;
+            background-image: none !important;
+            text-decoration: none !important;
+          }
+
+          /* Responsive Design for Stats */
+          @media (max-width: 1400px) {
+            .stats .container {
+              width: calc(100vw - 30px);
+              max-width: 1000px;
+              padding: 0 15px;
+            }
+            .stats-grid {
+              gap: 1rem;
+            }
+            .stat-item {
+              padding: 1.25rem 0.1rem;
+            }
+            .stats .stat-item .stat-number {
+              font-size: clamp(2rem, 3.5vw, 3.5rem) !important;
+            }
+          }
+
+          @media (max-width: 1100px) {
+            .stats-grid {
+              grid-template-columns: repeat(2, 1fr);
+              gap: 2rem;
+            }
+            .stats .container {
+              width: calc(100vw - 20px);
+              padding: 0 10px;
+            }
+            .stat-item {
+              padding: 2rem 0.5rem;
+            }
+          }
+
+          @media (max-width: 1200px) {
+            .stats .container {
+              max-width: 900px;
+              padding: 0 15px;
+            }
+            .stats-grid {
+              gap: 1.25rem;
+            }
+            .stat-item .stat-icon,
+            .stat-item svg {
+              width: 80px !important;
+              height: 80px !important;
+            }
+            .stats .stat-item .stat-number {
+              font-size: 3.5rem !important;
+              background: linear-gradient(135deg, #4285f4, #34a853) !important;
+              -webkit-background-clip: text !important;
+              -webkit-text-fill-color: transparent !important;
+              background-clip: text !important;
+              color: transparent !important;
+            }
+          }
+
+          @media (max-width: 900px) {
+            .stats-grid {
+              grid-template-columns: repeat(2, 1fr);
+              gap: 2rem;
+            }
+            .stats .container {
+              padding: 0 15px;
+              max-width: 100%;
+            }
+            .stat-item {
+              padding: 2rem 0.5rem;
+            }
+          }
+
+          @media (max-width: 768px) {
+            .stats-grid {
+              grid-template-columns: repeat(2, 1fr);
+              gap: 1.5rem;
+            }
+            .stats .container {
+              padding: 0 15px;
+            }
+            .stat-item {
+              padding: 2rem 0.5rem;
+            }
+            .stat-item .stat-icon,
+            .stat-item svg {
+              width: 60px !important;
+              height: 60px !important;
+            }
+            .stats .stat-item .stat-number {
+              font-size: 2.5rem !important;
+              background: linear-gradient(135deg, #4285f4, #34a853) !important;
+              -webkit-background-clip: text !important;
+              -webkit-text-fill-color: transparent !important;
+              background-clip: text !important;
+              color: transparent !important;
+            }
+            .stat-item .stat-label {
+              font-size: 1.1rem;
+            }
+          }
+
+          @media (max-width: 480px) {
+            .stats-grid {
+              grid-template-columns: 1fr;
+              gap: 2rem;
+            }
+            .stat-item {
+              padding: 1.5rem 1rem;
+            }
+            .stat-item .stat-icon,
+            .stat-item svg {
+              width: 80px !important;
+              height: 80px !important;
+            }
+            .stats .stat-item .stat-number {
+              font-size: 3rem !important;
+              background: linear-gradient(135deg, #4285f4, #34a853) !important;
+              -webkit-background-clip: text !important;
+              -webkit-text-fill-color: transparent !important;
+              background-clip: text !important;
+              color: transparent !important;
+            }
+            .stat-item .stat-label {
+              font-size: 1.2rem;
+            }
           }
 
           /* Features Section */
@@ -511,7 +765,6 @@ function LandingPage() {
           .footer {
             background: #0a0b0d;
             padding: 60px 0 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
           }
 
           .footer-content {

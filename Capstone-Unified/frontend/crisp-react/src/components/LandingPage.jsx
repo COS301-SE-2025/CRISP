@@ -277,22 +277,11 @@ function LandingPage() {
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
           }
 
-          .stats .stat-item .stat-icon {
-            background: none !important;
-            border: none !important;
-            width: auto !important;
-            height: auto !important;
-            border-radius: 0 !important;
-            margin: 0 auto 1.5rem;
-            color: #4285f4;
-          }
-
-          .stats .stat-icon svg {
-            width: 50px;
-            height: 50px;
+          .dashboard-preview .stat-icon svg {
+            width: 24px;
+            height: 24px;
           }
 
           .threat-icon { background: rgba(244, 67, 54, 0.2); color: #f44336; }
