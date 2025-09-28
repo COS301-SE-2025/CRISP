@@ -34,7 +34,7 @@ export default defineConfig({
       overlay: false // Disable error overlay for performance
     },
     headers: {
-      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:8000 ws://localhost:5173 ws://localhost:3000; img-src 'self' data: blob:; font-src 'self' data:;"
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:8000 ws://localhost:8000 ws://localhost:5173 ws://localhost:3000; img-src 'self' data: blob:; font-src 'self' data:;"
     },
     proxy: {
       '/api': {

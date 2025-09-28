@@ -5,21 +5,7 @@ import { useNotifications } from '../enhanced/NotificationManager.jsx';
 const IncidentsList = ({ active, showPage }) => {
   const { showSuccess, showError, showWarning, showInfo } = useNotifications();
 
-  if (!active) return null;
-  
-  // Check if user is BlueVisionAdmin
-  const currentUser = api.getCurrentUser();
-  if (!currentUser || currentUser.role !== 'BlueVisionAdmin') {
-    return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <div className="alert alert-warning" role="alert">
-          <i className="fas fa-lock mr-2"></i>
-          <strong>Access Restricted</strong>
-          <p className="mb-0 mt-2">SOC features are only available to BlueVision administrators.</p>
-        </div>
-      </div>
-    );
-  }
+  // All hooks must be called before any early returns
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -35,6 +21,23 @@ const IncidentsList = ({ active, showPage }) => {
   const [availableUsers, setAvailableUsers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
+  // Check if user is BlueVisionAdmin
+  const currentUser = api.getCurrentUser();
+
+  if (!active) return null;
+
+  if (!currentUser || currentUser.role !== 'BlueVisionAdmin') {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <div className="alert alert-warning" role="alert">
+          <i className="fas fa-lock mr-2"></i>
+          <strong>Access Restricted</strong>
+          <p className="mb-0 mt-2">SOC features are only available to BlueVision administrators.</p>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     fetchIncidents();

@@ -648,7 +648,7 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
             navigationState={navigationState}
             setNavigationState={setNavigationState}
           />
-          <TTPAnalysis active={activePage === 'ttp-analysis'} />
+          <TTPAnalysis active={activePage === 'ttp-analysis'} user={user} />
           <Institutions active={activePage === 'institutions'} api={api} showPage={showPage} user={user} />
           <OrganisationManagement active={activePage === 'organisation-management'} navigationState={navigationState} setNavigationState={setNavigationState} />
           <TrustManagement active={activePage === 'trust-management'} />
@@ -8076,8 +8076,11 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
 }
 
 // TTP Analysis Component
-function TTPAnalysis({ active }) {
+function TTPAnalysis({ active, user }) {
   if (!active) return null;
+
+  // Define userRole from the user prop
+  const userRole = user?.role || 'Security Analyst';
   
   const [ttpData, setTtpData] = useState([]);
   const [trendsData, setTrendsData] = useState([]);
