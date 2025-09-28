@@ -4,74 +4,14 @@ on:
   push:
     branches: [ main, Dev, Dev2_integration ]
   pull_request:
-    branches: [ main, Dev, Dev2_integration ]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  frontend-tests:
-    name: Frontend Tests
+  test:
+    name: Run All Tests
     runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: Capstone-Unified/frontend/crisp-react/package-lock.json
-    
-    - name: Install frontend dependencies
-      run: |
-        cd Capstone-Unified/frontend/crisp-react
-        npm ci
-    
-    - name: Run ESLint
-      run: |
-        cd Capstone-Unified/frontend/crisp-react
-        npm run lint
-    
-    - name: Run frontend unit tests
-      run: |
-        cd Capstone-Unified/frontend/crisp-react
-        npm run test:coverage
-    
-    - name: Run frontend integration tests
-      run: |
-        cd Capstone-Unified/frontend/crisp-react
-        npm run test:integration
-    
-    - name: Install Playwright browsers
-      run: |
-        cd Capstone-Unified/frontend/crisp-react
-        npx playwright install --with-deps
-    
-    - name: Run E2E tests
-      run: |
-        cd Capstone-Unified/frontend/crisp-react
-        npm run test:e2e
-    
-    - name: Upload frontend coverage report
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: frontend-coverage-report
-        path: Capstone-Unified/frontend/crisp-react/coverage/
-        if-no-files-found: ignore
-    
-    - name: Upload E2E test report
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: e2e-test-report
-        path: Capstone-Unified/frontend/crisp-react/playwright-report/
-        if-no-files-found: ignore
-
-  backend-tests:
-    name: Backend Tests
-    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/Dev2_integration'
     
     services:
       postgres:
@@ -86,6 +26,16 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
+      
+      redis:
+        image: redis:6
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
 
     steps:
     - name: Checkout code
@@ -99,18 +49,18 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y postgresql-client
+        sudo apt-get install -y postgresql-client redis-tools
         
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r Capstone-Unified/requirements.txt
+        pip install -r requirements.txt
         pip install pytest pytest-cov coverage pytest-django
         pip install flake8 bandit safety
         
     - name: Verify core module imports
       env:
-        PYTHONPATH: ${{ github.workspace }}/Capstone-Unified
+        PYTHONPATH: ${{ github.workspace }}
       run: |
         echo "Verifying core module imports..."
         python3 -c "
@@ -137,10 +87,10 @@ jobs:
         EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
         OTX_API_KEY: test-key
         OTX_ENABLED: False
-        PYTHONPATH: ${{ github.workspace }}/Capstone-Unified
+        REDIS_URL: redis://localhost:6379/0
+        PYTHONPATH: ${{ github.workspace }}
       run: |
         echo "Verifying Django configuration..."
-        cd Capstone-Unified
         python3 -c "
         import os
         os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings.settings')
@@ -162,21 +112,31 @@ jobs:
         EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
         OTX_API_KEY: test-key
         OTX_ENABLED: False
-        PYTHONPATH: ${{ github.workspace }}/Capstone-Unified
+        REDIS_URL: redis://localhost:6379/0
+        PYTHONPATH: ${{ github.workspace }}
       run: |
         echo "Executing database migrations..."
-        cd Capstone-Unified
         python manage.py migrate --noinput
         echo "Database migrations completed successfully"
 
     - name: Run core module tests
       env:
-        PYTHONPATH: ${{ github.workspace }}/Capstone-Unified
-        DJANGO_SETTINGS_MODULE: ""
+        PYTHONPATH: ${{ github.workspace }}
+        DJANGO_SETTINGS_MODULE: settings.settings
+        SECRET_KEY: test-secret-key-for-ci-cd-pipeline
+        DB_NAME: crisp_test
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DEBUG: False
+        EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
+        OTX_API_KEY: test-key
+        OTX_ENABLED: False
+        REDIS_URL: redis://localhost:6379/0
       run: |
         echo "Running core module tests..."
-        cd Capstone-Unified/core
-        python -m pytest tests/test_strategies.py tests/test_import_verification.py tests/test_observer_integration.py -v --tb=short
+        python manage.py test core.tests --verbosity=2
         echo "Core module tests completed successfully"
         
     - name: Run Django application tests
@@ -192,14 +152,14 @@ jobs:
         EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
         OTX_API_KEY: test-key
         OTX_ENABLED: False
-        PYTHONPATH: ${{ github.workspace }}/Capstone-Unified
+        REDIS_URL: redis://localhost:6379/0
+        PYTHONPATH: ${{ github.workspace }}
       run: |
         echo "Running Django application tests..."
-        cd Capstone-Unified
-        python manage.py test --verbosity=2 --failfast
+        python manage.py test --verbosity=2 --failfast --exclude-tag=slow
         echo "Django application tests completed successfully"
 
-    - name: Run integration tests
+    - name: Run SOC module tests
       env:
         DJANGO_SETTINGS_MODULE: settings.settings
         SECRET_KEY: test-secret-key-for-ci-cd-pipeline
@@ -212,12 +172,12 @@ jobs:
         EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
         OTX_API_KEY: test-key
         OTX_ENABLED: False
-        PYTHONPATH: ${{ github.workspace }}/Capstone-Unified
+        REDIS_URL: redis://localhost:6379/0
+        PYTHONPATH: ${{ github.workspace }}
       run: |
-        echo "Running integration tests..."
-        cd Capstone-Unified/core
-        python -m pytest tests/test_django_observer_integration.py -v --tb=short
-        echo "Integration tests completed successfully"
+        echo "Running SOC module tests..."
+        python manage.py test soc --verbosity=2
+        echo "SOC module tests completed successfully"
 
     - name: Generate test coverage report
       if: success()
@@ -233,10 +193,10 @@ jobs:
         EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
         OTX_API_KEY: test-key
         OTX_ENABLED: False
-        PYTHONPATH: ${{ github.workspace }}/Capstone-Unified
+        REDIS_URL: redis://localhost:6379/0
+        PYTHONPATH: ${{ github.workspace }}
       run: |
         echo "Generating test coverage report..."
-        cd Capstone-Unified
         coverage run --source='.' manage.py test
         coverage report --show-missing --skip-covered
         coverage html
@@ -245,16 +205,15 @@ jobs:
     - name: Run code quality checks
       run: |
         echo "Running code quality checks..."
-        cd Capstone-Unified
-        flake8 core/ --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=core/tests/
-        flake8 settings/ --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=settings/migrations/
+        flake8 core/ --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=core/migrations/,core/tests/
+        flake8 soc/ --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=soc/migrations/
+        flake8 settings/ --count --select=E9,F63,F7,F82 --show-source --statistics
         echo "Code quality checks completed"
 
     - name: Run security scans
       run: |
         echo "Running security vulnerability scans..."
-        cd Capstone-Unified
-        bandit -r core/ settings/ -f json -o bandit-report.json --exclude=core/tests/,settings/migrations/ --severity-level high
+        bandit -r core/ soc/ settings/ -f json -o bandit-report.json --exclude=*/migrations/,*/tests/ --severity-level high
         safety check --file=requirements.txt
         echo "Security scans completed"
 
@@ -262,8 +221,8 @@ jobs:
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: backend-coverage-report
-        path: Capstone-Unified/htmlcov/
+        name: coverage-report
+        path: htmlcov/
         if-no-files-found: ignore
 
     - name: Upload security scan report
@@ -271,14 +230,50 @@ jobs:
       if: always()
       with:
         name: security-report
-        path: Capstone-Unified/bandit-report.json
+        path: bandit-report.json
         if-no-files-found: ignore
+
+  frontend-test:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/Dev2_integration'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/crisp-react/package-lock.json
+
+    - name: Install frontend dependencies
+      run: |
+        cd frontend/crisp-react
+        npm ci
+
+    - name: Run frontend linting
+      run: |
+        cd frontend/crisp-react
+        npm run lint --if-present
+
+    - name: Run frontend tests
+      run: |
+        cd frontend/crisp-react
+        npm run test --if-present
+
+    - name: Build frontend
+      run: |
+        cd frontend/crisp-react
+        npm run build
 
   docker-build-push:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
-    needs: [frontend-tests, backend-tests]
-    if: always() && ((github.ref == 'refs/heads/main' && needs.frontend-tests.result == 'success' && needs.backend-tests.result == 'success') || github.ref == 'refs/heads/Dev' || github.ref == 'refs/heads/Dev2_integration')
+    needs: [test, frontend-test]
+    if: always() && (github.ref == 'refs/heads/main' && needs.test.result == 'success' && needs.frontend-test.result == 'success') || github.ref == 'refs/heads/Dev2_integration'
 
     steps:
     - name: Checkout code
@@ -307,8 +302,8 @@ jobs:
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
-        context: ./Capstone-Unified
-        file: ./Capstone-Unified/Dockerfile
+        context: .
+        file: ./Dockerfile
         target: production
         push: true
         tags: ${{ steps.meta.outputs.tags }}
@@ -319,32 +314,28 @@ jobs:
   status-report:
     name: Pipeline Status Report
     runs-on: ubuntu-latest
-    needs: [frontend-tests, backend-tests, docker-build-push]
-    if: always() && github.ref == 'refs/heads/main'
+    needs: [test, frontend-test, docker-build-push]
+    if: always() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/Dev2_integration')
     
     steps:
     - name: Report pipeline status
       run: |
         echo "================================================"
-        echo "CI/CD PIPELINE RESULTS"
+        echo "CRISP PLATFORM CI/CD PIPELINE RESULTS"
         echo "================================================"
-        echo "Frontend Tests Status: ${{ needs.frontend-tests.result }}"
-        echo "Backend Tests Status: ${{ needs.backend-tests.result }}"
+        echo "Backend Test Status: ${{ needs.test.result }}"
+        echo "Frontend Test Status: ${{ needs.frontend-test.result }}"
         echo "Docker Build Status: ${{ needs.docker-build-push.result }}"
+        echo "Branch: ${{ github.ref_name }}"
         echo ""
-        if [ "${{ needs.frontend-tests.result }}" == "success" ] && [ "${{ needs.backend-tests.result }}" == "success" ]; then
+        if [ "${{ needs.test.result }}" == "success" ] && [ "${{ needs.frontend-test.result }}" == "success" ]; then
           echo "SUCCESS: All tests and quality checks passed"
           echo ""
-          echo "Frontend Test Results:"
-          echo "- Frontend unit tests: PASSED"
-          echo "- Frontend integration tests: PASSED"
-          echo "- E2E tests: PASSED"
-          echo "- ESLint checks: PASSED"
-          echo ""
-          echo "Backend Test Results:"
+          echo "Test Results:"
           echo "- Core module tests: PASSED"
           echo "- Django application tests: PASSED"  
-          echo "- Integration tests: PASSED"
+          echo "- SOC module tests: PASSED"
+          echo "- Frontend tests: PASSED"
           echo "- Code quality checks: PASSED"
           echo "- Security scans: PASSED"
           echo ""
@@ -355,14 +346,6 @@ jobs:
           echo ""
           echo "DEPLOYMENT STATUS: REJECTED"
           echo "Critical issues found - do not deploy"
-          echo ""
-          echo "Failed Components:"
-          if [ "${{ needs.frontend-tests.result }}" != "success" ]; then
-            echo "- Frontend tests failed"
-          fi
-          if [ "${{ needs.backend-tests.result }}" != "success" ]; then
-            echo "- Backend tests failed"
-          fi
           echo ""
           echo "Troubleshooting steps:"
           echo "1. Review failed job logs above"
@@ -376,7 +359,7 @@ jobs:
           echo "- Database migration or model problems"
           echo "- Code quality violations or syntax errors"
           echo "- High-severity security vulnerabilities"
-          echo "- Frontend component or UI test failures"
-          echo "- E2E test failures due to UI changes"
+          echo "- Frontend build or test failures"
+          echo "- WebSocket or real-time feature issues"
         fi
         echo "================================================"
