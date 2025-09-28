@@ -129,6 +129,7 @@ const ThreatFeedList = () => {
         <div>
           <strong>Feed Consumption Complete</strong><br>
           <small>${feed.name}</small>
+          ${feed.indicators_consumed !== undefined ? `<br><small>Added ${feed.indicators_consumed} indicators${feed.ttps_consumed ? ` and ${feed.ttps_consumed} TTPs` : ''}</small>` : ''}
         </div>
       </div>
     `;
@@ -215,22 +216,79 @@ const ThreatFeedList = () => {
 
       const result = await consumeThreatFeed(feedId, {
         limit: 10,
-        batch_size: 100
+        batch_size: 100,
+        async: true  // Enable async processing for better UI responsiveness
       });
 
       console.log('Feed consumption result:', result);
 
-      // Trigger refresh for related components
-      refreshManager.triggerRelated('threat-feeds', 'feed_consumption_completed');
+      // Handle different response types
+      if (result.status === 'processing') {
+        // Async processing started - the UI will update via status polling
+        console.log(`🔄 Async processing started for feed ${feedId} with task ID: ${result.task_id}`);
 
-      // Also immediately refresh this component
-      setTimeout(() => {
-        fetchFeeds();
-      }, 1000);
+        // Start a more frequent status check for this specific feed
+        const checkAsyncStatus = async () => {
+          try {
+            const feedData = await getThreatFeeds();
+            const feedList = feedData.results || feedData || [];
+            const updatedFeed = feedList.find(f => f.id === feedId);
+
+            if (updatedFeed && updatedFeed.consumption_status === 'idle') {
+              // Consumption completed
+              const feed = feeds.find(f => f.id === feedId);
+              if (feed) {
+                showCompletionNotification({
+                  ...feed,
+                  indicators_consumed: updatedFeed.indicators_count - (feed.indicators_count || 0),
+                  ttps_consumed: 0 // TTPs count change not easily trackable
+                });
+              }
+
+              // Trigger refresh
+              refreshManager.triggerRelated('threat-feeds', 'feed_consumption_completed');
+              fetchFeeds();
+            } else if (updatedFeed && updatedFeed.consumption_status === 'running') {
+              // Still running, check again in a few seconds
+              setTimeout(checkAsyncStatus, 5000);
+            }
+          } catch (error) {
+            console.error('Error checking async status:', error);
+          }
+        };
+
+        // Start checking status after a brief delay
+        setTimeout(checkAsyncStatus, 3000);
+
+      } else if (result.status === 'completed' || result.success !== false) {
+        // Synchronous completion
+        const feed = feeds.find(f => f.id === feedId);
+        if (feed) {
+          showCompletionNotification({
+            ...feed,
+            indicators_consumed: result.indicators || 0,
+            ttps_consumed: result.ttps || 0
+          });
+        }
+
+        // Trigger refresh for related components
+        refreshManager.triggerRelated('threat-feeds', 'feed_consumption_completed');
+
+        // Also immediately refresh this component
+        setTimeout(() => {
+          fetchFeeds();
+        }, 1000);
+      }
 
     } catch (error) {
       console.error('Feed consumption error:', error);
       setError(`Failed to consume feed: ${error.message}`);
+
+      // Show error notification
+      const feed = feeds.find(f => f.id === feedId);
+      if (feed) {
+        showErrorNotification(feed);
+      }
     } finally {
       setConsumingFeeds(prev => {
         const newSet = new Set(prev);
