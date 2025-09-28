@@ -1,3 +1,0 @@
-http://127.0.0.1:8000/api/indicators/ (POST)  # /usr/bin/sqlmap -u http://127.0.0.1:8000/api/indicators/ --data=username=test&password=test --batch --level=1 --risk=1 --timeout=10 --retries=1 --output-dir=security-testing/reports/20250819_191252/sqlmap --flush-session --fresh-queries
-
-username=test&password=test
