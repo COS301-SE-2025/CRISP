@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import logoImage from '../assets/BlueV2.png';
+import logoImage from '../../assets/BlueV.png';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -42,6 +42,9 @@ const ForgotPassword = () => {
       if (response.ok && data.success) {
         setIsSuccess(true);
         setMessage('Password reset instructions have been sent to your email address. Please check your inbox and follow the instructions to reset your password.');
+      } else if (response.status === 404 || (data.message && data.message.includes('not found'))) {
+        setIsSuccess(false);
+        setMessage('Email not registered. Please contact an admin for assistance.');
       } else {
         setIsSuccess(false);
         setMessage(data.message || 'Failed to send password reset email. Please try again.');

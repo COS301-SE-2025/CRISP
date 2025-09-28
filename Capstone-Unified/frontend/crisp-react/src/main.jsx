@@ -7,7 +7,7 @@ import RegisterUser from "./RegisterUser.jsx";
 import CrispLogin from "./crisp_login.jsx";
 import LandingPage from "./LandingPage.jsx";
 import Construction from "./construction.jsx";
-import ForgotPassword from "./components/ForgotPassword.jsx";
+import ForgotPassword from "./components/enhanced/ForgotPassword.jsx";
 import ResetPassword from "./components/ResetPassword.jsx";
 import SessionTimeout from "./components/enhanced/SessionTimeout.jsx";
 import { NotificationProvider, useNotifications } from "./components/enhanced/NotificationManager.jsx";
