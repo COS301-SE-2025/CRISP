@@ -215,8 +215,8 @@ class UnifiedEmailService:
         try:
             subject = "Password Reset Request - CRISP Platform"
             
-            # Generate reset URL (in production this would be the actual domain)
-            reset_url = f"https://crisp-platform.org/reset-password?token={reset_token}"
+            # Generate reset URL for frontend
+            reset_url = f"http://localhost:5173/reset-password?token={reset_token}"
             
             # Generate HTML content
             html_content = self._generate_password_reset_html(user, reset_url)
@@ -679,7 +679,10 @@ This invitation was sent by {inviter.get_full_name() or inviter.username} from {
         """
     
     def _generate_password_reset_html(self, user: CustomUser, reset_url: str) -> str:
-        """Generate HTML content for password reset"""
+        """Generate HTML content for password reset with CRISP branding"""
+        # Fix the reset URL to point to the correct frontend route
+        frontend_reset_url = reset_url.replace('https://crisp-platform.org', 'http://localhost:5173')
+        
         return f"""
         <!DOCTYPE html>
         <html>
@@ -688,31 +691,150 @@ This invitation was sent by {inviter.get_full_name() or inviter.username} from {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>CRISP Password Reset</title>
             <style>
-                body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }}
-                .container {{ max-width: 600px; margin: 0 auto; background-color: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }}
-                .header {{ background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white; padding: 20px; text-align: center; }}
-                .content {{ padding: 30px; }}
-                .reset-box {{ background: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; }}
-                .reset-button {{ display: inline-block; background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 15px 0; }}
-                .reset-button:hover {{ background: #1e7e34; }}
-                .security-note {{ background: #fff3cd; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #ffc107; }}
-                .footer {{ background: #343a40; color: white; padding: 15px; text-align: center; font-size: 0.9em; }}
+                body {{ 
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                    margin: 0; 
+                    padding: 20px; 
+                    background: linear-gradient(135deg, #0056b3 0%, #003d82 50%, #002a5c 100%);
+                    min-height: 100vh;
+                }}
+                .container {{ 
+                    max-width: 600px; 
+                    margin: 0 auto; 
+                    background-color: white; 
+                    border-radius: 12px; 
+                    overflow: hidden; 
+                    box-shadow: 0 20px 40px rgba(0, 86, 179, 0.2);
+                    border: 1px solid rgba(0, 86, 179, 0.1);
+                }}
+                .header {{ 
+                    background: linear-gradient(135deg, #0056b3 0%, #003d82 100%); 
+                    color: white; 
+                    padding: 30px 20px; 
+                    text-align: center; 
+                }}
+                .header h1 {{ 
+                    margin: 0 0 10px 0; 
+                    font-size: 28px; 
+                    font-weight: 600; 
+                }}
+                .header p {{ 
+                    margin: 0; 
+                    font-size: 16px; 
+                    opacity: 0.9; 
+                }}
+                .content {{ 
+                    padding: 40px 30px; 
+                    line-height: 1.6; 
+                    color: #333; 
+                }}
+                .content p {{ 
+                    margin: 0 0 15px 0; 
+                }}
+                .reset-box {{ 
+                    background: linear-gradient(135deg, #e3f2fd 0%, #f0f9ff 100%); 
+                    padding: 25px; 
+                    border-radius: 12px; 
+                    margin: 25px 0; 
+                    text-align: center; 
+                    border: 1px solid #bbdefb;
+                }}
+                .reset-box h3 {{ 
+                    color: #0056b3; 
+                    margin: 0 0 15px 0; 
+                    font-size: 20px; 
+                }}
+                .reset-button {{ 
+                    display: inline-block; 
+                    background: linear-gradient(135deg, #0056b3, #003d82); 
+                    color: #333; 
+                    padding: 15px 30px; 
+                    text-decoration: none; 
+                    border-radius: 8px; 
+                    font-weight: 600; 
+                    font-size: 16px;
+                    margin: 15px 0; 
+                    box-shadow: 0 4px 12px rgba(0, 86, 179, 0.3);
+                    transition: all 0.2s ease;
+                }}
+                .reset-button:hover {{ 
+                    background: linear-gradient(135deg, #0066cc, #004d99); 
+                    color: #333;
+                    transform: translateY(-1px);
+                    box-shadow: 0 8px 20px rgba(0, 86, 179, 0.4);
+                }}
+                .security-note {{ 
+                    background: #fff8e1; 
+                    padding: 20px; 
+                    border-radius: 8px; 
+                    margin: 20px 0; 
+                    border-left: 4px solid #0056b3; 
+                }}
+                .security-note h4 {{ 
+                    color: #0056b3; 
+                    margin: 0 0 10px 0; 
+                    font-size: 16px; 
+                }}
+                .security-note ul {{ 
+                    margin: 10px 0; 
+                    padding-left: 20px; 
+                }}
+                .security-note li {{ 
+                    margin: 5px 0; 
+                    color: #5d4e75; 
+                }}
+                .account-details {{ 
+                    background: #fafcff; 
+                    padding: 20px; 
+                    border-radius: 8px; 
+                    margin: 20px 0; 
+                    border: 1px solid #e3f2fd; 
+                }}
+                .account-details ul {{ 
+                    margin: 10px 0; 
+                    padding-left: 20px; 
+                }}
+                .account-details li {{ 
+                    margin: 8px 0; 
+                    color: #0056b3; 
+                    font-weight: 500; 
+                }}
+                .footer {{ 
+                    background: linear-gradient(135deg, #0056b3, #003d82); 
+                    color: white; 
+                    padding: 20px; 
+                    text-align: center; 
+                    font-size: 14px; 
+                }}
+                .footer p {{ 
+                    margin: 5px 0; 
+                    opacity: 0.9; 
+                }}
+                .logo {{ 
+                    font-size: 24px; 
+                    font-weight: bold; 
+                    margin-bottom: 5px; 
+                }}
             </style>
         </head>
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>🔐 Password Reset Request</h1>
-                    <p>CRISP Platform</p>
+                    <div class="logo">🎯 CRISP</div>
+                    <h1>Password Reset Request</h1>
+                    <p>Cyber Risk Information Sharing Platform</p>
                 </div>
                 <div class="content">
-                    <p>Hello {user.get_full_name() or user.username},</p>
-                    <p>We received a request to reset your password for your CRISP account.</p>
+                    <p>Hello <strong>{user.get_full_name() or user.username}</strong>,</p>
+                    <p>We received a request to reset your password for your CRISP account. If you made this request, please click the button below to create a new password.</p>
                     
                     <div class="reset-box">
-                        <h3>Reset Your Password</h3>
-                        <p>Click the button below to create a new password:</p>
-                        <a href="{reset_url}" class="reset-button">Reset Password</a>
+                        <h3>🔐 Reset Your Password</h3>
+                        <p>Click the button below to securely reset your password:</p>
+                        <a href="{frontend_reset_url}" class="reset-button">Reset My Password</a>
+                        <p style="font-size: 12px; color: #666; margin-top: 15px;">
+                            Link expires in 24 hours for your security
+                        </p>
                     </div>
                     
                     <div class="security-note">
@@ -721,20 +843,25 @@ This invitation was sent by {inviter.get_full_name() or inviter.username} from {
                             <li>This reset link will expire in 24 hours</li>
                             <li>If you didn't request this reset, please ignore this email</li>
                             <li>For security, this link can only be used once</li>
-                            <li>Contact support if you continue having issues</li>
+                            <li>Contact support at <strong>ib@bitm.co.za</strong> if you continue having issues</li>
                         </ul>
                     </div>
                     
-                    <p><strong>Account Details:</strong></p>
-                    <ul>
-                        <li>Username: {user.username}</li>
-                        <li>Email: {user.email}</li>
-                        <li>Organization: {user.organization.name if user.organization else 'None'}</li>
-                    </ul>
+                    <div class="account-details">
+                        <p><strong>Account Details:</strong></p>
+                        <ul>
+                            <li><strong>Username:</strong> {user.username}</li>
+                            <li><strong>Email:</strong> {user.email}</li>
+                            <li><strong>Organization:</strong> {user.organization.name if user.organization else 'Individual Account'}</li>
+                        </ul>
+                    </div>
                 </div>
                 <div class="footer">
-                    <p>CRISP - Cyber Risk Information Sharing Platform</p>
-                    <p>If you didn't request this password reset, please contact support immediately.</p>
+                    <p><strong>CRISP - Cyber Risk Information Sharing Platform</strong></p>
+                    <p>If you didn't request this password reset, please contact support immediately at ib@bitm.co.za</p>
+                    <p style="font-size: 12px; margin-top: 10px;">
+                        This email was sent from an automated system. Please do not reply to this email.
+                    </p>
                 </div>
             </div>
         </body>
@@ -742,33 +869,41 @@ This invitation was sent by {inviter.get_full_name() or inviter.username} from {
         """
     
     def _generate_password_reset_text(self, user: CustomUser, reset_url: str) -> str:
-        """Generate plain text content for password reset"""
+        """Generate plain text content for password reset with correct routing"""
+        # Fix the reset URL to point to the correct frontend route
+        frontend_reset_url = reset_url.replace('https://crisp-platform.org', 'http://localhost:5173')
+        
         return f"""
 CRISP PASSWORD RESET REQUEST
 {'='*50}
 
 Hello {user.get_full_name() or user.username},
 
-We received a request to reset your password for your CRISP account.
+We received a request to reset your password for your CRISP account. 
+If you made this request, please use the link below to create a new password.
 
 TO RESET YOUR PASSWORD:
 Please visit the following link:
-{reset_url}
+{frontend_reset_url}
 
 SECURITY INFORMATION:
 - This reset link will expire in 24 hours
 - If you didn't request this reset, please ignore this email
 - For security, this link can only be used once
-- Contact support if you continue having issues
+- Contact support at ib@bitm.co.za if you continue having issues
 
 ACCOUNT DETAILS:
 - Username: {user.username}
 - Email: {user.email}
-- Organization: {user.organization.name if user.organization else 'None'}
+- Organization: {user.organization.name if user.organization else 'Individual Account'}
 
 ---
 CRISP - Cyber Risk Information Sharing Platform
-If you didn't request this password reset, please contact support immediately.
+Cyber Risk Information Sharing Platform
+
+If you didn't request this password reset, please contact support immediately at ib@bitm.co.za
+
+This email was sent from an automated system. Please do not reply to this email.
         """
     
     def _generate_threat_alert_html(self, threat_data: Dict[str, Any], alert_level: str) -> str:
