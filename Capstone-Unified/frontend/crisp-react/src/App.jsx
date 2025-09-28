@@ -16211,6 +16211,7 @@ function CSSStyles() {
             font-weight: 600;
             margin-bottom: 5px;
             color: var(--dark-blue);
+            text-align: left !important;
         }
         
         .feed-description {
@@ -16232,21 +16233,27 @@ function CSSStyles() {
         }
 
         .feed-stats .stat-item {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 11px;
-            padding: 1px 4px;
-            background: #f8f9fa;
-            border-radius: 3px;
-            color: #6c757d;
-            line-height: 1.2;
-            height: 18px;
+            display: flex !important;
+            align-items: center !important;
+            gap: 5px !important;
+            font-size: 13px !important;
+            background: none !important;
+            border: none !important;
+            padding: 0 !important;
+            height: auto !important;
+            width: auto !important;
+            min-height: auto !important;
+            flex-direction: row !important;
+            justify-content: flex-start !important;
+            text-align: left !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            line-height: normal !important;
+            color: inherit !important;
         }
 
         .feed-stats .stat-item i {
-            color: var(--primary-blue);
-            font-size: 10px;
+            color: var(--primary-blue) !important;
         }
         
         .feed-badges {
