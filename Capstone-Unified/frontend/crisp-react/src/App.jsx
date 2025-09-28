@@ -14760,35 +14760,28 @@ function CSSStyles() {
         /* Activity Stream - Enhanced with Scroll Functionality */
         .activity-stream {
             list-style: none;
-            max-height: 500px;
-            overflow-y: auto;
             padding-right: 8px;
             margin: 0;
             position: relative;
         }
 
-        /* Hide custom scrollbar for activity stream */
-        .activity-stream::-webkit-scrollbar {
-            display: none;
-        }
-
-        /* Apply same blue scrollbar styling to organization list */
-        .organisation-list::-webkit-scrollbar {
+        /* Custom blue scrollbar for side panel cards */
+        .side-panels .card .card-content::-webkit-scrollbar {
             width: 6px;
         }
 
-        .organisation-list::-webkit-scrollbar-track {
+        .side-panels .card .card-content::-webkit-scrollbar-track {
             background: #f1f1f1;
             border-radius: 10px;
         }
 
-        .organisation-list::-webkit-scrollbar-thumb {
+        .side-panels .card .card-content::-webkit-scrollbar-thumb {
             background: linear-gradient(180deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
             border-radius: 10px;
             transition: all 0.3s ease;
         }
 
-        .organisation-list::-webkit-scrollbar-thumb:hover {
+        .side-panels .card .card-content::-webkit-scrollbar-thumb:hover {
             background: linear-gradient(180deg, var(--secondary-blue) 0%, var(--primary-blue) 100%);
             box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
         }
@@ -14937,7 +14930,6 @@ function CSSStyles() {
         /* Mobile Optimizations */
         @media (max-width: 768px) {
             .activity-stream {
-                max-height: 400px;
                 padding-right: 4px;
             }
 
@@ -14964,15 +14956,12 @@ function CSSStyles() {
             }
 
             /* Adjust scrollbar for mobile */
-            .activity-stream::-webkit-scrollbar {
+            .side-panels .card .card-content::-webkit-scrollbar {
                 width: 4px;
             }
         }
 
         @media (max-width: 576px) {
-            .activity-stream {
-                max-height: 350px;
-            }
 
             .activity-item {
                 padding: 10px;
