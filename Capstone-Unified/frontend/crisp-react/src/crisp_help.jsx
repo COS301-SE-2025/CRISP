@@ -3,52 +3,62 @@ import { createRoot } from 'react-dom/client'; // Add proper import for createRo
 import feather from 'feather-icons'; // Import feather icons
 import './crisp_help.css';
 import Construction from './construction.jsx'; // Ensure lowercase to match actual filename
+import vid from './assets/TEST.mp4';
 
 function CrispHelp({ isOpen, onClose, onNavigate }) {
   const [activeTab, setActiveTab] = useState('getting-started');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedFAQ, setExpandedFAQ] = useState(null);
+  const [showVideoModal, setShowVideoModal] = useState(false);
 
   // Initialize Feather icons when component mounts
   useEffect(() => {
     if (isOpen) {
-      // Small delay to ensure DOM is ready
-      setTimeout(() => {
-        feather.replace();
-      }, 10);
+      // Multiple attempts to ensure icons load
+      const timeouts = [10, 50, 100, 200];
+      timeouts.forEach(delay => {
+        setTimeout(() => {
+          try {
+            feather.replace();
+          } catch (error) {
+            console.warn('Feather icons replace failed:', error);
+          }
+        }, delay);
+      });
     }
-  }, [isOpen, activeTab]);
-
-  // Re-run feather.replace() when content changes
-  useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => {
-        feather.replace();
-      }, 10);
-    }
-  }, [expandedFAQ, searchQuery, isOpen]);
+  }, [isOpen, activeTab, expandedFAQ, searchQuery, showVideoModal]);
 
   // Handle escape key to close
   useEffect(() => {
     const handleEscape = (e) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
+      if (e.key === 'Escape') {
+        if (showVideoModal) {
+          setShowVideoModal(false);
+        } else if (isOpen) {
+          onClose();
+        }
       }
     };
     
-    if (isOpen) {
+    if (isOpen || showVideoModal) {
       document.addEventListener('keydown', handleEscape);
     }
     
     return () => {
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, showVideoModal, onClose]);
 
   const handleTutorialClick = (item, e) => {
     e.preventDefault(); // Prevent default link behavior
     
-    // Close the help modal first
+    // Handle video links - show video modal instead of closing help
+    if (item.link === 'vid') {
+      setShowVideoModal(true);
+      return;
+    }
+    
+    // Close the help modal first for other links
     onClose();
     
     // If it's a construction link and we have the navigation callback
@@ -157,7 +167,7 @@ function CrispHelp({ isOpen, onClose, onNavigate }) {
         title: 'Complete CRISP Platform Overview',
         description: 'Watch this comprehensive demo video that covers all CRISP features including threat feeds, IoC management, TTP analysis, trust management, and collaboration tools.',
         duration: '15 min',
-        link: 'construction'
+        link: 'vid'
       }
     ]
   };
@@ -189,7 +199,7 @@ function CrispHelp({ isOpen, onClose, onNavigate }) {
             <p>Find answers, tutorials, and guides for CRISP</p>
           </div>
           <button className="help-close" onClick={onClose}>
-            <i data-feather="x"></i>
+            <i data-feather="x">×</i>
           </button>
         </div>
 
@@ -365,6 +375,38 @@ function CrispHelp({ isOpen, onClose, onNavigate }) {
           </div>
         </div>
       </div>
+      
+      {/* Video Modal */}
+      {showVideoModal && (
+        <div className="video-overlay" onClick={() => setShowVideoModal(false)}>
+          <div className="video-modal" onClick={e => e.stopPropagation()}>
+            <div className="video-header">
+              <h3>CRISP System Demo</h3>
+              <button className="video-close" onClick={() => setShowVideoModal(false)}>
+                <i data-feather="x">×</i>
+              </button>
+            </div>
+            <div className="video-container">
+              <video 
+                width="100%" 
+                height="100%" 
+                controls 
+                autoPlay
+                src={vid}
+                onError={(e) => console.error('Video load error:', e)}
+                ref={videoRef => {
+                  if (videoRef && !showVideoModal) {
+                    videoRef.pause();
+                  }
+                }}
+              >
+                <source src={vid} type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
