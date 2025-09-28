@@ -426,26 +426,6 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
                     )}
                   </div>
 
-                  <div className="mitre-attack-chain">
-                    <h4>Attack Chain Analysis</h4>
-                    <div className="attack-phases">
-                      {['initial-access', 'execution', 'persistence', 'privilege-escalation', 'defense-evasion', 'credential-access', 'discovery', 'lateral-movement', 'collection', 'exfiltration', 'impact'].map(phase => {
-                        const phaseTtps = fullReportData.ttps.filter(ttp =>
-                          (ttp.tactic || '').toLowerCase().includes(phase.replace('-', ' ')) ||
-                          (ttp.tactic || '').toLowerCase().includes(phase.replace('-', '_'))
-                        );
-                        return phaseTtps.length > 0 ? (
-                          <div key={phase} className="attack-phase">
-                            <div className="phase-header">
-                              <span className={`phase-icon ${phase}`}></span>
-                              <span className="phase-name">{phase.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
-                              <span className="phase-count">{phaseTtps.length}</span>
-                            </div>
-                          </div>
-                        ) : null;
-                      })}
-                    </div>
-                  </div>
                 </div>
               )}
 
@@ -511,22 +491,40 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
                                   return 'No threats detected';
                                 }
                                 const typeCounts = fullReportData.indicators.reduce((acc, indicator) => {
-                                  const type = indicator.type || 'unknown';
-                                  acc[type] = (acc[type] || 0) + 1;
+                                  // Try multiple fields to get threat type
+                                  const type = indicator.type || indicator.ioc_type || indicator.indicator_type || indicator.threat_type;
+                                  if (type && type.trim() !== '') {
+                                    acc[type] = (acc[type] || 0) + 1;
+                                  }
                                   return acc;
                                 }, {});
-                                const topType = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0];
-                                return topType ? `${topType[0]} (${topType[1]} indicators)` : 'Unknown';
+
+                                const entries = Object.entries(typeCounts);
+                                if (entries.length === 0) {
+                                  return 'Threat analysis in progress';
+                                }
+
+                                const topType = entries.sort((a, b) => b[1] - a[1])[0];
+                                return `${topType[0]} (${topType[1]} indicators)`;
                               })()}
                             </span>
                           </div>
                           <div className="sector-metric">
                             <span className="metric-label">Common Attack Patterns:</span>
                             <span className="metric-value">
-                              {fullReportData.ttps ?
-                                [...new Set(fullReportData.ttps.slice(0, 3).map(ttp => ttp.tactic))].filter(t => t).join(', ') :
-                                'Data Breach, Phishing, Malware'
-                              }
+                              {(() => {
+                                if (!fullReportData.ttps || fullReportData.ttps.length === 0) {
+                                  return 'No attack patterns detected';
+                                }
+
+                                const tactics = [...new Set(fullReportData.ttps
+                                  .slice(0, 5)
+                                  .map(ttp => ttp.tactic || ttp.technique || ttp.name)
+                                  .filter(t => t && t.trim() !== '')
+                                )];
+
+                                return tactics.length > 0 ? tactics.join(', ') : 'Attack patterns under analysis';
+                              })()}
                             </span>
                           </div>
                           <div className="sector-metric">
@@ -615,13 +613,13 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
                               <div className="org-name">{org.name || `Organization ${index + 1}`}</div>
                               <div className="org-type">{org.organization_type || 'Unknown Type'}</div>
                             </div>
-                            <div className="org-risk">
-                              <div className={`risk-indicator ${
-                                (org.threat_level || Math.random() > 0.5) ? 'high' : 'medium'
-                              }`}>
-                                {(org.threat_level || Math.random() > 0.5) ? 'High Risk' : 'Medium Risk'}
+                            {org.threat_level && (
+                              <div className="org-risk">
+                                <div className={`risk-indicator ${org.threat_level.toLowerCase()}`}>
+                                  {org.threat_level.charAt(0).toUpperCase() + org.threat_level.slice(1)} Risk
+                                </div>
                               </div>
-                            </div>
+                            )}
                           </div>
                         ))}
                         {fullReportData.organizations.length > 5 && (
@@ -1514,54 +1512,6 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
           font-size: 14px;
         }
 
-        .mitre-attack-chain {
-          margin-top: 24px;
-        }
-
-        .attack-phases {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 12px;
-          justify-content: center;
-        }
-
-        .attack-phase {
-          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-          border: 1px solid #dee2e6;
-          border-radius: 8px;
-          padding: 12px 16px;
-          min-width: 140px;
-          text-align: center;
-        }
-
-        .phase-header {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 4px;
-        }
-
-        .phase-icon {
-          width: 12px;
-          height: 12px;
-          border-radius: 50%;
-          background: #6c757d;
-        }
-
-        .phase-name {
-          font-size: 12px;
-          font-weight: 600;
-          color: #495057;
-        }
-
-        .phase-count {
-          background: #007bff;
-          color: white;
-          padding: 2px 6px;
-          border-radius: 10px;
-          font-size: 11px;
-          font-weight: 600;
-        }
 
         .visualizations-section {
           padding: 32px;
