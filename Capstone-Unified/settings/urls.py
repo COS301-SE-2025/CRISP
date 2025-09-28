@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.shortcuts import redirect
 from core.viewing.home import home
+from core.health_check import health_check
 
 # Redirect to admin by default
 def redirect_to_admin(request):
@@ -10,6 +11,7 @@ def redirect_to_admin(request):
 
 urlpatterns = [
     path('', home, name='home'),  # Home page
+    path('health/', health_check, name='health_check'),  # Health check endpoint
     path('admin/', admin.site.urls),
     
     # React Router routes - serve React app for all frontend routes
