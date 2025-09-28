@@ -586,12 +586,9 @@ const Reports = ({ active = true }) => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [dashboardStats, setDashboardStats] = useState(null);
-  const [recentActivity, setRecentActivity] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('date');
-  const [viewMode, setViewMode] = useState('grid');
   const [savingReportId, setSavingReportId] = useState(null);
   const [exportingReportId, setExportingReportId] = useState(null);
   const [deletingReportId, setDeletingReportId] = useState(null);
@@ -600,8 +597,6 @@ const Reports = ({ active = true }) => {
 
   useEffect(() => {
     fetchReports();
-    fetchDashboardStats();
-    fetchRecentActivity();
   }, [filter, sectorFilter, dateRangeFilter]);
 
   // Debounce search term to reduce re-renders
@@ -613,34 +608,7 @@ const Reports = ({ active = true }) => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const fetchDashboardStats = async () => {
-    try {
-      const token = localStorage.getItem('crisp_auth_token');
-      if (!token) return;
 
-      const response = await fetch('http://localhost:8000/api/reports/status/', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setDashboardStats(data.status);
-        }
-      }
-    } catch (error) {
-      console.warn('Failed to fetch dashboard stats:', error);
-    }
-  };
-
-  const fetchRecentActivity = async () => {
-    // Recent activity functionality removed for production
-    // Can be implemented later with real API endpoint
-    setRecentActivity([]);
-  };
 
   const fetchReports = async () => {
     try {
@@ -771,7 +739,6 @@ const Reports = ({ active = true }) => {
 
           setReports(filteredReports);
         } else {
-          console.warn('No reports returned from API');
           setReports([]);
         }
       } else {
@@ -958,124 +925,59 @@ const Reports = ({ active = true }) => {
     try {
       setExportingReportId(report.id);
 
-      // Generate a clean PDF-ready view of the report
-      const printWindow = window.open('', '_blank');
+      // Dynamically import html2pdf
+      const html2pdf = (await import('html2pdf.js')).default;
 
-      // Create PDF-optimized HTML content
-      const pdfContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>${report.title}</title>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              margin: 40px;
-              background: white;
-              color: black;
-              line-height: 1.6;
-            }
-            .report-header {
-              border-bottom: 2px solid #333;
-              padding-bottom: 20px;
-              margin-bottom: 30px;
-            }
-            .report-title {
-              font-size: 24px;
-              font-weight: bold;
-              margin: 0 0 10px 0;
-              color: #333;
-            }
-            .report-meta {
-              color: #666;
-              font-size: 14px;
-            }
-            .stats-grid {
-              display: grid;
-              grid-template-columns: repeat(2, 1fr);
-              gap: 20px;
-              margin: 30px 0;
-            }
-            .stat-card {
-              border: 1px solid #ddd;
-              padding: 15px;
-              border-radius: 8px;
-              text-align: center;
-            }
-            .stat-number {
-              font-size: 24px;
-              font-weight: bold;
-              color: #333;
-            }
-            .stat-label {
-              font-size: 12px;
-              color: #666;
-              text-transform: uppercase;
-            }
-            .description {
-              background: #f8f9fa;
-              padding: 20px;
-              border-radius: 8px;
-              margin: 20px 0;
-            }
-            .footer {
-              margin-top: 40px;
-              padding-top: 20px;
-              border-top: 1px solid #ddd;
-              text-align: center;
-              color: #666;
-              font-size: 12px;
-            }
-            @media print {
-              body { margin: 20px; }
-              .stats-grid { page-break-inside: avoid; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="report-header">
-            <div class="report-title">${report.title}</div>
-            <div class="report-meta">
-              Generated: ${report.date} |
-              Created by: ${typeof report.generated_by === 'object' && report.generated_by
+      // Create a temporary DOM element with the report content
+      const element = document.createElement('div');
+      element.innerHTML = `
+        <div style="font-family: Arial, sans-serif; padding: 20px; background: white; color: black; line-height: 1.6;">
+          <div style="border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px;">
+            <h1 style="font-size: 24px; font-weight: bold; margin: 0 0 10px 0; color: #333;">${report.title}</h1>
+            <div style="color: #666; font-size: 14px;">
+              <p>Generated: ${report.date} | Created by: ${typeof report.generated_by === 'object' && report.generated_by
                 ? `${report.generated_by.first_name} ${report.generated_by.last_name}`
-                : report.generated_by || 'System'}
+                : report.generated_by || 'System'}</p>
             </div>
           </div>
 
-          <div class="stats-grid">
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin: 30px 0;">
             ${(report.stats || []).map(stat => `
-              <div class="stat-card">
-                <div class="stat-number">${stat.value}</div>
-                <div class="stat-label">${stat.label}</div>
+              <div style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 5px;">${stat.value}</div>
+                <div style="font-size: 12px; color: #666; text-transform: uppercase;">${stat.label}</div>
               </div>
             `).join('')}
           </div>
 
-          <div class="description">
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <h3>Summary</h3>
             <p>${report.description}</p>
           </div>
 
-          <div class="footer">
+          <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #666; font-size: 12px;">
             <p>CRISP - Cyber Threat Intelligence Report</p>
             <p>Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
           </div>
-        </body>
-        </html>
+        </div>
       `;
 
-      printWindow.document.write(pdfContent);
-      printWindow.document.close();
+      // Configure PDF options
+      const options = {
+        margin: 1,
+        filename: `${report.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_report.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
 
-      // Wait a bit for content to load, then trigger print
-      setTimeout(() => {
-        printWindow.focus();
-        printWindow.print();
-      }, 500);
+      // Generate and download PDF
+      await html2pdf().set(options).from(element).save();
 
     } catch (error) {
       console.error('Error exporting PDF:', error);
+      // Fallback to print method if html2pdf fails
+      alert('PDF export failed. Please install html2pdf library or use browser print to save as PDF.');
     } finally {
       setTimeout(() => setExportingReportId(null), 1000);
     }
@@ -1116,6 +1018,7 @@ const Reports = ({ active = true }) => {
           if (!response.ok || !data.success) {
             throw new Error(data.message || 'Failed to delete report from server');
           }
+
         }
       }
 

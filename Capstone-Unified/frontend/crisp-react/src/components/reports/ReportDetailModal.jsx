@@ -64,7 +64,7 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
     }
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     if (!fullReportData && !report) {
       console.warn('No report data available for export');
       return;
@@ -72,11 +72,13 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
 
     const reportData = fullReportData || report;
 
-    // Generate a comprehensive PDF-ready view with all report data
-    const printWindow = window.open('', '_blank');
+    try {
+      // Dynamically import html2pdf
+      const html2pdf = (await import('html2pdf.js')).default;
 
-    // Create comprehensive PDF content
-    const pdfContent = `
+      // Create a temporary DOM element with comprehensive report content
+      const element = document.createElement('div');
+      element.innerHTML = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -251,14 +253,21 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
       </html>
     `;
 
-    printWindow.document.write(pdfContent);
-    printWindow.document.close();
+      // Configure PDF options
+      const options = {
+        margin: 0.5,
+        filename: `${(reportData.title || report?.title || 'report').replace(/[^a-z0-9]/gi, '_').toLowerCase()}_detailed.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
 
-    // Wait for content to load, then trigger print
-    setTimeout(() => {
-      printWindow.focus();
-      printWindow.print();
-    }, 500);
+      // Generate and download PDF
+      await html2pdf().set(options).from(element).save();
+    } catch (error) {
+      console.error('Error exporting detailed PDF:', error);
+      alert('PDF export failed. Please ensure the html2pdf library is installed.');
+    }
   };
 
   if (!isOpen) return null;
