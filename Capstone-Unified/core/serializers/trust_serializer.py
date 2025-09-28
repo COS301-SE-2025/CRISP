@@ -39,7 +39,7 @@ class TrustRelationshipSerializer(serializers.ModelSerializer):
             'id', 'source_organization', 'target_organization', 'trust_level',
             'relationship_type', 'status', 'is_bilateral', 'is_active',
             'anonymization_level', 'access_level', 'sharing_preferences',
-            'notes', 'created_at', 'updated_at', 'expires_at'
+            'notes', 'created_at', 'updated_at', 'valid_until'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 

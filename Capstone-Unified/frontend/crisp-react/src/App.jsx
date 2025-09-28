@@ -8095,7 +8095,24 @@ function TTPAnalysis({ active }) {
       };
 
       loadData();
+      
+      // Subscribe to RefreshManager for TTP Analysis
+      refreshManager.subscribe('ttp-analysis', () => {
+        console.log('🔄 RefreshManager: Refreshing TTP analysis data');
+        fetchTTPData();
+        fetchMatrixData();
+        fetchAggregationData();
+      }, {
+        backgroundRefresh: true,
+        isVisible: () => active
+      });
     }
+    
+    return () => {
+      if (active) {
+        refreshManager.unsubscribe('ttp-analysis');
+      }
+    };
   }, [active]);
   
   // Fetch available threat feeds
