@@ -860,47 +860,6 @@ def system_health(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def network_activity(request):
-    """
-    Get network activity metrics for SOC monitoring
-    """
-    try:
-        import random
-        
-        # Simulated network activity data
-        activity_data = {
-            'connections_count': random.randint(1500, 3000),
-            'bandwidth_usage': random.randint(45, 85),
-            'suspicious_ips': random.randint(5, 25),
-            'blocked_attempts': random.randint(50, 200),
-            'top_protocols': [
-                {'protocol': 'HTTPS', 'percentage': 65, 'count': 2450},
-                {'protocol': 'HTTP', 'percentage': 20, 'count': 750},
-                {'protocol': 'SSH', 'percentage': 10, 'count': 375},
-                {'protocol': 'FTP', 'percentage': 5, 'count': 188}
-            ],
-            'geo_distribution': [
-                {'country': 'United States', 'connections': 1200},
-                {'country': 'Canada', 'connections': 450},
-                {'country': 'United Kingdom', 'connections': 320},
-                {'country': 'Germany', 'connections': 280}
-            ],
-            'last_updated': timezone.now().isoformat()
-        }
-        
-        return Response({
-            'success': True,
-            'data': activity_data
-        })
-        
-    except Exception as e:
-        logger.error(f"Error in network_activity: {str(e)}")
-        return Response({
-            'success': False,
-            'message': 'Failed to get network activity data'
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
