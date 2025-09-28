@@ -353,8 +353,7 @@ function TrustManagement({ active, initialTab = null }) {
         
         console.log('🔍 TRUST LEVEL MAPPING FOR EDIT:', {
           itemTrustLevel: item.trust_level,
-          parenthesesMatch: parenthesesMatch,
-          extractedFromParentheses: parenthesesMatch ? parenthesesMatch[1] : 'none',
+          itemTrustLevelType: typeof item.trust_level,
           mappedCode: trustLevelCode,
           foundTrustLevelObj: trustLevelObj,
           availableLevels: trustData.trustLevels.map(l => ({ id: l.id, name: l.name, level: l.level }))
