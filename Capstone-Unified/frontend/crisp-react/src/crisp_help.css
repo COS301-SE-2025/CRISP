@@ -723,3 +723,118 @@
         padding: 6px 8px;
     }
 }
+
+/* Video Modal Styles */
+.video-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000; /* Higher than help modal */
+    padding: 20px;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.video-modal {
+    background: white;
+    border-radius: 12px;
+    max-width: 90vw;
+    max-height: 90vh;
+    width: 1000px;
+    overflow: hidden;
+    box-shadow: var(--shadow-xl);
+    animation: slideUp 0.3s ease-out;
+    display: flex;
+    flex-direction: column;
+}
+
+.video-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: var(--text-light);
+    padding: 20px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.video-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.video-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-light);
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.video-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+}
+
+.video-close i {
+    width: 18px;
+    height: 18px;
+}
+
+.video-container {
+    flex: 1;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+}
+
+.video-container video {
+    width: 100%;
+    height: 100%;
+    max-height: calc(90vh - 80px); /* Account for header */
+    object-fit: contain;
+}
+
+/* Responsive video modal */
+@media (max-width: 768px) {
+    .video-modal {
+        width: 95vw;
+        max-width: 95vw;
+        max-height: 85vh;
+    }
+    
+    .video-header {
+        padding: 16px 20px;
+    }
+    
+    .video-header h3 {
+        font-size: 1.1rem;
+    }
+    
+    .video-container {
+        min-height: 300px;
+    }
+    
+    .video-container video {
+        max-height: calc(85vh - 70px);
+    }
+}
