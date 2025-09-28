@@ -14338,6 +14338,37 @@ function CSSStyles() {
         .filter-control {
             width: 100%;
         }
+
+        /* Threat feeds filter input styling */
+        .filter-control input[type="text"] {
+            width: 100%;
+            min-width: 250px;
+            height: 38px;
+            padding: 8px 12px;
+            font-size: 13px;
+            color: #374151;
+            background: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .filter-control input[type="text"]:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            background: #fefefe;
+            outline: none;
+        }
+
+        .filter-control input[type="text"]:hover:not(:focus) {
+            border-color: #9ca3af;
+        }
+
+        .filter-control input[type="text"]::placeholder {
+            color: #9ca3af;
+            font-size: 13px;
+        }
         
         .search-input-wrapper {
             position: relative;
