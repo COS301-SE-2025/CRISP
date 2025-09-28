@@ -1,0 +1,214 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: crisp
+      POSTGRES_USER: crisp_user
+      POSTGRES_PASSWORD: crisp_password
+      POSTGRES_HOST_AUTH_METHOD: md5
+    command: [
+      "postgres",
+      "-c", "fsync=off",
+      "-c", "synchronous_commit=off", 
+      "-c", "full_page_writes=off",
+      "-c", "max_wal_size=1GB",
+      "-c", "checkpoint_completion_target=0.9",
+      "-c", "wal_buffers=16MB",
+      "-c", "shared_buffers=256MB",
+      "-c", "max_connections=100"
+    ]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crisp_user -d crisp"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+    networks:
+      - crisp-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - crisp-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Django Backend
+  backend:
+    build:
+      context: .
+      target: backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - DEBUG=True
+      - DB_HOST=db
+      - REDIS_URL=redis://redis:6379/0
+      - ALLOWED_HOSTS=localhost,127.0.0.1,backend,frontend
+      - POPULATE_TEST_DATA=true
+    volumes:
+      - ./logs:/app/logs
+      - ./media:/app/media
+      - ./core:/app/core
+      - ./settings:/app/settings
+      - ./manage.py:/app/manage.py
+      - ./requirements.txt:/app/requirements.txt
+      - ./docker-init.sh:/app/docker-init.sh
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - crisp-network
+    command: ["bash", "/app/docker-init.sh"]
+
+  # Vite Frontend
+  frontend:
+    build:
+      context: .
+      target: frontend-dev
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend/crisp-react/src:/app/src
+      - ./frontend/crisp-react/public:/app/public
+      - ./frontend/crisp-react/index.html:/app/index.html
+      - ./frontend/crisp-react/vite.config.js:/app/vite.config.js
+    depends_on:
+      - backend
+    networks:
+      - crisp-network
+
+  # Testing Backend with Large Dataset
+  backend-test:
+    build:
+      context: .
+      target: backend
+    ports:
+      - "8001:8000"
+    env_file:
+      - .env
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=2-yp3pr5_y-w1w9-3k-gib-jm-8-b6oitfi-094l-e4-test
+      - DB_NAME=crisp_test
+      - DB_HOST=db-test
+      - REDIS_URL=redis://redis-test:6379/0
+      - ALLOWED_HOSTS=localhost,127.0.0.1,backend-test,frontend-test
+      - POPULATE_TEST_DATA=true
+    volumes:
+      - ./logs:/app/logs
+      - ./media:/app/media
+      - ./core:/app/core
+      - ./settings:/app/settings
+      - ./manage.py:/app/manage.py
+      - ./requirements.txt:/app/requirements.txt
+    depends_on:
+      db-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    networks:
+      - crisp-test-network
+    command: >
+      sh -c "until pg_isready -h db-test -p 5432; do echo 'Waiting for test db...'; sleep 2; done &&
+             python manage.py migrate &&
+             python manage.py setup_base_users &&
+             if [ \"$$POPULATE_TEST_DATA\" = \"true\" ]; then
+               echo 'Populating test data...' &&
+               python manage.py populate_database --no-input &&
+               echo 'Populating TTP data...' &&
+               python manage.py populate_ttp_data --count 100;
+             fi &&
+             python manage.py collectstatic --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
+    profiles: ["test"]
+
+  # Testing PostgreSQL Database
+  db-test:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: crisp_test
+      POSTGRES_USER: crisp_user
+      POSTGRES_PASSWORD: crisp_password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crisp_user -d crisp_test"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    networks:
+      - crisp-test-network
+    profiles: ["test"]
+
+  # Testing Redis Cache
+  redis-test:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_test_data:/data
+    networks:
+      - crisp-test-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles: ["test"]
+
+  # Testing Vite Frontend
+  frontend-test:
+    build:
+      context: .
+      target: frontend-dev
+    ports:
+      - "5174:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8001
+    volumes:
+      - ./frontend/crisp-react/src:/app/src
+      - ./frontend/crisp-react/public:/app/public
+      - ./frontend/crisp-react/index.html:/app/index.html
+      - ./frontend/crisp-react/vite.config.js:/app/vite.config.js
+    depends_on:
+      - backend-test
+    networks:
+      - crisp-test-network
+    profiles: ["test"]
+
+volumes:
+  postgres_data:
+  redis_data:
+  postgres_test_data:
+  redis_test_data:
+
+networks:
+  crisp-network:
+    driver: bridge
+  crisp-test-network:
+    driver: bridge

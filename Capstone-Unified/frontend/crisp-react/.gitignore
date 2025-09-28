@@ -1,0 +1,55 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.staging
+*.env
+
+# SSH Keys & Deployment Files (SECURITY CRITICAL)
+*.pem
+*.ppk
+*.key
+id_rsa*
+authorized_keys
+known_hosts
+.ssh/
+ssh_keys/
+keys/
+deployment_keys/
+ssl_certificates/
+*.crt
+*.csr
+*.p12
+*.pfx
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Deployment & CI/CD Secrets
+deployment/
+deploy_keys/
+secrets/
+.secrets/
+ci_secrets/

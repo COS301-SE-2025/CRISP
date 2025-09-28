@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f3f4;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #007bff 0%, #0056b3 100%);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #0056b3 0%, #003f7f 100%);
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+::-webkit-scrollbar-corner {
+  background: #f1f3f4;
+}
+
+/* Firefox scrollbar styles */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #007bff #f1f3f4;
+}
+
+/* Force light scrollbars even in dark mode */
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #f1f3f4 !important;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #007bff 0%, #0056b3 100%) !important;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #0056b3 0%, #003f7f 100%) !important;
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: #f1f3f4 !important;
+  }
+
+  /* Firefox dark mode override */
+  * {
+    scrollbar-width: thin !important;
+    scrollbar-color: #007bff #f1f3f4 !important;
+  }
+}
+
