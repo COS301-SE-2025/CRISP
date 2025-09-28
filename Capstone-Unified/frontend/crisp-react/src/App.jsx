@@ -3943,7 +3943,9 @@ function ThreatFeeds({
           }));
 
           // Show success notification
-          const notificationText = `Successfully processed ${result.indicators || 0} indicators and ${result.ttps || 0} TTPs from ${feed.name}`;
+          const feed = feeds.find(f => f.id === feedId);
+          const feedName = feed?.name || `Feed ${feedId}`;
+          const notificationText = `Successfully processed ${result.indicators || 0} indicators and ${result.ttps || 0} TTPs from ${feedName}`;
           showSuccess('🎉 Feed Consumption Completed!', notificationText);
 
           // Also show browser notification if permission granted
@@ -4701,30 +4703,6 @@ function ThreatFeeds({
                               </div>
                             </div>
                             <div className="cancel-options" style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
-                              {/* Only show pause button if feed is actively running and not completed */}
-                              {!feedProgress[feed.id]?.paused && !feedProgress[feed.id]?.completed && consumingFeeds.includes(feed.id) ? (
-                                <button
-                                  className="btn btn-xs btn-warning"
-                                  onClick={() => handlePauseFeedConsumption(feed.id)}
-                                  title="Pause consumption and save progress for later resume"
-                                  style={{fontSize: '10px', padding: '2px 6px'}}
-                                  disabled={feedProgress[feed.id]?.pausing}
-                                >
-                                  <i className={feedProgress[feed.id]?.pausing ? "fas fa-clock" : "fas fa-pause"}></i> 
-                                  {feedProgress[feed.id]?.pausing ? 'Pausing...' : 'Pause'}
-                                </button>
-                              ) : feedProgress[feed.id]?.paused ? (
-                                <button
-                                  className="btn btn-xs btn-success"
-                                  onClick={() => handleResumeFeedConsumption(feed.id)}
-                                  title="Resume consumption from where it was paused"
-                                  style={{fontSize: '10px', padding: '2px 6px'}}
-                                  disabled={feedProgress[feed.id]?.resuming}
-                                >
-                                  <i className={feedProgress[feed.id]?.resuming ? "fas fa-clock" : "fas fa-play"}></i> 
-                                  {feedProgress[feed.id]?.resuming ? 'Resuming...' : 'Resume'}
-                                </button>
-                              ) : null}
                               <button
                                 className="btn btn-xs btn-danger"
                                 onClick={() => handleCancelFeedConsumption(feed.id, 'cancel_job')}
@@ -4732,7 +4710,7 @@ function ThreatFeeds({
                                 style={{fontSize: '10px', padding: '2px 6px'}}
                                 disabled={feedProgress[feed.id]?.cancelling}
                               >
-                                <i className={feedProgress[feed.id]?.cancelling ? "fas fa-clock" : "fas fa-times"}></i> 
+                                <i className={feedProgress[feed.id]?.cancelling ? "fas fa-clock" : "fas fa-times"}></i>
                                 {feedProgress[feed.id]?.cancelling ? 'Cancelling...' : 'Cancel Job'}
                               </button>
                             </div>
