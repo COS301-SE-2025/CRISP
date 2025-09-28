@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import * as api from '../../api.js';
 import { useNotifications } from '../enhanced/NotificationManager.jsx';
 import SOCIncidentModal from './SOCIncidentModal.jsx';
+import SOCIncidentEditModal from './SOCIncidentEditModal.jsx';
 
 const SOCDashboard = ({ active, showPage }) => {
   const { showError, showInfo, showSuccess } = useNotifications();
@@ -24,6 +25,8 @@ const SOCDashboard = ({ active, showPage }) => {
   
   // Incident management states
   const [showIncidentModal, setShowIncidentModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingIncident, setEditingIncident] = useState(null);
   const [deletingIncidentId, setDeletingIncidentId] = useState(null);
 
   useEffect(() => {
@@ -276,6 +279,20 @@ const SOCDashboard = ({ active, showPage }) => {
     
     // Refresh dashboard data to show the new incident
     await fetchDashboardData();
+  };
+
+  const handleEditIncident = (incident) => {
+    setEditingIncident(incident);
+    setShowEditModal(true);
+  };
+
+  const handleIncidentUpdated = async (updatedIncident) => {
+    showSuccess(`Incident updated successfully! ID: ${updatedIncident?.incident_id || 'N/A'}`);
+    
+    // Refresh dashboard data to show the updated incident
+    await fetchDashboardData();
+    setShowEditModal(false);
+    setEditingIncident(null);
   };
 
   // Check if component is active and user has access
@@ -1754,45 +1771,69 @@ const SOCDashboard = ({ active, showPage }) => {
                             )}
                           </td>
                           <td style={{ padding: '12px', textAlign: 'center' }}>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteIncident(incident.id);
-                              }}
-                              disabled={deletingIncidentId === incident.id}
-                              style={{
-                                backgroundColor: deletingIncidentId === incident.id ? '#6c757d' : '#dc3545',
-                                color: 'white',
-                                border: 'none',
-                                padding: '0.375rem 0.75rem',
-                                borderRadius: '4px',
-                                fontSize: '0.75rem',
-                                cursor: deletingIncidentId === incident.id ? 'not-allowed' : 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.25rem'
-                              }}
-                              title="Delete incident"
-                            >
-                              {deletingIncidentId === incident.id ? (
-                                <>
-                                  <span style={{ 
-                                    width: '12px', 
-                                    height: '12px', 
-                                    border: '2px solid transparent', 
-                                    borderTop: '2px solid white', 
-                                    borderRadius: '50%', 
-                                    animation: 'spin 1s linear infinite' 
-                                  }}></span>
-                                  Deleting...
-                                </>
-                              ) : (
-                                <>
-                                  <i className="fas fa-trash"></i>
-                                  Delete
-                                </>
-                              )}
-                            </button>
+                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditIncident(incident);
+                                }}
+                                style={{
+                                  backgroundColor: '#007bff',
+                                  color: 'white',
+                                  border: 'none',
+                                  padding: '0.375rem 0.75rem',
+                                  borderRadius: '4px',
+                                  fontSize: '0.75rem',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem'
+                                }}
+                                title="Edit incident"
+                              >
+                                <i className="fas fa-edit"></i>
+                                Edit
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteIncident(incident.id);
+                                }}
+                                disabled={deletingIncidentId === incident.id}
+                                style={{
+                                  backgroundColor: deletingIncidentId === incident.id ? '#6c757d' : '#dc3545',
+                                  color: 'white',
+                                  border: 'none',
+                                  padding: '0.375rem 0.75rem',
+                                  borderRadius: '4px',
+                                  fontSize: '0.75rem',
+                                  cursor: deletingIncidentId === incident.id ? 'not-allowed' : 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem'
+                                }}
+                                title="Delete incident"
+                              >
+                                {deletingIncidentId === incident.id ? (
+                                  <>
+                                    <span style={{ 
+                                      width: '12px', 
+                                      height: '12px', 
+                                      border: '2px solid transparent', 
+                                      borderTop: '2px solid white', 
+                                      borderRadius: '50%', 
+                                      animation: 'spin 1s linear infinite' 
+                                    }}></span>
+                                    Deleting...
+                                  </>
+                                ) : (
+                                  <>
+                                    <i className="fas fa-trash"></i>
+                                    Delete
+                                  </>
+                                )}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1816,6 +1857,17 @@ const SOCDashboard = ({ active, showPage }) => {
         isOpen={showIncidentModal}
         onClose={() => setShowIncidentModal(false)}
         onIncidentCreated={handleIncidentCreated}
+      />
+
+      {/* SOC Incident Edit Modal */}
+      <SOCIncidentEditModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingIncident(null);
+        }}
+        incident={editingIncident}
+        onIncidentUpdated={handleIncidentUpdated}
       />
     </div>
   );
