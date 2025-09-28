@@ -992,7 +992,9 @@ function TrustManagement({ active, initialTab = null }) {
                   padding: '0.5rem',
                   border: '1px solid #ced4da',
                   borderRadius: '4px',
-                  minWidth: '200px'
+                  minWidth: '200px',
+                  backgroundColor: 'white',
+                  color: 'black'
                 }}
               />
               
@@ -1003,7 +1005,9 @@ function TrustManagement({ active, initialTab = null }) {
                   padding: '0.5rem',
                   border: '1px solid #ced4da',
                   borderRadius: '4px',
-                  minWidth: '120px'
+                  minWidth: '120px',
+                  backgroundColor: 'white',
+                  color: 'black'
                 }}
               >
                 <option value="">All Status</option>
