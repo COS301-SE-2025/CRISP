@@ -3,6 +3,7 @@ import * as api from '../../api.js';
 import { useNotifications } from '../enhanced/NotificationManager.jsx';
 import SOCIncidentModal from './SOCIncidentModal.jsx';
 import SOCIncidentEditModal from './SOCIncidentEditModal.jsx';
+import BehaviorAnalyticsDashboard from './BehaviorAnalyticsDashboard.jsx';
 
 const SOCDashboard = ({ active, showPage }) => {
   const { showError, showInfo, showSuccess } = useNotifications();
@@ -22,6 +23,19 @@ const SOCDashboard = ({ active, showPage }) => {
   const [threatIntelligence, setThreatIntelligence] = useState(null);
   const [liveIOCAlerts, setLiveIOCAlerts] = useState([]);
   const [iocCorrelation, setIOCCorrelation] = useState(null);
+  
+  // Interactive MITRE states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTactic, setSelectedTactic] = useState(null);
+  const [selectedTechnique, setSelectedTechnique] = useState(null);
+  const [showTechniqueModal, setShowTechniqueModal] = useState(false);
+  const [hoveredTactic, setHoveredTactic] = useState(null);
+  const [filterBySeverity, setFilterBySeverity] = useState('all');
+  const [sortBy, setSortBy] = useState('detection_count');
+  const [viewMode, setViewMode] = useState('grid');
+  const [animationEnabled, setAnimationEnabled] = useState(true);
+  const [mitreMatrix, setMitreMatrix] = useState(null);
+  const [techniqueDetails, setTechniqueDetails] = useState({});
   
   // Incident management states
   const [showIncidentModal, setShowIncidentModal] = useState(false);
@@ -52,6 +66,7 @@ const SOCDashboard = ({ active, showPage }) => {
         fetchDashboardData(),
         fetchTopThreats(),
         fetchMitreTactics(),
+        fetchMitreMatrix(),
         fetchThreatIntelligence(),
         fetchLiveIOCAlerts(),
         fetchIOCCorrelation()
@@ -136,6 +151,88 @@ const SOCDashboard = ({ active, showPage }) => {
   };
 
 
+
+  const fetchMitreMatrix = async () => {
+    try {
+      const response = await api.getMitreMatrix();
+      if (response) {
+        setMitreMatrix(response);
+      }
+    } catch (err) {
+      console.error('Failed to fetch MITRE matrix:', err);
+    }
+  };
+
+  const fetchTechniqueDetails = async (techniqueId) => {
+    if (techniqueDetails[techniqueId]) return techniqueDetails[techniqueId];
+    
+    try {
+      const details = await api.getTechniqueDetails(techniqueId);
+      setTechniqueDetails(prev => ({ ...prev, [techniqueId]: details }));
+      return details;
+    } catch (err) {
+      console.warn('Failed to fetch technique details:', err);
+      return null;
+    }
+  };
+
+  const handleTechniqueClick = async (technique) => {
+    setSelectedTechnique(technique);
+    setShowTechniqueModal(true);
+    await fetchTechniqueDetails(technique.technique_id);
+  };
+
+  const getTacticColor = (tactic, intensity = 1) => {
+    const colors = {
+      'initial-access': `rgba(255, 107, 107, ${intensity})`,
+      'execution': `rgba(78, 205, 196, ${intensity})`,
+      'persistence': `rgba(69, 183, 209, ${intensity})`,
+      'privilege-escalation': `rgba(150, 206, 180, ${intensity})`,
+      'defense-evasion': `rgba(254, 202, 87, ${intensity})`,
+      'credential-access': `rgba(255, 159, 243, ${intensity})`,
+      'discovery': `rgba(84, 160, 255, ${intensity})`,
+      'lateral-movement': `rgba(95, 39, 205, ${intensity})`,
+      'collection': `rgba(0, 210, 211, ${intensity})`,
+      'command-and-control': `rgba(255, 159, 67, ${intensity})`,
+      'exfiltration': `rgba(238, 90, 36, ${intensity})`,
+      'impact': `rgba(234, 32, 39, ${intensity})`,
+      'unknown': `rgba(108, 117, 125, ${intensity})`
+    };
+    return colors[tactic?.toLowerCase()] || colors['unknown'];
+  };
+
+  const getFilteredTactics = () => {
+    if (!mitreTactics || mitreTactics.length === 0) return [];
+    
+    let filtered = [...mitreTactics];
+    
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(tactic => 
+        tactic.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        tactic.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Severity filter
+    if (filterBySeverity !== 'all') {
+      const thresholds = { high: 5, medium: 3, low: 1 };
+      const threshold = thresholds[filterBySeverity];
+      filtered = filtered.filter(tactic => (tactic.detection_count || 0) >= threshold);
+    }
+    
+    // Sort
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'detection_count': return (b.detection_count || 0) - (a.detection_count || 0);
+        case 'name': return a.name?.localeCompare(b.name) || 0;
+        case 'technique_count': return (b.technique_count || 0) - (a.technique_count || 0);
+        default: return 0;
+      }
+    });
+    
+    return filtered;
+  };
 
   const fetchTopThreats = async () => {
     try {
@@ -414,6 +511,7 @@ const SOCDashboard = ({ active, showPage }) => {
           { key: 'threats', label: 'Threat Intelligence', icon: 'fa-shield-virus' },
           { key: 'ioc-alerts', label: 'IOC Alerts', icon: 'fa-exclamation-triangle' },
           { key: 'mitre', label: 'MITRE ATT&CK', icon: 'fa-crosshairs' },
+          { key: 'behavior', label: 'Behavior Analytics', icon: 'fa-brain' },
           { key: 'alerts', label: 'Live Alerts', icon: 'fa-bell' }
         ].map(tab => (
           <button
@@ -1434,56 +1532,322 @@ const SOCDashboard = ({ active, showPage }) => {
 
       {activeTab === 'mitre' && (
         <div style={{ marginBottom: '2rem' }}>
-          <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-            <div style={{ backgroundColor: '#007bff', padding: '1rem', borderBottom: '1px solid #dee2e6' }}>
-              <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600', color: 'white' }}>
-                <i className="fas fa-crosshairs" style={{ marginRight: '0.5rem', color: 'white' }}></i>
-                MITRE ATT&CK Tactics Detection
+          {/* Interactive Controls */}
+          <div style={{ 
+            backgroundColor: 'white', 
+            borderRadius: '8px', 
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)', 
+            overflow: 'hidden',
+            marginBottom: '1.5rem'
+          }}>
+            <div style={{ 
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+              color: 'white', 
+              padding: '1rem' 
+            }}>
+              <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600' }}>
+                <i className="fas fa-crosshairs" style={{ marginRight: '0.5rem' }}></i>
+                Interactive MITRE ATT&CK Analysis
               </h3>
             </div>
             <div style={{ padding: '1.5rem' }}>
-              {mitreTactics.length > 0 ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
-                  {mitreTactics.map((tactic, index) => (
-                    <div key={index} style={{ 
-                      border: '1px solid #dee2e6', 
-                      borderRadius: '6px', 
-                      padding: '1.5rem',
-                      backgroundColor: 'white',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                    }}>
-                      <h4 style={{ margin: '0 0 1rem 0', fontSize: '1.125rem', fontWeight: '600', color: '#333' }}>{tactic.name}</h4>
-                      <p style={{ fontSize: '0.875rem', color: '#666', marginBottom: '1rem', lineHeight: '1.4' }}>{tactic.description}</p>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{
-                          backgroundColor: '#007bff',
-                          color: 'white',
-                          padding: '0.25rem 0.75rem',
-                          borderRadius: '12px',
-                          fontSize: '0.75rem',
-                          fontWeight: '600'
-                        }}>{tactic.technique_count} techniques</span>
-                        <span style={{
-                          backgroundColor: '#ffc107',
-                          color: 'white',
-                          padding: '0.25rem 0.75rem',
-                          borderRadius: '12px',
-                          fontSize: '0.75rem',
-                          fontWeight: '600'
-                        }}>{tactic.detection_count} detected</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {/* Search Box */}
+                <div style={{ position: 'relative', maxWidth: '400px' }}>
+                  <i className="fas fa-search" style={{
+                    position: 'absolute',
+                    left: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: '#6c757d',
+                    zIndex: 1
+                  }}></i>
+                  <input
+                    type="text"
+                    placeholder="Search tactics or techniques..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 40px 12px 40px',
+                      border: '2px solid #dee2e6',
+                      borderRadius: '25px',
+                      fontSize: '14px',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#007bff';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(0, 123, 255, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#dee2e6';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                  {searchTerm && (
+                    <button 
+                      onClick={() => setSearchTerm('')}
+                      style={{
+                        position: 'absolute',
+                        right: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        color: '#6c757d',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        borderRadius: '50%',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.background = '#e9ecef';
+                        e.target.style.color = '#495057';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.background = 'none';
+                        e.target.style.color = '#6c757d';
+                      }}
+                    >
+                      <i className="fas fa-times"></i>
+                    </button>
+                  )}
+                </div>
+
+                {/* Filter Controls */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center' }}>
+                  <select 
+                    value={filterBySeverity} 
+                    onChange={(e) => setFilterBySeverity(e.target.value)}
+                    style={{
+                      padding: '8px 12px',
+                      border: '1px solid #dee2e6',
+                      borderRadius: '6px',
+                      background: 'white',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    <option value="all">All Detection Levels</option>
+                    <option value="high">High (5+ detections)</option>
+                    <option value="medium">Medium (3+ detections)</option>
+                    <option value="low">Low (1+ detections)</option>
+                  </select>
+                  
+                  <select 
+                    value={sortBy} 
+                    onChange={(e) => setSortBy(e.target.value)}
+                    style={{
+                      padding: '8px 12px',
+                      border: '1px solid #dee2e6',
+                      borderRadius: '6px',
+                      background: 'white',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    <option value="detection_count">Sort by Detections</option>
+                    <option value="name">Sort by Name</option>
+                    <option value="technique_count">Sort by Techniques</option>
+                  </select>
+                  
+                  <div style={{ display: 'flex', border: '1px solid #dee2e6', borderRadius: '6px', overflow: 'hidden' }}>
+                    <button 
+                      onClick={() => setViewMode('grid')}
+                      style={{
+                        padding: '8px 12px',
+                        border: 'none',
+                        background: viewMode === 'grid' ? '#007bff' : 'white',
+                        color: viewMode === 'grid' ? 'white' : '#666',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      title="Grid View"
+                    >
+                      <i className="fas fa-th"></i>
+                    </button>
+                    <button 
+                      onClick={() => setViewMode('list')}
+                      style={{
+                        padding: '8px 12px',
+                        border: 'none',
+                        background: viewMode === 'list' ? '#007bff' : 'white',
+                        color: viewMode === 'list' ? 'white' : '#666',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      title="List View"
+                    >
+                      <i className="fas fa-list"></i>
+                    </button>
+                  </div>
+
+                  <button 
+                    onClick={() => setAnimationEnabled(!animationEnabled)}
+                    style={{
+                      padding: '8px 12px',
+                      border: '1px solid #dee2e6',
+                      borderRadius: '6px',
+                      background: animationEnabled ? '#007bff' : 'white',
+                      color: animationEnabled ? 'white' : '#666',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    title="Toggle Animations"
+                  >
+                    <i className="fas fa-magic"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive MITRE Matrix */}
+          <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+            <div style={{ 
+              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', 
+              color: 'white', 
+              padding: '1rem', 
+              borderBottom: '1px solid #dee2e6' 
+            }}>
+              <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600' }}>
+                <i className="fas fa-shield-alt" style={{ marginRight: '0.5rem' }}></i>
+                MITRE ATT&CK Tactics Matrix ({getFilteredTactics().length} tactics)
+              </h3>
+            </div>
+            <div style={{ padding: '1.5rem' }}>
+              {getFilteredTactics().length > 0 ? (
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: viewMode === 'grid' ? 'repeat(auto-fit, minmax(320px, 1fr))' : '1fr',
+                  gap: '1.5rem' 
+                }}>
+                  {getFilteredTactics().map((tactic, index) => (
+                    <div 
+                      key={index} 
+                      onClick={() => setSelectedTactic(selectedTactic === tactic.name ? null : tactic.name)}
+                      onMouseEnter={() => setHoveredTactic(tactic.name)}
+                      onMouseLeave={() => setHoveredTactic(null)}
+                      style={{ 
+                        border: '2px solid #dee2e6',
+                        borderRadius: '12px', 
+                        padding: '1.5rem',
+                        backgroundColor: 'white',
+                        boxShadow: hoveredTactic === tactic.name ? '0 8px 25px rgba(0, 123, 255, 0.2)' : '0 2px 8px rgba(0,0,0,0.1)',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                        transform: hoveredTactic === tactic.name && animationEnabled ? 'translateY(-5px)' : 'translateY(0)',
+                        borderColor: selectedTactic === tactic.name ? '#007bff' : '#dee2e6'
+                      }}
+                    >
+                      <div style={{ 
+                        background: `linear-gradient(135deg, ${getTacticColor(tactic.name, 0.8)}, ${getTacticColor(tactic.name, 1)})`,
+                        padding: '1rem',
+                        borderRadius: '8px',
+                        marginBottom: '1rem',
+                        color: 'white'
+                      }}>
+                        <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1.125rem', fontWeight: '600' }}>
+                          {tactic.name}
+                        </h4>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.875rem', opacity: '0.9' }}>
+                            {tactic.technique_count || 0} techniques
+                          </span>
+                          <span style={{ fontSize: '0.875rem', opacity: '0.9' }}>
+                            {tactic.detection_count || 0} detected
+                          </span>
+                        </div>
                       </div>
+                      
+                      <p style={{ 
+                        fontSize: '0.875rem', 
+                        color: '#666', 
+                        marginBottom: '1rem', 
+                        lineHeight: '1.4',
+                        display: '-webkit-box',
+                        WebkitLineClamp: selectedTactic === tactic.name ? 'none' : 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
+                      }}>
+                        {tactic.description}
+                      </p>
+                      
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <span style={{
+                            backgroundColor: '#007bff',
+                            color: 'white',
+                            padding: '0.25rem 0.75rem',
+                            borderRadius: '12px',
+                            fontSize: '0.75rem',
+                            fontWeight: '600'
+                          }}>
+                            {tactic.technique_count || 0} techniques
+                          </span>
+                          <span style={{
+                            backgroundColor: (tactic.detection_count || 0) > 5 ? '#dc3545' : 
+                                           (tactic.detection_count || 0) > 3 ? '#ffc107' : '#28a745',
+                            color: 'white',
+                            padding: '0.25rem 0.75rem',
+                            borderRadius: '12px',
+                            fontSize: '0.75rem',
+                            fontWeight: '600'
+                          }}>
+                            {tactic.detection_count || 0} detected
+                          </span>
+                        </div>
+                        
+                        {selectedTactic === tactic.name && (
+                          <div style={{ fontSize: '0.875rem', color: '#007bff', fontWeight: '600' }}>
+                            <i className="fas fa-chevron-up"></i> Click to collapse
+                          </div>
+                        )}
+                      </div>
+                      
+                      {selectedTactic === tactic.name && (
+                        <div style={{ 
+                          marginTop: '1rem', 
+                          padding: '1rem', 
+                          backgroundColor: '#f8f9fa', 
+                          borderRadius: '8px',
+                          borderTop: '3px solid #007bff'
+                        }}>
+                          <h5 style={{ margin: '0 0 0.5rem 0', color: '#333' }}>Detection Details</h5>
+                          <p style={{ margin: '0', fontSize: '0.875rem', color: '#666' }}>
+                            This tactic has been detected {tactic.detection_count || 0} times across your environment. 
+                            Click on individual techniques to view detailed information and mitigation strategies.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', color: '#666', padding: '2rem' }}>
-                  <i className="fas fa-crosshairs" style={{ fontSize: '3rem', marginBottom: '1rem', color: '#dee2e6' }}></i>
-                  <p>No MITRE ATT&CK data available</p>
+                <div style={{ textAlign: 'center', color: '#666', padding: '3rem' }}>
+                  {searchTerm || filterBySeverity !== 'all' ? (
+                    <>
+                      <i className="fas fa-search" style={{ fontSize: '3rem', marginBottom: '1rem', color: '#dee2e6' }}></i>
+                      <h4 style={{ margin: '0 0 0.5rem 0', color: '#666' }}>No tactics match your filters</h4>
+                      <p style={{ margin: '0' }}>Try adjusting your search term or detection level filter</p>
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-crosshairs" style={{ fontSize: '3rem', marginBottom: '1rem', color: '#dee2e6' }}></i>
+                      <h4 style={{ margin: '0 0 0.5rem 0', color: '#666' }}>No MITRE ATT&CK data available</h4>
+                      <p style={{ margin: '0' }}>Connect threat intelligence feeds to populate this view</p>
+                    </>
+                  )}
                 </div>
               )}
             </div>
           </div>
         </div>
+      )}
+
+      {/* Behavior Analytics Tab */}
+      {activeTab === 'behavior' && (
+        <BehaviorAnalyticsDashboard active={true} />
       )}
 
       {activeTab === 'alerts' && (
@@ -1869,6 +2233,246 @@ const SOCDashboard = ({ active, showPage }) => {
         incident={editingIncident}
         onIncidentUpdated={handleIncidentUpdated}
       />
+
+      {/* Technique Details Modal */}
+      {showTechniqueModal && selectedTechnique && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            backdropFilter: 'blur(5px)'
+          }}
+          onClick={() => setShowTechniqueModal(false)}
+        >
+          <div 
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              maxWidth: '600px',
+              width: '90%',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              padding: '25px',
+              borderBottom: '1px solid #dee2e6',
+              background: 'linear-gradient(135deg, #007bff, #0056b3)',
+              color: 'white',
+              borderRadius: '12px 12px 0 0'
+            }}>
+              <div>
+                <h2 style={{ margin: '0 0 5px 0', fontFamily: 'monospace', fontSize: '24px' }}>
+                  {selectedTechnique.technique_id}
+                </h2>
+                <h3 style={{ margin: '0', fontSize: '18px', opacity: '0.9' }}>
+                  {selectedTechnique.name}
+                </h3>
+              </div>
+              <button 
+                onClick={() => setShowTechniqueModal(false)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '40px',
+                  height: '40px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.3)'}
+                onMouseLeave={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.2)'}
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div style={{ padding: '25px' }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                gap: '15px',
+                marginBottom: '25px'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  padding: '15px',
+                  background: '#f8f9fa',
+                  borderRadius: '8px',
+                  border: '1px solid #dee2e6'
+                }}>
+                  <span style={{
+                    fontSize: '12px',
+                    color: '#6c757d',
+                    textTransform: 'uppercase',
+                    fontWeight: '600',
+                    marginBottom: '5px'
+                  }}>Detections</span>
+                  <span style={{ fontSize: '18px', fontWeight: '700', color: '#333' }}>
+                    {selectedTechnique.detection_count || 0}
+                  </span>
+                </div>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  padding: '15px',
+                  background: '#f8f9fa',
+                  borderRadius: '8px',
+                  border: '1px solid #dee2e6'
+                }}>
+                  <span style={{
+                    fontSize: '12px',
+                    color: '#6c757d',
+                    textTransform: 'uppercase',
+                    fontWeight: '600',
+                    marginBottom: '5px'
+                  }}>Tactic</span>
+                  <span style={{ fontSize: '18px', fontWeight: '700', color: '#333' }}>
+                    {selectedTechnique.tactic || 'Unknown'}
+                  </span>
+                </div>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  padding: '15px',
+                  background: '#f8f9fa',
+                  borderRadius: '8px',
+                  border: '1px solid #dee2e6'
+                }}>
+                  <span style={{
+                    fontSize: '12px',
+                    color: '#6c757d',
+                    textTransform: 'uppercase',
+                    fontWeight: '600',
+                    marginBottom: '5px'
+                  }}>Risk Level</span>
+                  <span style={{
+                    fontSize: '18px',
+                    fontWeight: '700',
+                    color: (selectedTechnique.detection_count || 0) > 5 ? '#dc3545' : 
+                           (selectedTechnique.detection_count || 0) > 3 ? '#ffc107' : '#28a745'
+                  }}>
+                    {(selectedTechnique.detection_count || 0) > 5 ? 'High' : 
+                     (selectedTechnique.detection_count || 0) > 3 ? 'Medium' : 'Low'}
+                  </span>
+                </div>
+              </div>
+              
+              {techniqueDetails[selectedTechnique.technique_id] && (
+                <div>
+                  <h4 style={{ margin: '20px 0 10px 0', color: '#333', borderBottom: '2px solid #e9ecef', paddingBottom: '5px' }}>
+                    Description
+                  </h4>
+                  <p style={{ color: '#666', lineHeight: '1.6' }}>
+                    {techniqueDetails[selectedTechnique.technique_id].description || 'No description available.'}
+                  </p>
+                  
+                  {techniqueDetails[selectedTechnique.technique_id].platforms && (
+                    <div style={{ margin: '20px 0' }}>
+                      <h4 style={{ margin: '0 0 10px 0', color: '#333' }}>Platforms</h4>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {techniqueDetails[selectedTechnique.technique_id].platforms.map((platform, i) => (
+                          <span key={i} style={{
+                            background: '#e9ecef',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            color: '#495057'
+                          }}>
+                            {platform}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {techniqueDetails[selectedTechnique.technique_id].data_sources && (
+                    <div style={{ margin: '20px 0' }}>
+                      <h4 style={{ margin: '0 0 10px 0', color: '#333' }}>Data Sources</h4>
+                      <ul style={{ margin: '10px 0 0 20px', padding: '0' }}>
+                        {techniqueDetails[selectedTechnique.technique_id].data_sources.map((source, i) => (
+                          <li key={i} style={{ margin: '5px 0', color: '#6c757d' }}>{source}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              <div style={{
+                display: 'flex',
+                gap: '15px',
+                justifyContent: 'flex-end',
+                marginTop: '25px',
+                paddingTop: '20px',
+                borderTop: '1px solid #dee2e6'
+              }}>
+                <button 
+                  onClick={() => window.open(`https://attack.mitre.org/techniques/${selectedTechnique.technique_id}/`, '_blank')}
+                  style={{
+                    backgroundColor: '#007bff',
+                    color: 'white',
+                    border: 'none',
+                    padding: '10px 20px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    transition: 'all 0.2s',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#0056b3'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#007bff'}
+                >
+                  <i className="fas fa-external-link-alt"></i>
+                  View on MITRE
+                </button>
+                <button 
+                  onClick={() => setShowTechniqueModal(false)}
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: '1px solid #dee2e6',
+                    color: '#495057',
+                    padding: '10px 20px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

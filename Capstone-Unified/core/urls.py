@@ -25,7 +25,7 @@ from core.api.threat_feed_views import (
     ttp_export_csv, ttp_export_stix, virustotal_sync, dashboard_stats_api  # New plain Django export views and VirusTotal sync
 )
 from core.api.ttp_views import TTPExportView, MITREMatrixView
-from core.api import reports_api, sync_api
+from core.api import reports_api, sync_api, behavior_analytics_api
 
 # Set up REST API router
 router = routers.DefaultRouter()
@@ -187,6 +187,28 @@ sync_urlpatterns = [
     path('last-seen/', sync_api.get_last_seen, name='sync_last_seen'),
 ]
 
+# Behavior Analytics URLs
+behavior_analytics_urlpatterns = [
+    # Dashboard and overview
+    path('dashboard/', behavior_analytics_api.behavior_analytics_dashboard, name='behavior_analytics_dashboard'),
+    
+    # Anomaly management
+    path('anomalies/', behavior_analytics_api.user_behavior_anomalies, name='user_behavior_anomalies'),
+    path('anomalies/<uuid:anomaly_id>/investigate/', behavior_analytics_api.investigate_anomaly, name='investigate_anomaly'),
+    
+    # User behavior profiles
+    path('users/<uuid:user_id>/profile/', behavior_analytics_api.user_behavior_profile, name='user_behavior_profile'),
+    path('users/<uuid:user_id>/generate-baseline/', behavior_analytics_api.generate_user_baseline, name='generate_user_baseline'),
+    
+    # Alerts management
+    path('alerts/', behavior_analytics_api.behavior_alerts, name='behavior_alerts'),
+    path('alerts/<uuid:alert_id>/acknowledge/', behavior_analytics_api.acknowledge_alert, name='acknowledge_alert'),
+    
+    # System logs and downloads
+    path('logs/', behavior_analytics_api.system_activity_logs, name='system_activity_logs'),
+    path('logs/download/', behavior_analytics_api.download_system_logs, name='download_system_logs'),
+]
+
 # Main URL patterns
 urlpatterns = [
     path('', status_view, name='core-status'),
@@ -199,5 +221,6 @@ urlpatterns = [
     path('assets/', include(asset_urlpatterns)), # Asset Management URLs (WOW Factor #1)
     path('sync/', include(sync_urlpatterns)), # Sync URLs for real-time updates
     path('soc/', include('soc.urls')), # SOC Management URLs
+    path('behavior-analytics/', include(behavior_analytics_urlpatterns)), # Behavior Analytics URLs
     path('', include(threat_feed_urlpatterns)), # Threat Feed URLs (no prefix, as they are already under 'api/' in crisp_unified/urls.py)
 ]

@@ -18,6 +18,15 @@ from .models import (
     ReportShare
 )
 
+# Import user behavior analytics models
+from .user_behavior_models import (
+    UserBehaviorBaseline,
+    UserSession,
+    BehaviorAnomaly,
+    UserActivityLog,
+    BehaviorAlert
+)
+
 __all__ = [
     'Organization',
     'STIXObject',
@@ -34,5 +43,10 @@ __all__ = [
     'TrustLevel',
     'TrustRelationship',
     'Report',
-    'ReportShare'
+    'ReportShare',
+    'UserBehaviorBaseline',
+    'UserSession',
+    'BehaviorAnomaly',
+    'UserActivityLog',
+    'BehaviorAlert'
 ]

@@ -27,3 +27,9 @@ whitenoise==6.5.0
 psutil>=5.9.0
 faker==19.6.2
 tqdm==4.66.1
+
+# User Behavior Analytics Dependencies
+numpy>=1.24.0
+scipy>=1.10.0
+scikit-learn>=1.3.0
+pandas>=2.0.0

@@ -1661,3 +1661,146 @@ export const checkRefreshTriggers = async () => {
   }
 };
 
+// Behavior Analytics API Functions
+export const getBehaviorAnalyticsDashboard = async (days = 7) => {
+  const response = await fetch(`${API_BASE_URL}/api/behavior-analytics/dashboard/?days=${days}`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch behavior analytics dashboard');
+  }
+
+  return await response.json();
+};
+
+export const getBehaviorAnomalies = async (queryParams = {}) => {
+  const params = new URLSearchParams(queryParams).toString();
+  const url = `${API_BASE_URL}/api/behavior-analytics/anomalies/${params ? `?${params}` : ''}`;
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch behavior anomalies');
+  }
+
+  return await response.json();
+};
+
+export const investigateAnomaly = async (anomalyId, investigationData) => {
+  const response = await fetch(`${API_BASE_URL}/api/behavior-analytics/anomalies/${anomalyId}/investigate/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(investigationData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to investigate anomaly');
+  }
+
+  return await response.json();
+};
+
+export const getUserBehaviorProfile = async (userId, days = 30) => {
+  const response = await fetch(`${API_BASE_URL}/api/behavior-analytics/users/${userId}/profile/?days=${days}`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch user behavior profile');
+  }
+
+  return await response.json();
+};
+
+export const generateUserBaseline = async (userId) => {
+  const response = await fetch(`${API_BASE_URL}/api/behavior-analytics/users/${userId}/generate-baseline/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to generate user baseline');
+  }
+
+  return await response.json();
+};
+
+export const getBehaviorAlerts = async (queryParams = {}) => {
+  const params = new URLSearchParams(queryParams).toString();
+  const url = `${API_BASE_URL}/api/behavior-analytics/alerts/${params ? `?${params}` : ''}`;
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch behavior alerts');
+  }
+
+  return await response.json();
+};
+
+export const acknowledgeBehaviorAlert = async (alertId) => {
+  const response = await fetch(`${API_BASE_URL}/api/behavior-analytics/alerts/${alertId}/acknowledge/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to acknowledge behavior alert');
+  }
+
+  return await response.json();
+};
+
+// System Logs API Functions
+export const getSystemActivityLogs = async (queryParams = {}) => {
+  const params = new URLSearchParams(queryParams).toString();
+  const url = `${API_BASE_URL}/api/behavior-analytics/logs/${params ? `?${params}` : ''}`;
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch system activity logs');
+  }
+
+  return await response.json();
+};
+
+export const downloadSystemLogs = async (queryParams = {}) => {
+  const params = new URLSearchParams(queryParams).toString();
+  const url = `${API_BASE_URL}/api/behavior-analytics/logs/download/${params ? `?${params}` : ''}`;
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to download system logs');
+  }
+
+  return response; // Return the response object for blob handling
+};
+

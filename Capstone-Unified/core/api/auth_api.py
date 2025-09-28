@@ -389,6 +389,21 @@ def forgot_password(request):
         auth_service = AuthenticationService()
         logger.info(f"🔧 Calling auth service for password reset")
         
+        # First check if user exists
+        try:
+            user = CustomUser.objects.get(email=email, is_active=True)
+            user_exists = True
+        except CustomUser.DoesNotExist:
+            user_exists = False
+        
+        if not user_exists:
+            logger.warning(f"❌ Password reset requested for non-existent email: {email}")
+            return Response({
+                'success': False,
+                'message': 'Email not registered. Please contact an admin for assistance.'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # User exists, proceed with password reset
         result = auth_service.request_password_reset(
             email=email,
             ip_address=request.META.get('REMOTE_ADDR'),
@@ -397,10 +412,10 @@ def forgot_password(request):
         
         logger.info(f"📤 Auth service result: {result}")
         
-        # Always return success to prevent email enumeration
+        # Return specific success message for existing users
         response_data = {
             'success': True,
-            'message': 'If an account with this email exists, a password reset link has been sent'
+            'message': 'Password reset instructions have been sent to your email address. Please check your inbox and follow the instructions to reset your password.'
         }
         logger.info(f"✅ Returning response: {response_data}")
         
