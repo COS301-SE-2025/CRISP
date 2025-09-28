@@ -6,8 +6,6 @@ URL patterns for SOC API endpoints
 from django.urls import path
 from soc import api
 
-app_name = 'soc'
-
 urlpatterns = [
     # Incident management
     path('incidents/', api.incidents_list, name='incidents_list'),

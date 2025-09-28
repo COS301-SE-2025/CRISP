@@ -1576,6 +1576,38 @@ export const addSOCIncidentComment = async (incidentId, comment) => {
   return await response.json();
 };
 
+export const deleteSOCIncident = async (incidentId) => {
+  const response = await fetch(`${API_BASE_URL}/api/soc/incidents/${incidentId}/`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to delete SOC incident');
+  }
+
+  return await response.json();
+};
+
+export const createSOCIncidentWithIOCs = async (incidentData, selectedIOCs = []) => {
+  const response = await fetch(`${API_BASE_URL}/api/soc/incidents/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      ...incidentData,
+      related_indicators: selectedIOCs.map(ioc => ioc.id)
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to create SOC incident with IOCs');
+  }
+
+  return await response.json();
+};
+
 // Sync API Functions for real-time updates
 export const checkUpdates = async () => {
   const response = await fetch(`${API_BASE_URL}/api/sync/check-updates/`, {

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as api from '../../api.js';
 import { useNotifications } from '../enhanced/NotificationManager.jsx';
+import SOCIncidentModal from './SOCIncidentModal.jsx';
 
 const SOCDashboard = ({ active, showPage }) => {
-  const { showError, showInfo } = useNotifications();
+  const { showError, showInfo, showSuccess } = useNotifications();
   const wsRef = useRef(null);
   const intervalRef = useRef(null);
 
@@ -22,6 +23,10 @@ const SOCDashboard = ({ active, showPage }) => {
   const [threatIntelligence, setThreatIntelligence] = useState(null);
   const [liveIOCAlerts, setLiveIOCAlerts] = useState([]);
   const [iocCorrelation, setIOCCorrelation] = useState(null);
+  
+  // Incident management states
+  const [showIncidentModal, setShowIncidentModal] = useState(false);
+  const [deletingIncidentId, setDeletingIncidentId] = useState(null);
 
   useEffect(() => {
     if (active) {
@@ -125,8 +130,8 @@ const SOCDashboard = ({ active, showPage }) => {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await api.get('/api/soc/dashboard/');
-      if (response?.data) {
+      const response = await api.getSOCDashboard();
+      if (response?.success && response?.data) {
         setDashboardData(response.data);
         setError(null);
       }
@@ -138,14 +143,9 @@ const SOCDashboard = ({ active, showPage }) => {
 
   const fetchSystemHealth = async () => {
     try {
-      const response = await fetch('/api/soc/system-health/', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setSystemHealth(data);
+      const response = await api.getSOCSystemHealth();
+      if (response?.success && response?.data) {
+        setSystemHealth(response.data);
       }
     } catch (err) {
       console.error('Failed to fetch system health:', err);
@@ -154,14 +154,9 @@ const SOCDashboard = ({ active, showPage }) => {
 
   const fetchNetworkActivity = async () => {
     try {
-      const response = await fetch('/api/soc/network-activity/', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setNetworkActivity(data);
+      const response = await api.getSOCNetworkActivity();
+      if (response?.success && response?.data) {
+        setNetworkActivity(response.data);
       }
     } catch (err) {
       console.error('Failed to fetch network activity:', err);
@@ -170,14 +165,9 @@ const SOCDashboard = ({ active, showPage }) => {
 
   const fetchTopThreats = async () => {
     try {
-      const response = await fetch('/api/soc/top-threats/', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setTopThreats(data.threats || []);
+      const response = await api.getSOCTopThreats();
+      if (response?.success && response?.threats) {
+        setTopThreats(response.threats);
       }
     } catch (err) {
       console.error('Failed to fetch top threats:', err);
@@ -186,14 +176,9 @@ const SOCDashboard = ({ active, showPage }) => {
 
   const fetchMitreTactics = async () => {
     try {
-      const response = await fetch('/api/soc/mitre-tactics/', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setMitreTactics(data.tactics || []);
+      const response = await api.getSOCMitreTactics();
+      if (response?.success && response?.tactics) {
+        setMitreTactics(response.tactics);
       }
     } catch (err) {
       console.error('Failed to fetch MITRE tactics:', err);
@@ -202,14 +187,9 @@ const SOCDashboard = ({ active, showPage }) => {
 
   const fetchThreatIntelligence = async () => {
     try {
-      const response = await fetch('/api/soc/threat-intelligence/', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setThreatIntelligence(data);
+      const response = await api.getSOCThreatIntelligence();
+      if (response?.success && response?.data) {
+        setThreatIntelligence(response.data);
       }
     } catch (err) {
       console.error('Failed to fetch threat intelligence:', err);
@@ -298,6 +278,33 @@ const SOCDashboard = ({ active, showPage }) => {
     } finally {
       setDownloading(false);
     }
+  };
+
+  const handleDeleteIncident = async (incidentId) => {
+    if (!window.confirm('Are you sure you want to delete this incident? This action cannot be undone.')) {
+      return;
+    }
+
+    setDeletingIncidentId(incidentId);
+    try {
+      await api.deleteSOCIncident(incidentId);
+      showSuccess('Incident deleted successfully');
+      
+      // Refresh dashboard data
+      await fetchDashboardData();
+    } catch (err) {
+      console.error('Error deleting incident:', err);
+      showError('Failed to delete incident: ' + err.message);
+    } finally {
+      setDeletingIncidentId(null);
+    }
+  };
+
+  const handleIncidentCreated = async (newIncident) => {
+    showSuccess(`Incident created successfully! ID: ${newIncident?.incident_id || 'N/A'}`);
+    
+    // Refresh dashboard data to show the new incident
+    await fetchDashboardData();
   };
 
   // Check if component is active and user has access
@@ -624,7 +631,7 @@ const SOCDashboard = ({ active, showPage }) => {
             marginBottom: '2rem' 
           }}>
             <div style={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: '#007bff',
               color: 'white',
               padding: '1.5rem',
               borderRadius: '8px',
@@ -643,7 +650,7 @@ const SOCDashboard = ({ active, showPage }) => {
             </div>
             
             <div style={{
-              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+              background: '#007bff',
               color: 'white',
               padding: '1.5rem',
               borderRadius: '8px',
@@ -662,7 +669,7 @@ const SOCDashboard = ({ active, showPage }) => {
             </div>
             
             <div style={{
-              background: 'linear-gradient(135deg, #fdbb2d 0%, #22c1c3 100%)',
+              background: '#007bff',
               color: 'white',
               padding: '1.5rem',
               borderRadius: '8px',
@@ -681,7 +688,7 @@ const SOCDashboard = ({ active, showPage }) => {
             </div>
             
             <div style={{
-              background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+              background: '#007bff',
               color: 'white',
               padding: '1.5rem',
               borderRadius: '8px',
@@ -708,7 +715,7 @@ const SOCDashboard = ({ active, showPage }) => {
           }}>
             <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
               <div style={{ 
-                background: 'linear-gradient(90deg, #4facfe 0%, #00f2fe 100%)', 
+                background: '#007bff', 
                 color: 'white', 
                 padding: '1rem' 
               }}>
@@ -718,21 +725,21 @@ const SOCDashboard = ({ active, showPage }) => {
                 </h3>
               </div>
               <div style={{ padding: '1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', backgroundColor: '#f8f9fa', borderRadius: '4px', marginBottom: '1rem' }}>
-                  <span style={{ color: '#666' }}>Today:</span>
-                  <strong style={{ color: '#007bff' }}>{metrics.incidents_today || 0} created</strong>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', backgroundColor: '#007bff', borderRadius: '4px', marginBottom: '1rem' }}>
+                  <span style={{ color: 'white' }}>Today:</span>
+                  <strong style={{ color: 'white' }}>{metrics.incidents_today || 0} created</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', marginBottom: '1rem' }}>
-                  <span style={{ color: '#666' }}>This Week:</span>
-                  <strong style={{ color: '#17a2b8' }}>{metrics.incidents_week || 0} created</strong>
+                  <span style={{ color: 'white' }}>This Week:</span>
+                  <strong style={{ color: 'white' }}>{metrics.incidents_week || 0} created</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', backgroundColor: '#f8f9fa', borderRadius: '4px', marginBottom: '1rem' }}>
-                  <span style={{ color: '#666' }}>This Month:</span>
-                  <strong style={{ color: '#ffc107' }}>{metrics.incidents_month || 0} created</strong>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', backgroundColor: '#007bff', borderRadius: '4px', marginBottom: '1rem' }}>
+                  <span style={{ color: 'white' }}>This Month:</span>
+                  <strong style={{ color: 'white' }}>{metrics.incidents_month || 0} created</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', backgroundColor: '#d4edda', borderRadius: '4px', marginBottom: '1rem' }}>
-                  <span style={{ color: '#666' }}>Resolved This Week:</span>
-                  <strong style={{ color: '#28a745' }}>{metrics.resolved_week || 0}</strong>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', backgroundColor: '#007bff', borderRadius: '4px', marginBottom: '1rem' }}>
+                  <span style={{ color: 'white' }}>Resolved This Week:</span>
+                  <strong style={{ color: 'white' }}>{metrics.resolved_week || 0}</strong>
                 </div>
                 <div style={{ paddingTop: '1rem', borderTop: '1px solid #dee2e6' }}>
                   <div style={{ fontSize: '0.875rem', textAlign: 'center', color: '#666' }}>
@@ -790,7 +797,7 @@ const SOCDashboard = ({ active, showPage }) => {
                       </div>
                       <div style={{ 
                         height: '6px', 
-                        backgroundColor: '#f8f9fa', 
+                        backgroundColor: '#007bff', 
                         borderRadius: '3px', 
                         overflow: 'hidden' 
                       }}>
@@ -848,12 +855,12 @@ const SOCDashboard = ({ active, showPage }) => {
                         </span>
                         <div style={{ textAlign: 'right' }}>
                           <strong style={{ color: getPriorityColor(priority), fontSize: '1.125rem' }}>{count}</strong>
-                          <div style={{ fontSize: '0.875rem', color: '#666' }}>{percentage}%</div>
+                          <div style={{ fontSize: '0.875rem', color: 'white' }}>{percentage}%</div>
                         </div>
                       </div>
                       <div style={{ 
                         height: '8px', 
-                        backgroundColor: '#f8f9fa', 
+                        backgroundColor: '#007bff', 
                         borderRadius: '4px', 
                         overflow: 'hidden' 
                       }}>
@@ -895,29 +902,29 @@ const SOCDashboard = ({ active, showPage }) => {
                 <>
                   {/* Enhanced Metrics Grid */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
-                      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#007bff', marginBottom: '0.5rem' }}>
+                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#007bff', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>
                         {threatIntelligence.iocs_count || 0}
                       </div>
-                      <div style={{ fontSize: '0.875rem', color: '#666' }}>Total IOCs</div>
+                      <div style={{ fontSize: '0.875rem', color: 'white' }}>Total IOCs</div>
                     </div>
-                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
-                      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#28a745', marginBottom: '0.5rem' }}>
+                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#007bff', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>
                         {threatIntelligence.high_confidence_iocs || 0}
                       </div>
-                      <div style={{ fontSize: '0.875rem', color: '#666' }}>High Confidence</div>
+                      <div style={{ fontSize: '0.875rem', color: 'white' }}>High Confidence</div>
                     </div>
-                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
-                      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#ffc107', marginBottom: '0.5rem' }}>
+                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#007bff', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>
                         {threatIntelligence.feeds_active || 0}
                       </div>
-                      <div style={{ fontSize: '0.875rem', color: '#666' }}>Active Feeds</div>
+                      <div style={{ fontSize: '0.875rem', color: 'white' }}>Active Feeds</div>
                     </div>
-                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
-                      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#dc3545', marginBottom: '0.5rem' }}>
+                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#007bff', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>
                         {threatIntelligence.recent_iocs_24h || 0}
                       </div>
-                      <div style={{ fontSize: '0.875rem', color: '#666' }}>Last 24h</div>
+                      <div style={{ fontSize: '0.875rem', color: 'white' }}>Last 24h</div>
                     </div>
                   </div>
 
@@ -964,7 +971,7 @@ const SOCDashboard = ({ active, showPage }) => {
                   <div style={{ borderTop: '1px solid #dee2e6', paddingTop: '1rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
-                        <div style={{ fontSize: '0.875rem', color: '#666' }}>Threat Level</div>
+                        <div style={{ fontSize: '0.875rem', color: 'white' }}>Threat Level</div>
                         <span style={{
                           backgroundColor: threatIntelligence.threat_level === 'High' ? '#dc3545' : 
                                          threatIntelligence.threat_level === 'Medium' ? '#ffc107' : '#28a745',
@@ -976,7 +983,7 @@ const SOCDashboard = ({ active, showPage }) => {
                         }}>{threatIntelligence.threat_level}</span>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.875rem', color: '#666' }}>Confidence</div>
+                        <div style={{ fontSize: '0.875rem', color: 'white' }}>Confidence</div>
                         <span style={{
                           backgroundColor: '#28a745',
                           color: 'white',
@@ -1017,7 +1024,7 @@ const SOCDashboard = ({ active, showPage }) => {
                   {threatIntelligence.recent_critical_iocs.map((ioc, index) => (
                     <div key={index} style={{ 
                       padding: '1rem', 
-                      backgroundColor: '#f8f9fa', 
+                      backgroundColor: '#007bff', 
                       borderRadius: '6px', 
                       marginBottom: '1rem',
                       border: '1px solid #e9ecef'
@@ -1046,7 +1053,7 @@ const SOCDashboard = ({ active, showPage }) => {
                           <div style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.25rem', wordBreak: 'break-all' }}>
                             {ioc.value}
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                          <div style={{ fontSize: '0.75rem', color: 'white' }}>
                             Source: {ioc.source}
                           </div>
                         </div>
@@ -1068,9 +1075,9 @@ const SOCDashboard = ({ active, showPage }) => {
 
           {/* Top Threats */}
           <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-            <div style={{ backgroundColor: '#f8f9fa', padding: '1rem', borderBottom: '1px solid #dee2e6' }}>
-              <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600', color: '#333' }}>
-                <i className="fas fa-shield-virus" style={{ marginRight: '0.5rem', color: '#dc3545' }}></i>
+            <div style={{ backgroundColor: '#007bff', padding: '1rem', borderBottom: '1px solid #dee2e6' }}>
+              <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600', color: 'white' }}>
+                <i className="fas fa-shield-virus" style={{ marginRight: '0.5rem', color: 'white' }}></i>
                 Trending Threats
               </h3>
             </div>
@@ -1082,14 +1089,14 @@ const SOCDashboard = ({ active, showPage }) => {
                     justifyContent: 'space-between', 
                     alignItems: 'center', 
                     padding: '1rem', 
-                    backgroundColor: '#f8f9fa', 
+                    backgroundColor: '#007bff', 
                     borderRadius: '6px', 
                     marginBottom: '1rem',
                     border: '1px solid #e9ecef'
                   }}>
                     <div>
                       <div style={{ fontWeight: '600', fontSize: '1rem', marginBottom: '0.25rem' }}>{threat.name}</div>
-                      <div style={{ fontSize: '0.875rem', color: '#666' }}>Count: {threat.count}</div>
+                      <div style={{ fontSize: '0.875rem', color: 'white' }}>Count: {threat.count}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <span style={{
@@ -1117,7 +1124,7 @@ const SOCDashboard = ({ active, showPage }) => {
                 }}>
                   <div>
                     <div style={{ fontWeight: '600', fontSize: '1rem', marginBottom: '0.25rem' }}>{threat.name}</div>
-                    <div style={{ fontSize: '0.875rem', color: '#666' }}>{threat.category}</div>
+                    <div style={{ fontSize: '0.875rem', color: 'white' }}>{threat.category}</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <span style={{
@@ -1143,9 +1150,9 @@ const SOCDashboard = ({ active, showPage }) => {
           {/* Feed Status */}
           {threatIntelligence && threatIntelligence.feed_status && (
             <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-              <div style={{ backgroundColor: '#f8f9fa', padding: '1rem', borderBottom: '1px solid #dee2e6' }}>
-                <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600', color: '#333' }}>
-                  <i className="fas fa-rss" style={{ marginRight: '0.5rem', color: '#17a2b8' }}></i>
+              <div style={{ backgroundColor: '#007bff', padding: '1rem', borderBottom: '1px solid #dee2e6' }}>
+                <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600', color: 'white' }}>
+                  <i className="fas fa-rss" style={{ marginRight: '0.5rem', color: 'white' }}></i>
                   Threat Feed Status
                 </h3>
               </div>
@@ -1156,14 +1163,14 @@ const SOCDashboard = ({ active, showPage }) => {
                     justifyContent: 'space-between', 
                     alignItems: 'center', 
                     padding: '0.75rem', 
-                    backgroundColor: '#f8f9fa', 
+                    backgroundColor: '#87ceeb', 
                     borderRadius: '6px', 
                     marginBottom: '0.75rem',
                     border: '1px solid #e9ecef'
                   }}>
                     <div>
                       <div style={{ fontWeight: '600', fontSize: '0.875rem', marginBottom: '0.25rem' }}>{feed.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'white' }}>
                         {feed.indicator_count} indicators
                       </div>
                     </div>
@@ -1267,7 +1274,7 @@ const SOCDashboard = ({ active, showPage }) => {
                   {liveIOCAlerts.map((alert, index) => (
                     <div key={index} style={{ 
                       padding: '1.5rem', 
-                      backgroundColor: '#f8f9fa', 
+                      backgroundColor: '#007bff', 
                       borderRadius: '8px', 
                       border: '1px solid #e9ecef',
                       borderLeft: `5px solid ${alert.severity === 'critical' ? '#dc3545' : 
@@ -1441,23 +1448,23 @@ const SOCDashboard = ({ active, showPage }) => {
               <div style={{ padding: '1.5rem' }}>
                 {/* Correlation Statistics */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#007bff', marginBottom: '0.5rem' }}>
+                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#007bff', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>
                       {iocCorrelation.statistics.total_incidents}
                     </div>
-                    <div style={{ fontSize: '0.875rem', color: '#666' }}>Total Incidents</div>
+                    <div style={{ fontSize: '0.875rem', color: 'white' }}>Total Incidents</div>
                   </div>
-                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#28a745', marginBottom: '0.5rem' }}>
+                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#007bff', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>
                       {iocCorrelation.statistics.incidents_with_iocs}
                     </div>
-                    <div style={{ fontSize: '0.875rem', color: '#666' }}>With IOCs</div>
+                    <div style={{ fontSize: '0.875rem', color: 'white' }}>With IOCs</div>
                   </div>
-                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#ffc107', marginBottom: '0.5rem' }}>
+                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#007bff', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>
                       {iocCorrelation.statistics.correlation_rate}%
                     </div>
-                    <div style={{ fontSize: '0.875rem', color: '#666' }}>Correlation Rate</div>
+                    <div style={{ fontSize: '0.875rem', color: 'white' }}>Correlation Rate</div>
                   </div>
                 </div>
 
@@ -1469,17 +1476,17 @@ const SOCDashboard = ({ active, showPage }) => {
                       {iocCorrelation.statistics.top_ioc_types.map((type, index) => (
                         <div key={index} style={{ 
                           padding: '1rem', 
-                          backgroundColor: '#f8f9fa', 
+                          backgroundColor: '#007bff', 
                           borderRadius: '6px', 
                           border: '1px solid #e9ecef' 
                         }}>
-                          <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#007bff', marginBottom: '0.5rem' }}>
+                          <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>
                             {type.count}
                           </div>
-                          <div style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.25rem', textTransform: 'capitalize' }}>
+                          <div style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.25rem', textTransform: 'capitalize', color: 'white' }}>
                             {type.type.replace('_', ' ')}
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                          <div style={{ fontSize: '0.75rem', color: 'white' }}>
                             {type.incidents_affected} incidents affected
                           </div>
                         </div>
@@ -1496,30 +1503,30 @@ const SOCDashboard = ({ active, showPage }) => {
       {activeTab === 'network' && (
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-            <div style={{ backgroundColor: '#f8f9fa', padding: '1rem', borderBottom: '1px solid #dee2e6' }}>
-              <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600', color: '#333' }}>
-                <i className="fas fa-network-wired" style={{ marginRight: '0.5rem', color: '#17a2b8' }}></i>
+            <div style={{ backgroundColor: '#007bff', padding: '1rem', borderBottom: '1px solid #dee2e6' }}>
+              <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600', color: 'white' }}>
+                <i className="fas fa-network-wired" style={{ marginRight: '0.5rem', color: 'white' }}></i>
                 Network Activity Monitor
               </h3>
             </div>
             <div style={{ padding: '1.5rem' }}>
               {networkActivity ? (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#17a2b8', marginBottom: '0.5rem' }}>{networkActivity.connections_count}</div>
-                    <div style={{ fontSize: '0.875rem', color: '#666' }}>Active Connections</div>
+                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#007bff', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>{networkActivity.connections_count}</div>
+                    <div style={{ fontSize: '0.875rem', color: 'white' }}>Active Connections</div>
                   </div>
-                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#28a745', marginBottom: '0.5rem' }}>{networkActivity.bandwidth_usage}%</div>
-                    <div style={{ fontSize: '0.875rem', color: '#666' }}>Bandwidth Usage</div>
+                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#007bff', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>{networkActivity.bandwidth_usage}%</div>
+                    <div style={{ fontSize: '0.875rem', color: 'white' }}>Bandwidth Usage</div>
                   </div>
-                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#ffc107', marginBottom: '0.5rem' }}>{networkActivity.suspicious_ips}</div>
-                    <div style={{ fontSize: '0.875rem', color: '#666' }}>Suspicious IPs</div>
+                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#007bff', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>{networkActivity.suspicious_ips}</div>
+                    <div style={{ fontSize: '0.875rem', color: 'white' }}>Suspicious IPs</div>
                   </div>
-                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#dc3545', marginBottom: '0.5rem' }}>{networkActivity.blocked_attempts}</div>
-                    <div style={{ fontSize: '0.875rem', color: '#666' }}>Blocked Attempts</div>
+                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#007bff', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>{networkActivity.blocked_attempts}</div>
+                    <div style={{ fontSize: '0.875rem', color: 'white' }}>Blocked Attempts</div>
                   </div>
                 </div>
               ) : (
@@ -1536,9 +1543,9 @@ const SOCDashboard = ({ active, showPage }) => {
       {activeTab === 'mitre' && (
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-            <div style={{ backgroundColor: '#f8f9fa', padding: '1rem', borderBottom: '1px solid #dee2e6' }}>
-              <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600', color: '#333' }}>
-                <i className="fas fa-crosshairs" style={{ marginRight: '0.5rem', color: '#6f42c1' }}></i>
+            <div style={{ backgroundColor: '#007bff', padding: '1rem', borderBottom: '1px solid #dee2e6' }}>
+              <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600', color: 'white' }}>
+                <i className="fas fa-crosshairs" style={{ marginRight: '0.5rem', color: 'white' }}></i>
                 MITRE ATT&CK Tactics Detection
               </h3>
             </div>
@@ -1591,8 +1598,8 @@ const SOCDashboard = ({ active, showPage }) => {
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
             <div style={{ backgroundColor: '#f8f9fa', padding: '1rem', borderBottom: '1px solid #dee2e6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600', color: '#333' }}>
-                <i className="fas fa-bell" style={{ marginRight: '0.5rem', color: '#dc3545' }}></i>
+              <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600', color: 'white' }}>
+                <i className="fas fa-bell" style={{ marginRight: '0.5rem', color: 'white' }}></i>
                 Live Security Alerts
               </h3>
               <span style={{
@@ -1660,6 +1667,25 @@ const SOCDashboard = ({ active, showPage }) => {
                 Recent Security Incidents
               </h3>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button 
+                  onClick={() => setShowIncidentModal(true)}
+                  style={{ 
+                    padding: '0.5rem 1rem',
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '0.75rem',
+                    fontWeight: '500',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <i className="fas fa-plus"></i>
+                  Create Incident
+                </button>
                 <button 
                   onClick={() => handleDownload('csv')}
                   disabled={downloading}
@@ -1748,6 +1774,7 @@ const SOCDashboard = ({ active, showPage }) => {
                         <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>Status</th>
                         <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>Created</th>
                         <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>SLA Status</th>
+                        <th style={{ padding: '1rem', textAlign: 'center', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1851,6 +1878,47 @@ const SOCDashboard = ({ active, showPage }) => {
                               </span>
                             )}
                           </td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteIncident(incident.id);
+                              }}
+                              disabled={deletingIncidentId === incident.id}
+                              style={{
+                                backgroundColor: deletingIncidentId === incident.id ? '#6c757d' : '#dc3545',
+                                color: 'white',
+                                border: 'none',
+                                padding: '0.375rem 0.75rem',
+                                borderRadius: '4px',
+                                fontSize: '0.75rem',
+                                cursor: deletingIncidentId === incident.id ? 'not-allowed' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.25rem'
+                              }}
+                              title="Delete incident"
+                            >
+                              {deletingIncidentId === incident.id ? (
+                                <>
+                                  <span style={{ 
+                                    width: '12px', 
+                                    height: '12px', 
+                                    border: '2px solid transparent', 
+                                    borderTop: '2px solid white', 
+                                    borderRadius: '50%', 
+                                    animation: 'spin 1s linear infinite' 
+                                  }}></span>
+                                  Deleting...
+                                </>
+                              ) : (
+                                <>
+                                  <i className="fas fa-trash"></i>
+                                  Delete
+                                </>
+                              )}
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1867,6 +1935,13 @@ const SOCDashboard = ({ active, showPage }) => {
         </div>
       )}
       </div>
+
+      {/* SOC Incident Creation Modal */}
+      <SOCIncidentModal
+        isOpen={showIncidentModal}
+        onClose={() => setShowIncidentModal(false)}
+        onIncidentCreated={handleIncidentCreated}
+      />
     </div>
   );
 };
