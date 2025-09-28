@@ -5127,7 +5127,6 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
   // Filter state management
   const [filters, setFilters] = useState({
     type: '',
-    severity: '',
     status: '',
     source: '',
     dateRange: '',
@@ -5325,7 +5324,6 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
       if (filterParams.type) params.append('type', filterParams.type);
       if (filterParams.source) params.append('source', filterParams.source);
       if (filterParams.search) params.append('search', filterParams.search);
-      if (filterParams.severity) params.append('severity', filterParams.severity);
       if (filterParams.status) params.append('status', filterParams.status);
       if (filterParams.dateRange) params.append('dateRange', filterParams.dateRange);
 
@@ -5437,10 +5435,6 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
       filterParams.search = filters.searchTerm;
     }
 
-    // Now backend supports these additional filters
-    if (filters.severity) {
-      filterParams.severity = filters.severity;
-    }
 
     if (filters.status) {
       filterParams.status = filters.status;
@@ -5468,7 +5462,6 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
   const resetFilters = () => {
     setFilters({
       type: '',
-      severity: '',
       status: '',
       source: '',
       dateRange: '',
@@ -6036,22 +6029,6 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
                 <option value="registry">Registry Key</option>
                 <option value="mutex">Mutex</option>
                 <option value="process">Process</option>
-              </select>
-            </div>
-          </div>
-          
-          <div className="filter-group">
-            <label className="filter-label">Severity</label>
-            <div className="filter-control">
-              <select 
-                value={filters.severity}
-                onChange={(e) => handleFilterChange('severity', e.target.value)}
-                className="form-control"
-              >
-                <option value="">All Severities</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
               </select>
             </div>
           </div>
@@ -7288,7 +7265,6 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
           type: filters.type || '',
           source: filters.source || '',
           searchTerm: filters.searchTerm || '',
-          severity: filters.severity || '',
           status: filters.status || '',
           dateRange: filters.dateRange || ''
         }
