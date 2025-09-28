@@ -5,11 +5,11 @@ CRISP (Cyber Risk Information Sharing Platform) is a secure threat intelligence 
 ## 📋 Project Links
 
 - **[Project Management](https://github.com/orgs/COS301-SE-2025/projects/205/views/1)** - scrum board tool github pages
-- **[PDF user manual](https://github.com/COS301-SE-2025/CRISP/blob/documents/CRISP%20User%20Manual.pdf)**
+- **[PDF user manual](https://github.com/COS301-SE-2025/CRISP/blob/documents/UserManual/UserManualDraft_v3.pdf)**
 - **[Technical installation manual](https://github.com/COS301-SE-2025/CRISP/blob/documents/Technical%20Installation%20manual.pdf)** 
 - **[Coding standards/quality](https://github.com/COS301-SE-2025/CRISP/wiki/Coding-Standards-Document)** 
 
-- **[Testing policy Document]()** !!!!!!!!!!!!!!!!!!!!!!!!DO THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+- **[Testing policy Document](https://github.com/COS301-SE-2025/CRISP/blob/documents/Testing%20Policy.pdf)**
 
 - **[Functional Requirements (SRS) Document](https://github.com/COS301-SE-2025/CRISP/blob/documents/SRS.md)** - Detailed system requirements and specifications 
 - **[GitHub Project Board](https://github.com/orgs/COS301-SE-2025/projects/205)** - Track our development progress and sprint planning
