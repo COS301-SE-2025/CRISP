@@ -28,7 +28,7 @@
 ## Introduction
 
 Welcome to the CRISP (Cyber Risk Information Sharing Platform), a comprehensive threat intelligence
-sharing ecosystem designed to enhance cybersecurity through secure, collaborative information
+sharing ecosystem designed to cybersecurity through secure, collaborative information
 exchange between organizations.
 
 ### Platform Overview
@@ -78,7 +78,7 @@ Memory : 4GB RAM minimum, 8GB recommended
 **Recommended Setup**
 
 ```
-Dual Monitor : For enhanced productivity with multiple dashboards
+Dual Monitor : For productivity with multiple dashboards
 High-Speed Internet : For real-time threat intelligence updates
 Modern Browser : Latest version for optimal performance and security
 ```
