@@ -5752,7 +5752,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
         <div className="card-content">
           <div className="stats-container">
             <div className="stats-grid">
-              <div className="stat-item">
+              <div className="ioc-stat-item">
                 <div className="stat-icon total">
                   <i className="fas fa-list"></i>
                 </div>
@@ -5762,7 +5762,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
                   <div className="stat-description">All indicators in system</div>
                 </div>
               </div>
-              <div className="stat-item">
+              <div className="ioc-stat-item">
                 <div className="stat-icon high-severity">
                   <i className="fas fa-exclamation-triangle"></i>
                 </div>
@@ -5772,7 +5772,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
                   <div className="stat-description">Critical threat indicators</div>
                 </div>
               </div>
-              <div className="stat-item">
+              <div className="ioc-stat-item">
                 <div className="stat-icon anonymized">
                   <i className="fas fa-user-secret"></i>
                 </div>
@@ -5782,7 +5782,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
                   <div className="stat-description">Privacy-protected IoCs</div>
                 </div>
               </div>
-              <div className="stat-item">
+              <div className="ioc-stat-item">
                 <div className="stat-icon active">
                   <i className="fas fa-eye"></i>
                 </div>
@@ -14629,7 +14629,7 @@ function CSSStyles() {
             gap: 20px;
         }
         
-        #ioc-management .stats-grid .stat-item {
+        #ioc-management .stats-grid .ioc-stat-item {
             display: flex;
             align-items: center;
             gap: 16px;
@@ -14640,7 +14640,7 @@ function CSSStyles() {
             transition: all 0.2s ease;
         }
 
-        #ioc-management .stats-grid .stat-item:hover {
+        #ioc-management .stats-grid .ioc-stat-item:hover {
             border-color: #d1d5db;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
@@ -14652,7 +14652,7 @@ function CSSStyles() {
             align-items: center;
             justify-content: center;
             font-size: 16px;
-            color: #6b7280;
+            color: #0056b3;
             background: transparent !important;
         }
 
@@ -14671,7 +14671,7 @@ function CSSStyles() {
         #ioc-management .stats-grid .stat-value {
             font-size: 28px;
             font-weight: 700;
-            color: #1f2937;
+            color: #0056b3;
             margin-bottom: 2px;
         }
 
