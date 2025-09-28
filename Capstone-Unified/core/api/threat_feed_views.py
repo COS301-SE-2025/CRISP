@@ -2,6 +2,7 @@ import logging
 import csv
 import json
 import uuid
+import calendar
 from datetime import timedelta, datetime
 from collections import defaultdict, OrderedDict
 from io import StringIO
@@ -4140,10 +4141,19 @@ def ttp_trends(request):
                 elif granularity == 'week':
                     current_date += timedelta(weeks=1)
                 else:  # month
+                    # Safe month increment that handles day overflow (e.g., Jan 31 -> Feb 28/29)
                     if current_date.month == 12:
-                        current_date = current_date.replace(year=current_date.year + 1, month=1)
+                        next_year = current_date.year + 1
+                        next_month = 1
                     else:
-                        current_date = current_date.replace(month=current_date.month + 1)
+                        next_year = current_date.year
+                        next_month = current_date.month + 1
+
+                    # Get the last day of the target month to handle day overflow
+                    last_day_of_next_month = calendar.monthrange(next_year, next_month)[1]
+                    next_day = min(current_date.day, last_day_of_next_month)
+
+                    current_date = current_date.replace(year=next_year, month=next_month, day=next_day)
         
         # Build the response data structure
         sorted_dates = sorted(dates_found)
