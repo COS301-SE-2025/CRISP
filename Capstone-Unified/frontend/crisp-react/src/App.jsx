@@ -2462,12 +2462,7 @@ function Dashboard({ active, showPage, user }) {
                     {recentActivities.slice(0, 8).map((activity, index) => (
                       <li key={activity.id || index} className="activity-item clean">
                         <div className="activity-content">
-                          <div className="activity-header">
-                            <div className="activity-icon-inline">
-                              <i className={activity.icon}></i>
-                            </div>
-                            <div className="activity-title">{activity.title}</div>
-                          </div>
+                          <div className="activity-title">{activity.title}</div>
                           {activity.description && (
                             <div className="activity-description">{activity.description}</div>
                           )}
@@ -14095,69 +14090,55 @@ function CSSStyles() {
         }
         
         .activity-item.clean {
-            padding: 0.75rem 1rem;
-            border-bottom: none;
-            transition: background-color 0.2s ease;
-            border-left: none;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            background: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
-        
+
         .activity-item.clean:hover {
-            background-color: #f8f9fa;
+            border-color: var(--primary-blue);
+            box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+            transform: translateY(-1px);
         }
-        
+
         .activity-item.clean:last-child {
-            border-bottom: none;
+            margin-bottom: 0;
         }
         
         .activity-content {
-            display: block;
+            width: 100%;
         }
         
-        .activity-header {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        .activity-icon-inline {
-            width: 20px;
-            height: 20px;
-            border-radius: 3px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: #e3f2fd;
-            color: #1976d2;
-            font-size: 0.7rem;
-            flex-shrink: 0;
-            margin-top: 2px;
-        }
         
         .activity-title {
             font-weight: 600;
-            font-size: 0.875rem;
-            color: #333;
-            flex: 1;
+            font-size: 13px;
+            color: #2c3e50;
+            margin-bottom: 4px;
             line-height: 1.3;
         }
-        
+
         .activity-description {
-            font-size: 0.8rem;
-            color: #666;
+            font-size: 12px;
+            color: #6c757d;
+            margin-bottom: 8px;
             line-height: 1.4;
-            margin-bottom: 0.5rem;
         }
-        
+
         .activity-footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            font-size: 11px;
         }
-        
+
         .activity-time {
-            font-size: 0.75rem;
-            color: #999;
+            color: #8e9aaf;
+            font-weight: 500;
         }
         
         /* Height matching adjustments - Only adjust right side heights to match left side */
