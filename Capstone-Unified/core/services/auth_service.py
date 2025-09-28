@@ -666,15 +666,15 @@ class AuthenticationService:
             logger.info(f"🎫 Token creation result: {'Success' if reset_token else 'Failed/User not found'}")
             
             if reset_token:
-                logger.info(f"Sending password reset email")
+                logger.info(f"📧 Sending password reset email")
                 # Send password reset email
                 email_result = email_service.send_password_reset_email(
                     user=reset_token.user,
                     reset_token=reset_token.token
                 )
                 
-                logger.info(f"Email send result: {email_result}")
-                logger.info(f"Password reset requested for {email}, email sent: {email_result.get('success', False)}")
+                logger.info(f"📧 Email send result: {email_result}")
+                logger.info(f"✅ Password reset requested for {email}, email sent: {email_result.get('success', False)}")
                 return {
                     'success': True,
                     'message': 'Password reset email sent'
