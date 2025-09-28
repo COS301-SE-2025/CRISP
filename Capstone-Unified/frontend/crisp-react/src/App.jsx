@@ -9190,13 +9190,15 @@ function TTPAnalysis({ active, user }) {
     } catch (error) {
       console.error('Error updating TTP:', error);
       
-      // Try to extract specific validation errors from the backend response
-      let errorMessage = error.message || 'Unknown error';
-      if (error.message && error.message.includes('400')) {
-        errorMessage = 'Validation failed. Check that:\n• Name is at least 3 characters\n• Description is at least 10 characters\n• MITRE technique ID follows T1234 format\n• MITRE tactic is valid';
+      // Show the actual error message from the backend
+      let errorMessage = error.message || 'Unknown error occurred';
+      
+      // If it's a generic message, provide helpful guidance
+      if (errorMessage === 'Failed to update TTP') {
+        errorMessage = 'Failed to update TTP. Please check:\n• You have publisher permissions\n• All required fields are filled\n• MITRE technique ID follows T1234 format\n• MITRE tactic is valid';
       }
       
-      showError('Update Error', 'Error updating TTP: ' + errorMessage);
+      showError('TTP Update Failed', errorMessage);
     }
   };
 
@@ -11484,16 +11486,18 @@ function TTPAnalysis({ active, user }) {
                               onChange={(e) => handleEditFormChange('mitre_tactic', e.target.value)}
                             >
                               <option value="">Select Tactic</option>
-                              <option value="initial-access">Initial Access</option>
+                              <option value="reconnaissance">Reconnaissance</option>
+                              <option value="resource_development">Resource Development</option>
+                              <option value="initial_access">Initial Access</option>
                               <option value="execution">Execution</option>
                               <option value="persistence">Persistence</option>
-                              <option value="privilege-escalation">Privilege Escalation</option>
-                              <option value="defense-evasion">Defense Evasion</option>
-                              <option value="credential-access">Credential Access</option>
+                              <option value="privilege_escalation">Privilege Escalation</option>
+                              <option value="defense_evasion">Defense Evasion</option>
+                              <option value="credential_access">Credential Access</option>
                               <option value="discovery">Discovery</option>
-                              <option value="lateral-movement">Lateral Movement</option>
+                              <option value="lateral_movement">Lateral Movement</option>
                               <option value="collection">Collection</option>
-                              <option value="command-and-control">Command and Control</option>
+                              <option value="command_and_control">Command and Control</option>
                               <option value="exfiltration">Exfiltration</option>
                               <option value="impact">Impact</option>
                             </select>
@@ -11696,16 +11700,18 @@ function TTPAnalysis({ active, user }) {
                         onChange={(e) => handleExportFilterChange('tactic', e.target.value)}
                       >
                         <option value="">All Tactics</option>
-                        <option value="initial-access">Initial Access</option>
+                        <option value="reconnaissance">Reconnaissance</option>
+                        <option value="resource_development">Resource Development</option>
+                        <option value="initial_access">Initial Access</option>
                         <option value="execution">Execution</option>
                         <option value="persistence">Persistence</option>
-                        <option value="privilege-escalation">Privilege Escalation</option>
-                        <option value="defense-evasion">Defense Evasion</option>
-                        <option value="credential-access">Credential Access</option>
+                        <option value="privilege_escalation">Privilege Escalation</option>
+                        <option value="defense_evasion">Defense Evasion</option>
+                        <option value="credential_access">Credential Access</option>
                         <option value="discovery">Discovery</option>
-                        <option value="lateral-movement">Lateral Movement</option>
+                        <option value="lateral_movement">Lateral Movement</option>
                         <option value="collection">Collection</option>
-                        <option value="command-and-control">Command and Control</option>
+                        <option value="command_and_control">Command and Control</option>
                         <option value="exfiltration">Exfiltration</option>
                         <option value="impact">Impact</option>
                       </select>

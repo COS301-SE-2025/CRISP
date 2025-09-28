@@ -931,6 +931,8 @@ export const getTtpDetails = async (ttpId) => {
 };
 
 export const updateTtp = async (ttpId, ttpData) => {
+  console.log('updateTtp called with:', { ttpId, ttpData });
+  
   const response = await fetch(`${API_BASE_URL}/api/ttps/${ttpId}/`, {
     method: 'PUT',
     headers: getAuthHeaders(),
@@ -939,7 +941,24 @@ export const updateTtp = async (ttpId, ttpData) => {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || 'Failed to update TTP');
+    console.error('TTP Update Error Response:', {
+      status: response.status,
+      statusText: response.statusText,
+      errorData
+    });
+    
+    // Provide more detailed error message
+    if (errorData.error && errorData.details) {
+      throw new Error(`${errorData.error}: ${errorData.details.join(', ')}`);
+    } else if (errorData.message) {
+      throw new Error(errorData.message);
+    } else if (response.status === 403) {
+      throw new Error('Access denied. You need publisher or admin permissions to edit TTPs.');
+    } else if (response.status === 400) {
+      throw new Error('Invalid data provided. Please check all required fields are filled correctly.');
+    } else {
+      throw new Error(`Failed to update TTP (HTTP ${response.status})`);
+    }
   }
 
   return await response.json();

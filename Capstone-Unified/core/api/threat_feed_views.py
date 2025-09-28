@@ -3233,8 +3233,12 @@ def _update_ttp(request, ttp_id):
         user_role = getattr(request.user, 'role', 'viewer')
         user_org = getattr(request.user, 'organization', None)
 
+        # Debug logging for TTP update permissions
+        logger.info(f"TTP Update Permission Check - User: {request.user.username}, Role: {user_role}, Is Superuser: {request.user.is_superuser}, Org: {user_org}")
+
         if user_role not in ['publisher', 'BlueVisionAdmin'] and not request.user.is_superuser:
             org_name = user_org.name if user_org else "your organization"
+            logger.warning(f"TTP Update Access Denied - User: {request.user.username}, Role: {user_role}, Required: publisher/BlueVisionAdmin")
             return Response({
                 "success": False,
                 "message": f"Access denied. Only publishers can edit TTPs. Please contact the administrator of {org_name} to request publisher access.",
@@ -3254,14 +3258,21 @@ def _update_ttp(request, ttp_id):
         errors = []
         is_put = request.method == 'PUT'
         
+        # Debug logging for TTP update data
+        logger.info(f"TTP Update Data Received - TTP ID: {ttp_id}, Method: {request.method}, Data: {data}")
+        
         # For PUT requests, validate that all required fields are present
         if is_put:
             required_fields = ['name', 'description', 'mitre_technique_id', 'mitre_tactic']
             for field in required_fields:
-                if not data.get(field) or not str(data.get(field)).strip():
+                field_value = data.get(field)
+                field_valid = field_value and str(field_value).strip()
+                logger.info(f"TTP Update Field Check - {field}: '{field_value}' (valid: {field_valid})")
+                if not field_valid:
                     errors.append(f"Field '{field}' is required for PUT requests and cannot be empty")
         
         if errors:
+            logger.warning(f"TTP Update Validation Failed - Errors: {errors}")
             return Response(
                 {"error": "Validation failed", "details": errors},
                 status=status.HTTP_400_BAD_REQUEST
@@ -3318,8 +3329,15 @@ def _update_ttp(request, ttp_id):
         if 'mitre_tactic' in data:
             mitre_tactic = str(data['mitre_tactic']).strip().lower()
             valid_tactics = [choice[0] for choice in TTPData.MITRE_TACTIC_CHOICES]
-            if mitre_tactic not in valid_tactics:
-                errors.append(f"Invalid MITRE tactic. Must be one of: {', '.join(valid_tactics)}")
+            
+            # Handle legacy 'unknown' tactic by converting to null/empty
+            if mitre_tactic == 'unknown':
+                logger.info(f"TTP Update: Converting legacy 'unknown' tactic to null for TTP {ttp_id}")
+                update_data['mitre_tactic'] = None
+            elif mitre_tactic == '' or mitre_tactic == 'null':
+                update_data['mitre_tactic'] = None
+            elif mitre_tactic not in valid_tactics:
+                errors.append(f"Invalid MITRE tactic '{mitre_tactic}'. Must be one of: {', '.join(valid_tactics)}")
             else:
                 update_data['mitre_tactic'] = mitre_tactic
         elif is_put:
