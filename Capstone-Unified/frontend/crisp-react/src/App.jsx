@@ -18,6 +18,40 @@ import { NotificationProvider, useNotification } from './components/ui/Notificat
 import Notifications from './components/notifications/Notifications.jsx';
 import refreshManager from './utils/RefreshManager.js';
 
+// Confirmation Modal Component
+function ConfirmationModal({ isOpen, onClose, onConfirm, title, message, confirmText = "Confirm", cancelText = "Cancel", variant = "danger" }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>
+            <i className={`fas ${variant === 'danger' ? 'fa-exclamation-triangle' : 'fa-question-circle'}`}></i>
+            {title}
+          </h2>
+          <button className="close-btn" onClick={onClose}>
+            <i className="fas fa-times"></i>
+          </button>
+        </div>
+        <div className="modal-body">
+          <p>{message}</p>
+        </div>
+        <div className="modal-footer">
+          <div className="modal-actions">
+            <button type="button" className="btn btn-outline" onClick={onClose}>
+              {cancelText}
+            </button>
+            <button type="button" className={`btn ${variant === 'danger' ? 'btn-danger' : 'btn-primary'}`} onClick={onConfirm}>
+              {confirmText}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Error Boundary for Chart Component
 class ChartErrorBoundary extends React.Component {
   constructor(props) {
@@ -5056,11 +5090,43 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
   // Organizations for sharing - loaded dynamically from API
   const [availableOrganisations, setAvailableOrganisations] = useState([]);
   const [organizationMap, setOrganizationMap] = useState({}); // Map organization names to IDs
+
+  // Confirmation modal state
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmModalConfig, setConfirmModalConfig] = useState({
+    title: '',
+    message: '',
+    onConfirm: null,
+    confirmText: 'Confirm',
+    variant: 'danger'
+  });
+
+  // Helper function to show confirmation modal
+  const showConfirmation = (title, message, onConfirm, confirmText = 'Confirm', variant = 'danger') => {
+    setConfirmModalConfig({
+      title,
+      message,
+      onConfirm,
+      confirmText,
+      variant
+    });
+    setShowConfirmModal(true);
+  };
+
+  const closeConfirmModal = () => {
+    setShowConfirmModal(false);
+    setConfirmModalConfig({
+      title: '',
+      message: '',
+      onConfirm: null,
+      confirmText: 'Confirm',
+      variant: 'danger'
+    });
+  };
   
   // Filter state management
   const [filters, setFilters] = useState({
     type: '',
-    severity: '',
     status: '',
     source: '',
     dateRange: '',
@@ -5258,7 +5324,6 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
       if (filterParams.type) params.append('type', filterParams.type);
       if (filterParams.source) params.append('source', filterParams.source);
       if (filterParams.search) params.append('search', filterParams.search);
-      if (filterParams.severity) params.append('severity', filterParams.severity);
       if (filterParams.status) params.append('status', filterParams.status);
       if (filterParams.dateRange) params.append('dateRange', filterParams.dateRange);
 
@@ -5370,10 +5435,6 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
       filterParams.search = filters.searchTerm;
     }
 
-    // Now backend supports these additional filters
-    if (filters.severity) {
-      filterParams.severity = filters.severity;
-    }
 
     if (filters.status) {
       filterParams.status = filters.status;
@@ -5401,7 +5462,6 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
   const resetFilters = () => {
     setFilters({
       type: '',
-      severity: '',
       status: '',
       source: '',
       dateRange: '',
@@ -5447,10 +5507,21 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
   // Bulk delete function
   const handleBulkDelete = async () => {
     if (selectedIndicators.size === 0) return;
-    
-    if (!confirm(`Are you sure you want to delete ${selectedIndicators.size} selected indicator(s)? This action cannot be undone.`)) {
-      return;
-    }
+
+    showConfirmation(
+      'Delete Selected Indicators',
+      `Are you sure you want to delete ${selectedIndicators.size} selected indicator(s)? This action cannot be undone.`,
+      async () => {
+        await performBulkDeleteFromButton();
+        closeConfirmModal();
+      },
+      'Delete Selected',
+      'danger'
+    );
+  };
+
+  // Separated bulk delete logic
+  const performBulkDeleteFromButton = async () => {
 
     setLoading(true);
     try {
@@ -5490,14 +5561,145 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
   // Clear all indicators function
   const handleClearAllIndicators = async () => {
     const confirmMessage = `Are you sure you want to delete ALL ${totalItems} indicators? This action cannot be undone and will remove all IoCs from your system.`;
-    if (!confirm(confirmMessage)) {
-      return;
-    }
 
-    const doubleConfirm = confirm("This will permanently delete ALL indicators. Click OK to proceed or Cancel to abort.");
-    if (!doubleConfirm) {
-      return;
+    showConfirmation(
+      'Delete All Indicators',
+      confirmMessage,
+      () => {
+        // Double confirmation for such a destructive action
+        showConfirmation(
+          'Final Confirmation',
+          'This will permanently delete ALL indicators. This action cannot be undone.',
+          async () => {
+            await performClearAllIndicators();
+            closeConfirmModal();
+          },
+          'Delete All',
+          'danger'
+        );
+      },
+      'Continue',
+      'danger'
+    );
+  };
+
+  // Helper functions for different deletion operations
+  const performBulkDelete = async (selectedIndicators) => {
+    try {
+      setLoading(true);
+      const indicatorIds = Array.from(selectedIndicators);
+
+      for (const indicatorId of indicatorIds) {
+        const response = await fetch(`/api/indicators/${indicatorId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to delete indicator ${indicatorId}`);
+        }
+      }
+
+      showSuccess('Bulk Delete Complete', `Successfully deleted ${indicatorIds.length} indicators`);
+      setSelectedIndicators(new Set());
+      await fetchIndicators();
+      refreshManager.triggerRefresh(['indicators', 'dashboard'], 'indicator_deleted');
+
+    } catch (error) {
+      console.error('Error during bulk delete:', error);
+      showError('Delete Error', 'Error deleting indicators. Please try again.');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const performSingleDelete = async (indicator) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/indicators/${indicator.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete indicator');
+      }
+
+      showSuccess('Indicator Deleted', `Successfully deleted ${indicator.type}`);
+      await fetchIndicators();
+      refreshManager.triggerRefresh(['indicators', 'dashboard'], 'indicator_deleted');
+
+    } catch (error) {
+      console.error('Error deleting indicator:', error);
+      showError('Delete Error', 'Error deleting indicator. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const performBulkDeleteSecond = async (selectedIndicators) => {
+    try {
+      setLoading(true);
+      const indicatorIds = Array.from(selectedIndicators);
+      let deletedCount = 0;
+
+      const response = await fetch('/api/indicators/bulk-delete/', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(localStorage.getItem('access_token') && {
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          })
+        },
+        body: JSON.stringify({
+          indicator_ids: indicatorIds
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        deletedCount = result.deleted_count;
+        setSelectedIndicators(new Set());
+        await fetchIndicators();
+        refreshManager.triggerRefresh(['indicators', 'dashboard'], 'indicators_deleted');
+        showSuccess('Bulk Delete Complete', `Successfully deleted ${deletedCount} indicator(s)`);
+      } else {
+        throw new Error(result.error || 'Failed to delete indicators');
+      }
+
+    } catch (error) {
+      console.error('Error during bulk delete:', error);
+      showError('Delete Error', 'Error deleting indicators. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const performSingleDeleteSecond = async (indicator) => {
+    try {
+      const response = await api.delete(`/api/indicators/${indicator.id}/delete/`);
+      if (response && response.success) {
+        await fetchIndicators();
+        refreshManager.triggerRefresh(['indicators', 'dashboard'], 'indicator_deleted');
+        showSuccess('Indicator Deleted', `Successfully deleted indicator: ${indicator.value}`);
+      } else {
+        throw new Error('Failed to delete indicator');
+      }
+    } catch (error) {
+      console.error('Error deleting indicator:', error);
+      showError('Delete Error', 'Error deleting indicator. Please try again.');
+    }
+  };
+
+  // Separated the actual deletion logic
+  const performClearAllIndicators = async () => {
 
     try {
       setLoading(true);
@@ -5600,9 +5802,17 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
       
       if (isMultipleSelected && isClickedIndicatorSelected) {
         // Bulk delete scenario - delete all selected indicators
-        if (!confirm(`Are you sure you want to delete ${selectedIndicators.size} selected indicators? This action cannot be undone.`)) {
-          return;
-        }
+        showConfirmation(
+          'Delete Selected Indicators',
+          `Are you sure you want to delete ${selectedIndicators.size} selected indicators? This action cannot be undone.`,
+          async () => {
+            await performBulkDelete(selectedIndicators);
+            closeConfirmModal();
+          },
+          'Delete Selected',
+          'danger'
+        );
+        return;
         
         setLoading(true);
         const indicatorIds = Array.from(selectedIndicators);
@@ -5626,9 +5836,17 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
         
       } else {
         // Single delete scenario
-        if (!confirm(`Are you sure you want to delete this ${indicator.type}? This action cannot be undone.`)) {
-          return;
-        }
+        showConfirmation(
+          'Delete Indicator',
+          `Are you sure you want to delete this ${indicator.type}? This action cannot be undone.`,
+          async () => {
+            await performSingleDelete(indicator);
+            closeConfirmModal();
+          },
+          'Delete',
+          'danger'
+        );
+        return;
         
         setLoading(true);
         const response = await fetch(`/api/indicators/${indicator.id}`, {
@@ -5811,22 +6029,6 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
                 <option value="registry">Registry Key</option>
                 <option value="mutex">Mutex</option>
                 <option value="process">Process</option>
-              </select>
-            </div>
-          </div>
-          
-          <div className="filter-group">
-            <label className="filter-label">Severity</label>
-            <div className="filter-control">
-              <select 
-                value={filters.severity}
-                onChange={(e) => handleFilterChange('severity', e.target.value)}
-                className="form-control"
-              >
-                <option value="">All Severities</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
               </select>
             </div>
           </div>
@@ -6986,6 +7188,21 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
           </div>
         </div>
       )}
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showConfirmModal}
+        onClose={closeConfirmModal}
+        onConfirm={() => {
+          if (confirmModalConfig.onConfirm) {
+            confirmModalConfig.onConfirm();
+          }
+        }}
+        title={confirmModalConfig.title}
+        message={confirmModalConfig.message}
+        confirmText={confirmModalConfig.confirmText}
+        variant={confirmModalConfig.variant}
+      />
     </section>
   );
 
@@ -7048,7 +7265,6 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
           type: filters.type || '',
           source: filters.source || '',
           searchTerm: filters.searchTerm || '',
-          severity: filters.severity || '',
           status: filters.status || '',
           dateRange: filters.dateRange || ''
         }
@@ -7778,9 +7994,17 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
     
     if (isMultipleSelected && isClickedIndicatorSelected) {
       // Bulk delete scenario - delete all selected indicators
-      if (!confirm(`Are you sure you want to delete ${selectedIndicators.size} selected indicators? This action cannot be undone.`)) {
-        return;
-      }
+      showConfirmation(
+        'Delete Selected Indicators',
+        `Are you sure you want to delete ${selectedIndicators.size} selected indicators? This action cannot be undone.`,
+        async () => {
+          await performBulkDeleteSecond(selectedIndicators);
+          closeConfirmModal();
+        },
+        'Delete Selected',
+        'danger'
+      );
+      return;
       
       try {
         setLoading(true);
@@ -7828,9 +8052,17 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
       }
     } else {
       // Single delete scenario - delete just the clicked indicator
-      if (!confirm(`Are you sure you want to delete the indicator "${indicator.value}"? This action cannot be undone.`)) {
-        return;
-      }
+      showConfirmation(
+        'Delete Indicator',
+        `Are you sure you want to delete the indicator "${indicator.value}"? This action cannot be undone.`,
+        async () => {
+          await performSingleDeleteSecond(indicator);
+          closeConfirmModal();
+        },
+        'Delete',
+        'danger'
+      );
+      return;
 
       try {
         const response = await api.delete(`/api/indicators/${indicator.id}/delete/`);
@@ -8146,6 +8378,39 @@ function TTPAnalysis({ active, user }) {
   });
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState('');
+
+  // TTP Confirmation modal state
+  const [showTtpConfirmModal, setShowTtpConfirmModal] = useState(false);
+  const [ttpConfirmModalConfig, setTtpConfirmModalConfig] = useState({
+    title: '',
+    message: '',
+    onConfirm: null,
+    confirmText: 'Confirm',
+    variant: 'danger'
+  });
+
+  // Helper function to show TTP confirmation modal
+  const showTtpConfirmation = (title, message, onConfirm, confirmText = 'Confirm', variant = 'danger') => {
+    setTtpConfirmModalConfig({
+      title,
+      message,
+      onConfirm,
+      confirmText,
+      variant
+    });
+    setShowTtpConfirmModal(true);
+  };
+
+  const closeTtpConfirmModal = () => {
+    setShowTtpConfirmModal(false);
+    setTtpConfirmModalConfig({
+      title: '',
+      message: '',
+      onConfirm: null,
+      confirmText: 'Confirm',
+      variant: 'danger'
+    });
+  };
   
   // Matrix Cell Details Modal state
   const [showMatrixCellModal, setShowMatrixCellModal] = useState(false);
@@ -8240,12 +8505,12 @@ function TTPAnalysis({ active, user }) {
         console.warn('Feed comparison endpoint not available:', err);
         return null;
       });
-      
+
       const techniqueFreqPromise = getTtpTechniqueFrequencies(30).catch(err => {
         console.warn('Technique frequencies endpoint not available:', err);
         return null;
       });
-      
+
       const seasonalPatternsPromise = getTtpSeasonalPatterns(180).catch(err => {
         console.warn('Seasonal patterns endpoint not available:', err);
         return null;
@@ -8260,8 +8525,16 @@ function TTPAnalysis({ active, user }) {
       if (feedComparison && feedComparison.success) {
         setFeedComparisonData(feedComparison);
       }
-      if (techniqueFreq && techniqueFreq.success) {
-        setFrequencyData(techniqueFreq);
+      if (techniqueFreq) {
+        console.log('🔄 TTP Analysis: Technique frequency data received:', techniqueFreq);
+        if (techniqueFreq.success) {
+          setFrequencyData(techniqueFreq);
+        } else if (techniqueFreq.data) {
+          // Sometimes the data is nested under a 'data' property
+          setFrequencyData(techniqueFreq.data);
+        } else {
+          console.warn('🔄 TTP Analysis: Technique frequency data missing or invalid format');
+        }
       }
       if (seasonalPatterns && seasonalPatterns.success) {
         setSeasonalPatternsData(seasonalPatterns);
@@ -8270,6 +8543,28 @@ function TTPAnalysis({ active, user }) {
       console.error('Error fetching aggregation data:', error);
     }
     setAggregationLoading(false);
+  };
+
+  // Comprehensive refresh function for Trends & Patterns page
+  const refreshTrendsData = async () => {
+    setAggregationLoading(true);
+    try {
+      console.log('🔄 Refreshing all trends data...');
+
+      // Refresh all data components in parallel
+      await Promise.all([
+        fetchAggregationData(),
+        fetchTTPTrendsData(),
+        fetchFeedComparisonData(),
+        fetchSeasonalPatternsData()
+      ]);
+
+      console.log('✅ All trends data refreshed successfully');
+    } catch (error) {
+      console.error('❌ Error refreshing trends data:', error);
+    } finally {
+      setAggregationLoading(false);
+    }
   };
 
   // Trigger feed consumption
@@ -8650,21 +8945,7 @@ function TTPAnalysis({ active, user }) {
   const fetchFeedComparisonData = async () => {
     setFeedComparisonLoading(true);
     try {
-console.log('🔍 Fetching feed comparison data...');
       const response = await getTtpFeedComparison(30);
-      console.log('📊 Feed comparison response:', response);
-      console.log('📈 Feed statistics:', response?.feed_statistics);
-      // Debug AVG/Day values specifically
-      if (response?.feed_statistics) {
-        response.feed_statistics.forEach((feed, index) => {
-          console.log(`🔢 Feed ${index + 1} (${feed.threat_feed__name}):`, {
-            avg_techniques_per_day: feed.avg_techniques_per_day,
-            type: typeof feed.avg_techniques_per_day,
-            ttp_count: feed.ttp_count,
-            unique_techniques: feed.unique_techniques
-          });
-        });
-      }
       setFeedComparisonData(response);
     } catch (error) {
       console.error('Error fetching feed comparison data:', error);
@@ -9339,9 +9620,19 @@ console.log('🔍 Fetching feed comparison data...');
   };
 
   const deleteTTP = async (ttpId) => {
-    if (!confirm('Are you sure you want to delete this TTP? This action cannot be undone.')) {
-      return;
-    }
+    showTtpConfirmation(
+      'Delete TTP',
+      'Are you sure you want to delete this TTP? This action cannot be undone.',
+      async () => {
+        await performTtpDelete(ttpId);
+        closeTtpConfirmModal();
+      },
+      'Delete',
+      'danger'
+    );
+  };
+
+  const performTtpDelete = async (ttpId) => {
     
     try {
       const response = await api.delete(`/api/ttps/${ttpId}/`);
@@ -10550,9 +10841,9 @@ console.log('🔍 Fetching feed comparison data...');
                   <option value="180">Last 6 Months</option>
                   <option value="365">Last Year</option>
                 </select>
-                <button 
+                <button
                   className="btn btn-outline btn-sm"
-                  onClick={fetchAggregationData}
+                  onClick={refreshTrendsData}
                   disabled={aggregationLoading}
                 >
                   <i className={`fas ${aggregationLoading ? 'fa-spinner fa-spin' : 'fa-sync-alt'}`}></i> Refresh
@@ -10624,30 +10915,49 @@ console.log('🔍 Fetching feed comparison data...');
                     
                     <div className="tactic-distribution">
                       <h3>Tactic Distribution</h3>
-                      {frequencyData && frequencyData.tactics ? (
-                        <div className="tactic-bars">
-                          {Object.entries(frequencyData.tactics)
-                            .sort(([,a], [,b]) => b.count - a.count)
-                            .slice(0, 8)
-                            .map(([tacticId, data]) => (
-                              <div key={tacticId} className="tactic-bar-item">
-                                <div className="tactic-label">{tacticId.replace('-', ' ')}</div>
-                                <div className="bar-container">
-                                  <div 
-                                    className="bar-fill"
-                                    style={{width: `${data.percentage}%`}}
-                                  ></div>
-                                </div>
-                                <div className="bar-value">{data.count}</div>
-                              </div>
-                            ))
-                          }
-                        </div>
-                      ) : (
-                        <div className="empty-state">
-                          <p>No tactic distribution data available</p>
-                        </div>
-                      )}
+                      {(() => {
+                        // Check multiple possible data structures
+                        const tactics = frequencyData?.tactics ||
+                                      frequencyData?.data?.tactics ||
+                                      frequencyData?.tactic_distribution ||
+                                      frequencyData?.data?.tactic_distribution ||
+                                      frequencyData?.techniques ||
+                                      frequencyData?.data?.techniques;
+
+                        if (tactics && Object.keys(tactics).length > 0) {
+                          return (
+                            <div className="tactic-bars">
+                              {Object.entries(tactics)
+                                .sort(([,a], [,b]) => (b.count || b) - (a.count || a))
+                                .slice(0, 8)
+                                .map(([tacticId, data]) => (
+                                  <div key={tacticId} className="tactic-bar-item">
+                                    <div className="tactic-label">{tacticId.replace('-', ' ')}</div>
+                                    <div className="bar-container">
+                                      <div
+                                        className="bar-fill"
+                                        style={{width: `${data.percentage || (data.count ? 100 : 0)}%`}}
+                                      ></div>
+                                    </div>
+                                    <div className="bar-value">{data.count || data}</div>
+                                  </div>
+                                ))
+                              }
+                            </div>
+                          );
+                        } else {
+                          return (
+                            <div className="empty-state">
+                              <p>No tactic distribution data available</p>
+                              {frequencyData && (
+                                <small style={{color: '#666'}}>
+                                  Debug: Received data keys: {Object.keys(frequencyData).join(', ')}
+                                </small>
+                              )}
+                            </div>
+                          );
+                        }
+                      })()}
                     </div>
                   </div>
 
@@ -12049,6 +12359,21 @@ console.log('🔍 Fetching feed comparison data...');
           </div>
         </div>
       )}
+
+      {/* TTP Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showTtpConfirmModal}
+        onClose={closeTtpConfirmModal}
+        onConfirm={() => {
+          if (ttpConfirmModalConfig.onConfirm) {
+            ttpConfirmModalConfig.onConfirm();
+          }
+        }}
+        title={ttpConfirmModalConfig.title}
+        message={ttpConfirmModalConfig.message}
+        confirmText={ttpConfirmModalConfig.confirmText}
+        variant={ttpConfirmModalConfig.variant}
+      />
     </section>
   );
 }
@@ -16925,6 +17250,7 @@ function CSSStyles() {
 
         .modal-body {
             padding: 1.5rem;
+            background-color: #ffffff;
         }
 
         .modal-footer {

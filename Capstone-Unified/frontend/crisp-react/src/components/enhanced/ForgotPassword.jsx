@@ -63,7 +63,6 @@ const ForgotPassword = () => {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <img src={logoImage} alt="CRISP Logo" className="auth-logo" />
           <h1>Reset Your Password</h1>
           <p>Enter your email address and we'll send you instructions to reset your password.</p>
         </div>
@@ -115,7 +114,7 @@ const ForgotPassword = () => {
               Back to Login
             </Link>
             <Link to="/register" className="auth-link">
-              Don't have an account? Sign up
+              Don't have an account? Contact a Admin
             </Link>
           </div>
         </div>
