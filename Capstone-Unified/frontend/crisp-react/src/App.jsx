@@ -14782,19 +14782,26 @@ function CSSStyles() {
         
         .organisation-stats {
             display: flex;
-            gap: 15px;
-            margin-top: 5px;
+            gap: 8px;
+            margin-top: 4px;
         }
-        
-        .stat-item {
-            display: flex;
+
+        .organisation-stats .stat-item {
+            display: inline-flex;
             align-items: center;
-            gap: 5px;
-            font-size: 13px;
+            gap: 4px;
+            font-size: 11px;
+            padding: 1px 4px;
+            background: #f8f9fa;
+            border-radius: 3px;
+            color: #6c757d;
+            line-height: 1.2;
+            height: 18px;
         }
-        
-        .stat-item i {
+
+        .organisation-stats .stat-item i {
             color: var(--primary-blue);
+            font-size: 10px;
         }
         
         .trust-level {
