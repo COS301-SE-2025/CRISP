@@ -8505,12 +8505,12 @@ function TTPAnalysis({ active, user }) {
         console.warn('Feed comparison endpoint not available:', err);
         return null;
       });
-      
+
       const techniqueFreqPromise = getTtpTechniqueFrequencies(30).catch(err => {
         console.warn('Technique frequencies endpoint not available:', err);
         return null;
       });
-      
+
       const seasonalPatternsPromise = getTtpSeasonalPatterns(180).catch(err => {
         console.warn('Seasonal patterns endpoint not available:', err);
         return null;
@@ -8525,8 +8525,16 @@ function TTPAnalysis({ active, user }) {
       if (feedComparison && feedComparison.success) {
         setFeedComparisonData(feedComparison);
       }
-      if (techniqueFreq && techniqueFreq.success) {
-        setFrequencyData(techniqueFreq);
+      if (techniqueFreq) {
+        console.log('🔄 TTP Analysis: Technique frequency data received:', techniqueFreq);
+        if (techniqueFreq.success) {
+          setFrequencyData(techniqueFreq);
+        } else if (techniqueFreq.data) {
+          // Sometimes the data is nested under a 'data' property
+          setFrequencyData(techniqueFreq.data);
+        } else {
+          console.warn('🔄 TTP Analysis: Technique frequency data missing or invalid format');
+        }
       }
       if (seasonalPatterns && seasonalPatterns.success) {
         setSeasonalPatternsData(seasonalPatterns);
@@ -8535,6 +8543,28 @@ function TTPAnalysis({ active, user }) {
       console.error('Error fetching aggregation data:', error);
     }
     setAggregationLoading(false);
+  };
+
+  // Comprehensive refresh function for Trends & Patterns page
+  const refreshTrendsData = async () => {
+    setAggregationLoading(true);
+    try {
+      console.log('🔄 Refreshing all trends data...');
+
+      // Refresh all data components in parallel
+      await Promise.all([
+        fetchAggregationData(),
+        fetchTTPTrendsData(),
+        fetchFeedComparisonData(),
+        fetchSeasonalPatternsData()
+      ]);
+
+      console.log('✅ All trends data refreshed successfully');
+    } catch (error) {
+      console.error('❌ Error refreshing trends data:', error);
+    } finally {
+      setAggregationLoading(false);
+    }
   };
 
   // Trigger feed consumption
@@ -10811,9 +10841,9 @@ function TTPAnalysis({ active, user }) {
                   <option value="180">Last 6 Months</option>
                   <option value="365">Last Year</option>
                 </select>
-                <button 
+                <button
                   className="btn btn-outline btn-sm"
-                  onClick={fetchAggregationData}
+                  onClick={refreshTrendsData}
                   disabled={aggregationLoading}
                 >
                   <i className={`fas ${aggregationLoading ? 'fa-spinner fa-spin' : 'fa-sync-alt'}`}></i> Refresh
@@ -10885,30 +10915,49 @@ function TTPAnalysis({ active, user }) {
                     
                     <div className="tactic-distribution">
                       <h3>Tactic Distribution</h3>
-                      {frequencyData && frequencyData.tactics ? (
-                        <div className="tactic-bars">
-                          {Object.entries(frequencyData.tactics)
-                            .sort(([,a], [,b]) => b.count - a.count)
-                            .slice(0, 8)
-                            .map(([tacticId, data]) => (
-                              <div key={tacticId} className="tactic-bar-item">
-                                <div className="tactic-label">{tacticId.replace('-', ' ')}</div>
-                                <div className="bar-container">
-                                  <div 
-                                    className="bar-fill"
-                                    style={{width: `${data.percentage}%`}}
-                                  ></div>
-                                </div>
-                                <div className="bar-value">{data.count}</div>
-                              </div>
-                            ))
-                          }
-                        </div>
-                      ) : (
-                        <div className="empty-state">
-                          <p>No tactic distribution data available</p>
-                        </div>
-                      )}
+                      {(() => {
+                        // Check multiple possible data structures
+                        const tactics = frequencyData?.tactics ||
+                                      frequencyData?.data?.tactics ||
+                                      frequencyData?.tactic_distribution ||
+                                      frequencyData?.data?.tactic_distribution ||
+                                      frequencyData?.techniques ||
+                                      frequencyData?.data?.techniques;
+
+                        if (tactics && Object.keys(tactics).length > 0) {
+                          return (
+                            <div className="tactic-bars">
+                              {Object.entries(tactics)
+                                .sort(([,a], [,b]) => (b.count || b) - (a.count || a))
+                                .slice(0, 8)
+                                .map(([tacticId, data]) => (
+                                  <div key={tacticId} className="tactic-bar-item">
+                                    <div className="tactic-label">{tacticId.replace('-', ' ')}</div>
+                                    <div className="bar-container">
+                                      <div
+                                        className="bar-fill"
+                                        style={{width: `${data.percentage || (data.count ? 100 : 0)}%`}}
+                                      ></div>
+                                    </div>
+                                    <div className="bar-value">{data.count || data}</div>
+                                  </div>
+                                ))
+                              }
+                            </div>
+                          );
+                        } else {
+                          return (
+                            <div className="empty-state">
+                              <p>No tactic distribution data available</p>
+                              {frequencyData && (
+                                <small style={{color: '#666'}}>
+                                  Debug: Received data keys: {Object.keys(frequencyData).join(', ')}
+                                </small>
+                              )}
+                            </div>
+                          );
+                        }
+                      })()}
                     </div>
                   </div>
 
