@@ -360,8 +360,7 @@ function AuthWrapper() {
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-  // PERFORMANCE TEST: StrictMode disabled - causes double-rendering with 40+ useEffects
-  // <React.StrictMode>
+  <React.StrictMode>
     <AuthWrapper />
-  // </React.StrictMode>
+  </React.StrictMode>
 );

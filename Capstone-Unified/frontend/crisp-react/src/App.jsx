@@ -142,6 +142,33 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
   // Get notification functions
   const { showSuccess, showInfo, showError, showWarning } = useNotification();
   
+  // Component mounted state to prevent state updates on unmounted components (React StrictMode fix)
+  const isMountedRef = useRef(true);
+  const cleanupFunctionsRef = useRef([]);
+  
+  // Cleanup mechanism for preventing React internal errors
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      // Execute all cleanup functions
+      cleanupFunctionsRef.current.forEach(cleanup => {
+        try {
+          cleanup();
+        } catch (error) {
+          console.warn('Cleanup function error:', error);
+        }
+      });
+      cleanupFunctionsRef.current = [];
+    };
+  }, []);
+  
+  // Helper function to safely set state only if component is mounted
+  const safeSetState = useCallback((setterFunction, ...args) => {
+    if (isMountedRef.current) {
+      setterFunction(...args);
+    }
+  }, []);
+  
   // Unread notifications count state
   const [unreadCount, setUnreadCount] = useState(0);
   
@@ -150,7 +177,7 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
     try {
       const response = await api.getAlerts({ unread_only: 'true' });
       const count = response.data ? response.data.length : 0;
-      setUnreadCount(count);
+      safeSetState(setUnreadCount, count);
     } catch (error) {
       console.error('Error fetching unread count:', error);
     }
@@ -8079,6 +8106,9 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
 function TTPAnalysis({ active, user }) {
   if (!active) return null;
 
+  // Get notification functions
+  const { showSuccess, showInfo, showError, showWarning } = useNotification();
+
   // Define userRole from the user prop
   const userRole = user?.role || 'Security Analyst';
   
@@ -8811,10 +8841,10 @@ function TTPAnalysis({ active, user }) {
         setEditFormData({
           name: response.data.name || '',
           description: response.data.description || '',
-          mitre_technique_id: response.data.mitre?.technique_id || '',
-          mitre_tactic: response.data.mitre?.tactic || '',
-          mitre_subtechnique: response.data.mitre?.subtechnique || '',
-          threat_feed_id: response.data.threat_feed?.id || ''
+          mitre_technique_id: response.data.mitre?.technique_id || response.data.mitre_technique_id || '',
+          mitre_tactic: response.data.mitre?.tactic || response.data.mitre_tactic || '',
+          mitre_subtechnique: response.data.mitre?.subtechnique || response.data.mitre_subtechnique || '',
+          threat_feed_id: response.data.threat_feed?.id || response.data.threat_feed_id || ''
         });
       } else {
         console.error('Failed to fetch TTP details');
@@ -8849,6 +8879,41 @@ function TTPAnalysis({ active, user }) {
     if (!selectedTTP) return;
     
     try {
+      // Frontend validation before sending to backend
+      const validationErrors = [];
+      
+      if (!editFormData.name || editFormData.name.trim().length < 3) {
+        validationErrors.push('Name must be at least 3 characters long');
+      }
+      
+      if (!editFormData.description || editFormData.description.trim().length < 10) {
+        validationErrors.push('Description must be at least 10 characters long');
+      }
+      
+      if (editFormData.mitre_technique_id && editFormData.mitre_technique_id.trim()) {
+        const mitreRegex = /^T\d{4}(\.\d{3})?$/;
+        if (!mitreRegex.test(editFormData.mitre_technique_id.trim().toUpperCase())) {
+          validationErrors.push('MITRE technique ID must follow format T1234 or T1234.001');
+        }
+      }
+      
+      if (validationErrors.length > 0) {
+        showError('Validation Error', validationErrors.join('\n• '));
+        return;
+      }
+      
+      // Debug: Log the data being sent to help identify validation issues
+      console.log('TTP Update Debug - Data being sent:', {
+        ttpId: selectedTTP.id,
+        editFormData,
+        validationChecks: {
+          name: editFormData.name ? `${editFormData.name.length} chars` : 'EMPTY',
+          description: editFormData.description ? `${editFormData.description.length} chars` : 'EMPTY',
+          mitre_technique_id: editFormData.mitre_technique_id || 'EMPTY',
+          mitre_tactic: editFormData.mitre_tactic || 'EMPTY'
+        }
+      });
+      
       const response = await updateTtp(selectedTTP.id, editFormData);
       if (response && response.success) {
         // Use the updated data from the backend response
@@ -8887,7 +8952,14 @@ function TTPAnalysis({ active, user }) {
       }
     } catch (error) {
       console.error('Error updating TTP:', error);
-      showError('Update Error', 'Error updating TTP: ' + (error.message || 'Unknown error'));
+      
+      // Try to extract specific validation errors from the backend response
+      let errorMessage = error.message || 'Unknown error';
+      if (error.message && error.message.includes('400')) {
+        errorMessage = 'Validation failed. Check that:\n• Name is at least 3 characters\n• Description is at least 10 characters\n• MITRE technique ID follows T1234 format\n• MITRE tactic is valid';
+      }
+      
+      showError('Update Error', 'Error updating TTP: ' + errorMessage);
     }
   };
 

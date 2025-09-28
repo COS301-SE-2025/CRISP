@@ -4020,9 +4020,16 @@ def ttp_trends(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Calculate date range
-        end_date = timezone.now()
-        start_date = end_date - timedelta(days=days)
+        # Calculate date range with safety checks
+        try:
+            end_date = timezone.now()
+            start_date = end_date - timedelta(days=days)
+        except (ValueError, OverflowError) as e:
+            logger.error(f"Date calculation error: {str(e)}")
+            return Response(
+                {"error": "Invalid date range calculation", "details": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         # Start with all TTPs in the date range
         queryset = TTPData.objects.filter(
@@ -4054,39 +4061,47 @@ def ttp_trends(request):
             'month': TruncMonth
         }[granularity]
         
-        # Group data by date and specified grouping
-        if group_by == 'tactic':
-            # Group by tactic
-            trends_data = queryset.annotate(
-                date_group=truncate_func('created_at')
-            ).values('date_group', 'mitre_tactic').annotate(
-                count=Count('id')
-            ).order_by('date_group', 'mitre_tactic')
-            
-            group_field = 'mitre_tactic'
-            group_display_map = dict(TTPData.MITRE_TACTIC_CHOICES)
-            
-        elif group_by == 'technique':
-            # Group by technique
-            trends_data = queryset.annotate(
-                date_group=truncate_func('created_at')
-            ).values('date_group', 'mitre_technique_id', 'name').annotate(
-                count=Count('id')
-            ).order_by('date_group', 'mitre_technique_id')
-            
-            group_field = 'mitre_technique_id'
-            group_display_map = {}
-            
-        else:  # group_by == 'feed'
-            # Group by threat feed
-            trends_data = queryset.annotate(
-                date_group=truncate_func('created_at')
-            ).values('date_group', 'threat_feed__id', 'threat_feed__name').annotate(
-                count=Count('id')
-            ).order_by('date_group', 'threat_feed__id')
-            
-            group_field = 'threat_feed__id'
-            group_display_map = {}
+        # Group data by date and specified grouping with error handling
+        try:
+            if group_by == 'tactic':
+                # Group by tactic
+                trends_data = queryset.annotate(
+                    date_group=truncate_func('created_at')
+                ).values('date_group', 'mitre_tactic').annotate(
+                    count=Count('id')
+                ).order_by('date_group', 'mitre_tactic')
+                
+                group_field = 'mitre_tactic'
+                group_display_map = dict(TTPData.MITRE_TACTIC_CHOICES)
+                
+            elif group_by == 'technique':
+                # Group by technique
+                trends_data = queryset.annotate(
+                    date_group=truncate_func('created_at')
+                ).values('date_group', 'mitre_technique_id', 'name').annotate(
+                    count=Count('id')
+                ).order_by('date_group', 'mitre_technique_id')
+                
+                group_field = 'mitre_technique_id'
+                group_display_map = {}
+                
+            else:  # group_by == 'feed'
+                # Group by threat feed
+                trends_data = queryset.annotate(
+                    date_group=truncate_func('created_at')
+                ).values('date_group', 'threat_feed__id', 'threat_feed__name').annotate(
+                    count=Count('id')
+                ).order_by('date_group', 'threat_feed__id')
+                
+                group_field = 'threat_feed__id'
+                group_display_map = {}
+                
+        except Exception as db_error:
+            logger.error(f"Database query error in TTP trends: {str(db_error)}")
+            return Response(
+                {"error": "Database query failed", "details": str(db_error)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
         
         # Organize data for time series
         time_series = defaultdict(lambda: defaultdict(int))
@@ -4258,9 +4273,23 @@ def ttp_trends(request):
         return Response(response_data, status=status.HTTP_200_OK)
         
     except Exception as e:
-        logger.error(f"Error getting TTP trends data: {str(e)}")
+        import traceback
+        error_details = traceback.format_exc()
+        logger.error(f"Error getting TTP trends data: {str(e)}\nTraceback: {error_details}")
+        
         return Response(
-            {"error": "Failed to get TTP trends data", "details": str(e)},
+            {
+                "error": "Failed to get TTP trends data", 
+                "message": str(e),
+                "debug_info": {
+                    "function": "ttp_trends",
+                    "parameters": {
+                        "days": request.GET.get('days', 30),
+                        "granularity": request.GET.get('granularity', 'day'),
+                        "group_by": request.GET.get('group_by', 'tactic')
+                    }
+                }
+            },
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
