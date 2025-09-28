@@ -57,8 +57,6 @@ function CrispHelp({ isOpen, onClose, onNavigate }) {
         onNavigate('construction', { tutorial: item.title });
       } else {
         // Fallback direct navigation if onNavigate isn't available
-        console.log('Direct navigation to construction page for tutorial:', item.title);
-        
         // Use window location to navigate
         window.location.href = '/construction';
       }

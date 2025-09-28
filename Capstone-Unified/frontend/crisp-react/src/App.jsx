@@ -14,7 +14,7 @@ import IncidentsList from './components/soc/IncidentsList.jsx';
 import BlueVLogo from './assets/enhanced/BlueV2.png';
 import * as api from './api.js';
 import { getOrganizations, getThreatFeedTtps, getMitreMatrix, getTtpFeedComparison, getTtpSeasonalPatterns, getTtpTechniqueFrequencies, getTtps, getTtpFilterOptions, getTtpTrends, getTtpDetails, updateTtp, getMatrixCellDetails, getTechniqueDetails, exportTtps, getUsersList, getIndicators } from './api.js';
-import { NotificationProvider, useNotifications } from './components/enhanced/NotificationManager.jsx';
+import { NotificationProvider } from './components/ui/NotificationManager.jsx';
 import Notifications from './components/notifications/Notifications.jsx';
 import refreshManager from './utils/RefreshManager.js';
 
@@ -30,7 +30,7 @@ class ChartErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('Chart Error:', error, errorInfo);
+    // Chart error occurred
   }
 
   render() {
@@ -80,7 +80,7 @@ class ThreatFeedsErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('ThreatFeeds Error:', error, errorInfo);
+    // ThreatFeeds error occurred
   }
 
   render() {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import ReportDetailModal from './ReportDetailModal';
+import { useNotification } from '../ui/NotificationManager';
 
 // Extract CSS styles outside component to prevent recreation on every render
 const REPORT_STYLES = `
@@ -574,6 +575,7 @@ const REPORT_STYLES = `
 `;
 
 const Reports = ({ active = true }) => {
+  const { showError, showSuccess } = useNotification();
 
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1127,8 +1129,7 @@ const Reports = ({ active = true }) => {
       setReportToDelete(null);
 
     } catch (error) {
-      console.error('Error deleting report:', error);
-      alert(error.message || 'Failed to delete report. Please try again.');
+      showError(error.message || 'Failed to delete report. Please try again.');
     } finally {
       setDeletingReportId(null);
     }

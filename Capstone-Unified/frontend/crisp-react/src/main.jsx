@@ -45,8 +45,7 @@ function AuthRoutesWithNotifications() {
           setIsAuthenticated(true);
         }
       } catch (error) {
-        console.error("Error validating session:", error);
-        // Clear invalid data
+        // Continue with login page if validation fails
         localStorage.removeItem("crisp_auth_token");
         localStorage.removeItem("crisp_user");
       } finally {
@@ -73,7 +72,6 @@ function AuthRoutesWithNotifications() {
       // Redirect to dashboard
       navigate('/dashboard', { replace: true });
     } catch (error) {
-      console.error("Error storing authentication data:", error);
       showError('Login Error', 'Unable to store session data');
     }
   };
@@ -91,7 +89,6 @@ function AuthRoutesWithNotifications() {
       setUserData(authData.user);
       setIsAuthenticated(true);
     } catch (error) {
-      console.error("Error storing authentication data:", error);
       showError('Registration Error', 'Unable to store session data');
     }
   };

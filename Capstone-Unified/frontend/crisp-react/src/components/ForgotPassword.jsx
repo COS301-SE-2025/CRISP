@@ -14,14 +14,15 @@ function ForgotPassword() {
     e.preventDefault();
     setIsLoading(true);
     
-    console.log('🔄 Starting forgot password request for email:', email);
+    const handleForgotPassword = async (email) => {
+    setLoading(true);
+    setError(null);
     
     try {
       const requestUrl = `${API_BASE_URL}/api/auth/forgot-password/`;
       const requestBody = { email };
       
-      console.log('📤 Making request to:', requestUrl);
-      console.log('📤 Request body:', requestBody);
+
       
       const response = await fetch(requestUrl, {
         method: 'POST',
@@ -31,25 +32,18 @@ function ForgotPassword() {
         body: JSON.stringify(requestBody),
       });
 
-      console.log('📥 Response status:', response.status);
-      console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
+
 
       const data = await response.json();
-      console.log('📥 Response data:', data);
-
-      if (response.ok && data.success) {
-        console.log('✅ Password reset email sent successfully');
-        setIsSubmitted(true);
+      if (data.success) {
+        setSuccess(data.message);
       } else {
-        console.error('❌ Failed to send password reset email:', data.message);
-        showError('Password Reset Failed', data.message || 'Failed to send password reset email. Please try again.');
+        setError(data.message || 'Failed to send password reset email');
       }
-    } catch (error) {
-      console.error('💥 Forgot password error:', error);
-      showError('Password Reset Error', 'An error occurred while sending the password reset email. Please try again later.');
+        } catch (error) {
+      setError('Failed to send password reset email. Please try again.');
     } finally {
-      setIsLoading(false);
-      console.log('🏁 Forgot password request completed');
+      setLoading(false);
     }
   };
 

@@ -71,7 +71,6 @@ class RefreshManager {
     try {
       // Skip backend polling if user is inactive to reduce server load
       if (!this.isActive) {
-        console.debug('RefreshManager: Skipping trigger check - user inactive');
         return;
       }
 
@@ -90,12 +89,10 @@ class RefreshManager {
 
       const data = await response.json();
       if (data.success && data.triggers && data.triggers.length > 0) {
-        console.log('🔔 RefreshManager: Found backend triggers:', data.triggers);
 
         // Process each trigger
         for (const trigger of data.triggers) {
           if (trigger.components && trigger.components.length > 0) {
-            console.log(`⚡ RefreshManager: Processing trigger '${trigger.type}' for components:`, trigger.components);
             await this.triggerRefresh(trigger.components, `backend_trigger:${trigger.type}`);
           }
         }
@@ -137,7 +134,7 @@ class RefreshManager {
         await this.safeRefresh(subscriber);
         subscriber.lastRefresh = Date.now();
       } else {
-        console.warn(`⚠️ RefreshManager: No subscriber found for '${key}' (available: [${Array.from(this.subscribers.keys()).join(', ')}])`);
+        // No subscriber found for key
       }
     }
   }
@@ -145,11 +142,10 @@ class RefreshManager {
   // Refresh related components after data changes
   async triggerRelated(triggerKey, reason = 'data_change') {
     const relatedKeys = this.getRelatedComponents(triggerKey);
-    console.log(`🔄 RefreshManager: triggerRelated('${triggerKey}') -> [${relatedKeys.join(', ')}]`);
     if (relatedKeys.length > 0) {
       await this.triggerRefresh(relatedKeys, reason);
     } else {
-      console.warn(`⚠️ RefreshManager: No related components found for '${triggerKey}'`);
+      // No related components found
     }
   }
 
@@ -171,7 +167,7 @@ class RefreshManager {
     try {
       await subscriber.refresh();
     } catch (error) {
-      console.warn('RefreshManager: Error during refresh:', error);
+      // Silently handle refresh error
     }
   }
 
@@ -193,7 +189,6 @@ class RefreshManager {
 
   // Manual refresh all visible components
   async refreshAll() {
-    console.log('RefreshManager: Manual refresh all');
     const visibleKeys = Array.from(this.subscribers.entries())
       .filter(([key, subscriber]) => subscriber.isVisible())
       .map(([key]) => key);
