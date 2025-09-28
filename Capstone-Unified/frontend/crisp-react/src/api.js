@@ -1379,19 +1379,6 @@ export const getSOCSystemHealth = async () => {
   return await response.json();
 };
 
-export const getSOCNetworkActivity = async () => {
-  const response = await fetch(`${API_BASE_URL}/api/soc/network-activity/`, {
-    method: 'GET',
-    headers: getAuthHeaders(),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || 'Failed to fetch network activity data');
-  }
-
-  return await response.json();
-};
 
 export const getSOCTopThreats = async () => {
   const response = await fetch(`${API_BASE_URL}/api/soc/top-threats/`, {

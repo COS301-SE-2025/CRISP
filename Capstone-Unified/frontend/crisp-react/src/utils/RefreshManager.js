@@ -213,27 +213,7 @@ class RefreshManager {
 const refreshManager = new RefreshManager();
 
 // React hook for easy component integration
-export const useRefresh = (key, refreshFunction, options = {}) => {
-  const { useEffect, useCallback, useRef } = window.React || require('react');
-
-  const optionsRef = useRef(options);
-  optionsRef.current = options;
-
-  const stableRefreshFunction = useCallback(refreshFunction, []);
-
-  useEffect(() => {
-    refreshManager.subscribe(key, stableRefreshFunction, optionsRef.current);
-
-    return () => {
-      refreshManager.unsubscribe(key);
-    };
-  }, [key, stableRefreshFunction]);
-
-  return {
-    refreshNow: () => refreshManager.triggerRefresh([key], 'manual'),
-    refreshRelated: () => refreshManager.triggerRelated(key),
-    queueRefresh: (delay) => refreshManager.queueRefresh(key, delay)
-  };
-};
+// Note: This hook should be imported and used directly in React components
+// Import React hooks directly in the component file instead of using this
 
 export default refreshManager;

@@ -13,11 +13,9 @@ const SOCDashboard = ({ active, showPage }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [downloading, setDownloading] = useState(false);
-  const [systemHealth, setSystemHealth] = useState(null);
   const [realTimeAlerts, setRealTimeAlerts] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [criticalAlerts, setCriticalAlerts] = useState([]);
-  const [networkActivity, setNetworkActivity] = useState(null);
   const [topThreats, setTopThreats] = useState([]);
   const [mitreTactics, setMitreTactics] = useState([]);
   const [threatIntelligence, setThreatIntelligence] = useState(null);
@@ -49,8 +47,6 @@ const SOCDashboard = ({ active, showPage }) => {
     try {
       await Promise.all([
         fetchDashboardData(),
-        fetchSystemHealth(),
-        fetchNetworkActivity(),
         fetchTopThreats(),
         fetchMitreTactics(),
         fetchThreatIntelligence(),
@@ -111,21 +107,16 @@ const SOCDashboard = ({ active, showPage }) => {
       case 'threat_intel_update':
         fetchThreatIntelligence();
         break;
-      case 'system_health':
-        setSystemHealth(data.health);
-        break;
       default:
         console.log('Unknown WebSocket message type:', data.type);
     }
   };
 
   const setupRealTimeRefresh = () => {
-    // Use RefreshManager instead of individual polling - disable this interval
-    // intervalRef.current = setInterval(() => {
-    //   fetchDashboardData();
-    //   fetchSystemHealth();
-    //   fetchNetworkActivity();
-    // }, 120000);
+    // Refresh data every 2 minutes to reduce server load
+    intervalRef.current = setInterval(() => {
+      fetchDashboardData();
+    }, 120000);
   };
 
   const fetchDashboardData = async () => {
@@ -141,27 +132,7 @@ const SOCDashboard = ({ active, showPage }) => {
     }
   };
 
-  const fetchSystemHealth = async () => {
-    try {
-      const response = await api.getSOCSystemHealth();
-      if (response?.success && response?.data) {
-        setSystemHealth(response.data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch system health:', err);
-    }
-  };
 
-  const fetchNetworkActivity = async () => {
-    try {
-      const response = await api.getSOCNetworkActivity();
-      if (response?.success && response?.data) {
-        setNetworkActivity(response.data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch network activity:', err);
-    }
-  };
 
   const fetchTopThreats = async () => {
     try {
@@ -425,7 +396,6 @@ const SOCDashboard = ({ active, showPage }) => {
           { key: 'overview', label: 'Overview', icon: 'fa-chart-line' },
           { key: 'threats', label: 'Threat Intelligence', icon: 'fa-shield-virus' },
           { key: 'ioc-alerts', label: 'IOC Alerts', icon: 'fa-exclamation-triangle' },
-          { key: 'network', label: 'Network Activity', icon: 'fa-network-wired' },
           { key: 'mitre', label: 'MITRE ATT&CK', icon: 'fa-crosshairs' },
           { key: 'alerts', label: 'Live Alerts', icon: 'fa-bell' }
         ].map(tab => (
@@ -466,61 +436,6 @@ const SOCDashboard = ({ active, showPage }) => {
     </div>
   );
 
-  const renderSystemHealthBar = () => (
-    <div style={{
-      background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
-      color: 'white',
-      padding: '1.5rem',
-      borderRadius: '8px',
-      marginBottom: '2rem',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ fontSize: '2rem' }}>
-            <i className="fas fa-server"></i>
-          </div>
-          <div>
-            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.25rem', fontWeight: '600' }}>System Status</h3>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-              <span style={{
-                backgroundColor: 'rgba(255,255,255,0.2)',
-                padding: '0.25rem 0.75rem',
-                borderRadius: '12px',
-                fontSize: '0.875rem',
-                fontWeight: '500'
-              }}>
-                <i className="fas fa-check-circle" style={{ marginRight: '0.5rem' }}></i>
-                Systems Online
-              </span>
-              {systemHealth && (
-                <>
-                  <span style={{ fontSize: '0.875rem' }}>CPU: {systemHealth.cpu_usage}%</span>
-                  <span style={{ fontSize: '0.875rem' }}>Memory: {systemHealth.memory_usage}%</span>
-                  <span style={{ fontSize: '0.875rem' }}>Alerts: {systemHealth.active_alerts}</span>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.875rem' }}>Connected Users: {systemHealth?.connected_users || 0}</div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.25rem' }}>
-              <div style={{
-                width: '8px',
-                height: '8px',
-                backgroundColor: '#ffffff',
-                borderRadius: '50%',
-                animation: 'pulse 2s infinite'
-              }}></div>
-              <span style={{ fontSize: '0.875rem', fontWeight: '500' }}>Live</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <div style={{ padding: '2rem', fontFamily: 'Arial, sans-serif', position: 'relative' }}>
@@ -569,7 +484,6 @@ const SOCDashboard = ({ active, showPage }) => {
         </button>
       </div>
 
-      {renderSystemHealthBar()}
       {renderTabNavigation()}
 
       {/* Tab Content Container */}
@@ -1500,45 +1414,6 @@ const SOCDashboard = ({ active, showPage }) => {
         </div>
       )}
 
-      {activeTab === 'network' && (
-        <div style={{ marginBottom: '2rem' }}>
-          <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-            <div style={{ backgroundColor: '#007bff', padding: '1rem', borderBottom: '1px solid #dee2e6' }}>
-              <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600', color: 'white' }}>
-                <i className="fas fa-network-wired" style={{ marginRight: '0.5rem', color: 'white' }}></i>
-                Network Activity Monitor
-              </h3>
-            </div>
-            <div style={{ padding: '1.5rem' }}>
-              {networkActivity ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#007bff', borderRadius: '6px' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>{networkActivity.connections_count}</div>
-                    <div style={{ fontSize: '0.875rem', color: 'white' }}>Active Connections</div>
-                  </div>
-                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#007bff', borderRadius: '6px' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>{networkActivity.bandwidth_usage}%</div>
-                    <div style={{ fontSize: '0.875rem', color: 'white' }}>Bandwidth Usage</div>
-                  </div>
-                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#007bff', borderRadius: '6px' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>{networkActivity.suspicious_ips}</div>
-                    <div style={{ fontSize: '0.875rem', color: 'white' }}>Suspicious IPs</div>
-                  </div>
-                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#007bff', borderRadius: '6px' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>{networkActivity.blocked_attempts}</div>
-                    <div style={{ fontSize: '0.875rem', color: 'white' }}>Blocked Attempts</div>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ textAlign: 'center', color: '#666', padding: '2rem' }}>
-                  <i className="fas fa-chart-line" style={{ fontSize: '3rem', marginBottom: '1rem', color: '#dee2e6' }}></i>
-                  <p>Loading network activity data...</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {activeTab === 'mitre' && (
         <div style={{ marginBottom: '2rem' }}>
@@ -1598,8 +1473,8 @@ const SOCDashboard = ({ active, showPage }) => {
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
             <div style={{ backgroundColor: '#f8f9fa', padding: '1rem', borderBottom: '1px solid #dee2e6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600', color: 'white' }}>
-                <i className="fas fa-bell" style={{ marginRight: '0.5rem', color: 'white' }}></i>
+              <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600', color: 'black' }}>
+                <i className="fas fa-bell" style={{ marginRight: '0.5rem', color: 'yellow' }}></i>
                 Live Security Alerts
               </h3>
               <span style={{
