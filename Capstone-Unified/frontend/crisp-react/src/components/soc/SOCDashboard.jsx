@@ -1473,8 +1473,8 @@ const SOCDashboard = ({ active, showPage }) => {
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
             <div style={{ backgroundColor: '#f8f9fa', padding: '1rem', borderBottom: '1px solid #dee2e6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600', color: 'white' }}>
-                <i className="fas fa-bell" style={{ marginRight: '0.5rem', color: 'white' }}></i>
+              <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600', color: 'black' }}>
+                <i className="fas fa-bell" style={{ marginRight: '0.5rem', color: 'yellow' }}></i>
                 Live Security Alerts
               </h3>
               <span style={{
