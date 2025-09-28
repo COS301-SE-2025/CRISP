@@ -323,25 +323,32 @@ function TrustManagement({ active, initialTab = null }) {
         let trustLevelCode = '';
         let trustLevelObj = null;
         
-        // First, try to extract level from parentheses like "Basic Trust (public)" -> "public"
-        const parenthesesMatch = item.trust_level.match(/\(([^)]+)\)/);
-        if (parenthesesMatch) {
-          const extractedLevel = parenthesesMatch[1].toLowerCase().trim();
-          trustLevelObj = trustData.trustLevels.find(level => level.level === extractedLevel);
-          if (trustLevelObj) {
-            trustLevelCode = extractedLevel;
+        // Handle trust_level as either object or string
+        if (typeof item.trust_level === 'object' && item.trust_level !== null) {
+          // trust_level is an object with properties like name, level, etc.
+          trustLevelCode = item.trust_level.level || '';
+          trustLevelObj = trustData.trustLevels.find(level => level.level === trustLevelCode);
+        } else if (typeof item.trust_level === 'string') {
+          // trust_level is a string - try to extract level from parentheses like "Basic Trust (public)" -> "public"
+          const parenthesesMatch = item.trust_level.match(/\(([^)]+)\)/);
+          if (parenthesesMatch) {
+            const extractedLevel = parenthesesMatch[1].toLowerCase().trim();
+            trustLevelObj = trustData.trustLevels.find(level => level.level === extractedLevel);
+            if (trustLevelObj) {
+              trustLevelCode = extractedLevel;
+            }
           }
-        }
-        
-        // If no match from parentheses, try exact name or level matching
-        if (!trustLevelObj) {
-          trustLevelObj = trustData.trustLevels.find(
-            level => level.name.toLowerCase().trim() === item.trust_level.toLowerCase().trim() ||
-                     level.level.toLowerCase().trim() === item.trust_level.toLowerCase().trim() ||
-                     level.name === item.trust_level ||
-                     level.level === item.trust_level
-          );
-          trustLevelCode = trustLevelObj?.level || item.trust_level.toLowerCase() || '';
+          
+          // If no match from parentheses, try exact name or level matching
+          if (!trustLevelObj) {
+            trustLevelObj = trustData.trustLevels.find(
+              level => level.name.toLowerCase().trim() === item.trust_level.toLowerCase().trim() ||
+                       level.level.toLowerCase().trim() === item.trust_level.toLowerCase().trim() ||
+                       level.name === item.trust_level ||
+                       level.level === item.trust_level
+            );
+            trustLevelCode = trustLevelObj?.level || item.trust_level.toLowerCase() || '';
+          }
         }
         
         console.log('🔍 TRUST LEVEL MAPPING FOR EDIT:', {
@@ -684,11 +691,16 @@ function TrustManagement({ active, initialTab = null }) {
           action: async () => {
             try {
               // Extract trust level from the item - API expects the trust level name
-              // Format: "Public (public)" -> extract "public" from parentheses
               let trustLevelName = 'public';
               if (item.trust_level) {
-                const match = item.trust_level.match(/\(([^)]+)\)/);
-                trustLevelName = match ? match[1] : item.trust_level.toLowerCase().split(' ')[0];
+                if (typeof item.trust_level === 'object' && item.trust_level !== null) {
+                  // trust_level is an object - use the level property
+                  trustLevelName = item.trust_level.level || 'public';
+                } else if (typeof item.trust_level === 'string') {
+                  // trust_level is a string - extract from parentheses or use as-is
+                  const match = item.trust_level.match(/\(([^)]+)\)/);
+                  trustLevelName = match ? match[1] : item.trust_level.toLowerCase().split(' ')[0];
+                }
               }
               
               // Use the respond API to accept the trust relationship
@@ -715,11 +727,16 @@ function TrustManagement({ active, initialTab = null }) {
           action: async () => {
             try {
               // Extract trust level from the item - API expects the trust level name
-              // Format: "Public (public)" -> extract "public" from parentheses
               let trustLevelName = 'public';
               if (item.trust_level) {
-                const match = item.trust_level.match(/\(([^)]+)\)/);
-                trustLevelName = match ? match[1] : item.trust_level.toLowerCase().split(' ')[0];
+                if (typeof item.trust_level === 'object' && item.trust_level !== null) {
+                  // trust_level is an object - use the level property
+                  trustLevelName = item.trust_level.level || 'public';
+                } else if (typeof item.trust_level === 'string') {
+                  // trust_level is a string - extract from parentheses or use as-is
+                  const match = item.trust_level.match(/\(([^)]+)\)/);
+                  trustLevelName = match ? match[1] : item.trust_level.toLowerCase().split(' ')[0];
+                }
               }
               
               await api.updateTrustRelationship(item.id, { 
