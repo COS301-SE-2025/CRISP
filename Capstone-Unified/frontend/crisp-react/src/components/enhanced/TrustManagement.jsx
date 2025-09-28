@@ -1320,7 +1320,7 @@ function TrustManagement({ active, initialTab = null }) {
             maxHeight: '90vh',
             overflowY: 'auto'
           }}>
-            <h3 style={{ margin: '0 0 1rem 0' }}>
+            <h3 style={{ margin: '0 0 1rem 0', color: 'black' }}>
               {modalType === 'org-to-group' ? 'Add Organization to Trust Group' : 
                `${modalMode === 'add' ? 'Create' : 'Edit'} ${modalType === 'relationship' ? 'Trust Relationship' : 'Trust Group'}`}
               {modalMode === 'edit' && modalType === 'relationship' && (
@@ -1340,7 +1340,7 @@ function TrustManagement({ active, initialTab = null }) {
                 <>
                   {isAdmin && (
                     <div style={{ marginBottom: '1rem' }}>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'black' }}>
                         Source Organization *
                       </label>
                       {modalMode === 'edit' ? (
@@ -1349,8 +1349,8 @@ function TrustManagement({ active, initialTab = null }) {
                           padding: '0.5rem',
                           border: '1px solid #e9ecef',
                           borderRadius: '4px',
-                          backgroundColor: '#f8f9fa',
-                          color: '#6c757d'
+                          backgroundColor: 'white',
+                          color: 'black'
                         }}>
                           {trustData.organizations.find(org => org.id === formData.source_organization)?.name || 'Unknown Organization'}
                           <small style={{ display: 'block', fontSize: '0.875em', marginTop: '0.25rem' }}>
@@ -1366,7 +1366,9 @@ function TrustManagement({ active, initialTab = null }) {
                             width: '100%',
                             padding: '0.5rem',
                             border: '1px solid #ced4da',
-                            borderRadius: '4px'
+                            borderRadius: '4px',
+                            backgroundColor: 'white',
+                            color: 'black'
                           }}
                         >
                           <option value="">Select Source Organization</option>
@@ -1379,7 +1381,7 @@ function TrustManagement({ active, initialTab = null }) {
                   )}
                   
                   <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'black' }}>
                       Target Organization *
                     </label>
                     {modalMode === 'edit' ? (
@@ -1417,7 +1419,7 @@ function TrustManagement({ active, initialTab = null }) {
                   </div>
                   
                   <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'black' }}>
                       Trust Level *
                     </label>
                     <select
@@ -1431,7 +1433,9 @@ function TrustManagement({ active, initialTab = null }) {
                         width: '100%',
                         padding: '0.5rem',
                         border: '1px solid #ced4da',
-                        borderRadius: '4px'
+                        borderRadius: '4px',
+                        backgroundColor: 'white',
+                        color: 'black'
                       }}
                     >
                       <option value="">Select Trust Level</option>
@@ -1448,7 +1452,7 @@ function TrustManagement({ active, initialTab = null }) {
                   </div>
                   
                   <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'black' }}>
                       Relationship Type
                     </label>
                     {modalMode === 'edit' ? (
@@ -1483,7 +1487,7 @@ function TrustManagement({ active, initialTab = null }) {
                   </div>
                   
                   <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'black' }}>
                       Notes
                     </label>
                     <textarea
@@ -1496,7 +1500,9 @@ function TrustManagement({ active, initialTab = null }) {
                         padding: '0.5rem',
                         border: '1px solid #ced4da',
                         borderRadius: '4px',
-                        resize: 'vertical'
+                        resize: 'vertical',
+                        backgroundColor: 'white',
+                        color: 'black'
                       }}
                     />
                   </div>
@@ -1506,7 +1512,7 @@ function TrustManagement({ active, initialTab = null }) {
               {modalType === 'group' && (
                 <>
                   <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'black' }}>
                       Group Name *
                     </label>
                     <input
@@ -1519,13 +1525,15 @@ function TrustManagement({ active, initialTab = null }) {
                         width: '100%',
                         padding: '0.5rem',
                         border: '1px solid #ced4da',
-                        borderRadius: '4px'
+                        borderRadius: '4px',
+                        backgroundColor: 'white',
+                        color: 'black'
                       }}
                     />
                   </div>
                   
                   <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'black' }}>
                       Description
                     </label>
                     <textarea
@@ -1538,13 +1546,15 @@ function TrustManagement({ active, initialTab = null }) {
                         padding: '0.5rem',
                         border: '1px solid #ced4da',
                         borderRadius: '4px',
-                        resize: 'vertical'
+                        resize: 'vertical',
+                        backgroundColor: 'white',
+                        color: 'black'
                       }}
                     />
                   </div>
                   
                   <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'black' }}>
                       Group Type
                     </label>
                     <select
@@ -1554,7 +1564,9 @@ function TrustManagement({ active, initialTab = null }) {
                         width: '100%',
                         padding: '0.5rem',
                         border: '1px solid #ced4da',
-                        borderRadius: '4px'
+                        borderRadius: '4px',
+                        backgroundColor: 'white',
+                        color: 'black'
                       }}
                     >
                       <option value="industry">Industry</option>
@@ -1565,7 +1577,7 @@ function TrustManagement({ active, initialTab = null }) {
                   </div>
                   
                   <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'black' }}>
                       Trust Level (Optional)
                     </label>
                     <select
@@ -1575,7 +1587,9 @@ function TrustManagement({ active, initialTab = null }) {
                         width: '100%',
                         padding: '0.5rem',
                         border: '1px solid #ced4da',
-                        borderRadius: '4px'
+                        borderRadius: '4px',
+                        backgroundColor: 'white',
+                        color: 'black'
                       }}
                     >
                       <option value="">Default (Public)</option>
@@ -1589,7 +1603,7 @@ function TrustManagement({ active, initialTab = null }) {
                   </div>
                   
                   <div style={{ marginBottom: '1rem', display: 'flex', gap: '1rem' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'black' }}>
                       <input
                         type="checkbox"
                         checked={formData.is_public}
@@ -1598,7 +1612,7 @@ function TrustManagement({ active, initialTab = null }) {
                       Public Group
                     </label>
                     
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'black' }}>
                       <input
                         type="checkbox"
                         checked={formData.requires_approval}
@@ -1613,7 +1627,7 @@ function TrustManagement({ active, initialTab = null }) {
               {modalType === 'org-to-group' && (
                 <>
                   <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'black' }}>
                       Select Organization *
                     </label>
                     <select
@@ -1624,7 +1638,9 @@ function TrustManagement({ active, initialTab = null }) {
                         width: '100%',
                         padding: '0.5rem',
                         border: '1px solid #ced4da',
-                        borderRadius: '4px'
+                        borderRadius: '4px',
+                        backgroundColor: 'white',
+                        color: 'black'
                       }}
                     >
                       <option value="">Select Organization</option>
@@ -1635,7 +1651,7 @@ function TrustManagement({ active, initialTab = null }) {
                   </div>
                   
                   <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'black' }}>
                       Select Trust Group *
                     </label>
                     <select
@@ -1646,7 +1662,9 @@ function TrustManagement({ active, initialTab = null }) {
                         width: '100%',
                         padding: '0.5rem',
                         border: '1px solid #ced4da',
-                        borderRadius: '4px'
+                        borderRadius: '4px',
+                        backgroundColor: 'white',
+                        color: 'black'
                       }}
                     >
                       <option value="">Select Trust Group</option>
