@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import CRISPApp from "./App.jsx";
+import TestApp from "./TestApp.jsx";
 import RegisterUser from "./RegisterUser.jsx";
 import CrispLogin from "./crisp_login.jsx";
 import LandingPage from "./LandingPage.jsx";
@@ -164,16 +165,17 @@ function AuthRoutesWithNotifications() {
 
   return (
     <NotificationProvider>
-      <SessionTimeout 
+      {/* DISABLE PERFORMANCE-HEAVY COMPONENTS FOR LOGIN PERFORMANCE */}
+      {/* <SessionTimeout
         isAuthenticated={isAuthenticated}
         onLogout={handleLogout}
         timeoutMinutes={10}
         warningMinutes={2}
-      />
-      {/* Notification watcher only when authenticated */}
-      {isAuthenticated && userData && (
+      /> */}
+      {/* Notification watcher disabled for performance */}
+      {/* {isAuthenticated && userData && (
         <NotificationWatcher user={userData} />
-      )}
+      )} */}
       <Routes>
         {/* Landing page route - redirect to dashboard if authenticated */}
         <Route
@@ -360,7 +362,8 @@ function AuthWrapper() {
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
+  // TEMPORARILY DISABLE STRICT MODE FOR PERFORMANCE
+  // <React.StrictMode>
     <AuthWrapper />
-  </React.StrictMode>
+  // </React.StrictMode>
 );

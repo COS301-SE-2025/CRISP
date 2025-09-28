@@ -15,7 +15,7 @@ class RefreshManager {
     // Track user activity to pause refreshing when inactive
     this.setupActivityTracking();
 
-    // Start smart background refresh (60s instead of multiple 5-30s timers)
+    // Start smart background refresh (300s instead of multiple 5-30s timers)
     this.startGlobalRefresh();
   }
 
@@ -35,16 +35,19 @@ class RefreshManager {
     setInterval(() => {
       const inactiveTime = Date.now() - this.lastActivity;
       this.isActive = inactiveTime < 300000; // 5 minutes
-    }, 30000);
+    }, 60000); // Check less frequently
   }
 
   startGlobalRefresh() {
-    // Reduce polling frequency to prevent performance issues
+    // Significantly reduce polling frequency to prevent performance issues
+    // TEMPORARILY DISABLED - Global refresh disabled to prevent performance issues
+    /*
     this.globalInterval = setInterval(() => {
       if (this.isActive && !this.isProcessing && this.subscribers.size > 0) {
         this.processBackgroundRefresh();
       }
-    }, 60000); // 60 seconds - much less aggressive polling
+    }, 300000); // 5 minutes - much less aggressive polling
+    */
   }
 
   async processBackgroundRefresh() {
@@ -116,24 +119,24 @@ class RefreshManager {
     });
 
     // Reduce console spam for better performance
-    console.debug(`RefreshManager: Subscribed ${key}`);
+    // console.debug(`RefreshManager: Subscribed ${key}`);
   }
 
   unsubscribe(key) {
     this.subscribers.delete(key);
-    console.debug(`RefreshManager: Unsubscribed ${key}`);
+    // console.debug(`RefreshManager: Unsubscribed ${key}`);
   }
 
   // Immediate refresh triggered by user actions
   async triggerRefresh(keys, reason = 'user_action') {
     if (!Array.isArray(keys)) keys = [keys];
 
-    console.debug(`🔄 RefreshManager: Triggering refresh for [${keys.join(', ')}] - ${reason}`);
+    // console.debug(`🔄 RefreshManager: Triggering refresh for [${keys.join(', ')}] - ${reason}`);
 
     for (const key of keys) {
       const subscriber = this.subscribers.get(key);
       if (subscriber) {
-        console.debug(`✅ RefreshManager: Refreshing '${key}'`);
+        // console.debug(`✅ RefreshManager: Refreshing '${key}'`);
         await this.safeRefresh(subscriber);
         subscriber.lastRefresh = Date.now();
       } else {

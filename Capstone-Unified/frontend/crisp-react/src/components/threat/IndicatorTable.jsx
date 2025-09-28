@@ -41,7 +41,7 @@ const IndicatorTable = () => {
             const lastUpdateDate = new Date(lastUpdate);
             const lastCheckDate = lastSyncCheck ? new Date(lastSyncCheck) : null;
 
-            console.log('🔍 Sync check:', {
+            // console.log('🔍 Sync check:', {
               lastUpdate: lastUpdate,
               lastSyncCheck: lastSyncCheck,
               shouldRefresh: !lastCheckDate || lastUpdateDate > lastCheckDate
@@ -59,7 +59,7 @@ const IndicatorTable = () => {
               // Mark this update as seen
               await markUpdateSeen('indicators_updated', lastUpdate);
             } else {
-              console.log('📊 No new indicators since last check');
+              // console.log('📊 No new indicators since last check');
             }
           } else {
             console.log('⏸️ No indicators_updated in response:', updateData);
@@ -72,7 +72,7 @@ const IndicatorTable = () => {
           setLastRefresh(new Date());
           setRefreshing(false);
         }
-      }, 60000); // Reduced to 60 seconds to prevent performance issues
+      }, 600000); // 10 minutes to dramatically prevent performance issues
     }
     return () => {
       if (interval) clearInterval(interval);
@@ -136,12 +136,12 @@ const IndicatorTable = () => {
         queryParams.search = searchTerm;
       }
 
-      console.log('🔍 Fetching indicators with params:', queryParams);
+      // console.log('🔍 Fetching indicators with params:', queryParams);
 
       // Use the proper API function
       const indicatorsData = await getIndicators(queryParams);
 
-      console.log('📡 Indicators API response:', indicatorsData);
+      // console.log('📡 Indicators API response:', indicatorsData);
 
       // Handle different response formats for indicators
       let indicatorsList = Array.isArray(indicatorsData) ? indicatorsData :
@@ -149,7 +149,7 @@ const IndicatorTable = () => {
 
       // Debug: Log the first indicator to see its structure
       if (indicatorsList.length > 0) {
-        console.log('🔍 First indicator structure:', indicatorsList[0]);
+        // console.log('🔍 First indicator structure:', indicatorsList[0]);
       }
 
       // Transform indicators to consistent format
@@ -196,7 +196,7 @@ const IndicatorTable = () => {
         );
       }
 
-      console.log(`📊 Setting ${filteredIndicators.length} indicators (${sharedIndicators.length} shared)`);
+      // console.log(`📊 Setting ${filteredIndicators.length} indicators (${sharedIndicators.length} shared)`);
       setIndicators(filteredIndicators);
 
       // Clear error if fetch was successful

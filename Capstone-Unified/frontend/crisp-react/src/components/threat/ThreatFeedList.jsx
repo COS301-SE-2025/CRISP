@@ -59,7 +59,7 @@ const ThreatFeedList = () => {
     } finally {
       setLoading(false);
     }
-  }, [filter, previousFeedStates]);
+  }, [filter]); // Remove previousFeedStates dependency that caused infinite loops
 
   useEffect(() => {
     fetchFeeds();
@@ -72,22 +72,22 @@ const ThreatFeedList = () => {
       isVisible: () => true // This component is visible when mounted
     });
 
-    console.log('🔄 ThreatFeedList: Subscribed to RefreshManager');
+    // console.log('🔄 ThreatFeedList: Subscribed to RefreshManager');
 
     return () => {
       refreshManager.unsubscribe('threat-feeds');
-      console.log('🔄 ThreatFeedList: Unsubscribed from RefreshManager');
+      // console.log('🔄 ThreatFeedList: Unsubscribed from RefreshManager');
     };
   }, [fetchFeeds]);
 
-  // Smart polling only when needed - much less aggressive
+  // Disable aggressive polling - use RefreshManager instead
   useEffect(() => {
     if (consumingFeeds.size > 0) {
-      // Only poll while we have locally tracked consuming feeds
+      // Only poll while we have locally tracked consuming feeds - but much less aggressively
       const intervalId = setInterval(() => {
-        console.log('🔄 Checking status for locally tracked consuming feeds');
+        // console.log('🔄 Checking status for locally tracked consuming feeds');
         fetchFeeds();
-      }, 30000); // Reduce to 30 seconds to prevent performance issues
+      }, 300000); // 5 minutes instead of 30 seconds
 
       setPollIntervalId(intervalId);
 

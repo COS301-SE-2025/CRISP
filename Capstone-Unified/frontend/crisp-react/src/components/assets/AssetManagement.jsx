@@ -785,7 +785,7 @@ const AssetManagement = ({ active }) => {
     if (active && activeTab === 'alerts') {
       const interval = setInterval(() => {
         fetchData();
-      }, 30000); // Refresh every 30 seconds
+      }, 300000); // Refresh every 5 minutes instead of 30 seconds
       setRefreshInterval(interval);
       return () => clearInterval(interval);
     } else if (refreshInterval) {

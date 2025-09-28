@@ -115,12 +115,12 @@ const SOCDashboard = ({ active, showPage }) => {
   };
 
   const setupRealTimeRefresh = () => {
-    // Refresh data every 2 minutes to reduce server load
-    intervalRef.current = setInterval(() => {
-      fetchDashboardData();
-      fetchSystemHealth();
-      fetchNetworkActivity();
-    }, 120000);
+    // Use RefreshManager instead of individual polling - disable this interval
+    // intervalRef.current = setInterval(() => {
+    //   fetchDashboardData();
+    //   fetchSystemHealth();
+    //   fetchNetworkActivity();
+    // }, 120000);
   };
 
   const fetchDashboardData = async () => {

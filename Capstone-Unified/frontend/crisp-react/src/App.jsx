@@ -281,10 +281,10 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
       const indicators = Array.isArray(indicatorsResponse) ? indicatorsResponse :
                         (indicatorsResponse.results?.indicators || indicatorsResponse.results || indicatorsResponse.data || []);
 
-      console.log('Organizations response:', organizations); // Debug log
-      console.log('Users response:', users); // Debug log
-      console.log('Threat feeds response:', threatFeeds); // Debug log
-      console.log('Indicators response:', indicators); // Debug log
+      // console.log('Organizations response:', organizations); // Debug log
+      // console.log('Users response:', users); // Debug log
+      // console.log('Threat feeds response:', threatFeeds); // Debug log
+      // console.log('Indicators response:', indicators); // Debug log
 
       const results = [];
 
@@ -381,25 +381,25 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
     if (searchQuery.trim()) {
       setShowSearchDropdown(false);
       // You can navigate to a search results page here if needed
-      console.log('Search submitted:', searchQuery);
+      // console.log('Search submitted:', searchQuery);
     }
   };
 
   const handleSearchResultClick = (item) => {
-    console.log('🔍 Search Result Clicked:', item);
+    // // console.log('🔍 Search Result Clicked:', item);
     setShowSearchDropdown(false);
     setSearchQuery('');
 
     if (item.type === 'organization') {
-      console.log('🏢 Navigating to organization:', item.orgData);
+      // console.log('🏢 Navigating to organization:', item.orgData);
       // Navigate to organisation management and trigger modal for the specific org
       showPage('organisation-management', 'viewOrganization', { organization: item.orgData });
     } else if (item.type === 'user') {
-      console.log('👤 Navigating to user:', item.userData);
+      // console.log('👤 Navigating to user:', item.userData);
       // Navigate to user management and trigger modal for the specific user
       showPage('user-management', 'viewUser', { user: item.userData });
     } else if (item.type === 'threat-feed') {
-      console.log('🛡️ Navigating to threat feed:', item.feedData);
+      // console.log('🛡️ Navigating to threat feed:', item.feedData);
       // Navigate to threat feeds page and highlight the specific feed
       showPage('threat-feeds', 'highlightFeed', {
         feedId: item.id,
@@ -407,7 +407,7 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
         feedData: item.feedData
       });
     } else if (item.type === 'indicator') {
-      console.log('⚠️ Navigating to indicator:', item.indicatorData);
+      // console.log('⚠️ Navigating to indicator:', item.indicatorData);
       // Navigate to IoC management page and highlight the specific indicator
       showPage('ioc-management', 'highlightIndicator', {
         indicatorId: item.id,
@@ -466,8 +466,8 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
   useEffect(() => {
     fetchUnreadCount(); // Initial fetch
     
-    // Fetch every 2 minutes to reduce server load
-    const interval = setInterval(fetchUnreadCount, 120000);
+    // Fetch every 10 minutes to dramatically reduce server load
+    const interval = setInterval(fetchUnreadCount, 600000); // 10 minutes instead of 2
     
     return () => clearInterval(interval);
   }, []);
@@ -893,7 +893,7 @@ function Header({
                 <div className="menu-divider"></div>
                 <button className="menu-item logout-item" onClick={() => {
                   setShowUserMenu(false); 
-                  console.log('Logout button clicked - onLogout:', onLogout, typeof onLogout);
+                  // console.log('Logout button clicked - onLogout:', onLogout, typeof onLogout);
                   if (typeof onLogout === 'function') {
                     onLogout();
                   } else {
@@ -925,7 +925,7 @@ function MainNav({ activePage, showPage, user, onLogout, isAdmin }) {
     };
     
     checkStatus();
-    const statusInterval = setInterval(checkStatus, 120000); // Check every 2 minutes
+    const statusInterval = setInterval(checkStatus, 600000); // Check every 10 minutes instead of 2
     
     return () => clearInterval(statusInterval);
   }, []);
@@ -1101,7 +1101,7 @@ function Dashboard({ active, showPage, user }) {
 
       // Subscribe to RefreshManager for dashboard
       refreshManager.subscribe('dashboard', () => {
-        console.log('🔄 RefreshManager: Refreshing dashboard data');
+        // // console.log('🔄 RefreshManager: Refreshing dashboard data');
         fetchChartData();
         fetchDashboardData();
       }, {
@@ -1135,24 +1135,25 @@ function Dashboard({ active, showPage, user }) {
     const token = localStorage.getItem('crisp_auth_token');
     if (!token) return;
     
-    const interval = setInterval(() => {
-      const currentToken = localStorage.getItem('crisp_auth_token');
-      if (currentToken) {
-        fetchSystemHealth();
-      }
-    }, 5 * 60 * 1000); // 5 minutes instead of 30 seconds
-    
-    return () => clearInterval(interval);
+    // DISABLED FOR PERFORMANCE - Use RefreshManager instead
+    // const interval = setInterval(() => {
+    //   const currentToken = localStorage.getItem('crisp_auth_token');
+    //   if (currentToken) {
+    //     fetchSystemHealth();
+    //   }
+    // }, 5 * 60 * 1000);
+
+    // return () => clearInterval(interval);
   }, [active]);
   
   const fetchDashboardData = async () => {
     try {
       setDashboardLoading(true);
-      console.log('🔄 Fetching optimized dashboard data...');
+      // // console.log('🔄 Fetching optimized dashboard data...');
       const response = await api.get('/api/dashboard-stats/');
 
       if (response && response.success && response.data) {
-        console.log(`📈 Dashboard stats loaded: ${response.data.indicators} indicators, ${response.data.ttps} TTPs, ${response.data.threat_feeds} feeds`);
+        // // console.log(`📈 Dashboard stats loaded: ${response.data.indicators} indicators, ${response.data.ttps} TTPs, ${response.data.threat_feeds} feeds`);
 
         setDashboardStats({
           threat_feeds: response.data.threat_feeds,
@@ -1270,7 +1271,7 @@ function Dashboard({ active, showPage, user }) {
         setChartSummary(response.summary);
 
         // Chart updated successfully
-        console.log('📊 Chart updated successfully');
+        // // console.log('📊 Chart updated successfully');
 
         // Redraw chart with new data
         if (chartRef.current) {
@@ -1525,12 +1526,13 @@ function Dashboard({ active, showPage, user }) {
   useEffect(() => {
     if (!active) return;
 
-    const interval = setInterval(() => {
-      console.log('Auto-refreshing chart data...');
-      fetchChartData();
-    }, 5 * 60 * 1000); // 5 minutes
+    // DISABLED FOR PERFORMANCE
+    // const interval = setInterval(() => {
+    //   console.log('Auto-refreshing chart data...');
+    //   fetchChartData();
+    // }, 5 * 60 * 1000);
 
-    return () => clearInterval(interval);
+    // return () => clearInterval(interval);
   }, [active, chartFilters]);
 
   // Handle window resize for responsive chart
@@ -2967,23 +2969,23 @@ function ThreatFeeds({
       );
 
       if (hasRunningFeeds) {
-        console.log('🔄 Found running feeds, refreshing status...');
+        // // console.log('🔄 Found running feeds, refreshing status...');
         fetchThreatFeeds();
       }
     };
 
-    // Only start polling if we have loaded data
+    // Only start polling if we have loaded data - DISABLED for performance
     if (threatFeeds.length > 0) {
-      // Check for running feeds every 60 seconds to reduce API load and improve performance
-      intervalId = setInterval(checkRunningFeeds, 60000);
-      console.log('📡 Started polling for running feed status updates');
+      // Check for running feeds every 5 minutes instead of 60 seconds to dramatically reduce API load
+      intervalId = setInterval(checkRunningFeeds, 300000); // 5 minutes instead of 1 minute
+      // // console.log('📡 Started polling for running feed status updates');
     }
 
     // Cleanup interval when component unmounts or dependencies change
     return () => {
       if (intervalId) {
         clearInterval(intervalId);
-        console.log('🛑 Stopped polling for feed status updates');
+        // console.log('🛑 Stopped polling for feed status updates');
       }
     };
   }, [threatFeeds]); // Re-run when threatFeeds changes
@@ -2994,7 +2996,7 @@ function ThreatFeeds({
 
     // Also expose manual refresh all for debugging
     window.refreshAllComponents = () => {
-      console.log('🔄 Manual refresh triggered for all components');
+      // // console.log('🔄 Manual refresh triggered for all components');
       refreshManager.refreshAll();
     };
   }, [clearCachedState]);
@@ -3016,14 +3018,14 @@ function ThreatFeeds({
   // Fetch threat feeds from backend when component becomes active
   useEffect(() => {
     if (active && !hasLoadedData) {
-      console.log('🔄 ThreatFeeds: Fetching data...');
+      // // console.log('🔄 ThreatFeeds: Fetching data...');
       fetchThreatFeeds();
     }
 
     // Subscribe to RefreshManager for cross-component updates
     if (active) {
       refreshManager.subscribe('threat-feeds', () => {
-        console.log('🔄 RefreshManager: Refreshing threat feeds data');
+        // // console.log('🔄 RefreshManager: Refreshing threat feeds data');
         fetchThreatFeeds();
       }, {
         backgroundRefresh: true,
@@ -3052,16 +3054,16 @@ function ThreatFeeds({
 
       // Set filter to search for the specific feed
       setFilters(prev => ({ ...prev, search: feedName }));
-      console.log('🔍 ThreatFeeds: Set search filter to:', feedName);
+      // console.log('🔍 ThreatFeeds: Set search filter to:', feedName);
 
       // Show a notification about the highlighted feed
       setTimeout(() => {
         const feedElement = document.querySelector(`[data-feed-id="${feedId}"]`);
-        console.log('🎯 ThreatFeeds: Looking for feed element with ID:', feedId, 'Found:', !!feedElement);
+        // console.log('🎯 ThreatFeeds: Looking for feed element with ID:', feedId, 'Found:', !!feedElement);
         if (feedElement) {
           feedElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
           feedElement.style.animation = 'highlight 2s ease-in-out';
-          console.log('✅ ThreatFeeds: Highlighted feed element');
+          // // console.log('✅ ThreatFeeds: Highlighted feed element');
         }
       }, 500);
 
@@ -3133,25 +3135,25 @@ function ThreatFeeds({
   }, []);
 
   const fetchThreatFeeds = async () => {
-    console.log('🔄 Fetching threat feeds...');
+    // // console.log('🔄 Fetching threat feeds...');
     setLoading(true);
     try {
       // Add cache busting timestamp
       const cacheBuster = Date.now();
       const data = await api.get(`/api/threat-feeds/?t=${cacheBuster}`);
-      console.log('📡 API response:', data);
-      console.log('📊 API response details:', {
-        count: data.count,
-        results_length: data.results?.length,
-        results: data.results
-      });
+      // // console.log('📡 API response:', data);
+      // // console.log('📊 API response details:', {
+      //   count: data.count,
+      //   results_length: data.results?.length,
+      //   results: data.results
+      // });
       if (data && data.results) {
-        console.log(`✅ Found ${data.results.length} threat feeds, updating state...`);
-        console.log('📋 Feed names:', data.results.map(f => f.name));
-        console.log('🔄 Current threatFeeds state before update:', threatFeeds.length);
+        // // console.log(`✅ Found ${data.results.length} threat feeds, updating state...`);
+        // // console.log('📋 Feed names:', data.results.map(f => f.name));
+        // // console.log('🔄 Current threatFeeds state before update:', threatFeeds.length);
         setThreatFeeds(data.results);
         setRefreshTrigger(prev => prev + 1); // Force re-render
-        console.log('✅ Threat feeds state updated');
+        // // console.log('✅ Threat feeds state updated');
         
         // Mark data as loaded
         setHasLoadedData(true);
@@ -3161,7 +3163,7 @@ function ThreatFeeds({
         
         // Force a re-render by updating a dummy state
         setTimeout(() => {
-          console.log('🔄 Force checking state after update:', threatFeeds.length);
+          // // console.log('🔄 Force checking state after update:', threatFeeds.length);
         }, 100);
       } else {
         console.warn('⚠️ No threat feeds data found in response');
@@ -3174,7 +3176,7 @@ function ThreatFeeds({
 
   const fetchFeedConsumptionStatus = async (feeds) => {
     try {
-      console.log('🔄 Fetching consumption status for all feeds...');
+      // // console.log('🔄 Fetching consumption status for all feeds...');
       
       // Import the API function
       const { getFeedConsumptionStatus } = await import('./api.js');
@@ -3204,13 +3206,13 @@ function ThreatFeeds({
 
       statusResults.forEach(({ feedId, status }) => {
         if (status && status.success) {
-          console.log(`🔍 Feed ${feedId} status recovery:`, {
-            consumption_status: status.consumption_status,
-            current_task_id: status.current_task_id,
-            can_be_paused: status.can_be_paused,
-            can_be_resumed: status.can_be_resumed,
-            is_consuming: status.is_consuming
-          });
+          // console.log(`🔍 Feed ${feedId} status recovery:`, {
+          //   consumption_status: status.consumption_status,
+          //   current_task_id: status.current_task_id,
+          //   can_be_paused: status.can_be_paused,
+          //   can_be_resumed: status.can_be_resumed,
+          //   is_consuming: status.is_consuming
+          // });
 
           // Check if feed just completed (was running/consuming, now idle)
           const wasConsuming = consumingFeeds.includes(feedId);
@@ -3223,19 +3225,19 @@ function ThreatFeeds({
                                           status.consumption_status === 'completed' ||
                                           status.consumption_status === 'finished';
 
-          console.log(`🔍 Feed ${feedId} completion check:`, {
-            wasConsuming,
-            currentStatus: status.consumption_status,
-            isConsuming: status.is_consuming,
-            taskId: status.current_task_id,
-            isNowIdle,
-            hasNoActiveTask,
-            notCurrentlyConsuming,
-            statusIndicatesCompletion
-          });
+          // // console.log(`🔍 Feed ${feedId} completion check:`, {
+          //   wasConsuming,
+          //   currentStatus: status.consumption_status,
+          //   isConsuming: status.is_consuming,
+          //   taskId: status.current_task_id,
+          //   isNowIdle,
+          //   hasNoActiveTask,
+          //   notCurrentlyConsuming,
+          //   statusIndicatesCompletion
+          // });
 
           if (wasConsuming && (isNowIdle || (hasNoActiveTask && notCurrentlyConsuming && statusIndicatesCompletion))) {
-            console.log(`🎉 Feed ${feedId} just completed! Triggering completion actions...`);
+            // console.log(`🎉 Feed ${feedId} just completed! Triggering completion actions...`);
             completedFeeds.push({ feedId, feedName: feeds.find(f => f.id === feedId)?.name || `Feed ${feedId}` });
 
             // Also remove from consuming feeds list to prevent duplicate detection
@@ -3287,12 +3289,12 @@ function ThreatFeeds({
           ...prev,
           ...progressUpdates
         }));
-        console.log(`✅ Updated status for ${Object.keys(progressUpdates).length} feeds`);
+        // // console.log(`✅ Updated status for ${Object.keys(progressUpdates).length} feeds`);
       }
 
       // Handle completed feeds - trigger notifications and dashboard refresh
       if (completedFeeds.length > 0) {
-        console.log(`🎉 Processing ${completedFeeds.length} completed feeds...`);
+        // console.log(`🎉 Processing ${completedFeeds.length} completed feeds...`);
 
         for (const { feedId, feedName } of completedFeeds) {
           // Show completion notification
@@ -3316,10 +3318,10 @@ function ThreatFeeds({
           refreshManager.triggerRefresh(['dashboard', 'notifications'], 'feed_completion_detected');
 
           // Force immediate dashboard data refresh to update stats
-          console.log('🔄 Force refreshing dashboard stats after feed completion');
+          // // console.log('🔄 Force refreshing dashboard stats after feed completion');
           try {
             await fetchDashboardData();
-            console.log('✅ Dashboard stats refreshed successfully');
+            // // console.log('✅ Dashboard stats refreshed successfully');
           } catch (error) {
             console.warn('⚠️ Dashboard stats refresh failed:', error);
           }
@@ -3334,7 +3336,7 @@ function ThreatFeeds({
         });
 
         if (stuckFeeds.length > 0) {
-          console.log(`🔍 Found ${stuckFeeds.length} stuck cancelling feeds, checking their status...`);
+          // // console.log(`🔍 Found ${stuckFeeds.length} stuck cancelling feeds, checking their status...`);
 
           for (const feedId of stuckFeeds) {
             const progress = feedProgress[feedId];
@@ -3358,7 +3360,7 @@ function ThreatFeeds({
             } catch (error) {
               console.error(`Error checking stuck task ${progress.taskId}:`, error);
               // If we can't check the task, assume it's dead and clean it up
-              console.log(`🧹 Force cleaning up unreachable task for feed ${feedId}`);
+              // console.log(`🧹 Force cleaning up unreachable task for feed ${feedId}`);
 
               setFeedProgress(prev => {
                 const newProgress = { ...prev };
@@ -3426,7 +3428,7 @@ function ThreatFeeds({
                 delete newProgress[feedId];
                 return newProgress;
               });
-            }, 3000);
+            }, 30000); // 30 seconds instead of 3 seconds
 
             // Refresh feeds to update status
             await fetchThreatFeeds();
@@ -3485,7 +3487,7 @@ function ThreatFeeds({
                       delete newProgress[feedId];
                       return newProgress;
                     });
-                  }, 3000);
+                  }, 30000); // 30 seconds instead of 3 seconds
 
                   // Refresh feeds to update status
                   await fetchThreatFeeds();
@@ -3521,7 +3523,7 @@ function ThreatFeeds({
                     delete newProgress[feedId];
                     return newProgress;
                   });
-                }, 3000);
+                }, 30000); // 30 seconds instead of 3 seconds
 
                 // Refresh feeds to update status
                 await fetchThreatFeeds();
@@ -3554,11 +3556,11 @@ function ThreatFeeds({
                   delete newProgress[feedId];
                   return newProgress;
                 });
-              }, 3000);
+              }, 30000); // 30 seconds instead of 3 seconds
 
               await fetchThreatFeeds();
             }
-          }, 2000); // Poll every 2 seconds
+          }, 30000); // Poll every 30 seconds instead of 2
 
           // Clear polling after 15 seconds max
           setTimeout(() => {
@@ -3581,7 +3583,7 @@ function ThreatFeeds({
                 delete newProgress[feedId];
                 return newProgress;
               });
-            }, 3000);
+            }, 30000); // 30 seconds instead of 3 seconds
           }, 15000);
         }
       } else {
@@ -3884,7 +3886,7 @@ function ThreatFeeds({
 
           // Start polling for background status instead of removing
           setTimeout(() => {
-            console.log(`🔄 Starting background status polling for feed ${feedId}`);
+            // // console.log(`🔄 Starting background status polling for feed ${feedId}`);
             // Trigger immediate status refresh to show running state
             fetchThreatFeeds();
             // Also trigger related component refresh
@@ -3941,10 +3943,10 @@ function ThreatFeeds({
           refreshManager.triggerRefresh(['dashboard', 'notifications'], 'feed_consumption_completed_direct');
 
           // Force immediate dashboard data refresh to update Active IoCs count
-          console.log('🔄 Force refreshing dashboard stats after feed consumption');
+          // // console.log('🔄 Force refreshing dashboard stats after feed consumption');
           try {
             await fetchDashboardData();
-            console.log('✅ Dashboard stats refreshed successfully');
+            // // console.log('✅ Dashboard stats refreshed successfully');
           } catch (error) {
             console.warn('⚠️ Dashboard stats refresh failed:', error);
           }
@@ -3961,7 +3963,7 @@ function ThreatFeeds({
             if (timeoutIndex > -1) {
               activeTimeouts.current.splice(timeoutIndex, 1);
             }
-          }, 3000); // Show completion for 3 seconds
+          }, 30000); // 30 seconds instead of 3 seconds // Show completion for 3 seconds
           activeTimeouts.current.push(completionTimeout);
           
           // Refresh feeds after consumption
@@ -4110,7 +4112,7 @@ function ThreatFeeds({
               });
             }
           }
-        }, 2000); // Poll every 2 seconds
+        }, 30000); // Poll every 30 seconds instead of 2
         activeIntervals.current.push(progressInterval);
         
         // Set a maximum timeout to prevent infinite polling
@@ -4181,13 +4183,13 @@ function ThreatFeeds({
     try {
       const result = await api.delete(`/api/threat-feeds/${feedToDelete.id}/`);
       if (result !== null) {
-        console.log('✅ Feed deleted successfully:', feedToDelete.name);
+        // // console.log('✅ Feed deleted successfully:', feedToDelete.name);
         
         // Show success notification
         showSuccess('Feed Deleted', `Threat feed "${feedToDelete.name}" has been deleted successfully.`);
         
         // Refresh the threat feeds list to remove the deleted feed immediately
-        console.log('🔄 Forcing refresh by clearing state first...');
+        // // console.log('🔄 Forcing refresh by clearing state first...');
         setThreatFeeds([]); // Clear first to force re-render
         
         // Small delay to ensure database transaction is committed
@@ -4205,7 +4207,7 @@ function ThreatFeeds({
         // Also trigger dashboard directly to ensure it refreshes
         refreshManager.triggerRefresh(['dashboard'], 'feed_deleted_direct');
 
-        console.log('✅ Threat feeds list refreshed after deletion and related components updated');
+        // console.log('✅ Threat feeds list refreshed after deletion and related components updated');
 
         // Close modal
         closeDeleteFeedModal();
@@ -4258,15 +4260,15 @@ function ThreatFeeds({
       const result = await api.post('/api/threat-feeds/', cleanedFormData);
       console.log('📤 POST result:', result);
       if (result) {
-        console.log('✅ Feed added successfully, refreshing list...');
+        // // console.log('✅ Feed added successfully, refreshing list...');
         console.log('🆔 New feed ID:', result.id);
-        console.log('📋 New feed name:', result.name);
-        console.log('🔍 Result object details:', {
-          id: result.id,
-          name: result.name,
-          is_external: result.is_external,
-          created_at: result.created_at
-        });
+        // console.log('📋 New feed name:', result.name);
+        // console.log('🔍 Result object details:', {
+        //   id: result.id,
+        //   name: result.name,
+        //   is_external: result.is_external,
+        //   created_at: result.created_at
+        // });
         
         // Show success notification
         showSuccess('Feed Added', `Threat feed "${cleanedFormData.name}" has been added successfully.`);
@@ -4286,7 +4288,7 @@ function ThreatFeeds({
           taxii_password: ''
         });
         // Refresh the threat feeds list to show the new feed immediately
-        console.log('🔄 Forcing refresh by clearing state first...');
+        // // console.log('🔄 Forcing refresh by clearing state first...');
         setThreatFeeds([]); // Clear first to force re-render
         
         // Small delay to ensure database transaction is committed
@@ -4297,7 +4299,7 @@ function ThreatFeeds({
         setHasLoadedData(false);
         
         await fetchThreatFeeds();
-        console.log('✅ Threat feeds list refreshed');
+        // console.log('✅ Threat feeds list refreshed');
       }
     } catch (error) {
       console.error('Error adding threat feed:', error);
@@ -5081,7 +5083,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
 
       // Subscribe to RefreshManager for indicators
       refreshManager.subscribe('indicators', () => {
-        console.log('🔄 RefreshManager: Refreshing indicators data');
+        // console.log('🔄 RefreshManager: Refreshing indicators data');
         fetchIndicators(currentPage, itemsPerPage);
       }, {
         backgroundRefresh: true,
@@ -5107,7 +5109,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
 
       // Set search filter to find the specific indicator
       setFilters(prev => ({ ...prev, searchTerm: indicatorValue }));
-      console.log('🔍 IoCManagement: Set search filter to:', indicatorValue);
+      // console.log('🔍 IoCManagement: Set search filter to:', indicatorValue);
 
       // Scroll to the indicator if it exists in the DOM
       setTimeout(() => {
@@ -5116,7 +5118,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
         if (indicatorElement) {
           indicatorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
           indicatorElement.style.animation = 'highlight-indicator 2s ease-in-out';
-          console.log('✅ IoCManagement: Highlighted indicator element');
+          // console.log('✅ IoCManagement: Highlighted indicator element');
         }
       }, 500);
 
@@ -5238,7 +5240,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
 
 
   const fetchIndicators = async (page = 1, pageSize = itemsPerPage, filterParams = {}) => {
-    console.log('🔍 IoCManagement: fetchIndicators called', { page, pageSize, filterParams });
+    // console.log('🔍 IoCManagement: fetchIndicators called', { page, pageSize, filterParams });
     setLoading(true);
     setError(null);
     try {
@@ -5262,9 +5264,9 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
       const crispToken = localStorage.getItem('crisp_auth_token');
       const userInStorage = localStorage.getItem('crisp_user');
       
-      console.log('🔑 IoCManagement: access_token exists?', !!accessToken);
-      console.log('🔑 IoCManagement: crisp_auth_token exists?', !!crispToken);
-      console.log('🔑 IoCManagement: User in localStorage?', !!userInStorage);
+      // console.log('🔑 IoCManagement: access_token exists?', !!accessToken);
+      // console.log('🔑 IoCManagement: crisp_auth_token exists?', !!crispToken);
+      // console.log('🔑 IoCManagement: User in localStorage?', !!userInStorage);
       
       if (!accessToken && !crispToken) {
         throw new Error('No authentication token found. Please login again.');
@@ -5272,17 +5274,17 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
 
       // Use the dedicated getIndicators function with parameters
       const queryParams = Object.fromEntries(params);
-      console.log('🌐 IoCManagement: Making API call with params:', queryParams);
+      // console.log('🌐 IoCManagement: Making API call with params:', queryParams);
       
       const indicatorsData = await getIndicators(queryParams);
-      console.log('📊 IoCManagement: API response received:', indicatorsData);
+      // console.log('📊 IoCManagement: API response received:', indicatorsData);
 
       if (indicatorsData && indicatorsData.results) {
 
         // Transform indicators to match IoC Management table format
         const transformedIndicators = indicatorsData.results.map(indicator => {
           // Debug: Log sharing data for each indicator
-          console.log(`🔍 Indicator ${indicator.id} sharing data:`, indicator.sharing);
+          // console.log(`🔍 Indicator ${indicator.id} sharing data:`, indicator.sharing);
 
           return {
             id: indicator.id,
@@ -5319,12 +5321,12 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
           };
         });
 
-        console.log('✅ IoCManagement: Transformed indicators count:', transformedIndicators.length);
+        // console.log('✅ IoCManagement: Transformed indicators count:', transformedIndicators.length);
         setIndicators(transformedIndicators);
         setFilteredIndicators(transformedIndicators); // For server-side pagination, filtered = indicators
         setTotalItems(indicatorsData.count || 0);
         setTotalPages(Math.ceil((indicatorsData.count || 0) / itemsPerPage));
-        console.log('📈 IoCManagement: Set state - indicators:', transformedIndicators.length, 'total:', indicatorsData.count);
+        // console.log('📈 IoCManagement: Set state - indicators:', transformedIndicators.length, 'total:', indicatorsData.count);
       } else {
         console.warn('⚠️ IoCManagement: No results in API response or empty response', indicatorsData);
         setIndicators([]);
@@ -5343,7 +5345,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
       setTotalPages(0);
     } finally {
       setLoading(false);
-      console.log('🔄 IoCManagement: Finished fetchIndicators');
+      // // console.log('🔄 IoCManagement: Finished fetchIndicators');
     }
   };
 
@@ -5407,9 +5409,9 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
 
   // Get current page indicators (server-side pagination, so just return filtered indicators)
   const getPaginatedIndicators = () => {
-    console.log('🔍 IoCManagement: getPaginatedIndicators called, filteredIndicators.length:', filteredIndicators.length);
-    console.log('🔍 IoCManagement: indicators.length:', indicators.length);
-    console.log('🔍 IoCManagement: loading:', loading);
+    // console.log('🔍 IoCManagement: getPaginatedIndicators called, filteredIndicators.length:', filteredIndicators.length);
+    // console.log('🔍 IoCManagement: indicators.length:', indicators.length);
+    // console.log('🔍 IoCManagement: loading:', loading);
     return filteredIndicators;
   };
 
@@ -5578,7 +5580,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
       await fetchIndicators(currentPage, itemsPerPage, filterParams);
       if (onRefresh) onRefresh();
       // Show a brief success message
-      console.log('Indicators refreshed successfully');
+      // console.log('Indicators refreshed successfully');
     } catch (error) {
       console.error('Error refreshing indicators:', error);
     } finally {
