@@ -1390,8 +1390,8 @@ function TrustManagement({ active, initialTab = null }) {
                         padding: '0.5rem',
                         border: '1px solid #e9ecef',
                         borderRadius: '4px',
-                        backgroundColor: '#f8f9fa',
-                        color: '#6c757d'
+                        backgroundColor: 'white',
+                        color: 'black'
                       }}>
                         {trustData.organizations.find(org => org.id === formData.target_organization)?.name || 'Unknown Organization'}
                         <small style={{ display: 'block', fontSize: '0.875em', marginTop: '0.25rem' }}>
@@ -1407,7 +1407,9 @@ function TrustManagement({ active, initialTab = null }) {
                           width: '100%',
                           padding: '0.5rem',
                           border: '1px solid #ced4da',
-                          borderRadius: '4px'
+                          borderRadius: '4px',
+                          backgroundColor: 'white',
+                          color: 'black'
                         }}
                       >
                         <option value="">Select Organization</option>
@@ -1461,8 +1463,8 @@ function TrustManagement({ active, initialTab = null }) {
                         padding: '0.5rem',
                         border: '1px solid #e9ecef',
                         borderRadius: '4px',
-                        backgroundColor: '#f8f9fa',
-                        color: '#6c757d'
+                        backgroundColor: 'white',
+                        color: 'black'
                       }}>
                         {formData.relationship_type?.charAt(0).toUpperCase() + formData.relationship_type?.slice(1) || 'Bilateral'}
                         <small style={{ display: 'block', fontSize: '0.875em', marginTop: '0.25rem' }}>
@@ -1477,7 +1479,9 @@ function TrustManagement({ active, initialTab = null }) {
                           width: '100%',
                           padding: '0.5rem',
                           border: '1px solid #ced4da',
-                          borderRadius: '4px'
+                          borderRadius: '4px',
+                          backgroundColor: 'white',
+                          color: 'black'
                         }}
                       >
                         <option value="bilateral">Bilateral</option>
