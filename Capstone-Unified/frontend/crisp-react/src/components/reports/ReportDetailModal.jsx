@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNotification } from '../ui/NotificationManager';
 
 const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
+  const { showError } = useNotification();
   const [fullReportData, setFullReportData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -266,7 +268,7 @@ const ReportDetailModal = ({ report, isOpen, onClose, api }) => {
       await html2pdf().set(options).from(element).save();
     } catch (error) {
       console.error('Error exporting detailed PDF:', error);
-      alert('PDF export failed. Please ensure the html2pdf library is installed.');
+      showError('PDF Export Failed', 'PDF export failed. Please try again or use browser print to save as PDF.');
     }
   };
 

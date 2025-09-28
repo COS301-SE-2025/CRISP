@@ -5728,45 +5728,47 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
           <h3><i className="fas fa-chart-bar"></i> IoC Statistics</h3>
         </div>
         <div className="card-content">
-          <div className="stats-grid">
-            <div className="stat-item">
-              <div className="stat-icon total">
-                <i className="fas fa-list"></i>
+          <div className="stats-container">
+            <div className="stats-grid">
+              <div className="stat-item">
+                <div className="stat-icon total">
+                  <i className="fas fa-list"></i>
+                </div>
+                <div className="stat-content">
+                  <div className="stat-label">Total IoCs</div>
+                  <div className="stat-value">{totalItems}</div>
+                  <div className="stat-description">All indicators in system</div>
+                </div>
               </div>
-              <div className="stat-content">
-                <div className="stat-label">Total IoCs</div>
-                <div className="stat-value">{totalItems}</div>
-                <div className="stat-description">All indicators in system</div>
+              <div className="stat-item">
+                <div className="stat-icon high-severity">
+                  <i className="fas fa-exclamation-triangle"></i>
+                </div>
+                <div className="stat-content">
+                  <div className="stat-label">High Severity</div>
+                  <div className="stat-value">{indicators.filter(i => i.severity === 'High').length}</div>
+                  <div className="stat-description">Critical threat indicators</div>
+                </div>
               </div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-icon high-severity">
-                <i className="fas fa-exclamation-triangle"></i>
+              <div className="stat-item">
+                <div className="stat-icon anonymized">
+                  <i className="fas fa-user-secret"></i>
+                </div>
+                <div className="stat-content">
+                  <div className="stat-label">Anonymized</div>
+                  <div className="stat-value">{indicators.filter(i => i.isShared && i.anonymizationLevel !== 'none').length}</div>
+                  <div className="stat-description">Privacy-protected IoCs</div>
+                </div>
               </div>
-              <div className="stat-content">
-                <div className="stat-label">High Severity</div>
-                <div className="stat-value">{indicators.filter(i => i.severity === 'High').length}</div>
-                <div className="stat-description">Critical threat indicators</div>
-              </div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-icon anonymized">
-                <i className="fas fa-user-secret"></i>
-              </div>
-              <div className="stat-content">
-                <div className="stat-label">Anonymized</div>
-                <div className="stat-value">{indicators.filter(i => i.isShared && i.anonymizationLevel !== 'none').length}</div>
-                <div className="stat-description">Privacy-protected IoCs</div>
-              </div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-icon active">
-                <i className="fas fa-eye"></i>
-              </div>
-              <div className="stat-content">
-                <div className="stat-label">Active</div>
-                <div className="stat-value">{indicators.filter(i => i.status === 'Active').length}</div>
-                <div className="stat-description">Currently monitored IoCs</div>
+              <div className="stat-item">
+                <div className="stat-icon active">
+                  <i className="fas fa-eye"></i>
+                </div>
+                <div className="stat-content">
+                  <div className="stat-label">Active</div>
+                  <div className="stat-value">{indicators.filter(i => i.status === 'Active').length}</div>
+                  <div className="stat-description">Currently monitored IoCs</div>
+                </div>
               </div>
             </div>
           </div>
@@ -5802,6 +5804,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
         
         <div className="filters-grid">
           <div className="filter-group search-filter">
+            <label className="filter-label">Search</label>
             <div className="filter-control">
               <div className="search-input-wrapper">
                 <i className="fas fa-search search-icon"></i>
@@ -14197,60 +14200,85 @@ function CSSStyles() {
         
         /* Filter Section */
         .filters-section {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            border: 1px solid var(--light-gray);
-            border-radius: 12px;
-            padding: 20px;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 24px;
             margin-bottom: 24px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: box-shadow 0.3s ease;
+        }
+
+        .filters-section:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
         }
         
         .filters-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid var(--light-gray);
+            margin-bottom: 16px;
         }
         
         .filter-title-area {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 12px;
         }
         
         .filter-title-area h3 {
             margin: 0;
-            color: var(--text-dark);
+            color: #1e293b;
             font-size: 18px;
-            font-weight: 600;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-        
+
+        .filter-title-area h3 i {
+            color: #6366f1;
+        }
+
         .results-summary {
-            background-color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            border: 1px solid var(--light-gray);
+            background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+            padding: 8px 14px;
+            border-radius: 8px;
             font-size: 13px;
-            color: var(--text-muted);
+            font-weight: 600;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+        }
+
+        .filtered-count {
+            color: #6366f1;
+        }
+
+        .total-count {
+            color: #64748b;
         }
         
-        .filtered-count {
-            color: var(--primary-blue);
-            font-weight: 500;
-        }
         
         .clear-filters-btn {
-            background-color: white;
-            border: 1px solid var(--medium-gray);
-            color: var(--text-muted);
+            background: linear-gradient(135deg, #f8fafc, #ffffff);
+            border: 1.5px solid #d1d5db;
+            color: #6b7280;
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
-        
+
         .clear-filters-btn:hover {
-            background-color: #f8f9fa;
-            border-color: var(--primary-blue);
-            color: var(--primary-blue);
+            border-color: #f43f5e;
+            color: #f43f5e;
+            background: linear-gradient(135deg, #fef2f2, #ffffff);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(244, 63, 94, 0.15);
         }
         
         .filters-grid {
@@ -14258,76 +14286,148 @@ function CSSStyles() {
             grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr;
             gap: 16px;
             align-items: end;
+            margin-top: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
         }
-        
+
         .filter-group {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
         }
-        
+
         .search-filter {
-            grid-column: span 2;
+            /* Takes up 2 grid columns */
         }
-        
+
         .filter-label {
             font-size: 12px;
-            font-weight: 600;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-weight: 500;
+            color: #374151;
             margin-bottom: 4px;
+            white-space: nowrap;
         }
         
         .filter-control {
-            display: flex;
-            gap: 10px;
+            width: 100%;
         }
         
         .search-input-wrapper {
             position: relative;
             width: 100%;
         }
-        
+
         .search-icon {
             position: absolute;
             left: 12px;
             top: 50%;
             transform: translateY(-50%);
-            color: var(--text-muted);
+            color: #9ca3af;
             font-size: 14px;
-            z-index: 1;
+            pointer-events: none;
+            z-index: 2;
         }
-        
+
         .search-input {
-            padding-left: 40px !important;
+            width: 100%;
+            padding: 12px 16px 12px 36px;
+            font-size: 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background: white;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        }
+
+        .search-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            outline: none;
+        }
+
+        .filter-group .form-control {
+            height: 38px;
+            font-size: 13px;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            background: #ffffff;
+            transition: all 0.3s ease;
+        }
+
+        .filter-group .form-control:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            background: #fefefe;
+        }
+
+        .filter-group .form-control:hover:not(:focus) {
+            border-color: #9ca3af;
         }
         
+        @media (max-width: 1400px) {
+            .filters-grid {
+                gap: 12px;
+            }
+
+            .filter-label {
+                font-size: 10px;
+                min-width: 45px;
+            }
+        }
+
         @media (max-width: 1200px) {
             .filters-grid {
-                grid-template-columns: 1fr 1fr 1fr;
                 gap: 12px;
             }
-            
+
+            .filter-group {
+                min-width: 100px;
+            }
+
             .search-filter {
-                grid-column: span 3;
+                flex: 1.5;
+                min-width: 180px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .filters-grid {
+                gap: 10px;
+            }
+
+            .filter-group {
+                min-width: 90px;
+            }
+
+            .search-filter {
+                flex: 1.2;
+                min-width: 150px;
+            }
+
+            .filter-group .form-control {
+                height: 36px;
+                font-size: 12px;
+            }
+
+            .filter-label {
+                font-size: 9px;
+                min-width: 40px;
             }
         }
         
-        @media (max-width: 768px) {
-            .filters-grid {
-                grid-template-columns: 1fr;
-                gap: 12px;
-            }
-            
-            .search-filter {
-                grid-column: span 1;
-            }
-            
+        @media (max-width: 640px) {
             .filters-header {
                 flex-direction: column;
-                gap: 12px;
-                align-items: flex-start;
+                gap: 8px;
+                align-items: stretch;
+            }
+            
+            .filter-title-area {
+                justify-content: space-between;
             }
         }
         
@@ -14439,7 +14539,16 @@ function CSSStyles() {
         
         /* Stats Card Styling */
         .stats-card {
-            margin-bottom: 20px;
+            margin-bottom: 16px;
+        }
+        
+        .stats-card .card-header {
+            padding: 12px 16px;
+        }
+        
+        .stats-card .card-header h3 {
+            font-size: 16px;
+            margin: 0;
         }
         
         .stats-grid {
@@ -14448,127 +14557,103 @@ function CSSStyles() {
             gap: 20px;
         }
         
-        .stat-item {
+        #ioc-management .stats-grid .stat-item {
             display: flex;
             align-items: center;
             gap: 16px;
             padding: 16px;
-            background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
-            border-radius: 12px;
-            border: 1px solid var(--light-gray);
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
             transition: all 0.2s ease;
         }
-        
-        .stat-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+
+        #ioc-management .stats-grid .stat-item:hover {
+            border-color: #d1d5db;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
-        
-        .stat-icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 12px;
+
+        #ioc-management .stats-grid .stat-icon {
+            width: 40px;
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
-            color: white;
+            font-size: 16px;
+            color: #6b7280;
+            background: transparent !important;
         }
-        
-        .stat-icon.total {
-            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-        }
-        
-        .stat-icon.high-severity {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-        }
-        
-        .stat-icon.anonymized {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-        }
-        
-        .stat-icon.active {
-            background: linear-gradient(135deg, #10b981, #059669);
-        }
-        
-        .stat-content {
+
+        #ioc-management .stats-grid .stat-content {
             flex: 1;
         }
-        
-        .stat-label {
+
+        #ioc-management .stats-grid .stat-label {
             font-size: 12px;
-            color: var(--text-muted);
+            color: #6b7280;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             margin-bottom: 4px;
         }
-        
-        .stat-value {
+
+        #ioc-management .stats-grid .stat-value {
             font-size: 28px;
             font-weight: 700;
-            color: var(--text-dark);
+            color: #1f2937;
             margin-bottom: 2px;
         }
-        
-        .stat-description {
+
+        #ioc-management .stats-grid .stat-description {
             font-size: 12px;
-            color: var(--text-muted);
+            color: #6b7280;
         }
         
         /* Legacy filter control styling - overridden by .form-control */
         
         /* Stats Card Styling */
         .stats-card .card-content {
-            padding: 20px;
+            padding: 12px;
+        }
+        
+        .stats-container {
+            width: 100%;
+            margin-bottom: 0;
+            overflow: hidden;
         }
         
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 16px;
+            width: 100%;
         }
         
         .stat-item {
             display: flex;
             align-items: center;
-            gap: 16px;
-            padding: 20px;
-            background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
-            border-radius: 12px;
-            border: 1px solid var(--light-gray);
+            gap: 12px;
+            padding: 16px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
             transition: all 0.2s ease;
+            height: 80px;
+            box-sizing: border-box;
         }
         
         .stat-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-color: #d1d5db;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
         
         .stat-icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 12px;
+            width: 40px;
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
-            color: white;
-        }
-        
-        .stat-icon.total {
-            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-        }
-        
-        .stat-icon.high-severity {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-        }
-        
-        .stat-icon.anonymized {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-        }
-        
-        .stat-icon.active {
-            background: linear-gradient(135deg, #10b981, #059669);
+            font-size: 16px;
+            color: #6b7280;
         }
         
         .stat-content {
@@ -15296,6 +15381,16 @@ function CSSStyles() {
             color: var(--text-dark);
             transition: all 0.2s ease;
             appearance: none;
+        }
+        
+        .form-control:hover {
+            border-color: #9ca3af;
+        }
+        
+        .form-control:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            outline: none;
         }
         
         select.form-control {

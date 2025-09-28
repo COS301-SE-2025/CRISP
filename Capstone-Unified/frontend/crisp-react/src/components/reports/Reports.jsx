@@ -977,7 +977,7 @@ const Reports = ({ active = true }) => {
     } catch (error) {
       console.error('Error exporting PDF:', error);
       // Fallback to print method if html2pdf fails
-      alert('PDF export failed. Please install html2pdf library or use browser print to save as PDF.');
+      showError('PDF Export Failed', 'PDF export failed. Please try again or use browser print to save as PDF.');
     } finally {
       setTimeout(() => setExportingReportId(null), 1000);
     }
