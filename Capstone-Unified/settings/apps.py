@@ -34,7 +34,24 @@ class CrispThreatIntelConfig(AppConfig):
             if 'runserver' not in sys.argv:
                 return
 
-            # Check if workers are already running
+            # First, kill any existing Celery workers to prevent accumulation
+            print("🔄 Cleaning up existing Celery workers...")
+            try:
+                # Kill any existing celery workers
+                subprocess.run([
+                    'pkill', '-f', 'celery.*worker'
+                ], capture_output=True, timeout=5)
+
+                # Give them a moment to shut down
+                import time
+                time.sleep(2)
+
+            except subprocess.TimeoutExpired:
+                print("⚠️  Timeout killing workers, continuing...")
+            except Exception as cleanup_error:
+                print(f"⚠️  Error during cleanup: {cleanup_error}")
+
+            # Check if any workers are still running after cleanup
             result = subprocess.run(
                 ['ps', 'aux'],
                 capture_output=True,
@@ -47,20 +64,20 @@ class CrispThreatIntelConfig(AppConfig):
                 if 'celery -A settings worker' in line and 'python' in line and 'grep' not in line:
                     worker_count += 1
 
-            # Start workers if needed (only if none exist)
-            if worker_count == 0:
-                print(f"🔄 Starting Celery workers (found {worker_count}, need 2)...")
+            if worker_count > 0:
+                print(f"⚠️  Still found {worker_count} workers after cleanup - they may be persistent")
 
-                for i in range(2):
-                    subprocess.Popen([
-                        sys.executable, '-m', 'celery', '-A', 'settings',
-                        'worker', '--loglevel=info', '--detach'
-                    ])
+            # Start fresh workers
+            print(f"🔄 Starting 2 fresh Celery workers...")
 
-                print("✅ Celery workers started - threat feed processing ready!")
-            else:
-                print(f"✅ Found {worker_count} Celery workers running")
+            for i in range(2):
+                subprocess.Popen([
+                    sys.executable, '-m', 'celery', '-A', 'settings',
+                    'worker', '--loglevel=info', '--detach'
+                ])
+
+            print("✅ Celery workers started - threat feed processing ready!")
 
         except Exception as e:
-            print(f"⚠️  Could not start Celery workers: {e}")
+            print(f"⚠️  Could not manage Celery workers: {e}")
             print("   Threat feed consumption may not work properly")

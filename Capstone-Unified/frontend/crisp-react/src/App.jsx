@@ -213,7 +213,6 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
-  const [useAsync, setUseAsync] = useState(true);
 
   // Function to check task status (bypasses cache for real-time updates)
   const checkTaskStatus = async (taskId) => {
@@ -657,8 +656,6 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
             navigationState={navigationState}
             setNavigationState={setNavigationState}
             onConsumptionComplete={() => setLastUpdate(Date.now())}
-            useAsync={useAsync}
-            setUseAsync={setUseAsync}
             consumptionParams={consumptionParams}
             handleParamChange={handleParamChange}
             activePreset={activePreset}
@@ -2867,8 +2864,6 @@ function ThreatFeeds({
   navigationState,
   setNavigationState,
   onConsumptionComplete,
-  useAsync,
-  setUseAsync,
   consumptionParams,
   handleParamChange,
   activePreset,
@@ -3321,7 +3316,7 @@ function ThreatFeeds({
         for (const { feedId, feedName } of completedFeeds) {
           // Show completion notification
           const notificationText = `Feed "${feedName}" consumption completed successfully!`;
-          showSuccess('🎉 Feed Consumption Completed!', notificationText);
+          showSuccess('Feed Consumption Completed!', notificationText);
 
           // Also show browser notification if permission granted
           if (Notification.permission === 'granted') {
@@ -3647,11 +3642,6 @@ function ThreatFeeds({
 
   const handlePauseFeedConsumption = async (feedId) => {
     try {
-      // Ensure async mode is enabled for pause functionality
-      if (!useAsync) {
-        setUseAsync(true);
-        showInfo('Background Processing Enabled', 'Async mode has been automatically enabled to support pause functionality.');
-      }
 
       // Update UI to show pausing state
       setFeedProgress(prev => ({
@@ -3804,10 +3794,6 @@ function ThreatFeeds({
       return;
     }
     
-    // Warn if async mode is disabled (pause functionality won't work)
-    if (!useAsync) {
-      showWarning('Background Processing Disabled', 'You are consuming feeds in synchronous mode. Pause/resume functionality will not be available. Consider enabling background processing.');
-    }
 
     // Batch state updates to prevent React reconciliation issues
     setConsumingFeeds(prev => {
@@ -3835,13 +3821,9 @@ function ThreatFeeds({
       if (consumptionParams.block_limit !== 10) { // Only add if different from default
         params.append('limit', consumptionParams.block_limit);
       }
-      if (useAsync) {
-        params.append('async', 'true');
-      }
 
       const url = `/api/threat-feeds/${feedId}/consume/${params.toString() ? '?' + params.toString() : ''}`;
 // PERFORMANCE FIX: console.log('API Call URL:', url);
-// PERFORMANCE FIX: console.log('Async enabled:', useAsync);
       // Check if feed is already running before attempting consumption
       const { getFeedConsumptionStatus } = await import('./api.js');
       const currentStatus = await getFeedConsumptionStatus(feedId);
@@ -3946,7 +3928,7 @@ function ThreatFeeds({
           const feed = feeds.find(f => f.id === feedId);
           const feedName = feed?.name || `Feed ${feedId}`;
           const notificationText = `Successfully processed ${result.indicators || 0} indicators and ${result.ttps || 0} TTPs from ${feedName}`;
-          showSuccess('🎉 Feed Consumption Completed!', notificationText);
+          showSuccess('Feed Consumption Completed!', notificationText);
 
           // Also show browser notification if permission granted
           if (Notification.permission === 'granted') {
@@ -4530,14 +4512,6 @@ function ThreatFeeds({
             <span>Consumption Filter</span>
           </div>
           <div className="header-right">
-            <label className="async-checkbox-header">
-              <input
-                type="checkbox"
-                checked={useAsync}
-                onChange={(e) => setUseAsync(e.target.checked)}
-              />
-              <span className="async-label-header">Process in background (required for pause/resume)</span>
-            </label>
           </div>
         </div>
         <div className="consumption-params-controls">

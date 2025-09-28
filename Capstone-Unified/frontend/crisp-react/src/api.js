@@ -1302,7 +1302,6 @@ export const consumeThreatFeed = async (feedId, options = {}) => {
   if (options.limit) params.append('limit', options.limit);
   if (options.force_days) params.append('force_days', options.force_days);
   if (options.batch_size) params.append('batch_size', options.batch_size);
-  if (options.async) params.append('async', 'true');
 
   const url = `${API_BASE_URL}/api/threat-feeds/${feedId}/consume/${params.toString() ? `?${params.toString()}` : ''}`;
 
