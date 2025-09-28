@@ -119,7 +119,7 @@ class ThreatFeedsErrorBoundary extends React.Component {
 }
 
 // API Configuration
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://data-defenders.co.za';
+const API_BASE_URL = 'http://localhost:8000';
 
 // Simple cache for API responses to prevent duplicate requests
 const apiCache = new Map();
