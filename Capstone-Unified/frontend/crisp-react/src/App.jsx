@@ -14369,7 +14369,33 @@ function CSSStyles() {
             color: #9ca3af;
             font-size: 13px;
         }
-        
+
+        /* Threat feeds filter select styling */
+        .filter-control select {
+            width: 100%;
+            height: 38px;
+            padding: 8px 12px;
+            font-size: 13px;
+            color: #374151;
+            background: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+            cursor: pointer;
+        }
+
+        .filter-control select:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            background: #fefefe;
+            outline: none;
+        }
+
+        .filter-control select:hover:not(:focus) {
+            border-color: #9ca3af;
+        }
+
         .search-input-wrapper {
             position: relative;
             width: 100%;
