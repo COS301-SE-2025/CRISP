@@ -16221,7 +16221,25 @@ function CSSStyles() {
         
         .feed-stats {
             display: flex;
-            gap: 15px;
+            gap: 8px;
+        }
+
+        .feed-stats .stat-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            padding: 1px 4px;
+            background: #f8f9fa;
+            border-radius: 3px;
+            color: #6c757d;
+            line-height: 1.2;
+            height: 18px;
+        }
+
+        .feed-stats .stat-item i {
+            color: var(--primary-blue);
+            font-size: 10px;
         }
         
         .feed-badges {
