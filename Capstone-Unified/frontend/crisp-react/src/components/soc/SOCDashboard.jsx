@@ -120,6 +120,12 @@ const SOCDashboard = ({ active, showPage }) => {
     //   fetchSystemHealth();
     //   fetchNetworkActivity();
     // }, 120000);
+=======
+    // Refresh data every 2 minutes to reduce server load
+    intervalRef.current = setInterval(() => {
+      fetchDashboardData();
+    }, 120000);
+>>>>>>> Stashed changes
   };
 
   const fetchDashboardData = async () => {
