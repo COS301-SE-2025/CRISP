@@ -6787,8 +6787,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
                 
                 <div className="form-group">
                   <label className="form-label">
-                    <i className="fas fa-building"></i>
-                    Target Organizations
+                    <i className="fas fa-building"></i> Target Organizations
                   </label>
                   <p className="form-description">
                     Select trusted organizations to share this threat intelligence with
@@ -6914,8 +6913,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
                 <div className="form-grid">
                   <div className="form-group">
                     <label className="form-label">
-                      <i className="fas fa-user-secret"></i>
-                      Anonymization Level
+                      <i className="fas fa-user-secret"></i> Anonymization Level
                     </label>
                     <select
                       value={shareFormData.anonymizationLevel}
@@ -6937,8 +6935,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
 
                   <div className="form-group">
                     <label className="form-label">
-                      <i className="fas fa-share-nodes"></i>
-                      Share Method
+                      <i className="fas fa-share-nodes"></i> Share Method
                     </label>
                     <input
                       type="text"
@@ -16497,6 +16494,7 @@ function CSSStyles() {
             display: flex;
             align-items: center;
             gap: 8px;
+            background: transparent !important;
         }
 
         .detail-item strong {
