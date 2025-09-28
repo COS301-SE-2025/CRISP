@@ -2407,11 +2407,11 @@ function Dashboard({ active, showPage, user }) {
                         <div className="organisation-name" style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.25rem' }}>
                           {org.name.length > 25 ? org.name.substring(0, 25) + '...' : org.name}
                         </div>
-                        <div className="organisation-stats" style={{ fontSize: '0.75rem', display: 'flex', gap: '0.75rem' }}>
-                          <div className="stat-item">
+                        <div className="organisation-stats">
+                          <div className="org-stat-item">
                             <i className="fas fa-exchange-alt"></i> {org.ioc_count} IoCs
                           </div>
-                          <div className="stat-item">
+                          <div className="org-stat-item">
                             <i className="fas fa-clock"></i> {org.last_activity}
                           </div>
                         </div>
@@ -14798,14 +14798,14 @@ function CSSStyles() {
         
         .organisation-stats {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             margin-top: 4px;
         }
 
-        .organisation-stats .stat-item {
+        .org-stat-item {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: 3px;
             font-size: 11px;
             padding: 1px 4px;
             background: #f8f9fa;
@@ -14815,7 +14815,7 @@ function CSSStyles() {
             height: 18px;
         }
 
-        .organisation-stats .stat-item i {
+        .org-stat-item i {
             color: var(--primary-blue);
             font-size: 10px;
         }
