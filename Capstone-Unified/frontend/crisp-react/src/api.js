@@ -415,7 +415,7 @@ export const getTrustRelationships = async (queryParams = {}) => {
         trust.status && 
         !['revoked', 'expired'].includes(trust.status.toLowerCase())
       );
-      console.log(`🔍 Filtered trust relationships: ${originalCount} -> ${data.trusts.length} (excluded revoked/expired)`);
+// PERFORMANCE FIX: console.log(`🔍 Filtered trust relationships: ${originalCount} -> ${data.trusts.length} (excluded revoked/expired)`);
     }
     
     // Filter data.results.trusts if it exists (paginated response)
@@ -425,10 +425,10 @@ export const getTrustRelationships = async (queryParams = {}) => {
         trust.status && 
         !['revoked', 'expired'].includes(trust.status.toLowerCase())
       );
-      console.log(`🔍 Filtered paginated trust relationships: ${originalCount} -> ${data.results.trusts.length} (excluded revoked/expired)`);
+// PERFORMANCE FIX: console.log(`🔍 Filtered paginated trust relationships: ${originalCount} -> ${data.results.trusts.length} (excluded revoked/expired)`);
     }
   } else {
-    console.log(`🔍 Showing ALL '${queryParams.status}' relationships (no filtering)`);
+// PERFORMANCE FIX: console.log(`🔍 Showing ALL '${queryParams.status}' relationships (no filtering)`);
   }
   
   return data;
@@ -442,10 +442,10 @@ export const createTrustRelationship = async (relationshipData) => {
     message: relationshipData.notes || ''
   };
   
-  console.log('🚀 Creating trust relationship:', { 
-    original: relationshipData, 
-    mapped: mappedData 
-  });
+// PERFORMANCE FIX: console.log('🚀 Creating trust relationship:', {
+  //   original: relationshipData,
+  //   mapped: mappedData
+  // });
   
   const response = await fetch(`${API_BASE_URL}/api/trust/bilateral/request/`, {
     method: 'POST',
@@ -475,16 +475,16 @@ export const createTrustRelationship = async (relationshipData) => {
   }
 
   const result = await response.json();
-  console.log('✅ Trust relationship created successfully:', result);
+// PERFORMANCE FIX: console.log('✅ Trust relationship created successfully:', result);
   return result;
 };
 
 export const updateTrustRelationship = async (relationshipId, relationshipData) => {
-  console.log('🔄 API: Updating trust relationship:', {
-    id: relationshipId,
-    data: relationshipData,
-    url: `${API_BASE_URL}/api/trust/bilateral/${relationshipId}/update/`
-  });
+// PERFORMANCE FIX: console.log('🔄 API: Updating trust relationship:', {
+  //   id: relationshipId,
+  //   data: relationshipData,
+  //   url: `${API_BASE_URL}/api/trust/bilateral/${relationshipId}/update/`
+  // });
   
   const response = await fetch(`${API_BASE_URL}/api/trust/bilateral/${relationshipId}/update/`, {
     method: 'PUT',
@@ -492,11 +492,11 @@ export const updateTrustRelationship = async (relationshipId, relationshipData) 
     body: JSON.stringify(relationshipData),
   });
 
-  console.log('📡 API Response:', {
-    status: response.status,
-    statusText: response.statusText,
-    ok: response.ok
-  });
+// PERFORMANCE FIX: console.log('📡 API Response:', {
+  //   status: response.status,
+  //   statusText: response.statusText,
+  //   ok: response.ok
+  // });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -505,7 +505,7 @@ export const updateTrustRelationship = async (relationshipId, relationshipData) 
   }
 
   const result = await response.json();
-  console.log('✅ Update successful:', result);
+// PERFORMANCE FIX: console.log('✅ Update successful:', result);
   return result;
 };
 
@@ -584,11 +584,11 @@ export const createTrustGroup = async (groupData) => {
 };
 
 export const updateTrustGroup = async (groupId, groupData) => {
-  console.log('🔄 API: Updating trust group:', {
-    id: groupId,
-    data: groupData,
-    url: `${API_BASE_URL}/api/trust-management/groups/${groupId}/`
-  });
+// PERFORMANCE FIX: console.log('🔄 API: Updating trust group:', {
+  //   id: groupId,
+  //   data: groupData,
+  //   url: `${API_BASE_URL}/api/trust-management/groups/${groupId}/`
+  // });
   
   const response = await fetch(`${API_BASE_URL}/api/trust-management/groups/${groupId}/`, {
     method: 'PUT',
@@ -596,11 +596,11 @@ export const updateTrustGroup = async (groupId, groupData) => {
     body: JSON.stringify(groupData),
   });
 
-  console.log('📡 API Response:', {
-    status: response.status,
-    statusText: response.statusText,
-    ok: response.ok
-  });
+// PERFORMANCE FIX: console.log('📡 API Response:', {
+  //   status: response.status,
+  //   statusText: response.statusText,
+  //   ok: response.ok
+  // });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -609,7 +609,7 @@ export const updateTrustGroup = async (groupId, groupData) => {
   }
 
   const result = await response.json();
-  console.log('✅ Group update successful:', result);
+// PERFORMANCE FIX: console.log('✅ Group update successful:', result);
   return result;
 };
 
@@ -984,7 +984,7 @@ const apiCache = new Map();
 
 // Function to clear API cache
 export const clearApiCache = () => {
-  console.log('🧹 Clearing API cache...', `${apiCache.size} items removed`);
+// PERFORMANCE FIX: console.log('🧹 Clearing API cache...', `${apiCache.size} items removed`);
   apiCache.clear();
 };
 
@@ -997,7 +997,7 @@ export const clearCacheForEndpoint = (endpoint) => {
     }
   }
   keysToRemove.forEach(key => apiCache.delete(key));
-  console.log(`🧹 Cleared ${keysToRemove.length} cache entries for ${endpoint}`);
+// PERFORMANCE FIX: console.log(`🧹 Cleared ${keysToRemove.length} cache entries for ${endpoint}`);
 };
 
 export const get = async (endpoint) => {
@@ -1154,14 +1154,14 @@ export const deleteRequest = async (endpoint) => {
 
     // For DELETE requests, we might get 204 No Content with no response body
     if (response.status === 204) {
-      console.log(`DELETE ${endpoint} returned 204 No Content`);
+// PERFORMANCE FIX: console.log(`DELETE ${endpoint} returned 204 No Content`);
       return { success: true };
     }
 
     // Try to parse JSON, but handle empty responses
     const text = await response.text();
     const result = text ? JSON.parse(text) : { success: true };
-    console.log(`DELETE ${endpoint} result:`, result);
+// PERFORMANCE FIX: console.log(`DELETE ${endpoint} result:`, result);
     return result;
   } catch (error) {
     console.error(`DELETE API Error: ${endpoint}`, error);

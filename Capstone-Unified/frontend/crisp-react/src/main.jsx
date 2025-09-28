@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import CRISPApp from "./App.jsx";
-import TestApp from "./TestApp.jsx";
 import RegisterUser from "./RegisterUser.jsx";
 import CrispLogin from "./crisp_login.jsx";
 import LandingPage from "./LandingPage.jsx";
@@ -165,14 +164,18 @@ function AuthRoutesWithNotifications() {
 
   return (
     <NotificationProvider>
-      {/* DISABLE PERFORMANCE-HEAVY COMPONENTS FOR LOGIN PERFORMANCE */}
-      {/* <SessionTimeout
-        isAuthenticated={isAuthenticated}
-        onLogout={handleLogout}
-        timeoutMinutes={10}
-        warningMinutes={2}
-      /> */}
-      {/* Notification watcher disabled for performance */}
+      {/* STEP BY STEP TESTING - ALL DISABLED */}
+      {/* Step 1: SessionTimeout */}
+      {/* {isAuthenticated && (
+        <SessionTimeout
+          isAuthenticated={isAuthenticated}
+          onLogout={handleLogout}
+          timeoutMinutes={10}
+          warningMinutes={2}
+        />
+      )} */}
+
+      {/* Step 2: NotificationWatcher */}
       {/* {isAuthenticated && userData && (
         <NotificationWatcher user={userData} />
       )} */}
@@ -362,7 +365,7 @@ function AuthWrapper() {
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-  // TEMPORARILY DISABLE STRICT MODE FOR PERFORMANCE
+  // PERFORMANCE TEST: StrictMode disabled - causes double-rendering with 40+ useEffects
   // <React.StrictMode>
     <AuthWrapper />
   // </React.StrictMode>

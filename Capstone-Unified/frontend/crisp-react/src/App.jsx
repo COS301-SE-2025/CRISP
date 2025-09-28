@@ -467,9 +467,9 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
     fetchUnreadCount(); // Initial fetch
     
     // Fetch every 10 minutes to dramatically reduce server load
-    const interval = setInterval(fetchUnreadCount, 600000); // 10 minutes instead of 2
+    // DISABLED FOR TESTING: const interval = setInterval(fetchUnreadCount, 600000); // 10 minutes instead of 2
     
-    return () => clearInterval(interval);
+    // DISABLED FOR TESTING: return () => clearInterval(interval);
   }, []);
 
   // Function to switch between pages with optional modal triggers
@@ -1915,7 +1915,7 @@ function Dashboard({ active, showPage, user }) {
 
       closeDashboardExportModal();
       
-      console.log(`Successfully exported dashboard data as ${dashboardExportFormat.toUpperCase()}`);
+// PERFORMANCE FIX: console.log(`Successfully exported dashboard data as ${dashboardExportFormat.toUpperCase()}`);
       
     } catch (error) {
       console.error('Dashboard export failed:', error);
@@ -2944,7 +2944,7 @@ function ThreatFeeds({
     setActiveTab('all');
     setShowFilters(false);
     setFilters({ type: '', status: '', source: '', search: '' });
-    console.log('🧹 ThreatFeeds: Cleared cached state');
+// PERFORMANCE FIX: console.log('🧹 ThreatFeeds: Cleared cached state');
   }, []);
 
   // Clear state persistence when component unmounts or page changes
@@ -3048,7 +3048,7 @@ function ThreatFeeds({
         modalParams: {}
       });
     } else if (active && navigationState?.triggerModal === 'highlightFeed') {
-      console.log('🛡️ ThreatFeeds: Handling highlightFeed navigation state:', navigationState.modalParams);
+// PERFORMANCE FIX: console.log('🛡️ ThreatFeeds: Handling highlightFeed navigation state:', navigationState.modalParams);
       // Handle highlighting a specific feed from search
       const { feedId, feedName } = navigationState.modalParams;
 
@@ -3186,7 +3186,7 @@ function ThreatFeeds({
         try {
           // Skip feeds that have recent pause/resume operations to avoid race conditions
           if (recentPauseOperations.has(feed.id)) {
-            console.log(`⏭️ Skipping status check for feed ${feed.id} due to recent pause/resume operation`);
+// PERFORMANCE FIX: console.log(`⏭️ Skipping status check for feed ${feed.id} due to recent pause/resume operation`);
             return { feedId: feed.id, status: null };
           }
           
@@ -3266,7 +3266,7 @@ function ThreatFeeds({
           if (isActivelyConsuming && status.consumption_status !== 'paused') {
             setConsumingFeeds(prev => {
               if (!prev.includes(feedId)) {
-                console.log(`➕ Adding feed ${feedId} to consuming feeds (task_id: ${status.current_task_id}, status: ${status.consumption_status})`);
+// PERFORMANCE FIX: console.log(`➕ Adding feed ${feedId} to consuming feeds (task_id: ${status.current_task_id}, status: ${status.consumption_status})`);
                 return [...prev, feedId];
               }
               return prev;
@@ -3275,7 +3275,7 @@ function ThreatFeeds({
             // If feed is not consuming or is paused, remove from consuming feeds
             setConsumingFeeds(prev => {
               if (prev.includes(feedId)) {
-                console.log(`➖ Removing feed ${feedId} from consuming feeds (task_id: ${status.current_task_id}, status: ${status.consumption_status})`);
+// PERFORMANCE FIX: console.log(`➖ Removing feed ${feedId} from consuming feeds (task_id: ${status.current_task_id}, status: ${status.consumption_status})`);
                 return prev.filter(id => id !== feedId);
               }
               return prev;
@@ -3342,10 +3342,10 @@ function ThreatFeeds({
             const progress = feedProgress[feedId];
             try {
               const taskStatus = await api.get(`/api/threat-feeds/task-status/${progress.taskId}/`);
-              console.log(`Task ${progress.taskId} for feed ${feedId} status:`, taskStatus.status);
+// PERFORMANCE FIX: console.log(`Task ${progress.taskId} for feed ${feedId} status:`, taskStatus.status);
 
               if (taskStatus.success && (taskStatus.status === 'pending' || taskStatus.status === 'revoked' || taskStatus.status === 'cancelled')) {
-                console.log(`🧹 Cleaning up stuck feed ${feedId} - task status: ${taskStatus.status}`);
+// PERFORMANCE FIX: console.log(`🧹 Cleaning up stuck feed ${feedId} - task status: ${taskStatus.status}`);
 
                 setFeedProgress(prev => {
                   const newProgress = { ...prev };
@@ -3391,7 +3391,7 @@ function ThreatFeeds({
       
       if (taskId) {
         // Use new task-specific cancellation endpoint
-        console.log(`Cancelling task ${taskId} for feed ${feedId} with mode: ${mode}`);
+// PERFORMANCE FIX: console.log(`Cancelling task ${taskId} for feed ${feedId} with mode: ${mode}`);
         
         const result = await api.post(`/api/threat-feeds/cancel-task/${taskId}/`, {
           mode: mode
@@ -3450,7 +3450,7 @@ function ThreatFeeds({
           const pollInterval = setInterval(async () => {
             try {
               const statusResult = await api.get(`/api/threat-feeds/task-status/${taskId}/`);
-              console.log(`Polling task ${taskId} status:`, statusResult);
+// PERFORMANCE FIX: console.log(`Polling task ${taskId} status:`, statusResult);
 
               if (statusResult.success) {
                 const taskStatus = statusResult.status;
@@ -3494,7 +3494,7 @@ function ThreatFeeds({
                 }
               } else {
                 // If task not found, consider it cancelled
-                console.log(`Task ${taskId} not found, considering cancelled`);
+// PERFORMANCE FIX: console.log(`Task ${taskId} not found, considering cancelled`);
                 clearInterval(pollInterval);
 
                 // Update final status
@@ -3772,12 +3772,12 @@ function ThreatFeeds({
   };
 
   const handleConsumeFeed = async (feedId) => {
-    console.log(`🚀 handleConsumeFeed called for feed ${feedId}`);
-    console.trace('handleConsumeFeed call stack:');
+// PERFORMANCE FIX: console.log(`🚀 handleConsumeFeed called for feed ${feedId}`);
+    // PERFORMANCE FIX: console.trace('handleConsumeFeed call stack:');
     
     // Check if feed is already paused in our UI state
     if (feedProgress[feedId]?.paused) {
-      console.log(`⏸️ Feed ${feedId} is paused in UI state - blocking consumption`);
+// PERFORMANCE FIX: console.log(`⏸️ Feed ${feedId} is paused in UI state - blocking consumption`);
       showError('Feed is Paused', 'This feed is currently paused. Use the Resume button to continue consumption.');
       return;
     }
@@ -3818,8 +3818,8 @@ function ThreatFeeds({
       }
 
       const url = `/api/threat-feeds/${feedId}/consume/${params.toString() ? '?' + params.toString() : ''}`;
-      console.log('API Call URL:', url);
-      console.log('Async enabled:', useAsync);
+// PERFORMANCE FIX: console.log('API Call URL:', url);
+// PERFORMANCE FIX: console.log('Async enabled:', useAsync);
       // Check if feed is already running before attempting consumption
       const { getFeedConsumptionStatus } = await import('./api.js');
       const currentStatus = await getFeedConsumptionStatus(feedId);
@@ -3858,11 +3858,11 @@ function ThreatFeeds({
       
       const result = await api.post(url);
       if (result) {
-        console.log('Feed consumption started:', result);
+// PERFORMANCE FIX: console.log('Feed consumption started:', result);
         
         // Check if this is async processing
         if (result.status === 'processing' && result.task_id) {
-          console.log('Async processing started, task ID:', result.task_id);
+// PERFORMANCE FIX: console.log('Async processing started, task ID:', result.task_id);
           // Update progress to show async processing
           setFeedProgress(prev => ({
             ...prev,
@@ -3905,9 +3905,9 @@ function ThreatFeeds({
         }
 
         // Check if the consumption completed immediately (sync processing)
-        console.log('Checking completion status:', result.status, result.status === 'completed');
+// PERFORMANCE FIX: console.log('Checking completion status:', result.status, result.status === 'completed');
         if (result.status === 'completed') {
-          console.log('Consumption completed immediately, updating UI');
+// PERFORMANCE FIX: console.log('Consumption completed immediately, updating UI');
           // Update progress to show completion
           setFeedProgress(prev => ({
             ...prev,
@@ -3968,7 +3968,7 @@ function ThreatFeeds({
           
           // Refresh feeds after consumption
           await fetchThreatFeeds();
-          console.log('Feed refresh completed');
+// PERFORMANCE FIX: console.log('Feed refresh completed');
 
           // Dispatch event to notify other components
           window.dispatchEvent(new CustomEvent('feedConsumptionComplete', {
@@ -3985,9 +3985,9 @@ function ThreatFeeds({
         
         // Fallback: If we didn't detect immediate completion, set a shorter timeout to check status
         const fallbackTimeout = setTimeout(async () => {
-          console.log('Fallback check - examining current progress state for feed', feedId);
+// PERFORMANCE FIX: console.log('Fallback check - examining current progress state for feed', feedId);
           if (consumingFeeds.includes(feedId)) {
-            console.log('Feed still consuming after 5 seconds, checking if it actually completed');
+// PERFORMANCE FIX: console.log('Feed still consuming after 5 seconds, checking if it actually completed');
             // Check if consumption actually completed by refreshing feeds
             await fetchThreatFeeds();
             
@@ -4193,7 +4193,7 @@ function ThreatFeeds({
         setThreatFeeds([]); // Clear first to force re-render
         
         // Small delay to ensure database transaction is committed
-        console.log('⏳ Waiting 2000ms for database commit...');
+// PERFORMANCE FIX: console.log('⏳ Waiting 2000ms for database commit...');
         await new Promise(resolve => setTimeout(resolve, 2000));
         
         // Clear cache to force fresh data load
@@ -4255,13 +4255,13 @@ function ThreatFeeds({
         description: formData.description || null
       };
       
-      console.log('Submitting threat feed data:', cleanedFormData);
+// PERFORMANCE FIX: console.log('Submitting threat feed data:', cleanedFormData);
       
       const result = await api.post('/api/threat-feeds/', cleanedFormData);
-      console.log('📤 POST result:', result);
+// PERFORMANCE FIX: console.log('📤 POST result:', result);
       if (result) {
         // // console.log('✅ Feed added successfully, refreshing list...');
-        console.log('🆔 New feed ID:', result.id);
+// PERFORMANCE FIX: console.log('🆔 New feed ID:', result.id);
         // console.log('📋 New feed name:', result.name);
         // console.log('🔍 Result object details:', {
         //   id: result.id,
@@ -4292,7 +4292,7 @@ function ThreatFeeds({
         setThreatFeeds([]); // Clear first to force re-render
         
         // Small delay to ensure database transaction is committed
-        console.log('⏳ Waiting 2000ms for database commit...');
+// PERFORMANCE FIX: console.log('⏳ Waiting 2000ms for database commit...');
         await new Promise(resolve => setTimeout(resolve, 2000));
         
         // Clear cache to force fresh data load
@@ -5104,7 +5104,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
   // Handle navigation state for highlighting specific indicators from search
   useEffect(() => {
     if (active && navigationState?.triggerModal === 'highlightIndicator') {
-      console.log('⚠️ IoCManagement: Handling highlightIndicator navigation state:', navigationState.modalParams);
+// PERFORMANCE FIX: console.log('⚠️ IoCManagement: Handling highlightIndicator navigation state:', navigationState.modalParams);
       const { indicatorId, indicatorValue } = navigationState.modalParams;
 
       // Set search filter to find the specific indicator
@@ -5114,7 +5114,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
       // Scroll to the indicator if it exists in the DOM
       setTimeout(() => {
         const indicatorElement = document.querySelector(`[data-indicator-id="${indicatorId}"]`);
-        console.log('🎯 IoCManagement: Looking for indicator element with ID:', indicatorId, 'Found:', !!indicatorElement);
+// PERFORMANCE FIX: console.log('🎯 IoCManagement: Looking for indicator element with ID:', indicatorId, 'Found:', !!indicatorElement);
         if (indicatorElement) {
           indicatorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
           indicatorElement.style.animation = 'highlight-indicator 2s ease-in-out';
@@ -5191,10 +5191,10 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
 
   const fetchOrganizations = async () => {
     try {
-      console.log('Fetching organizations using getOrganizations API function...');
+// PERFORMANCE FIX: console.log('Fetching organizations using getOrganizations API function...');
 
       const response = await getOrganizations();
-      console.log('Organizations API response data:', response);
+// PERFORMANCE FIX: console.log('Organizations API response data:', response);
 
       // Use the same parsing logic as OrganisationManagement component
       let organizationsData = [];
@@ -5211,7 +5211,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
         organizationsData = response;
       }
 
-      console.log('Extracted organizations data:', organizationsData);
+// PERFORMANCE FIX: console.log('Extracted organizations data:', organizationsData);
       const orgsList = Array.isArray(organizationsData) ? organizationsData : [];
 
       if (orgsList.length > 0) {
@@ -5221,8 +5221,8 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
           nameToIdMap[org.name] = org.id;
         });
 
-        console.log('Extracted organization names:', orgNames);
-        console.log('Organization name to ID mapping:', nameToIdMap);
+// PERFORMANCE FIX: console.log('Extracted organization names:', orgNames);
+// PERFORMANCE FIX: console.log('Organization name to ID mapping:', nameToIdMap);
 
         setAvailableOrganisations(orgNames);
         setOrganizationMap(nameToIdMap);
@@ -5475,7 +5475,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
       setSelectedIndicators(new Set());
       await fetchIndicators(currentPage, itemsPerPage, {});
       
-      console.log(`Successfully deleted ${indicatorIds.length} indicators`);
+// PERFORMANCE FIX: console.log(`Successfully deleted ${indicatorIds.length} indicators`);
       
     } catch (error) {
       console.error('Error during bulk delete:', error);
@@ -7002,7 +7002,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
       // Close modal
       closeExportModal();
 
-      console.log(`Successfully exported ${totalCount} IoCs as ${exportFormat.toUpperCase()}`);
+// PERFORMANCE FIX: console.log(`Successfully exported ${totalCount} IoCs as ${exportFormat.toUpperCase()}`);
       showSuccess('Export Completed', `Downloaded ${totalCount} indicators as ${filename}`);
 
     } catch (error) {
@@ -7141,7 +7141,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
     try {
       // Step 1: Generate file hash for integrity verification
       const fileHash = await generateFileHash(importFile);
-      console.log(`File hash (SHA-256): ${fileHash}`);
+// PERFORMANCE FIX: console.log(`File hash (SHA-256): ${fileHash}`);
       
       // Step 2: Read file content
       const fileContent = await readFileContent(importFile);
@@ -7164,7 +7164,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
         recordCount: parsedData.length
       };
       
-      console.log('File security validation passed:', fileMetadata);
+// PERFORMANCE FIX: console.log('File security validation passed:', fileMetadata);
       setImportPreview(parsedData);
       setShowPreview(true);
       
@@ -7224,7 +7224,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
         // Show results
         const message = `Import completed! Added ${response.created_count} new indicators.`;
         const errorMessage = response.error_count > 0 ? ` ${response.error_count} errors occurred.` : '';
-        console.log(`${message}${errorMessage}`, response.errors);
+// PERFORMANCE FIX: console.log(`${message}${errorMessage}`, response.errors);
         if (response.error_count > 0) {
           showWarning('Import Completed with Errors', `${message}${errorMessage}`);
         } else {
@@ -7850,7 +7850,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
         return;
       }
 
-      console.log('Sharing indicator with organization IDs:', organizationIds);
+// PERFORMANCE FIX: console.log('Sharing indicator with organization IDs:', organizationIds);
 
       const shareData = {
         organizations: organizationIds,
@@ -7934,7 +7934,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
         closeAddModal();
         
         // Show success message
-        console.log('IoC added successfully:', response);
+// PERFORMANCE FIX: console.log('IoC added successfully:', response);
         showSuccess('IoC Added', 'IoC added successfully!');
 
         // Trigger refresh after successful IoC addition
@@ -8105,7 +8105,7 @@ function TTPAnalysis({ active }) {
       if (response && response.results) {
         setAvailableFeeds(response.results);
       } else {
-        console.log('No threat feeds found or invalid response:', response);
+// PERFORMANCE FIX: console.log('No threat feeds found or invalid response:', response);
         setAvailableFeeds([]);
       }
     } catch (error) {
@@ -8280,18 +8280,18 @@ function TTPAnalysis({ active }) {
       }
       
       const queryParams = Object.fromEntries(params.entries());
-      console.log('Fetching TTPs with params:', queryParams);
+// PERFORMANCE FIX: console.log('Fetching TTPs with params:', queryParams);
       const response = await getTtps(queryParams);
-      console.log('TTP Response received:', response);
+// PERFORMANCE FIX: console.log('TTP Response received:', response);
       if (response && response.success) {
-        console.log('First 2 TTP results:', response.results?.slice(0, 2));
+// PERFORMANCE FIX: console.log('First 2 TTP results:', response.results?.slice(0, 2));
         setTtpData(response.results || []);
         setTotalCount(response.count || 0);
         setTotalPages(response.num_pages || 0);
         setHasNext(response.has_next || false);
         setHasPrevious(response.has_previous || false);
       } else {
-        console.log('TTP response failed or invalid:', response);
+// PERFORMANCE FIX: console.log('TTP response failed or invalid:', response);
         setTtpData([]);
         setTotalCount(0);
         setTotalPages(0);
@@ -8498,12 +8498,12 @@ function TTPAnalysis({ active }) {
     try {
       // Get TTP trends data from the API
       const response = await getTtpTrends(120, 'month', 'tactic');
-      console.log('TTP Trends API response:', response);
+// PERFORMANCE FIX: console.log('TTP Trends API response:', response);
       if (response && response.series) {
-        console.log('Setting trends data:', response.series.length, 'series');
+// PERFORMANCE FIX: console.log('Setting trends data:', response.series.length, 'series');
         setTrendsData(response.series);
       } else {
-        console.log('No series data in response');
+// PERFORMANCE FIX: console.log('No series data in response');
         setTrendsData([]);
       }
     } catch (error) {
@@ -8533,9 +8533,9 @@ function TTPAnalysis({ active }) {
   const fetchFeedComparisonData = async () => {
     setFeedComparisonLoading(true);
     try {
-      console.log('Fetching feed comparison data...');
+// PERFORMANCE FIX: console.log('Fetching feed comparison data...');
       const response = await getTtpFeedComparison(30);
-      console.log('Feed comparison response:', response);
+// PERFORMANCE FIX: console.log('Feed comparison response:', response);
       setFeedComparisonData(response);
     } catch (error) {
       console.error('Error fetching feed comparison data:', error);
@@ -8547,9 +8547,9 @@ function TTPAnalysis({ active }) {
   const fetchSeasonalPatternsData = async () => {
     setSeasonalPatternsLoading(true);
     try {
-      console.log('Fetching seasonal patterns data...');
+// PERFORMANCE FIX: console.log('Fetching seasonal patterns data...');
       const response = await getTtpSeasonalPatterns(180);
-      console.log('Seasonal patterns response:', response);
+// PERFORMANCE FIX: console.log('Seasonal patterns response:', response);
       setSeasonalPatternsData(response);
     } catch (error) {
       console.error('Error fetching seasonal patterns data:', error);
@@ -9118,7 +9118,7 @@ function TTPAnalysis({ active }) {
   };
 
   const transformTrendsDataForChart = (apiData) => {
-    console.log('Transforming trends data:', apiData.length, 'series');
+// PERFORMANCE FIX: console.log('Transforming trends data:', apiData.length, 'series');
     
     // First pass: collect all unique tactics and dates
     const allTactics = new Set();
@@ -9133,8 +9133,8 @@ function TTPAnalysis({ active }) {
       });
     });
     
-    console.log('Found tactics:', Array.from(allTactics));
-    console.log('Found dates:', Array.from(allDates).slice(0, 5), '...');
+// PERFORMANCE FIX: console.log('Found tactics:', Array.from(allTactics));
+// PERFORMANCE FIX: console.log('Found dates:', Array.from(allDates).slice(0, 5), '...');
     
     // Group data by date and aggregate by tactic
     const dateMap = new Map();
@@ -9162,7 +9162,7 @@ function TTPAnalysis({ active }) {
     
     // Convert to array and sort by date
     const result = Array.from(dateMap.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
-    console.log('Transformed data:', result.length, 'entries, first entry:', result[0]);
+// PERFORMANCE FIX: console.log('Transformed data:', result.length, 'entries, first entry:', result[0]);
     
     return result;
   };
@@ -9226,7 +9226,7 @@ function TTPAnalysis({ active }) {
   }, [active, trendsData, activeTab]);
 
   const createTTPTrendsChart = () => {
-    console.log('createTTPTrendsChart called, trendsData:', trendsData.length, 'items');
+// PERFORMANCE FIX: console.log('createTTPTrendsChart called, trendsData:', trendsData.length, 'items');
     try {
       // Determine which chart container to use based on active tab
       const chartContainer = (activeTab === 'trends') ? ttpTrendsChartRef.current : ttpChartRef.current;
@@ -9242,11 +9242,11 @@ function TTPAnalysis({ active }) {
       
       // Return early if no trends data or ref not available
       if (!trendsData || trendsData.length === 0 || !chartContainer) {
-        console.log('Early return - no data or ref:', {
-          hasData: trendsData?.length > 0,
-          hasRef: !!chartContainer,
-          activeTab: activeTab
-        });
+// PERFORMANCE FIX: console.log('Early return - no data or ref:', {
+        //   hasData: trendsData?.length > 0,
+        //   hasRef: !!chartContainer,
+        //   activeTab: activeTab
+        // });
         return;
       }
       
@@ -9326,7 +9326,7 @@ function TTPAnalysis({ active }) {
       data.some(d => d[tactic] > 0)
     );
     
-    console.log('Chart categories with data:', categories);
+// PERFORMANCE FIX: console.log('Chart categories with data:', categories);
 
     // Set up scales
     const x = d3.scalePoint()
@@ -9409,11 +9409,11 @@ function TTPAnalysis({ active }) {
         })
         .on("click", function(event, d) {
           // Show detailed feed analysis modal for this data point
-          console.log("Clicked on data point:", {
-            tactic: category,
-            date: d.date,
-            count: d.value
-          });
+// PERFORMANCE FIX: console.log("Clicked on data point:", {
+          //   tactic: category,
+          //   date: d.date,
+          //   count: d.value
+          // });
           
           openChartDataModal(category, d.date, d.value);
         });
@@ -11922,10 +11922,10 @@ function Organisations({ active }) {
       setLoading(true);
       setError(null);
       const response = await api.get('/api/organizations/');
-      console.log('Organizations API response:', response); // Debug log
+// PERFORMANCE FIX: console.log('Organizations API response:', response); // Debug log
       if (response && response.success) {
         const orgs = response.organizations || [];
-        console.log('Setting organizations:', orgs); // Debug log
+// PERFORMANCE FIX: console.log('Setting organizations:', orgs); // Debug log
         setOrganizations(orgs);
       } else {
         console.error('API response unsuccessful:', response);
@@ -12107,11 +12107,11 @@ function Organisations({ active }) {
                             <button 
                               className="btn btn-sm btn-outline"
                               onClick={() => {
-                                console.log('View button clicked for org:', org.name, org.id);
+// PERFORMANCE FIX: console.log('View button clicked for org:', org.name, org.id);
                                 setSelectedOrg(org);
                                 setOrgModalMode('view');
                                 setShowOrgModal(true);
-                                console.log('Modal state set - showOrgModal:', true, 'modalMode:', 'view');
+// PERFORMANCE FIX: console.log('Modal state set - showOrgModal:', true, 'modalMode:', 'view');
                               }}
                             >
                               <i className="fas fa-eye"></i>
@@ -12119,11 +12119,11 @@ function Organisations({ active }) {
                             <button 
                               className="btn btn-sm btn-primary"
                               onClick={() => {
-                                console.log('Edit button clicked for org:', org.name, org.id);
+// PERFORMANCE FIX: console.log('Edit button clicked for org:', org.name, org.id);
                                 setSelectedOrg(org);
                                 setOrgModalMode('edit');
                                 setShowOrgModal(true);
-                                console.log('Modal state set - showOrgModal:', true, 'modalMode:', 'edit');
+// PERFORMANCE FIX: console.log('Modal state set - showOrgModal:', true, 'modalMode:', 'edit');
                               }}
                               style={{ marginLeft: '0.5rem' }}
                             >

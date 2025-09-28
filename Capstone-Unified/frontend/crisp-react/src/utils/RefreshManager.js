@@ -39,15 +39,12 @@ class RefreshManager {
   }
 
   startGlobalRefresh() {
-    // Significantly reduce polling frequency to prevent performance issues
-    // TEMPORARILY DISABLED - Global refresh disabled to prevent performance issues
-    /*
-    this.globalInterval = setInterval(() => {
-      if (this.isActive && !this.isProcessing && this.subscribers.size > 0) {
-        this.processBackgroundRefresh();
-      }
-    }, 300000); // 5 minutes - much less aggressive polling
-    */
+    // STEP BY STEP TESTING - DISABLED AGAIN
+    // this.globalInterval = setInterval(() => {
+    //   if (this.isActive && !this.isProcessing && this.subscribers.size > 0) {
+    //     this.processBackgroundRefresh();
+    //   }
+    // }, 600000);
   }
 
   async processBackgroundRefresh() {

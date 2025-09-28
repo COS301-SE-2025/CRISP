@@ -5,7 +5,7 @@ import CrispHelp from './crisp_help.jsx'; // Import the help component
 import Construction from './construction.jsx'; // Import construction component
 import ChangePassword from './components/ChangePassword.jsx'; // Import change password component
 import LoadingSpinner from './components/LoadingSpinner.jsx'; // Import loading spinner
-import RippleGrid from './components/RippleGrid.jsx'; // Import ripple grid effect
+// REMOVED: import RippleGrid from './components/RippleGrid.jsx'; // Performance fix - removed heavy animation
 import { useNotifications } from './components/enhanced/NotificationManager.jsx';
 import feather from 'feather-icons'; // Import feather icons
 import './crisp_login.css'; // Import CSS styles
@@ -21,9 +21,13 @@ function CrispLogin({ onLoginSuccess, switchView }) {
   const [showConstruction, setShowConstruction] = useState(false); // State for construction page
   const [showChangePassword, setShowChangePassword] = useState(false); // State for change password modal
 
-  // Initialize Feather icons after component mounts
+  // PERFORMANCE FIX: Minimize feather icon processing
   useEffect(() => {
-    feather.replace();
+    // Only replace icons once, with debounce
+    const timer = setTimeout(() => {
+      feather.replace();
+    }, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleSubmit = async (e) => {
@@ -69,7 +73,7 @@ function CrispLogin({ onLoginSuccess, switchView }) {
 
   // Handle navigation from help component
   const handleNavigate = (page, context) => {
-    console.log(`Navigate to ${page} from login page with context:`, context);
+    // PERFORMANCE FIX: console.log(`Navigate to ${page} from login page with context:`, context);
     
     // Close help modal first
     closeHelp();
@@ -94,22 +98,6 @@ function CrispLogin({ onLoginSuccess, switchView }) {
   return (
     <>
       {isLoading && <LoadingSpinner fullscreen={true} />}
-      {/* CRISP-themed Ripple Grid Background */}
-      <RippleGrid
-        enableRainbow={false}
-        gridColor="#4285f4"
-        rippleIntensity={0.03}
-        gridSize={12.0}
-        gridThickness={8.0}
-        fadeDistance={2.0}
-        vignetteStrength={1.5}
-        glowIntensity={0.05}
-        opacity={0.4}
-        gridRotation={15}
-        mouseInteraction={true}
-        mouseInteractionRadius={1.2}
-        className="login-ripple-grid"
-      />
       <div className="login-page">
         <div className="login-content">
           <div className="login-left">
