@@ -81,8 +81,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'core.middleware.audit_middleware.AuditMiddleware',
     'core.middleware.trust_middleware.TrustMiddleware',
+    'core.middleware.behavior_tracking_middleware.BehaviorTrackingMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.middleware.behavior_tracking_middleware.SessionCleanupMiddleware',
 ]
 
 ROOT_URLCONF = 'settings.urls'

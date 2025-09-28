@@ -29,6 +29,13 @@ CRISP (Cyber Risk Intelligence Sharing Platform) is a comprehensive trust manage
   - Multi-channel alert delivery (email, SMS, Slack, webhooks)
   - Asset criticality-based prioritization
   - Real-time IoC correlation
+- 🧠 **User Behavior Analytics (WOW Factor #2)**
+  - Statistical anomaly detection for suspicious user activities
+  - Behavioral baseline learning and pattern recognition
+  - Real-time activity monitoring and session tracking
+  - Comprehensive system logs export (CSV/JSON)
+  - Advanced threat hunting capabilities
+  - Optional ML-enhanced detection with scikit-learn
 
 ## 🗂️ Project Structure
 
@@ -525,6 +532,7 @@ export LOG_LEVEL=DEBUG
 - `SECURITY_TESTING_GUIDE.md` - Security testing guide
 - `LOAD_TESTING_GUIDE.md` - Performance testing guide
 - `DOCKER_README.md` - Docker deployment guide
+- `BEHAVIOR_ANALYTICS_SETUP.md` - User Behavior Analytics configuration guide
 
 ### API Documentation
 - Django Admin: http://localhost:8000/admin/
