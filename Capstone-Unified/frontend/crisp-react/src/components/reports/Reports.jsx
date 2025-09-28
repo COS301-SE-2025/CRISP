@@ -1116,8 +1116,6 @@ const Reports = ({ active = true }) => {
           if (!response.ok || !data.success) {
             throw new Error(data.message || 'Failed to delete report from server');
           }
-
-          console.log('Report deleted from backend:', data.message);
         }
       }
 

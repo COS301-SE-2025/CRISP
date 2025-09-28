@@ -4981,9 +4981,38 @@ function ThreatFeeds({
 function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavigationState }) {
   if (!active) return null;
   
+  const { showSuccess, showError, showWarning, showInfo } = useNotification();
   const [indicators, setIndicators] = useState([]);
   const [filteredIndicators, setFilteredIndicators] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Helper function to get display value (anonymized if needed)
+  const getDisplayValue = (indicator) => {
+    if (indicator.isShared && indicator.anonymizationLevel && indicator.anonymizationLevel !== 'none') {
+      if (indicator.anonymizationLevel === 'full') {
+        return '[ANONYMIZED]';
+      } else if (indicator.anonymizationLevel === 'partial') {
+        // For domains, show first part as asterisks
+        if (indicator.rawType === 'domain' && indicator.value.includes('.')) {
+          const parts = indicator.value.split('.');
+          if (parts.length >= 2) {
+            return '*'.repeat(parts[0].length) + '.' + parts.slice(1).join('.');
+          }
+        }
+        // For IPs, show first two octets as asterisks
+        else if (indicator.rawType === 'ip' && indicator.value.includes('.')) {
+          const parts = indicator.value.split('.');
+          if (parts.length === 4) {
+            return '***.***.'+parts[2]+'.'+parts[3];
+          }
+        }
+        // For other types, show first half as asterisks
+        const halfLength = Math.floor(indicator.value.length / 2);
+        return '*'.repeat(halfLength) + indicator.value.substring(halfLength);
+      }
+    }
+    return indicator.value;
+  };
   const [showAddModal, setShowAddModal] = useState(false);
   const [error, setError] = useState(null);
   const [newIoC, setNewIoC] = useState({
@@ -5587,6 +5616,97 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
       setLoading(false);
     }
   };
+
+  // Handle indicator deletion
+  async function handleDeleteIndicator(indicator) {
+    try {
+      // Check if multiple indicators are selected and the clicked indicator is one of them
+      const isMultipleSelected = selectedIndicators.size > 1;
+      const isClickedIndicatorSelected = selectedIndicators.has(indicator.id);
+      
+      if (isMultipleSelected && isClickedIndicatorSelected) {
+        // Bulk delete scenario - delete all selected indicators
+        if (!confirm(`Are you sure you want to delete ${selectedIndicators.size} selected indicators? This action cannot be undone.`)) {
+          return;
+        }
+        
+        setLoading(true);
+        const indicatorIds = Array.from(selectedIndicators);
+        
+        for (const indicatorId of indicatorIds) {
+          const response = await fetch(`/api/indicators/${indicatorId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to delete indicator ${indicatorId}`);
+          }
+        }
+        
+        showSuccess('Bulk Delete Complete', `Successfully deleted ${indicatorIds.length} indicators`);
+        setSelectedIndicators(new Set());
+        
+      } else {
+        // Single delete scenario
+        if (!confirm(`Are you sure you want to delete this ${indicator.type}? This action cannot be undone.`)) {
+          return;
+        }
+        
+        setLoading(true);
+        const response = await fetch(`/api/indicators/${indicator.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to delete indicator');
+        }
+        
+        showSuccess('Indicator Deleted', 'Indicator deleted successfully');
+      }
+      
+      // Refresh the indicators list
+      await fetchIndicators();
+      
+    } catch (error) {
+      console.error('Error deleting indicator:', error);
+      showError('Delete Error', 'Error deleting indicator. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Handle indicator sharing
+  function handleShareIndicator(indicator) {
+    setSharingIndicator(indicator);
+    setShareFormData({
+      organisations: [],
+      anonymizationLevel: 'partial',
+      shareMethod: 'taxii'
+    });
+    setShowShareModal(true);
+  }
+
+  // Handle indicator editing
+  function handleEditIndicator(indicator) {
+    setEditingIndicator(indicator);
+    setEditFormData({
+      type: indicator.rawType || indicator.type,
+      value: indicator.value,
+      description: indicator.description || '',
+      confidence: indicator.confidence || 50,
+      threat_feed_id: indicator.threat_feed_id || '',
+      threatFeedMode: indicator.threat_feed_id ? 'existing' : 'new'
+    });
+    setShowEditModal(true);
+  }
   
   return (
     <section id="ioc-management" className={`page-section ${active ? 'active' : ''}`}>
@@ -5604,21 +5724,12 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
 
       <div className="filters-section">
         <div className="filters-header">
-          <h3><i className="fas fa-filter"></i> Filter & Search IoCs</h3>
-          <div className="filter-actions">
-            {Object.values(filters).some(value => value !== '') && (
-              <button 
-                className="btn btn-secondary btn-sm" 
-                onClick={resetFilters}
-                title="Clear all active filters"
-              >
-                <i className="fas fa-times"></i> Clear Filters
-              </button>
-            )}
+          <div className="filter-title-area">
+            <h3><i className="fas fa-filter"></i> Filter & Search IoCs</h3>
             <div className="results-summary">
               {Object.values(filters).some(value => value !== '') ? (
                 <span className="filtered-count">
-                  <strong>{totalItems}</strong> indicators match filters
+                  <i className="fas fa-filter"></i> <strong>{totalItems}</strong> filtered
                 </span>
               ) : (
                 <span className="total-count">
@@ -5627,24 +5738,35 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
               )}
             </div>
           </div>
+          {Object.values(filters).some(value => value !== '') && (
+            <button 
+              className="btn btn-outline btn-sm clear-filters-btn" 
+              onClick={resetFilters}
+              title="Clear all active filters"
+            >
+              <i className="fas fa-times"></i> Clear All
+            </button>
+          )}
         </div>
         
         <div className="filters-grid">
-          <div className="filter-group">
-            <label className="filter-label">Search</label>
+          <div className="filter-group search-filter">
             <div className="filter-control">
-              <input
-                type="text"
-                placeholder="Search by value or description..."
-                value={filters.searchTerm}
-                onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
-                className="form-control"
-              />
+              <div className="search-input-wrapper">
+                <i className="fas fa-search search-icon"></i>
+                <input
+                  type="text"
+                  placeholder="Search indicators..."
+                  value={filters.searchTerm}
+                  onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
+                  className="form-control search-input"
+                />
+              </div>
             </div>
           </div>
           
           <div className="filter-group">
-            <label className="filter-label">IoC Type</label>
+            <label className="filter-label">Type</label>
             <div className="filter-control">
               <select 
                 value={filters.type}
@@ -5875,8 +5997,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
           <div className="table-responsive">
             <table className="data-table" style={{
               tableLayout: 'fixed',
-              width: '100%',
-              minWidth: '1000px'
+              width: '100%'
             }}>
             <thead>
               <tr>
@@ -5891,15 +6012,15 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
                     title={selectedIndicators.size > 0 ? `${selectedIndicators.size} selected` : 'Select all'}
                   />
                 </th>
-                <th style={{width: '8%', textAlign: 'center'}}>Type</th>
-                <th style={{width: '20%'}}>Value</th>
-                <th style={{width: '20%'}}>Description</th>
-                <th style={{width: '7%', textAlign: 'center'}}>Severity</th>
-                <th style={{width: '10%'}}>Source</th>
-                <th style={{width: '20%'}}>Shared Info</th>
-                <th style={{width: '8%', textAlign: 'center'}}>Date Added</th>
-                <th style={{width: '6%', textAlign: 'center'}}>Status</th>
-                <th style={{width: '11%', textAlign: 'center'}}>Actions</th>
+                <th style={{width: '7%', textAlign: 'center'}}>Type</th>
+                <th style={{width: '16%'}}>Value</th>
+                <th style={{width: '16%'}}>Description</th>
+                <th style={{width: '6%', textAlign: 'center'}}>Severity</th>
+                <th style={{width: '9%'}}>Source</th>
+                <th style={{width: '16%'}}>Shared Info</th>
+                <th style={{width: '7%', textAlign: 'center'}}>Date Added</th>
+                <th style={{width: '5%', textAlign: 'center'}}>Status</th>
+                <th style={{width: '14%', textAlign: 'center'}}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -5925,7 +6046,15 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
                       </span>
                     </td>
                     <td style={{width: '20%', padding: '8px 6px', whiteSpace: 'normal', wordWrap: 'break-word', fontFamily: 'Monaco, Consolas, monospace', fontSize: '13px'}} title={indicator.value}>
-                      {indicator.value}
+                      <span style={{
+                        color: (indicator.isShared && indicator.anonymizationLevel && indicator.anonymizationLevel !== 'none') ? '#f57c00' : 'inherit',
+                        fontStyle: (indicator.isShared && indicator.anonymizationLevel && indicator.anonymizationLevel !== 'none') ? 'italic' : 'normal'
+                      }}>
+                        {getDisplayValue(indicator)}
+                      </span>
+                      {(indicator.isShared && indicator.anonymizationLevel && indicator.anonymizationLevel !== 'none') && (
+                        <i className="fas fa-user-secret" style={{marginLeft: '6px', color: '#f57c00', fontSize: '12px'}} title="Anonymized value"></i>
+                      )}
                     </td>
                     <td style={{width: '20%', padding: '8px 6px', whiteSpace: 'normal', wordWrap: 'break-word'}} title={indicator.description || ''}>
                       {indicator.description || <em className="text-muted">No description</em>}
@@ -7819,7 +7948,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
   function removeOrganisation(organisation) {
     setShareFormData(prev => ({
       ...prev,
-      institutions: prev.institutions.filter(inst => inst !== organisation)
+      organisations: prev.organisations.filter(org => org.id !== organisation.id)
     }));
   }
 
@@ -13624,6 +13753,18 @@ function CSSStyles() {
             background-color: #c53030;
         }
         
+        /* Remove blue border from outline danger buttons (delete buttons) */
+        .btn-outline.btn-danger {
+            border: 1px solid var(--danger);
+            background-color: transparent;
+            color: var(--danger);
+        }
+        
+        .btn-outline.btn-danger:hover {
+            background-color: var(--danger);
+            color: white;
+        }
+        
         .btn-sm {
             padding: 6px 12px;
             font-size: 13px;
@@ -13813,7 +13954,7 @@ function CSSStyles() {
         
         /* Tables */
         .table-responsive {
-            overflow-x: auto;
+            overflow-x: hidden;
             margin-bottom: 1rem;
         }
         
@@ -13824,20 +13965,20 @@ function CSSStyles() {
         
         /* IoC Management table with optimized column widths */
         #ioc-management .data-table {
-            min-width: 1200px;
+            width: 100%;
             table-layout: fixed;
         }
         
-        #ioc-management .data-table th:nth-child(1) { width: 40px; }   /* Checkbox */
-        #ioc-management .data-table th:nth-child(2) { width: 80px; }   /* Type */
-        #ioc-management .data-table th:nth-child(3) { width: 120px; }  /* Title */
-        #ioc-management .data-table th:nth-child(4) { width: 200px; }  /* Value */
-        #ioc-management .data-table th:nth-child(5) { width: 150px; }  /* Description */
-        #ioc-management .data-table th:nth-child(6) { width: 80px; }   /* Severity */
-        #ioc-management .data-table th:nth-child(7) { width: 100px; }  /* Source */
-        #ioc-management .data-table th:nth-child(8) { width: 110px; }  /* Date Added */
-        #ioc-management .data-table th:nth-child(9) { width: 80px; }   /* Status */
-        #ioc-management .data-table th:nth-child(10) { width: 120px; } /* Actions */
+        #ioc-management .data-table th:nth-child(1) { width: 4%; }   /* Checkbox */
+        #ioc-management .data-table th:nth-child(2) { width: 7%; }   /* Type */
+        #ioc-management .data-table th:nth-child(3) { width: 16%; }  /* Value */
+        #ioc-management .data-table th:nth-child(4) { width: 16%; }  /* Description */
+        #ioc-management .data-table th:nth-child(5) { width: 6%; }   /* Severity */
+        #ioc-management .data-table th:nth-child(6) { width: 9%; }   /* Source */
+        #ioc-management .data-table th:nth-child(7) { width: 16%; }  /* Shared Info */
+        #ioc-management .data-table th:nth-child(8) { width: 7%; }   /* Date Added */
+        #ioc-management .data-table th:nth-child(9) { width: 5%; }   /* Status */
+        #ioc-management .data-table th:nth-child(10) { width: 14%; }  /* Actions */
         
         /* Ensure text wraps properly and doesn't overflow */
         #ioc-management .data-table td {
@@ -14065,16 +14206,67 @@ function CSSStyles() {
         
         /* Filter Section */
         .filters-section {
-            background-color: var(--light-gray);
-            border-radius: 8px;
-            padding: 16px;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border: 1px solid var(--light-gray);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        
+        .filters-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--light-gray);
+        }
+        
+        .filter-title-area {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .filter-title-area h3 {
+            margin: 0;
+            color: var(--text-dark);
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .results-summary {
+            background-color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--light-gray);
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        
+        .filtered-count {
+            color: var(--primary-blue);
+            font-weight: 500;
+        }
+        
+        .clear-filters-btn {
+            background-color: white;
+            border: 1px solid var(--medium-gray);
+            color: var(--text-muted);
+        }
+        
+        .clear-filters-btn:hover {
+            background-color: #f8f9fa;
+            border-color: var(--primary-blue);
+            color: var(--primary-blue);
         }
         
         .filters-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr;
             gap: 16px;
+            align-items: end;
         }
         
         .filter-group {
@@ -14083,10 +14275,17 @@ function CSSStyles() {
             gap: 8px;
         }
         
+        .search-filter {
+            grid-column: span 2;
+        }
+        
         .filter-label {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
             color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
         }
         
         .filter-control {
@@ -14094,21 +14293,54 @@ function CSSStyles() {
             gap: 10px;
         }
         
-        .filter-control select,
-        .filter-control input {
-            padding: 8px 12px;
-            border-radius: 6px;
-            border: 1px solid var(--medium-gray);
-            font-size: 14px;
-            background-color: white;
-            flex: 1;
+        .search-input-wrapper {
+            position: relative;
+            width: 100%;
         }
         
-        .filter-control select:focus,
-        .filter-control input:focus {
-            outline: none;
-            border-color: var(--secondary-blue);
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 14px;
+            z-index: 1;
         }
+        
+        .search-input {
+            padding-left: 40px !important;
+        }
+        
+        @media (max-width: 1200px) {
+            .filters-grid {
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 12px;
+            }
+            
+            .search-filter {
+                grid-column: span 3;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .filters-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            
+            .search-filter {
+                grid-column: span 1;
+            }
+            
+            .filters-header {
+                flex-direction: column;
+                gap: 12px;
+                align-items: flex-start;
+            }
+        }
+        
+        /* Legacy filter control styling - overridden by .form-control */
         
         /* Organisations List */
         .organisation-list {
@@ -14802,18 +15034,29 @@ function CSSStyles() {
 
         .form-control {
             width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            font-size: 0.9rem;
+            padding: 12px 16px;
+            border: 1.5px solid var(--medium-gray);
+            border-radius: 8px;
+            font-size: 14px;
             background-color: white;
-            color: #333;
-            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+            color: var(--text-dark);
+            transition: all 0.2s ease;
+            appearance: none;
+        }
+        
+        select.form-control {
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23666"><path d="M7 10l5 5 5-5z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+            padding-right: 40px;
+            cursor: pointer;
         }
         
         .form-control option {
-            color: #333;
+            color: var(--text-dark);
             background-color: white;
+            padding: 8px;
         }
         
         .form-control-sm {
