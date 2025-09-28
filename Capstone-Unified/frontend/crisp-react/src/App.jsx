@@ -14,7 +14,7 @@ import IncidentsList from './components/soc/IncidentsList.jsx';
 import BlueVLogo from './assets/enhanced/BlueV2.png';
 import * as api from './api.js';
 import { getOrganizations, getThreatFeedTtps, getMitreMatrix, getTtpFeedComparison, getTtpSeasonalPatterns, getTtpTechniqueFrequencies, getTtps, getTtpFilterOptions, getTtpTrends, getTtpDetails, updateTtp, getMatrixCellDetails, getTechniqueDetails, exportTtps, getUsersList, getIndicators } from './api.js';
-import { NotificationProvider } from './components/ui/NotificationManager.jsx';
+import { NotificationProvider, useNotification } from './components/ui/NotificationManager.jsx';
 import Notifications from './components/notifications/Notifications.jsx';
 import refreshManager from './utils/RefreshManager.js';
 
@@ -140,7 +140,7 @@ const getAuthHeaders = () => {
 
 function AppWithNotifications({ user, onLogout, isAdmin }) {
   // Get notification functions
-  const { showSuccess, showInfo, showError, showWarning } = useNotifications();
+  const { showSuccess, showInfo, showError, showWarning } = useNotification();
   
   // Unread notifications count state
   const [unreadCount, setUnreadCount] = useState(0);

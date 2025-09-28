@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNotifications } from './enhanced/NotificationManager.jsx';
 
 // API configuration
 const API_BASE_URL = 'http://localhost:8000';
@@ -8,14 +7,11 @@ function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { showError } = useNotifications();
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleForgotPassword = async (email) => {
     setIsLoading(true);
-    
-    const handleForgotPassword = async (email) => {
-    setLoading(true);
     setError(null);
     
     try {
@@ -37,14 +33,20 @@ function ForgotPassword() {
       const data = await response.json();
       if (data.success) {
         setSuccess(data.message);
+        setIsSubmitted(true);
       } else {
         setError(data.message || 'Failed to send password reset email');
       }
-        } catch (error) {
+    } catch (error) {
       setError('Failed to send password reset email. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await handleForgotPassword(email);
   };
 
   return (
@@ -102,6 +104,16 @@ function ForgotPassword() {
                 {isLoading ? 'Sending...' : 'Send Reset Link'}
               </button>
             </form>
+            {error && (
+              <div style={{ marginTop: '1rem', padding: '0.5rem', background: '#fee2e2', color: '#dc2626', borderRadius: '4px' }}>
+                {error}
+              </div>
+            )}
+            {success && (
+              <div style={{ marginTop: '1rem', padding: '0.5rem', background: '#d1fae5', color: '#065f46', borderRadius: '4px' }}>
+                {success}
+              </div>
+            )}
             <div style={{ marginTop: '1rem', textAlign: 'center' }}>
               <a href="/login" style={{ color: '#0056b3' }}>Back to Login</a>
             </div>
