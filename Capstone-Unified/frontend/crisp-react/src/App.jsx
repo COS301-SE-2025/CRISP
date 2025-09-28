@@ -8939,21 +8939,7 @@ function TTPAnalysis({ active, user }) {
   const fetchFeedComparisonData = async () => {
     setFeedComparisonLoading(true);
     try {
-console.log('🔍 Fetching feed comparison data...');
       const response = await getTtpFeedComparison(30);
-      console.log('📊 Feed comparison response:', response);
-      console.log('📈 Feed statistics:', response?.feed_statistics);
-      // Debug AVG/Day values specifically
-      if (response?.feed_statistics) {
-        response.feed_statistics.forEach((feed, index) => {
-          console.log(`🔢 Feed ${index + 1} (${feed.threat_feed__name}):`, {
-            avg_techniques_per_day: feed.avg_techniques_per_day,
-            type: typeof feed.avg_techniques_per_day,
-            ttp_count: feed.ttp_count,
-            unique_techniques: feed.unique_techniques
-          });
-        });
-      }
       setFeedComparisonData(response);
     } catch (error) {
       console.error('Error fetching feed comparison data:', error);
