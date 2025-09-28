@@ -1,0 +1,1909 @@
+Run started:2025-08-19 17:13:43.848961
+
+Test results:
+>> Issue: [B703:django_mark_safe] Potential XSS on mark_safe function.
+   Severity: Medium   Confidence: High
+   CWE: CWE-80 (https://cwe.mitre.org/data/definitions/80.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b703_django_mark_safe.html
+   Location: ./core/admin.py:85:15
+84	        """
+85	        return mark_safe(html)
+86	    get_anonymization_info.short_description = 'Anonymization Info'
+
+--------------------------------------------------
+>> Issue: [B308:blacklist] Use of mark_safe() may expose cross-site scripting vulnerabilities and should be reviewed.
+   Severity: Medium   Confidence: High
+   CWE: CWE-79 (https://cwe.mitre.org/data/definitions/79.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b308-mark-safe
+   Location: ./core/admin.py:85:15
+84	        """
+85	        return mark_safe(html)
+86	    get_anonymization_info.short_description = 'Anonymization Info'
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b110_try_except_pass.html
+   Location: ./core/api/threat_feed_views.py:3748:12
+3747	                date_from = datetime.fromisoformat(filters['date_from'].replace('Z', '+00:00'))
+3748	            except:
+3749	                pass
+3750	        if filters.get('date_to'):
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b110_try_except_pass.html
+   Location: ./core/api/threat_feed_views.py:3753:12
+3752	                date_to = datetime.fromisoformat(filters['date_to'].replace('Z', '+00:00'))
+3753	            except:
+3754	                pass
+3755	        
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: ./core/audit/services/audit_service.py:14:0
+13	import os
+14	import subprocess
+15	import hashlib
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/audit/services/audit_service.py:144:65
+143	                        # Exponential backoff with jitter
+144	                        sleep_time = (2 ** retry_count) * 0.05 + random.uniform(0, 0.05)
+145	                        time.sleep(sleep_time)
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'DefaultPassword123!'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/management/commands/initialize_system.py:250:21
+249	            
+250	            result = user_service.create_user(
+251	                username=publisher_username,
+252	                email=f'publisher@{org.domain}',
+253	                password='DefaultPassword123!',  # Should be changed on first login
+254	                first_name='Organization',
+255	                last_name='Publisher',
+256	                role='publisher',
+257	                organization_id=str(org.id),
+258	                created_by=admin_user
+259	            )
+260	            
+
+--------------------------------------------------
+>> Issue: [B605:start_process_with_a_shell] Starting a process with a shell: Seems safe, but may be changed in the future, consider rewriting without shell
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b605_start_process_with_a_shell.html
+   Location: ./core/management/commands/populate_database.py:26:4
+25	    print("Installing tqdm for progress bars...")
+26	    os.system("pip install tqdm")
+27	    from tqdm import tqdm
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b607_start_process_with_partial_path.html
+   Location: ./core/management/commands/populate_database.py:26:4
+25	    print("Installing tqdm for progress bars...")
+26	    os.system("pip install tqdm")
+27	    from tqdm import tqdm
+
+--------------------------------------------------
+>> Issue: [B112:try_except_continue] Try, Except, Continue detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b112_try_except_continue.html
+   Location: ./core/management/commands/populate_database.py:211:12
+210	                    created_orgs.append(org)
+211	            except Exception as e:
+212	                # Skip duplicates or errors
+213	                continue
+214	                
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:224:27
+223	        for i in range(self.NUM_ORGANIZATIONS):
+224	            company_type = random.choice(self.company_types)
+225	            company_name = f"{fake.company().replace(',', '').replace('.', '')} {company_type}"
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:229:41
+228	            domain_base = company_name.lower().replace(' ', '').replace('&', 'and')[:15]
+229	            domain = f"{domain_base}{i}.{random.choice(self.domain_suffixes)}"
+230	            
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:248:29
+247	                'website': f"https://www.{domain}",
+248	                'is_active': random.choice([True, True, True, False]),
+249	                'is_publisher': random.choice([True, False]),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:249:32
+248	                'is_active': random.choice([True, True, True, False]),
+249	                'is_publisher': random.choice([True, False]),
+250	                'is_verified': random.choice([True, True, False]),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:250:31
+249	                'is_publisher': random.choice([True, False]),
+250	                'is_verified': random.choice([True, True, False]),
+251	                'trust_metadata': {'industry': company_type, 'country': fake.country()}
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:314:27
+313	                try:
+314	                    role = random.choices(roles, weights=role_weights)[0]
+315	                    
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:329:38
+328	                            role=role,
+329	                            is_active=random.choice([True, True, True, False]),
+330	                            is_publisher=random.choice([True, False]),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:330:41
+329	                            is_active=random.choice([True, True, True, False]),
+330	                            is_publisher=random.choice([True, False]),
+331	                            is_verified=random.choice([True, True, False]),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:331:40
+330	                            is_publisher=random.choice([True, False]),
+331	                            is_verified=random.choice([True, True, False]),
+332	                            date_joined=fake.date_time_between(start_date='-2y', end_date='now', tzinfo=timezone.get_current_timezone())
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:356:25
+355	        for org in self.organizations:
+356	            user_count = random.randint(*self.USERS_PER_ORG)
+357	            org_user_pairs.append((org, user_count))
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:393:29
+392	            try:
+393	                source_org = random.choice(self.organizations)
+394	                target_org = random.choice(self.organizations)
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:394:29
+393	                source_org = random.choice(self.organizations)
+394	                target_org = random.choice(self.organizations)
+395	                
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:409:29
+408	                    
+409	                admin_user = random.choice(admin_users)
+410	                trust_level = random.choice(self.trust_levels)
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:410:30
+409	                admin_user = random.choice(admin_users)
+410	                trust_level = random.choice(self.trust_levels)
+411	                
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:417:42
+416	                        trust_level=trust_level,
+417	                        relationship_type=random.choice(relationship_types),
+418	                        status=random.choice(statuses),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:418:31
+417	                        relationship_type=random.choice(relationship_types),
+418	                        status=random.choice(statuses),
+419	                        is_active=random.choice([True, False]),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:419:34
+418	                        status=random.choice(statuses),
+419	                        is_active=random.choice([True, False]),
+420	                        created_by=admin_user,
+
+--------------------------------------------------
+>> Issue: [B112:try_except_continue] Try, Except, Continue detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b112_try_except_continue.html
+   Location: ./core/management/commands/populate_database.py:428:12
+427	                    
+428	            except Exception as e:
+429	                continue
+430	                
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:464:29
+463	                    
+464	                admin_user = random.choice(admin_users)
+465	                group_name = f"{fake.word().title()} {random.choice(['Alliance', 'Network', 'Consortium', 'Partnership', 'Coalition'])}"
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:465:54
+464	                admin_user = random.choice(admin_users)
+465	                group_name = f"{fake.word().title()} {random.choice(['Alliance', 'Network', 'Consortium', 'Partnership', 'Coalition'])}"
+466	                
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:478:44
+477	                        description=fake.paragraph(),
+478	                        default_trust_level=random.choice(self.trust_levels),
+479	                        created_by=str(admin_user),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:480:34
+479	                        created_by=str(admin_user),
+480	                        is_active=random.choice([True, True, False]),
+481	                        group_type=random.choice(['industry', 'regional', 'strategic', 'community']),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:481:35
+480	                        is_active=random.choice([True, True, False]),
+481	                        group_type=random.choice(['industry', 'regional', 'strategic', 'community']),
+482	                        is_public=random.choice([True, False]),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:482:34
+481	                        group_type=random.choice(['industry', 'regional', 'strategic', 'community']),
+482	                        is_public=random.choice([True, False]),
+483	                        requires_approval=random.choice([True, False]),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:483:42
+482	                        is_public=random.choice([True, False]),
+483	                        requires_approval=random.choice([True, False]),
+484	                        administrators=[str(admin_user.organization.id)] if admin_user.organization else []
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:500:34
+499	                    # Add random organizations to the group
+500	                    num_members = random.randint(2, 8)
+501	                    available_orgs = [org for org in self.organizations if org != admin_user.organization]
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:502:34
+501	                    available_orgs = [org for org in self.organizations if org != admin_user.organization]
+502	                    member_orgs = random.sample(available_orgs, min(num_members, len(available_orgs)))
+503	                    
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:508:44
+507	                            organization=org,
+508	                            membership_type=random.choice(['member', 'member', 'member', 'moderator']),
+509	                            is_active=random.choice([True, True, False]),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:509:38
+508	                            membership_type=random.choice(['member', 'member', 'member', 'moderator']),
+509	                            is_active=random.choice([True, True, False]),
+510	                            joined_at=fake.date_time_between(start_date='-6m', end_date='now', tzinfo=timezone.get_current_timezone()),
+
+--------------------------------------------------
+>> Issue: [B112:try_except_continue] Try, Except, Continue detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b112_try_except_continue.html
+   Location: ./core/management/commands/populate_database.py:518:12
+517	                    
+518	            except Exception as e:
+519	                continue
+520	                
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:535:23
+534	            try:
+535	                user = random.choice(self.users)
+536	                session_start = fake.date_time_between(start_date='-30d', end_date='now', tzinfo=timezone.get_current_timezone())
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:537:53
+536	                session_start = fake.date_time_between(start_date='-30d', end_date='now', tzinfo=timezone.get_current_timezone())
+537	                session_duration = timedelta(minutes=random.randint(5, 480))
+538	                
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:550:34
+549	                        ip_address=fake.ipv4(),
+550	                        is_active=random.choice([True, False]),
+551	                        expires_at=session_start + session_duration,
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:552:42
+551	                        expires_at=session_start + session_duration,
+552	                        is_trusted_device=random.choice([True, False])
+553	                    )
+
+--------------------------------------------------
+>> Issue: [B112:try_except_continue] Try, Except, Continue detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b112_try_except_continue.html
+   Location: ./core/management/commands/populate_database.py:556:12
+555	                    
+556	            except Exception as e:
+557	                continue
+558	                
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:580:35
+579	                        description=fake.text(),
+580	                        created_by=random.choice(self.users),
+581	                        source_organization=random.choice(self.organizations)
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:581:44
+580	                        created_by=random.choice(self.users),
+581	                        source_organization=random.choice(self.organizations)
+582	                    )
+
+--------------------------------------------------
+>> Issue: [B112:try_except_continue] Try, Except, Continue detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b112_try_except_continue.html
+   Location: ./core/management/commands/populate_database.py:584:12
+583	                    collections.append(collection)
+584	            except Exception as e:
+585	                continue
+586	        
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:590:23
+589	            try:
+590	                user = random.choice(self.users)
+591	                org = random.choice(self.organizations)
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:591:22
+590	                user = random.choice(self.users)
+591	                org = random.choice(self.organizations)
+592	                collection = random.choice(collections) if collections else None
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:592:29
+591	                org = random.choice(self.organizations)
+592	                collection = random.choice(collections) if collections else None
+593	                
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:598:34
+597	                        description=fake.text(),
+598	                        feed_type=random.choice(['STIX', 'IOC', 'Custom']),
+599	                        is_active=random.choice([True, True, False]),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:599:34
+598	                        feed_type=random.choice(['STIX', 'IOC', 'Custom']),
+599	                        is_active=random.choice([True, True, False]),
+600	                        created_by=user,
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_database.py:602:36
+601	                        organization=org,
+602	                        trust_level=random.choice(self.trust_levels) if self.trust_levels else None
+603	                    )
+
+--------------------------------------------------
+>> Issue: [B112:try_except_continue] Try, Except, Continue detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b112_try_except_continue.html
+   Location: ./core/management/commands/populate_database.py:619:12
+618	                    
+619	            except Exception as e:
+620	                continue
+621	                
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_trust_data.py:114:33
+113	                    # Pick two different organizations
+114	                    source_org = random.choice(organizations)
+115	                    target_org = random.choice(organizations)
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_trust_data.py:115:33
+114	                    source_org = random.choice(organizations)
+115	                    target_org = random.choice(organizations)
+116	                    
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_trust_data.py:138:24
+137	                        str(target_org.id),  # Ensure UUID is passed as string
+138	                        random.choice(relationship_types),
+139	                        random.randint(25, 95),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_trust_data.py:139:24
+138	                        random.choice(relationship_types),
+139	                        random.randint(25, 95),
+140	                        random.choice(statuses),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_trust_data.py:140:24
+139	                        random.randint(25, 95),
+140	                        random.choice(statuses),
+141	                        fake.date_time_this_year(),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_trust_data.py:142:24
+141	                        fake.date_time_this_year(),
+142	                        random.choice(users).id if users else None,
+143	                        random.choice([True, False])
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_trust_data.py:143:24
+142	                        random.choice(users).id if users else None,
+143	                        random.choice([True, False])
+144	                    ])
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_trust_relationships_simple.py:43:33
+42	                try:
+43	                    source_org = random.choice(organizations)
+44	                    target_org = random.choice(organizations)
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_trust_relationships_simple.py:44:33
+43	                    source_org = random.choice(organizations)
+44	                    target_org = random.choice(organizations)
+45	                    
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_trust_relationships_simple.py:72:24
+71	                        str(target_org.id),
+72	                        random.choice(relationship_types),
+73	                        random.choice(statuses),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_trust_relationships_simple.py:73:24
+72	                        random.choice(relationship_types),
+73	                        random.choice(statuses),
+74	                        random.choice(['read', 'contribute', 'full']),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_trust_relationships_simple.py:74:24
+73	                        random.choice(statuses),
+74	                        random.choice(['read', 'contribute', 'full']),
+75	                        random.choice(['none', 'minimal', 'partial', 'full']),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_trust_relationships_simple.py:75:24
+74	                        random.choice(['read', 'contribute', 'full']),
+75	                        random.choice(['none', 'minimal', 'partial', 'full']),
+76	                        True,
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_trust_relationships_simple.py:77:24
+76	                        True,
+77	                        random.choice([True, False]),
+78	                        random.choice([True, False]),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_trust_relationships_simple.py:78:24
+77	                        random.choice([True, False]),
+78	                        random.choice([True, False]),
+79	                        random.choice([True, False]),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_trust_relationships_simple.py:79:24
+78	                        random.choice([True, False]),
+79	                        random.choice([True, False]),
+80	                        random.choice(['approved', 'pending', 'rejected']),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_trust_relationships_simple.py:80:24
+79	                        random.choice([True, False]),
+80	                        random.choice(['approved', 'pending', 'rejected']),
+81	                        random.choice(['approved', 'pending', 'rejected']),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_trust_relationships_simple.py:81:24
+80	                        random.choice(['approved', 'pending', 'rejected']),
+81	                        random.choice(['approved', 'pending', 'rejected']),
+82	                        fake.date_time_this_year(),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_ttp_data.py:312:28
+311	                # Select technique (with some repetition for realistic distribution)
+312	                technique = random.choice(all_techniques)
+313	                
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_ttp_data.py:315:30
+314	                # Select random threat feed
+315	                threat_feed = random.choice(threat_feeds)
+316	                
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_ttp_data.py:332:26
+331	            # Generate random creation time within the specified range
+332	            random_days = random.randint(0, days_back)
+333	            random_hours = random.randint(0, 23)
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_ttp_data.py:333:27
+332	            random_days = random.randint(0, days_back)
+333	            random_hours = random.randint(0, 23)
+334	            random_minutes = random.randint(0, 59)
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_ttp_data.py:334:29
+333	            random_hours = random.randint(0, 23)
+334	            random_minutes = random.randint(0, 59)
+335	            created_at = start_date + timedelta(
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_ttp_data.py:345:28
+344	            # Determine anonymization (20% chance)
+345	            is_anonymized = random.choice([True] * 2 + [False] * 8)  # 20% chance
+346	            
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_ttp_data.py:359:28
+358	                name=technique['name'],
+359	                description=random.choice(description_variations),
+360	                mitre_technique_id=technique['id'],
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_ttp_data.py:368:34
+367	                    'source': f'Simulated data from {threat_feed.name}',
+368	                    'confidence': random.choice(['high', 'medium', 'low']),
+369	                    'severity': random.choice(['critical', 'high', 'medium', 'low']),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_ttp_data.py:369:32
+368	                    'confidence': random.choice(['high', 'medium', 'low']),
+369	                    'severity': random.choice(['critical', 'high', 'medium', 'low']),
+370	                    'tags': random.sample(['apt', 'malware', 'ransomware', 'phishing', 'lateral-movement', 'persistence', 'evasion'], k=random.randint(1, 3))
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_ttp_data.py:370:28
+369	                    'severity': random.choice(['critical', 'high', 'medium', 'low']),
+370	                    'tags': random.sample(['apt', 'malware', 'ransomware', 'phishing', 'lateral-movement', 'persistence', 'evasion'], k=random.randint(1, 3))
+371	                },
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_ttp_data.py:370:136
+369	                    'severity': random.choice(['critical', 'high', 'medium', 'low']),
+370	                    'tags': random.sample(['apt', 'malware', 'ransomware', 'phishing', 'lateral-movement', 'persistence', 'evasion'], k=random.randint(1, 3))
+371	                },
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/management/commands/populate_ttp_data.py:373:58
+372	                created_at=created_at,
+373	                updated_at=created_at + timedelta(minutes=random.randint(0, 60))
+374	            )
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'AdminPass123!'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b105_hardcoded_password_string.html
+   Location: ./core/management/commands/setup_base_users.py:80:19
+79	        email = 'admin@bluevision.tech'
+80	        password = 'AdminPass123!'
+81	        
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'PublisherPass123!'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b105_hardcoded_password_string.html
+   Location: ./core/management/commands/setup_base_users.py:123:19
+122	        email = 'publisher@bluevision.tech'
+123	        password = 'PublisherPass123!'
+124	        
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'ViewerPass123!'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b105_hardcoded_password_string.html
+   Location: ./core/management/commands/setup_base_users.py:164:19
+163	        email = 'viewer@bluevision.tech'
+164	        password = 'ViewerPass123!'
+165	        
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'django-insecure-default-key-for-dev'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b105_hardcoded_password_string.html
+   Location: ./core/management/commands/system_health_check.py:335:34
+334	        # Check SECRET_KEY
+335	        if settings.SECRET_KEY == 'django-insecure-default-key-for-dev':
+336	            warnings.append('Using default SECRET_KEY')
+
+--------------------------------------------------
+>> Issue: [B405:blacklist] Using xml.etree.ElementTree to parse untrusted XML data is known to be vulnerable to XML attacks. Replace xml.etree.ElementTree with the equivalent defusedxml package, or make sure defusedxml.defuse_stdlib() is called.
+   Severity: Low   Confidence: High
+   CWE: CWE-20 (https://cwe.mitre.org/data/definitions/20.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_imports.html#b405-import-xml-etree
+   Location: ./core/parsers/stix1_parser.py:2:0
+1	import logging
+2	import xml.etree.ElementTree as ET
+3	from io import BytesIO
+
+--------------------------------------------------
+>> Issue: [B314:blacklist] Using xml.etree.ElementTree.parse to parse untrusted XML data is known to be vulnerable to XML attacks. Replace xml.etree.ElementTree.parse with its defusedxml equivalent function or make sure defusedxml.defuse_stdlib() is called
+   Severity: Medium   Confidence: High
+   CWE: CWE-20 (https://cwe.mitre.org/data/definitions/20.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b313-b320-xml-bad-elementtree
+   Location: ./core/parsers/stix1_parser.py:65:23
+64	            try:
+65	                root = ET.parse(BytesIO(content)).getroot()
+66	                logger.info(f"Successfully parsed XML. Root tag: {root.tag}")
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b110_try_except_pass.html
+   Location: ./core/patterns/strategy/context.py:479:16
+478	                        obj[field] = dt.strftime('%Y-%m-%dT%H:%M:%S.%fZ')[:-3] + 'Z'
+479	                except Exception:
+480	                    pass
+481	        
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b110_try_except_pass.html
+   Location: ./core/patterns/strategy/context.py:752:12
+751	                result = result[:start] + anonymized_ip + result[end:]
+752	            except Exception:
+753	                # Skip if anonymization fails
+754	                pass
+755	        
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b110_try_except_pass.html
+   Location: ./core/patterns/strategy/context.py:764:12
+763	                result = result[:start] + anonymized_ip + result[end:]
+764	            except Exception:
+765	                # Skip if anonymization fails
+766	                pass
+767	        
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b110_try_except_pass.html
+   Location: ./core/patterns/strategy/context.py:776:12
+775	                result = result[:start] + anonymized_url + result[end:]
+776	            except Exception:
+777	                # Skip if anonymization fails
+778	                pass
+779	        
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b110_try_except_pass.html
+   Location: ./core/patterns/strategy/context.py:788:12
+787	                result = result[:start] + anonymized_email + result[end:]
+788	            except Exception:
+789	                # Skip if anonymization fails
+790	                pass
+791	        
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b110_try_except_pass.html
+   Location: ./core/patterns/strategy/context.py:811:12
+810	                result = result[:start] + anonymized_domain + result[end:]
+811	            except Exception:
+812	                # Skip if anonymization fails
+813	                pass
+814	        
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b110_try_except_pass.html
+   Location: ./core/patterns/strategy/context.py:822:16
+821	                    result = result.replace(domain, anonymized_domain)
+822	                except Exception:
+823	                    # Skip if anonymization fails
+824	                    pass
+825	        
+
+--------------------------------------------------
+>> Issue: [B324:hashlib] Use of weak MD5 hash for security. Consider usedforsecurity=False
+   Severity: High   Confidence: High
+   CWE: CWE-327 (https://cwe.mitre.org/data/definitions/327.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b324_hashlib.html
+   Location: ./core/patterns/strategy/strategies.py:122:31
+121	                elif level == AnonymizationLevel.FULL:
+122	                    hash_obj = hashlib.md5(str(ip).encode())
+123	                    return f"anon-ipv4-{hash_obj.hexdigest()[:8]}"
+
+--------------------------------------------------
+>> Issue: [B324:hashlib] Use of weak MD5 hash for security. Consider usedforsecurity=False
+   Severity: High   Confidence: High
+   CWE: CWE-327 (https://cwe.mitre.org/data/definitions/327.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b324_hashlib.html
+   Location: ./core/patterns/strategy/strategies.py:143:31
+142	                elif level == AnonymizationLevel.FULL:
+143	                    hash_obj = hashlib.md5(str(ip).encode())
+144	                    result = f"anon-ipv6-{hash_obj.hexdigest()[:8]}"
+
+--------------------------------------------------
+>> Issue: [B324:hashlib] Use of weak MD5 hash for security. Consider usedforsecurity=False
+   Severity: High   Confidence: High
+   CWE: CWE-327 (https://cwe.mitre.org/data/definitions/327.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b324_hashlib.html
+   Location: ./core/patterns/strategy/strategies.py:244:23
+243	            # Complete anonymization with consistent hash
+244	            hash_obj = hashlib.md5(domain.encode())
+245	            return f"anon-domain-{hash_obj.hexdigest()[:8]}.example"
+
+--------------------------------------------------
+>> Issue: [B324:hashlib] Use of weak MD5 hash for security. Consider usedforsecurity=False
+   Severity: High   Confidence: High
+   CWE: CWE-327 (https://cwe.mitre.org/data/definitions/327.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b324_hashlib.html
+   Location: ./core/patterns/strategy/strategies.py:367:31
+366	                # Anonymize local part but keep domain
+367	                return f"user-{hashlib.md5(local_part.encode()).hexdigest()[:6]}@{domain_part}"
+368	            elif level == AnonymizationLevel.MEDIUM:
+
+--------------------------------------------------
+>> Issue: [B324:hashlib] Use of weak MD5 hash for security. Consider usedforsecurity=False
+   Severity: High   Confidence: High
+   CWE: CWE-327 (https://cwe.mitre.org/data/definitions/327.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b324_hashlib.html
+   Location: ./core/patterns/strategy/strategies.py:373:35
+372	                    anon_domain = domain_strategy.anonymize(domain_part, AnonymizationLevel.LOW)
+373	                    return f"user-{hashlib.md5(local_part.encode()).hexdigest()[:6]}@{anon_domain}"
+374	                except Exception:
+
+--------------------------------------------------
+>> Issue: [B324:hashlib] Use of weak MD5 hash for security. Consider usedforsecurity=False
+   Severity: High   Confidence: High
+   CWE: CWE-327 (https://cwe.mitre.org/data/definitions/327.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b324_hashlib.html
+   Location: ./core/patterns/strategy/strategies.py:376:35
+375	                    # If domain is invalid, just use a simplified approach
+376	                    return f"user-{hashlib.md5(local_part.encode()).hexdigest()[:6]}@*.domain"
+377	            elif level == AnonymizationLevel.HIGH:
+
+--------------------------------------------------
+>> Issue: [B324:hashlib] Use of weak MD5 hash for security. Consider usedforsecurity=False
+   Severity: High   Confidence: High
+   CWE: CWE-327 (https://cwe.mitre.org/data/definitions/327.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b324_hashlib.html
+   Location: ./core/patterns/strategy/strategies.py:388:27
+387	                # Complete anonymization
+388	                hash_obj = hashlib.md5(email.encode())
+389	                return f"anon-user-{hash_obj.hexdigest()[:8]}@example.com"
+
+--------------------------------------------------
+>> Issue: [B324:hashlib] Use of weak MD5 hash for security. Consider usedforsecurity=False
+   Severity: High   Confidence: High
+   CWE: CWE-327 (https://cwe.mitre.org/data/definitions/327.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b324_hashlib.html
+   Location: ./core/patterns/strategy/strategies.py:474:27
+473	                # Complete anonymization
+474	                hash_obj = hashlib.md5(url.encode())
+475	                return f"https://anon-url-{hash_obj.hexdigest()[:8]}.example"
+
+--------------------------------------------------
+>> Issue: [B324:hashlib] Use of weak MD5 hash for security. Consider usedforsecurity=False
+   Severity: High   Confidence: High
+   CWE: CWE-327 (https://cwe.mitre.org/data/definitions/327.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b324_hashlib.html
+   Location: ./core/patterns/strategy/utils.py:32:15
+31	        """
+32	        return hashlib.md5(data.encode()).hexdigest()[:length]
+33	    
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/patterns/strategy/utils.py:45:23
+44	        """
+45	        return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+46	    
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/services/audit_service.py:133:65
+132	                        # Exponential backoff with jitter
+133	                        sleep_time = (2 ** retry_count) * 0.05 + random.uniform(0, 0.05)
+134	                        time.sleep(sleep_time)
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'unused'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/services/otx_taxii_service.py:35:12
+34	            
+35	            client.set_auth(username=self.api_key, password='unused')
+36	            
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b110_try_except_pass.html
+   Location: ./core/services/user_service.py:544:16
+543	                    UserProfile.objects.filter(user=user).delete()
+544	                except:
+545	                    pass  # UserProfile might not exist
+546	                
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'testpass123'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/tests/test_data_fixtures.py:24:11
+23	    
+24	    return User.objects.create_user(
+25	        username=username,
+26	        email=email,
+27	        password='testpass123'
+28	    )
+29	
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/tests/test_data_fixtures.py:202:34
+201	        'description': 'Test description',
+202	        'mitre_technique_id': f'T{random.randint(1000, 9999)}',  # Generate random ID
+203	        'stix_id': f'attack-pattern--{uuid.uuid4()}',  # Generate unique STIX ID
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'testpass123'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/tests/test_end_to_end.py:40:20
+39	        # Create test user for authentication
+40	        self.user = User.objects.create_user(
+41	            username=get_unique_username('api_test'),
+42	            password='testpass123',
+43	            email=get_unique_email('api_test')
+44	        )
+45	        
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'testpass123'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/tests/test_end_to_end.py:235:20
+234	        # Create test user for authentication
+235	        self.user = User.objects.create_user(
+236	            username=get_unique_username('consumption_test'),
+237	            password='testpass123',
+238	            email=get_unique_email('consumption_test')
+239	        )
+240	        
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'testpass123'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/tests/test_end_to_end.py:365:20
+364	        # Create test user
+365	        self.user = User.objects.create_user(
+366	            username=get_unique_username('publication_test'),
+367	            password='testpass123',
+368	            email=get_unique_email('publication_test')
+369	        )
+370	        
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'testpass123'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/tests/test_end_to_end.py:463:20
+462	        # Create test user
+463	        self.user = User.objects.create_user(
+464	            username=get_unique_username('error_test'),
+465	            password='testpass123',
+466	            email=get_unique_email('error_test')
+467	        )
+468	        
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'testpass123'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/tests/test_full_workflow.py:30:20
+29	        # Create test user
+30	        self.user = User.objects.create_user(
+31	            username=f'testuser_{unique_suffix}',
+32	            email=f'test_{unique_suffix}@example.com',
+33	            password='testpass123'
+34	        )
+35	        
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/tests/test_helpers.py:12:28
+11	    """Generate a unique username for test users."""
+12	    random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+13	    return f"{prefix}_{random_suffix}"
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/tests/test_helpers.py:23:28
+22	    """Generate a unique name for test organizations."""
+23	    random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+24	    return f"{prefix} {random_suffix}"
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/tests/test_helpers.py:29:28
+28	    """Generate a unique email address."""
+29	    random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+30	    return f"{prefix}_{random_suffix}@example.com"
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/tests/test_helpers.py:40:28
+39	    """Generate a unique domain for institutions."""
+40	    random_suffix = ''.join(random.choices(string.ascii_lowercase, k=6))
+41	    return f"{prefix}-{random_suffix}.edu"
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'testpass'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/tests/test_integrated_anonymization.py:34:20
+33	        unique_suffix = str(uuid.uuid4())[:8]
+34	        self.user = User.objects.create_user(
+35	            username=f'testuser_{unique_suffix}',
+36	            email=f'test_{unique_suffix}@example.com',
+37	            password='testpass'
+38	        )
+39	        
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b101_assert_used.html
+   Location: ./core/tests/test_integration.py:23:8
+22	        ip_result = context.execute_anonymization("192.168.1.100", DataType.IP_ADDRESS, AnonymizationLevel.MEDIUM)
+23	        assert ip_result == "192.168.x.x", f"Expected '192.168.x.x', got '{ip_result}'"
+24	        
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b101_assert_used.html
+   Location: ./core/tests/test_integration.py:27:8
+26	        domain_result = context.execute_anonymization("malicious.example.com", DataType.DOMAIN, AnonymizationLevel.LOW)
+27	        assert domain_result == "*.example.com", f"Expected '*.example.com', got '{domain_result}'"
+28	        
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b101_assert_used.html
+   Location: ./core/tests/test_integration.py:31:8
+30	        auto_result = context.auto_detect_and_anonymize("evil.org", AnonymizationLevel.HIGH)
+31	        assert "*.organization" in auto_result or "*.other" in auto_result, f"Expected category anonymization, got '{auto_result}'"
+32	        
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b101_assert_used.html
+   Location: ./core/tests/test_integration.py:54:8
+53	        ip_strategy = IPAddressAnonymizationStrategy()
+54	        assert ip_strategy.can_handle(DataType.IP_ADDRESS)
+55	        assert ip_strategy.validate("192.168.1.1")
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b101_assert_used.html
+   Location: ./core/tests/test_integration.py:55:8
+54	        assert ip_strategy.can_handle(DataType.IP_ADDRESS)
+55	        assert ip_strategy.validate("192.168.1.1")
+56	        ip_anon = ip_strategy.anonymize("192.168.1.1", AnonymizationLevel.LOW)
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b101_assert_used.html
+   Location: ./core/tests/test_integration.py:57:8
+56	        ip_anon = ip_strategy.anonymize("192.168.1.1", AnonymizationLevel.LOW)
+57	        assert ip_anon == "192.168.1.x"
+58	        
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b101_assert_used.html
+   Location: ./core/tests/test_integration.py:61:8
+60	        domain_strategy = DomainAnonymizationStrategy()
+61	        assert domain_strategy.can_handle(DataType.DOMAIN)
+62	        assert domain_strategy.validate("example.com")
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b101_assert_used.html
+   Location: ./core/tests/test_integration.py:62:8
+61	        assert domain_strategy.can_handle(DataType.DOMAIN)
+62	        assert domain_strategy.validate("example.com")
+63	        domain_anon = domain_strategy.anonymize("test.example.com", AnonymizationLevel.LOW)
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b101_assert_used.html
+   Location: ./core/tests/test_integration.py:64:8
+63	        domain_anon = domain_strategy.anonymize("test.example.com", AnonymizationLevel.LOW)
+64	        assert domain_anon == "*.example.com"
+65	        
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b101_assert_used.html
+   Location: ./core/tests/test_integration.py:68:8
+67	        email_strategy = EmailAnonymizationStrategy()
+68	        assert email_strategy.can_handle(DataType.EMAIL)
+69	        assert email_strategy.validate("user@example.com")
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b101_assert_used.html
+   Location: ./core/tests/test_integration.py:69:8
+68	        assert email_strategy.can_handle(DataType.EMAIL)
+69	        assert email_strategy.validate("user@example.com")
+70	        email_anon = email_strategy.anonymize("user@example.com", AnonymizationLevel.MEDIUM)
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b101_assert_used.html
+   Location: ./core/tests/test_integration.py:71:8
+70	        email_anon = email_strategy.anonymize("user@example.com", AnonymizationLevel.MEDIUM)
+71	        assert "@*.example.com" in email_anon
+72	        
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b101_assert_used.html
+   Location: ./core/tests/test_integration.py:101:12
+100	            result = map_trust_to_anon(trust)
+101	            assert result == expected, f"Trust {trust} should map to {expected}, got {result}"
+102	        
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b101_assert_used.html
+   Location: ./core/tests/test_integration.py:132:8
+131	        # Validate STIX structure
+132	        assert stix_indicator["type"] == "indicator"
+133	        assert "pattern" in stix_indicator
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b101_assert_used.html
+   Location: ./core/tests/test_integration.py:133:8
+132	        assert stix_indicator["type"] == "indicator"
+133	        assert "pattern" in stix_indicator
+134	        assert "domain-name:value" in stix_indicator["pattern"]
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b101_assert_used.html
+   Location: ./core/tests/test_integration.py:134:8
+133	        assert "pattern" in stix_indicator
+134	        assert "domain-name:value" in stix_indicator["pattern"]
+135	        
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b101_assert_used.html
+   Location: ./core/tests/test_integration.py:139:8
+138	        anonymized_pattern = original_pattern.replace("test.example.com", "[REDACTED].example.com")
+139	        assert anonymized_pattern != original_pattern
+140	        assert "[REDACTED]" in anonymized_pattern
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b101_assert_used.html
+   Location: ./core/tests/test_integration.py:140:8
+139	        assert anonymized_pattern != original_pattern
+140	        assert "[REDACTED]" in anonymized_pattern
+141	        
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/tests/test_publication_system.py:60:28
+59	    """Generate a unique username for test users."""
+60	    random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+61	    return f"{prefix}_{random_suffix}"
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b311-random
+   Location: ./core/tests/test_publication_system.py:69:28
+68	    """Generate a unique name for test organizations."""
+69	    random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+70	    return f"{prefix} {random_suffix}"
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'testpass123'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/tests/test_publication_system.py:77:20
+76	    def setUp(self):
+77	        self.user = User.objects.create_user(
+78	            username=get_unique_username('publisher'),
+79	            password='testpass123',
+80	            email='publisher@test.com'
+81	        )
+82	        
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'testpass123'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/tests/test_publication_system.py:254:20
+253	    def setUp(self):
+254	        self.user = User.objects.create_user(
+255	            username=get_unique_username('feed_pub'),
+256	            password='testpass123'
+257	        )
+258	        
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'testpass123'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/tests/test_publication_system.py:459:20
+458	    def setUp(self):
+459	        self.user = User.objects.create_user(
+460	            username=get_unique_username('auth_test'),
+461	            password='testpass123'
+462	        )
+463	        
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'testpass123'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/tests/test_publication_system.py:496:21
+495	        # Create another user and organization
+496	        other_user = User.objects.create_user(
+497	            username=get_unique_username('other_auth'),
+498	            password='testpass123'
+499	        )
+500	        
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'testpass123'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/tests/test_publication_system.py:526:20
+525	    def setUp(self):
+526	        self.user = User.objects.create_user(
+527	            username=get_unique_username('workflow'),
+528	            password='testpass123'
+529	        )
+530	        
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'testpass123'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/tests/test_publication_system.py:612:20
+611	    def setUp(self):
+612	        self.user = User.objects.create_user(
+613	            username=get_unique_username('error_test'),
+614	            password='testpass123'
+615	        )
+616	        
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'testpass123'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/tests/test_repository.py:41:20
+40	        # Create test user for organization ownership
+41	        self.user = User.objects.create_user(
+42	            username=get_unique_username('repo_test'),
+43	            password='testpass123',
+44	            email=get_unique_email('repo_test')
+45	        )
+46	        
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'testpass123'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/tests/test_repository.py:257:20
+256	        # Create test user
+257	        self.user = User.objects.create_user(
+258	            username=get_unique_username('indicator_test'),
+259	            password='testpass123',
+260	            email=get_unique_email('indicator_test')
+261	        )
+262	        
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'testpass123'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/tests/test_repository.py:376:20
+375	        # Create test user
+376	        self.user = User.objects.create_user(
+377	            username=get_unique_username('ttp_test'),
+378	            password='testpass123',
+379	            email=get_unique_email('ttp_test')
+380	        )
+381	        
+
+--------------------------------------------------
+>> Issue: [B405:blacklist] Using xml.etree.ElementTree to parse untrusted XML data is known to be vulnerable to XML attacks. Replace xml.etree.ElementTree with the equivalent defusedxml package, or make sure defusedxml.defuse_stdlib() is called.
+   Severity: Low   Confidence: High
+   CWE: CWE-20 (https://cwe.mitre.org/data/definitions/20.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_imports.html#b405-import-xml-etree
+   Location: ./core/tests/test_stix1_parser.py:7:0
+6	from io import BytesIO
+7	import xml.etree.ElementTree as ET
+8	from django.test import TestCase
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'testpass'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/tests/test_taxii_anonymization.py:33:21
+32	
+33	        self.user1 = User.objects.create_user(
+34	            username=f'user1_{unique_suffix}',
+35	            email=f'user1_{unique_suffix}@example.com', 
+36	            password='testpass'
+37	        )
+38	
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'testpass'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/tests/test_taxii_anonymization.py:39:21
+38	
+39	        self.user2 = User.objects.create_user(
+40	            username=f'user2_{unique_suffix}',
+41	            email=f'user2_{unique_suffix}@example.com',
+42	            password='testpass'
+43	        )
+44	        
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'test_pass'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/tests/test_taxii_service.py:304:20
+303	        # Create feed with credentials
+304	        auth_feed = create_test_threat_feed(
+305	            owner=self.organization,
+306	            name_suffix=f"auth_{self.unique_suffix}",
+307	            taxii_username="test_user",
+308	            taxii_password="test_pass",
+309	            unique=True
+310	        )
+311	        
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b110_try_except_pass.html
+   Location: ./core/tests/test_taxii_service.py:353:12
+352	                self.assertIsInstance(parsed, datetime)
+353	            except Exception:
+354	                # Some formats might not be supported - that's okay
+355	                pass
+356	
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'testpass123'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/tests/test_utils.py:20:15
+19	        unique_name = f"{base_name}_{self.test_id}_{len(self.created_objects)}"
+20	        user = User.objects.create_user(
+21	            username=unique_name,
+22	            email=f"{unique_name}@example.com",
+23	            password="testpass123"
+24	        )
+25	        self.created_objects.append(user)
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b110_try_except_pass.html
+   Location: ./core/tests/test_utils.py:61:12
+60	                obj.delete()
+61	            except:
+62	                pass
+63	        self.created_objects.clear() 
+
+--------------------------------------------------
+>> Issue: [B112:try_except_continue] Try, Except, Continue detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b112_try_except_continue.html
+   Location: ./core/user_management/services/access_control_service.py:221:20
+220	                            accessible.append(rel.target_organization)
+221	                    except Exception:
+222	                        continue
+223	            except Exception:
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b110_try_except_pass.html
+   Location: ./core/user_management/services/access_control_service.py:223:12
+222	                        continue
+223	            except Exception:
+224	                pass  # Handle gracefully in case of model issues
+225	        
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b110_try_except_pass.html
+   Location: ./core/user_management/services/access_control_service.py:261:8
+260	                })
+261	        except Exception:
+262	            pass  # Handle gracefully
+263	        
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b110_try_except_pass.html
+   Location: ./core/user_management/services/user_service.py:689:16
+688	                    EmailLog.objects.filter(sent_by=target_user).delete()
+689	                except:
+690	                    pass  # EmailLog table might not exist
+691	                
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b110_try_except_pass.html
+   Location: ./core/user_management/services/user_service.py:698:16
+697	                    ).delete()
+698	                except:
+699	                    pass  # UserInvitation might not exist
+700	                
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b110_try_except_pass.html
+   Location: ./core/user_management/services/user_service.py:705:16
+704	                    PasswordResetToken.objects.filter(user=target_user).delete()
+705	                except:
+706	                    pass  # PasswordResetToken might not exist
+707	                
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'testpass123'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/user_management/tests/test_models.py:23:15
+22	        """Test creating a user with required fields"""
+23	        user = User.objects.create_user(
+24	            username='testuser',
+25	            email='test@example.com',
+26	            password='testpass123',
+27	            organization=self.organization
+28	        )
+29	        
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'adminpass123'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/user_management/tests/test_models.py:40:16
+39	        """Test creating a superuser"""
+40	        admin = User.objects.create_superuser(
+41	            username='admin',
+42	            email='admin@example.com',
+43	            password='adminpass123',
+44	            organization=self.organization
+45	        )
+46	        self.assertTrue(admin.is_superuser)
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'test_session_token'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/user_management/tests/test_models.py:140:18
+139	        expires_at = timezone.now() + timedelta(hours=1)
+140	        session = UserSession.objects.create(
+141	            user=self.user,
+142	            session_token='test_session_token',
+143	            refresh_token='test_refresh_token',
+144	            ip_address='127.0.0.1',
+145	            device_info={'browser': 'Test Browser'},
+146	            expires_at=expires_at
+147	        )
+148	        
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'test_session_token'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html
+   Location: ./core/user_management/tests/test_models.py:159:18
+158	        expires_at = timezone.now() + timedelta(hours=1)
+159	        session = UserSession.objects.create(
+160	            user=self.user,
+161	            session_token='test_session_token',
+162	            refresh_token='test_refresh_token',
+163	            ip_address='127.0.0.1',
+164	            expires_at=expires_at
+165	        )
+166	        
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b110_try_except_pass.html
+   Location: ./core/user_management/views/admin_views.py:199:16
+198	                    logs_query = logs_query.filter(user_id=user_id)
+199	                except Exception:
+200	                    # Skip invalid user_id values
+201	                    pass
+202	            if success is not None:
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b110_try_except_pass.html
+   Location: ./core/user_management/views/admin_views.py:211:16
+210	                        logs_query = logs_query.filter(timestamp__gte=parsed_start)
+211	                except Exception:
+212	                    # Skip invalid date format
+213	                    pass
+214	            if end_date:
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b110_try_except_pass.html
+   Location: ./core/user_management/views/admin_views.py:220:16
+219	                        logs_query = logs_query.filter(timestamp__lte=parsed_end)
+220	                except Exception:
+221	                    # Skip invalid date format
+222	                    pass
+223	            
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b110_try_except_pass.html
+   Location: ./core/viewing/home.py:25:8
+24	            return HttpResponse(react_html)
+25	        except Exception:
+26	            pass
+27	    
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'unused'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b105_hardcoded_password_string.html
+   Location: ./crisp_unified/settings.py:226:25
+225	TAXII_DEFAULT_USERNAME = os.getenv('OTX_API_KEY', '')
+226	TAXII_DEFAULT_PASSWORD = 'unused'  # OTX ignores the password field
+227	
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 49485
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 162
+		Medium: 3
+		High: 9
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 31
+		High: 143
+Files skipped (0):

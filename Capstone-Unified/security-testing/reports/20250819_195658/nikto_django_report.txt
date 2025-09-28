@@ -1,0 +1,8 @@
+- Nikto v2.1.5/2.1.5
++ Target Host: localhost
++ Target Port: 8000
++ GET /: Uncommon header 'cross-origin-opener-policy' found, with contents: same-origin
++ GET /: Uncommon header 'referrer-policy' found, with contents: same-origin
++ GET /: Uncommon header 'x-content-type-options' found, with contents: nosniff
++ GET /: Uncommon header 'x-frame-options' found, with contents: DENY
++ -3092: GET /login/: /login/: This might be interesting...
