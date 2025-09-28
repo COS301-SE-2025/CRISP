@@ -11,9 +11,15 @@ CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 # Frontend production build stage
 FROM node:18-slim AS frontend-builder
 WORKDIR /app/frontend
+# Copy package files first for better layer caching
 COPY frontend/crisp-react/package*.json ./
 RUN npm ci --only=production=false
+# Copy all frontend source code
 COPY frontend/crisp-react/ ./
+# Add build argument to bust cache when needed
+ARG BUILD_DATE
+ENV BUILD_DATE=${BUILD_DATE}
+# Build the React application
 RUN npm run build
 
 # Django backend stage

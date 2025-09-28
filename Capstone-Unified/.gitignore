@@ -24,6 +24,7 @@ known_hosts
 .ssh/
 ssh_keys/
 keys/
+production_keys/
 
 # Deployment keys and certificates
 *.crt
