@@ -8701,9 +8701,21 @@ function TTPAnalysis({ active, user }) {
   const fetchFeedComparisonData = async () => {
     setFeedComparisonLoading(true);
     try {
-// PERFORMANCE FIX: console.log('Fetching feed comparison data...');
+console.log('🔍 Fetching feed comparison data...');
       const response = await getTtpFeedComparison(30);
-// PERFORMANCE FIX: console.log('Feed comparison response:', response);
+      console.log('📊 Feed comparison response:', response);
+      console.log('📈 Feed statistics:', response?.feed_statistics);
+      // Debug AVG/Day values specifically
+      if (response?.feed_statistics) {
+        response.feed_statistics.forEach((feed, index) => {
+          console.log(`🔢 Feed ${index + 1} (${feed.threat_feed__name}):`, {
+            avg_techniques_per_day: feed.avg_techniques_per_day,
+            type: typeof feed.avg_techniques_per_day,
+            ttp_count: feed.ttp_count,
+            unique_techniques: feed.unique_techniques
+          });
+        });
+      }
       setFeedComparisonData(response);
     } catch (error) {
       console.error('Error fetching feed comparison data:', error);
@@ -9824,15 +9836,19 @@ function TTPAnalysis({ active, user }) {
                         <div className="feed-name">{feed.threat_feed__name}</div>
                         <div className="feed-stats">
                           <div className="stat-item">
-                            <span className="stat-value">{feed.ttp_count}</span>
+                            <span className="stat-value">{feed.ttp_count || 0}</span>
                             <span className="stat-label">TTPs</span>
                           </div>
                           <div className="stat-item">
-                            <span className="stat-value">{feed.unique_techniques}</span>
+                            <span className="stat-value">{feed.unique_techniques || 0}</span>
                             <span className="stat-label">Unique Techniques</span>
                           </div>
-                          <div className="stat-item">
-                            <span className="stat-value">{feed.avg_techniques_per_day}</span>
+                          <div className="stat-item avg-day-stat" title={`Raw value: ${feed.avg_techniques_per_day} (${typeof feed.avg_techniques_per_day})`}>
+                            <span className="stat-value">
+                              {feed.avg_techniques_per_day !== null && feed.avg_techniques_per_day !== undefined 
+                                ? Number(feed.avg_techniques_per_day).toFixed(2) 
+                                : '0.00'}
+                            </span>
                             <span className="stat-label">Avg/Day</span>
                           </div>
                         </div>
@@ -16212,7 +16228,25 @@ function CSSStyles() {
         
         .feed-stats {
             display: flex;
-            gap: 15px;
+            gap: 8px;
+        }
+
+        .feed-stats .stat-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            padding: 1px 4px;
+            background: #f8f9fa;
+            border-radius: 3px;
+            color: #6c757d;
+            line-height: 1.2;
+            height: 18px;
+        }
+
+        .feed-stats .stat-item i {
+            color: var(--primary-blue);
+            font-size: 10px;
         }
         
         .feed-badges {
