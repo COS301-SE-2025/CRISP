@@ -14798,26 +14798,19 @@ function CSSStyles() {
         
         .organisation-stats {
             display: flex;
-            gap: 8px;
-            margin-top: 4px;
+            gap: 15px;
+            margin-top: 5px;
         }
-
-        .organisation-stats .stat-item {
-            display: inline-flex;
+        
+        .stat-item {
+            display: flex;
             align-items: center;
-            gap: 4px;
-            font-size: 11px;
-            padding: 1px 4px;
-            background: #f8f9fa;
-            border-radius: 3px;
-            color: #6c757d;
-            line-height: 1.2;
-            height: 18px;
+            gap: 5px;
+            font-size: 13px;
         }
-
-        .organisation-stats .stat-item i {
+        
+        .stat-item i {
             color: var(--primary-blue);
-            font-size: 10px;
         }
         
         .trust-level {
