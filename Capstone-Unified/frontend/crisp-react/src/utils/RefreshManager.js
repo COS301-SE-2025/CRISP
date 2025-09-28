@@ -39,12 +39,12 @@ class RefreshManager {
   }
 
   startGlobalRefresh() {
-    // STEP BY STEP TESTING - DISABLED AGAIN
-    // this.globalInterval = setInterval(() => {
-    //   if (this.isActive && !this.isProcessing && this.subscribers.size > 0) {
-    //     this.processBackgroundRefresh();
-    //   }
-    // }, 600000);
+    // PERFORMANCE RESTORED: Global refresh enabled with 10-minute interval
+    this.globalInterval = setInterval(() => {
+      if (this.isActive && !this.isProcessing && this.subscribers.size > 0) {
+        this.processBackgroundRefresh();
+      }
+    }, 600000); // 10 minutes - much less frequent than before
   }
 
   async processBackgroundRefresh() {

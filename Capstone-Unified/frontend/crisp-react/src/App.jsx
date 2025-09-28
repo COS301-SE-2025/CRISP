@@ -467,9 +467,9 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
     fetchUnreadCount(); // Initial fetch
     
     // Fetch every 10 minutes to dramatically reduce server load
-    // DISABLED FOR TESTING: const interval = setInterval(fetchUnreadCount, 600000); // 10 minutes instead of 2
-    
-    // DISABLED FOR TESTING: return () => clearInterval(interval);
+    const interval = setInterval(fetchUnreadCount, 600000); // 10 minutes - reasonable frequency
+
+    return () => clearInterval(interval);
   }, []);
 
   // Function to switch between pages with optional modal triggers

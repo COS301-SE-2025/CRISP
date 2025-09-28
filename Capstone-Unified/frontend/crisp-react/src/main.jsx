@@ -164,21 +164,19 @@ function AuthRoutesWithNotifications() {
 
   return (
     <NotificationProvider>
-      {/* STEP BY STEP TESTING - ALL DISABLED */}
-      {/* Step 1: SessionTimeout */}
-      {/* {isAuthenticated && (
+      {/* PERFORMANCE RESTORED: SessionTimeout and NotificationWatcher re-enabled */}
+      {isAuthenticated && (
         <SessionTimeout
           isAuthenticated={isAuthenticated}
           onLogout={handleLogout}
           timeoutMinutes={10}
           warningMinutes={2}
         />
-      )} */}
+      )}
 
-      {/* Step 2: NotificationWatcher */}
-      {/* {isAuthenticated && userData && (
+      {isAuthenticated && userData && (
         <NotificationWatcher user={userData} />
-      )} */}
+      )}
       <Routes>
         {/* Landing page route - redirect to dashboard if authenticated */}
         <Route
