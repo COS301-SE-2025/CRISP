@@ -151,13 +151,29 @@ def incidents_list(request):
                         metadata=incident_data.get('metadata', {})
                     )
                     
+                    # Add related indicators if provided
+                    related_indicators = incident_data.get('related_indicators', [])
+                    if related_indicators:
+                        try:
+                            indicators = Indicator.objects.filter(id__in=related_indicators)
+                            incident.related_indicators.add(*indicators)
+                            logger.info(f"Added {indicators.count()} indicators to incident {incident.incident_id}")
+                        except Exception as e:
+                            logger.warning(f"Error adding indicators to incident: {str(e)}")
+                    
                     # Log activity
+                    activity_details = {
+                        'priority': incident_data['priority'], 
+                        'category': incident_data['category'],
+                        'related_indicators_count': len(related_indicators)
+                    }
                     SOCIncidentActivity.objects.create(
                         incident=incident,
                         user=request.user,
                         activity_type='created',
-                        description=f"Incident created by {request.user.username}",
-                        details={'priority': incident_data['priority'], 'category': incident_data['category']}
+                        description=f"Incident created by {request.user.username}" + 
+                                   (f" with {len(related_indicators)} related IOCs" if related_indicators else ""),
+                        details=activity_details
                     )
                     
                     logger.info(f"Created incident {incident.incident_id} for organization {organization.name}")
@@ -356,25 +372,26 @@ def incident_detail(request, incident_id):
                 }, status=status.HTTP_400_BAD_REQUEST)
 
         elif request.method == 'DELETE':
-            # Delete incident (soft delete by marking as closed)
-            incident.status = 'closed'
-            incident.closed_at = timezone.now()
-            incident.save()
+            # Hard delete incident (actual deletion)
+            incident_id_str = incident.incident_id
             
-            # Log activity
+            # Log activity before deletion
             SOCIncidentActivity.objects.create(
                 incident=incident,
                 user=request.user,
-                activity_type='closed',
-                description=f"Incident deleted/closed by {request.user.username}",
-                details={'reason': 'deleted'}
+                activity_type='deleted',
+                description=f"Incident permanently deleted by {request.user.username}",
+                details={'reason': 'hard_delete', 'deleted_at': timezone.now().isoformat()}
             )
             
-            logger.info(f"Deleted incident {incident.incident_id} by {request.user.username}")
+            logger.info(f"Hard deleting incident {incident_id_str} by {request.user.username}")
+            
+            # Actually delete the incident
+            incident.delete()
             
             return Response({
                 'success': True,
-                'message': 'Incident deleted successfully'
+                'message': 'Incident deleted permanently'
             })
 
     except Exception as e:

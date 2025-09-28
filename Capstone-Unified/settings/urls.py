@@ -36,4 +36,7 @@ urlpatterns = [
     
     # Alert management endpoints
     path('api/alerts/', include('core.alerts.alerts_urls')),
+    
+    # SOC (Security Operations Center) endpoints
+    path('api/soc/', include('soc.urls')),
 ]
