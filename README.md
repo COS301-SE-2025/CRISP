@@ -150,10 +150,6 @@ We follow an **Agile Scrum Framework**:
 - Node.js 16+
 - PostgreSQL 13+
 
-### Installation
-```
- **FIX AFTER DONE WITH IMPLEMENTATION (add description on how to use system)**
-```
 
 ## 🔒 Security
 
