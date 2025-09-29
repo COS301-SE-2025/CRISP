@@ -827,7 +827,7 @@ The **N-tier architecture** provides clear separation of concerns, enabling inde
 
 This hybrid approach delivers scalability, maintainability, security, and performance required for enterprise threat intelligence operations.
 
-![View Architecture Diagram](Architecture%20Diagram/ArchitectureDiagram_v1.png)
+![View Architecture Diagram](ArchitectureDiagram.drawio.svg)
 
 ---
 
