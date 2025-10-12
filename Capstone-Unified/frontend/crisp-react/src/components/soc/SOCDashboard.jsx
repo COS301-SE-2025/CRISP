@@ -84,6 +84,10 @@ const SOCDashboard = ({ active, showPage }) => {
   };
 
   const setupWebSocketConnection = () => {
+    // WebSocket temporarily disabled - using polling for updates
+    console.log('WebSocket connection disabled - using API polling instead');
+    return;
+    
     try {
       const token = localStorage.getItem('access_token');
       const wsUrl = `ws://${window.location.hostname}:8000/ws/soc/?token=${token}`;

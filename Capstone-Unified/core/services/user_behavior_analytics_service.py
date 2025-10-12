@@ -67,7 +67,7 @@ class UserBehaviorAnalyticsService:
             end_time__isnull=False  # Only completed sessions
         )
         
-        if sessions.count() < 5:  # Need minimum sessions for reliable baseline
+        if sessions.count() < 10:  # Need minimum sessions for reliable baseline
             logger.warning(f"Insufficient session data for {user.username} baseline")
             return None
             
