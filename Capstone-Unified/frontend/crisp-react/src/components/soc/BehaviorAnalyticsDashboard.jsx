@@ -43,7 +43,7 @@ const BehaviorAnalyticsDashboard = ({ active }) => {
 
   const fetchAnomalies = async () => {
     try {
-      const response = await api.get(`/api/behavior-analytics/anomalies/?days=${selectedTimeframe}&page_size=10`);
+      const response = await api.get(`/api/behavior-analytics/anomalies/?days=${selectedTimeframe}&page_size=10&is_investigated=false`);
       setAnomalies(response.results || []);
     } catch (err) {
       console.error('Error fetching anomalies:', err);
@@ -192,8 +192,8 @@ const BehaviorAnalyticsDashboard = ({ active }) => {
   if (loading) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <i className="fas fa-spinner fa-spin" style={{ fontSize: '3rem', color: '#007bff' }}></i>
-        <p style={{ marginTop: '1rem', color: '#666' }}>Loading behavior analytics...</p>
+        <i className="fas fa-spinner fa-spin" style={{ fontSize: '3rem', color: '#2563eb' }}></i>
+        <p style={{ marginTop: '1rem', color: '#64748b' }}>Loading behavior analytics...</p>
       </div>
     );
   }
@@ -207,7 +207,7 @@ const BehaviorAnalyticsDashboard = ({ active }) => {
         alignItems: 'center',
         marginBottom: '2rem',
         padding: '1rem',
-        background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
+        background: '#2563eb',
         color: 'white',
         borderRadius: '8px'
       }}>
@@ -248,7 +248,7 @@ const BehaviorAnalyticsDashboard = ({ active }) => {
           marginBottom: '2rem' 
         }}>
           <div style={{
-            background: '#007bff',
+            background: '#2563eb',
             color: 'white',
             padding: '1.5rem',
             borderRadius: '8px',
@@ -324,7 +324,7 @@ const BehaviorAnalyticsDashboard = ({ active }) => {
           overflow: 'hidden' 
         }}>
           <div style={{
-            background: '#007bff',
+            background: '#2563eb',
             color: 'white',
             padding: '1rem'
           }}>
@@ -335,7 +335,7 @@ const BehaviorAnalyticsDashboard = ({ active }) => {
           </div>
           <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
             {anomalies.length === 0 ? (
-              <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
                 <i className="fas fa-shield-check" style={{ fontSize: '3rem', marginBottom: '1rem', color: '#28a745' }}></i>
                 <p>No high-confidence anomalies detected</p>
               </div>
@@ -348,7 +348,7 @@ const BehaviorAnalyticsDashboard = ({ active }) => {
                     borderBottom: index < anomalies.length - 1 ? '1px solid #dee2e6' : 'none',
                     cursor: 'pointer'
                   }}
-                  onMouseEnter={(e) => e.target.closest('div').style.background = '#f8f9fa'}
+                  onMouseEnter={(e) => e.target.closest('div').style.background = '#eff6ff'}
                   onMouseLeave={(e) => e.target.closest('div').style.background = 'white'}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -365,14 +365,14 @@ const BehaviorAnalyticsDashboard = ({ active }) => {
                         }}>
                           {anomaly.severity}
                         </span>
-                        <span style={{ fontSize: '0.875rem', color: '#666' }}>
+                        <span style={{ fontSize: '0.875rem', color: '#64748b' }}>
                           {anomaly.confidence_score}% confidence
                         </span>
                       </div>
                       <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', fontWeight: '600' }}>
                         {anomaly.title}
                       </h4>
-                      <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.8rem', color: '#666', lineHeight: '1.4' }}>
+                      <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.8rem', color: '#64748b', lineHeight: '1.4' }}>
                         {anomaly.description}
                       </p>
                       <div style={{ fontSize: '0.75rem', color: '#999' }}>
@@ -381,31 +381,20 @@ const BehaviorAnalyticsDashboard = ({ active }) => {
                       </div>
                     </div>
                     <div style={{ marginLeft: '1rem' }}>
-                      {!anomaly.is_investigated && (
-                        <button
-                          onClick={() => handleInvestigateAnomaly(anomaly.id, 'Investigated from dashboard', false, false)}
-                          style={{
-                            padding: '0.375rem 0.75rem',
-                            backgroundColor: '#007bff',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            fontSize: '0.75rem',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Investigate
-                        </button>
-                      )}
-                      {anomaly.is_investigated && (
-                        <span style={{
-                          color: '#28a745',
+                      <button
+                        onClick={() => handleInvestigateAnomaly(anomaly.id, 'Investigated from dashboard', false, false)}
+                        style={{
+                          padding: '0.375rem 0.75rem',
+                          backgroundColor: '#2563eb',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
                           fontSize: '0.75rem',
-                          fontWeight: '600'
-                        }}>
-                          <i className="fas fa-check-circle"></i> Investigated
-                        </span>
-                      )}
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Investigate
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -433,7 +422,7 @@ const BehaviorAnalyticsDashboard = ({ active }) => {
           </div>
           <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
             {alerts.length === 0 ? (
-              <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
                 <i className="fas fa-shield-check" style={{ fontSize: '3rem', marginBottom: '1rem', color: '#28a745' }}></i>
                 <p>No active behavior alerts</p>
               </div>
@@ -466,11 +455,11 @@ const BehaviorAnalyticsDashboard = ({ active }) => {
                       <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', fontWeight: '600' }}>
                         {alert.title}
                       </h4>
-                      <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.8rem', color: '#666', lineHeight: '1.4' }}>
+                      <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.8rem', color: '#64748b', lineHeight: '1.4' }}>
                         {alert.message}
                       </p>
                       {alert.recommended_actions && alert.recommended_actions.length > 0 && (
-                        <div style={{ fontSize: '0.75rem', color: '#007bff', marginBottom: '0.5rem' }}>
+                        <div style={{ fontSize: '0.75rem', color: '#2563eb', marginBottom: '0.5rem' }}>
                           <strong>Recommended:</strong> {alert.recommended_actions[0]}
                         </div>
                       )}
@@ -535,13 +524,13 @@ const BehaviorAnalyticsDashboard = ({ active }) => {
                     borderRadius: '6px',
                     textAlign: 'center'
                   }}>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#007bff', marginBottom: '0.5rem' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2563eb', marginBottom: '0.5rem' }}>
                       {item.count}
                     </div>
                     <div style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.25rem', textTransform: 'capitalize' }}>
                       {item.anomaly_type.replace('_', ' ')}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
                       {percentage}% of total
                     </div>
                   </div>
@@ -593,7 +582,7 @@ const BehaviorAnalyticsDashboard = ({ active }) => {
                           <div>
                             <div style={{ fontWeight: '600' }}>{user.user__username}</div>
                             {user.user__first_name && (
-                              <div style={{ fontSize: '0.8rem', color: '#666' }}>
+                              <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
                                 {user.user__first_name} {user.user__last_name}
                               </div>
                             )}
@@ -674,7 +663,7 @@ const BehaviorAnalyticsDashboard = ({ active }) => {
                 disabled={downloadingLogs}
                 style={{
                   padding: '0.375rem 0.75rem',
-                  backgroundColor: '#007bff',
+                  backgroundColor: '#2563eb',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',
@@ -725,10 +714,10 @@ const BehaviorAnalyticsDashboard = ({ active }) => {
           {logsLoading ? (
             <div style={{ textAlign: 'center', padding: '2rem' }}>
               <i className="fas fa-spinner fa-spin" style={{ fontSize: '2rem', color: '#20c997' }}></i>
-              <p style={{ marginTop: '1rem', color: '#666' }}>Loading system logs...</p>
+              <p style={{ marginTop: '1rem', color: '#64748b' }}>Loading system logs...</p>
             </div>
           ) : systemLogs.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+            <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
               <i className="fas fa-inbox" style={{ fontSize: '3rem', marginBottom: '1rem', color: '#20c997' }}></i>
               <p>No logs found for the selected criteria</p>
             </div>
@@ -778,13 +767,13 @@ const BehaviorAnalyticsDashboard = ({ active }) => {
                           overflow: 'hidden', 
                           textOverflow: 'ellipsis', 
                           whiteSpace: 'nowrap',
-                          color: '#666'
+                          color: '#64748b'
                         }}>
                           {log.description || log.message || log.endpoint || 
                            (log.duration_minutes ? `Session duration: ${log.duration_minutes}min` : 'N/A')}
                         </div>
                       </td>
-                      <td style={{ padding: '0.75rem', fontSize: '0.8rem', color: '#666' }}>
+                      <td style={{ padding: '0.75rem', fontSize: '0.8rem', color: '#64748b' }}>
                         {log.ip_address || 'N/A'}
                       </td>
                     </tr>
@@ -801,7 +790,7 @@ const BehaviorAnalyticsDashboard = ({ active }) => {
               backgroundColor: '#f8f9fa',
               borderRadius: '4px',
               fontSize: '0.8rem',
-              color: '#666',
+              color: '#64748b',
               textAlign: 'center'
             }}>
               Showing latest 20 logs. Use download buttons above to get complete logs for the selected timeframe.
