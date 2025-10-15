@@ -7,11 +7,9 @@ function CrispLogin({ onLoginSuccess }) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const API_BASE_URL = 'http://localhost:8000';
-
   // Login API function
   const loginUser = async (username, password) => {
-    const response = await fetch(`${API_BASE_URL}/api/auth/login/`, {
+    const response = await fetch(`/api/auth/login/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

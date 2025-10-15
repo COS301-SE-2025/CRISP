@@ -75,7 +75,7 @@ class RefreshManager {
       }
 
       // Import the API function dynamically to avoid circular dependencies
-      const response = await fetch('http://localhost:8000/api/threat-feeds/check_refresh_triggers/', {
+      const response = await fetch('/api/threat-feeds/check_refresh_triggers/', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

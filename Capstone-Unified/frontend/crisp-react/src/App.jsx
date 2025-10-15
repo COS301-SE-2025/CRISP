@@ -153,7 +153,7 @@ class ThreatFeedsErrorBoundary extends React.Component {
 }
 
 // API Configuration
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = '';
 
 // Simple cache for API responses to prevent duplicate requests
 const apiCache = new Map();
@@ -253,7 +253,7 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
     try {
       // Bypass cache for task status checks by making direct fetch call
       const token = localStorage.getItem('access_token') || localStorage.getItem('crisp_auth_token');
-      const response = await fetch(`http://localhost:8000/api/threat-feeds/task-status/${taskId}/`, {
+      const response = await fetch(`/api/threat-feeds/task-status/${taskId}/`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -5529,7 +5529,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
       
       for (const indicatorId of indicatorIds) {
         try {
-          const response = await fetch(`http://localhost:8000/api/indicators/${indicatorId}/`, {
+          const response = await fetch(`/api/indicators/${indicatorId}/`, {
             method: 'DELETE',
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
@@ -13093,7 +13093,11 @@ function CreateReportModal({ isOpen, onClose, onGenerate, isGenerating }) {
       const token = localStorage.getItem('crisp_auth_token');
       if (!token) return;
 
-      const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+      // Use empty string for production (relative URLs) or localhost for development
+      const apiBase = import.meta.env.VITE_API_BASE_URL;
+      const baseURL = (apiBase === undefined || apiBase === '') && !import.meta.env.DEV 
+        ? '' 
+        : (apiBase || '');
       const response = await fetch(`${baseURL}/api/organizations/`, {
         headers: {
           'Authorization': `Bearer ${token}`,

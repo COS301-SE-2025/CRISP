@@ -10,7 +10,7 @@ def home(request):
     Serves the React frontend if available, otherwise shows a simple landing page.
     """
     # Try to serve React app
-    react_index_path = os.path.join(settings.BASE_DIR, 'static', 'react', 'index.html')
+    react_index_path = os.path.join(settings.BASE_DIR, 'staticfiles', 'react', 'index.html')
     
     if os.path.exists(react_index_path):
         try:

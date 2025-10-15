@@ -30,7 +30,7 @@ const ResetPassword = () => {
 
   const validateToken = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/v1/auth/validate-reset-token/', {
+      const response = await fetch('/api/v1/auth/validate-reset-token/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -112,7 +112,7 @@ const ResetPassword = () => {
     setMessage('');
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/auth/reset-password/', {
+      const response = await fetch('/api/v1/auth/reset-password/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

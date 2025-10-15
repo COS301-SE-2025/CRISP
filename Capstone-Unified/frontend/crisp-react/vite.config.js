@@ -11,6 +11,11 @@ export default defineConfig({
       minified: false // Disable minification in dev for speed
     }
   })],
+  define: {
+    // Replace environment variable at build time
+    // Explicitly check for undefined, because empty string is valid
+    'import.meta.env.VITE_API_BASE_URL': JSON.stringify(process.env.VITE_API_BASE_URL || '')
+  },
   build: {
     outDir: 'dist',
     assetsDir: 'assets',

@@ -21,7 +21,7 @@ const UserProfile = ({ active = true }) => {
       setLoading(true);
       setError(null);
       const token = localStorage.getItem('crisp_auth_token');
-      const response = await fetch('http://localhost:8000/api/auth/profile/', {
+      const response = await fetch('/api/auth/profile/', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -66,7 +66,7 @@ const UserProfile = ({ active = true }) => {
       setSaving(true);
       setError(null);
       const token = localStorage.getItem('crisp_auth_token');
-      const response = await fetch('http://localhost:8000/api/auth/profile/', {
+      const response = await fetch('/api/auth/profile/', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

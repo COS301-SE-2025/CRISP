@@ -114,9 +114,10 @@ class ReportsService:
                                    limit: int = None, include_shared: bool = True) -> List[Report]:
         """
         Get reports for an organization with optional filtering.
+        If organization is None and user is BlueVision admin, returns ALL reports.
 
         Args:
-            organization: Organization to get reports for
+            organization: Organization to get reports for (None for admins)
             user: User making the request (for access control)
             report_type: Filter by specific report type
             limit: Limit number of results
@@ -126,6 +127,27 @@ class ReportsService:
             List of Report objects
         """
         try:
+            # BlueVision admins can access ALL reports
+            if organization is None and user and (getattr(user, 'role', None) == 'BlueVisionAdmin' or user.is_superuser):
+                queryset = Report.objects.all()
+                
+                # Filter by report type if specified
+                if report_type:
+                    queryset = queryset.filter(report_type=report_type)
+                
+                # Order by creation date
+                queryset = queryset.order_by('-created_at')
+                
+                # Apply limit
+                if limit:
+                    queryset = queryset[:limit]
+                    
+                return list(queryset)
+            
+            # Regular organization-based access
+            if not organization:
+                return []
+                
             # Base query for organization's own reports
             queryset = Report.objects.filter(organization=organization)
 

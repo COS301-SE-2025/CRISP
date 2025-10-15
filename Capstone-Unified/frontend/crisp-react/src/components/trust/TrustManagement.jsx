@@ -13,7 +13,7 @@ const TrustManagement = () => {
   const fetchTrustData = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8000/api/trust/bilateral/');
+      const response = await fetch('/api/trust/bilateral/');
       if (response.ok) {
         const data = await response.json();
         setTrustRelationships(data.relationships || []);

@@ -19,7 +19,7 @@ const UserManagement = () => {
       console.log('Using token:', token ? 'Token found' : 'No token');
       console.log('Available localStorage keys:', Object.keys(localStorage));
       
-      const response = await fetch('http://localhost:8000/api/users/', {
+      const response = await fetch('/api/users/', {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${token}` : '',

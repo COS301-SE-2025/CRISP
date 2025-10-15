@@ -558,8 +558,12 @@ def list_reports(request):
 
         # Get user's organization (directly from user model)
         organization = getattr(request.user, 'organization', None)
-
-        if not organization:
+        user_role = getattr(request.user, 'role', None)
+        
+        # BlueVision admins have access to ALL reports without organization requirement
+        is_bluevision_admin = user_role == 'BlueVisionAdmin' or request.user.is_superuser
+        
+        if not organization and not is_bluevision_admin:
             return Response({
                 'success': False,
                 'message': 'User organization not found'

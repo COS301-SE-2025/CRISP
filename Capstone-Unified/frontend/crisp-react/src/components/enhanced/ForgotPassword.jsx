@@ -30,7 +30,7 @@ const ForgotPassword = () => {
     setMessage('');
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/forgot-password/', {
+      const response = await fetch('/api/auth/forgot-password/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

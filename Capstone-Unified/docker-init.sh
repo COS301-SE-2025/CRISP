@@ -10,6 +10,9 @@ python manage.py wait_for_db
 echo "Running database migrations..."
 python manage.py migrate
 
+echo "Creating default admin user (admin/AdminPass123!)..."
+python manage.py create_default_admin
+
 echo "Setting up base users..."
 python manage.py setup_base_users
 

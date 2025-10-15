@@ -86,7 +86,9 @@ const SOCDashboard = ({ active, showPage }) => {
   const setupWebSocketConnection = () => {
     try {
       const token = localStorage.getItem('access_token');
-      const wsUrl = `ws://${window.location.hostname}:8000/ws/soc/?token=${token}`;
+      // Use relative WebSocket URL - will use same host and port as the page
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws/soc/?token=${token}`;
       wsRef.current = new WebSocket(wsUrl);
       
       wsRef.current.onopen = () => {
