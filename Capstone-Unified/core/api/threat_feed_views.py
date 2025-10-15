@@ -16,6 +16,7 @@ from django.db.models import Count, Q
 from django.http import Http404, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.core.cache import cache
 from rest_framework.permissions import AllowAny
 from rest_framework.views import exception_handler
 from django.core.cache import cache
@@ -1297,9 +1298,19 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 def indicators_list(request):
-    """Get all indicators across all feeds for dashboard summary or create new indicator."""
+    """Get all indicators across all feeds for dashboard summary or create new indicator - OPTIMIZED."""
     if request.method == 'GET':
         try:
+            # Build cache key from user and filters
+            user_id = request.user.id if request.user.is_authenticated else 'anon'
+            cache_params = f"{user_id}_{request.GET.urlencode()}"
+            cache_key = f"indicators_list_{cache_params[:100]}"  # Limit key length
+            
+            # Check cache first
+            cached_response = cache.get(cache_key)
+            if cached_response:
+                return Response(cached_response, status=status.HTTP_200_OK)
+            
             # Get pagination parameters
             page = int(request.GET.get('page', 1))
             page_size = int(request.GET.get('page_size', 20))
@@ -1332,14 +1343,12 @@ def indicators_list(request):
                 logger.info(f"User has no organization and is not admin, returning empty queryset")
                 indicators = Indicator.objects.none()
             elif is_admin:
-                # Admins (superuser or BlueVisionAdmin) can see all indicators
+                # Admins (superuser or BlueVisionAdmin) can see all indicators - OPTIMIZED
                 logger.info(f"Admin user, returning all indicators")
-                indicators = Indicator.objects.all()
+                indicators = Indicator.objects.select_related('threat_feed', 'threat_feed__owner').all()
             else:
-                # Regular users can see:
-                # 1. Indicators from threat feeds owned by their organization (both external and internal)
-                # 2. Indicators that have been shared with their organization
-                indicators = Indicator.objects.filter(
+                # Regular users - OPTIMIZED with select_related
+                indicators = Indicator.objects.select_related('threat_feed', 'threat_feed__owner').filter(
                     Q(threat_feed__owner=user_org) |  # Feeds consumed by their organization (external or internal)
                     Q(sharing_relationships__target_organization=user_org)  # Shared indicators
                 ).distinct()
@@ -1398,77 +1407,93 @@ def indicators_list(request):
             # Format the response
             results = []
             for indicator in indicators_page:
-                # Get the feed name
-                feed_name = 'Unknown'
-                if hasattr(indicator, 'threat_feed') and indicator.threat_feed:
-                    feed_name = indicator.threat_feed.name
-                elif hasattr(indicator, 'threat_feed_id') and indicator.threat_feed_id:
-                    try:
-                        feed = ThreatFeed.objects.get(id=indicator.threat_feed_id)
-                        feed_name = feed.name
-                    except ThreatFeed.DoesNotExist:
-                        pass
+                try:
+                    # Get the feed name
+                    feed_name = 'Unknown'
+                    if hasattr(indicator, 'threat_feed') and indicator.threat_feed:
+                        feed_name = indicator.threat_feed.name
+                    elif hasattr(indicator, 'threat_feed_id') and indicator.threat_feed_id:
+                        try:
+                            feed = ThreatFeed.objects.get(id=indicator.threat_feed_id)
+                            feed_name = feed.name
+                        except ThreatFeed.DoesNotExist:
+                            pass
 
-                # Check if this indicator was shared with the current user's organization
-                sharing_info = None
-                if user_org:
-                    try:
-                        from core.models.models import IndicatorSharingRelationship
-                        sharing_relationship = IndicatorSharingRelationship.objects.filter(
-                            indicator=indicator,
-                            target_organization=user_org
-                        ).select_related('shared_by_user', 'indicator__threat_feed__owner').first()
+                    # Check if this indicator was shared with the current user's organization
+                    sharing_info = None
+                    if user_org:
+                        try:
+                            from core.models.models import IndicatorSharingRelationship
+                            sharing_relationship = IndicatorSharingRelationship.objects.filter(
+                                indicator=indicator,
+                                target_organization=user_org
+                            ).select_related('shared_by_user', 'indicator__threat_feed__owner').first()
 
-                        if sharing_relationship:
-                            # Get source organization from the sharing user's organization
-                            source_org_name = sharing_relationship.shared_by_user.organization.name if sharing_relationship.shared_by_user and sharing_relationship.shared_by_user.organization else 'Unknown'
-                            shared_by_name = sharing_relationship.shared_by_user.username if sharing_relationship.shared_by_user else 'System'
+                            if sharing_relationship:
+                                # Get source organization from the sharing user's organization
+                                source_org_name = sharing_relationship.shared_by_user.organization.name if sharing_relationship.shared_by_user and sharing_relationship.shared_by_user.organization else 'Unknown'
+                                shared_by_name = sharing_relationship.shared_by_user.username if sharing_relationship.shared_by_user else 'System'
 
-                            sharing_info = {
-                                'is_shared': True,
-                                'shared_from': source_org_name,
-                                'shared_by': shared_by_name,
-                                'shared_at': sharing_relationship.shared_at,
-                                'anonymization_level': sharing_relationship.anonymization_level,
-                                'share_method': sharing_relationship.share_method
-                            }
-                    except Exception as e:
-                        # If there's an error checking sharing, don't break the response
-                        pass
+                                sharing_info = {
+                                    'is_shared': True,
+                                    'shared_from': source_org_name,
+                                    'shared_by': shared_by_name,
+                                    'shared_at': sharing_relationship.shared_at,
+                                    'anonymization_level': sharing_relationship.anonymization_level,
+                                    'share_method': sharing_relationship.share_method
+                                }
+                        except Exception as sharing_error:
+                            # If there's an error checking sharing, log it but don't break the response
+                            logger.warning(f"Error checking sharing for indicator {indicator.id}: {str(sharing_error)}")
 
-                # If not shared, mark as original
-                if not sharing_info:
-                    sharing_info = {
-                        'is_shared': False,
-                        'shared_from': None,
-                        'shared_by': None,
-                        'shared_at': None,
-                        'anonymization_level': None,
-                        'share_method': None
-                    }
+                    # If not shared, mark as original
+                    if not sharing_info:
+                        sharing_info = {
+                            'is_shared': False,
+                            'shared_from': None,
+                            'shared_by': None,
+                            'shared_at': None,
+                            'anonymization_level': None,
+                            'share_method': None
+                        }
 
-                results.append({
-                    'id': indicator.id,
-                    'type': indicator.type,
-                    'value': indicator.value,
-                    'stix_id': indicator.stix_id,
-                    'name': indicator.name,
-                    'description': indicator.description,
-                    'confidence': indicator.confidence,
-                    'first_seen': indicator.first_seen,
-                    'last_seen': indicator.last_seen,
-                    'created_at': indicator.created_at,
-                    'is_anonymized': indicator.is_anonymized,
-                    'source': feed_name,
-                    'sharing': sharing_info
-                })
+                    results.append({
+                        'id': indicator.id,
+                        'type': indicator.type,
+                        'value': indicator.value,
+                        'stix_id': indicator.stix_id,
+                        'name': indicator.name,
+                        'description': indicator.description,
+                        'confidence': indicator.confidence,
+                        'first_seen': indicator.first_seen,
+                        'last_seen': indicator.last_seen,
+                        'created_at': indicator.created_at,
+                        'is_anonymized': indicator.is_anonymized,
+                        'source': feed_name,
+                        'sharing': sharing_info
+                    })
+                except Exception as indicator_error:
+                    # Log error but continue processing other indicators
+                    logger.error(f"Error processing indicator {indicator.id}: {str(indicator_error)}")
+                    # Add minimal data for failed indicator
+                    results.append({
+                        'id': indicator.id,
+                        'type': getattr(indicator, 'type', 'unknown'),
+                        'value': getattr(indicator, 'value', 'Error loading'),
+                        'error': 'Failed to load full indicator data'
+                    })
             
-            return Response({
+            response_data = {
                 'count': total_count,
                 'next': f'/api/indicators/?page={page + 1}&page_size={page_size}' if end < total_count else None,
                 'previous': f'/api/indicators/?page={page - 1}&page_size={page_size}' if page > 1 else None,
                 'results': results
-            })
+            }
+            
+            # Cache for 3 minutes (180 seconds)
+            cache.set(cache_key, response_data, 180)
+            
+            return Response(response_data)
         except Exception as e:
             logger.error(f"Error fetching indicators: {str(e)}")
             return Response(
@@ -2477,13 +2502,26 @@ def shared_indicators(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def system_health(request):
-    """Get system health status including database, Redis, and system resources."""
+    """Get system health status including database, Redis, and system resources - OPTIMIZED with caching."""
     try:
         import psutil
         from django.db import connection
-        from django.core.cache import cache
         from django.utils import timezone
         import redis
+        
+        # Build cache key
+        user_id = request.user.id if request.user.is_authenticated else 'anon'
+        user_org = getattr(request.user, 'organization', None)
+        org_id = user_org.id if user_org else 'none'
+        cache_key = f"system_health_{user_id}_{org_id}"
+        
+        # Check cache first (1 minute TTL for system health)
+        cached_response = cache.get(cache_key)
+        if cached_response:
+            logger.info(f"System Health cache HIT for user {user_id}")
+            return Response(cached_response)
+        
+        logger.info(f"System Health cache MISS for user {user_id}, fetching system status")
         
         health_data = {
             'status': 'healthy',
@@ -2556,7 +2594,7 @@ def system_health(request):
         
         # System resources check
         try:
-            cpu_percent = psutil.cpu_percent(interval=1)
+            cpu_percent = psutil.cpu_percent(interval=0.1)  # Faster check (was 1s)
             memory = psutil.virtual_memory()
             disk = psutil.disk_usage('/')
             
@@ -2649,13 +2687,18 @@ def system_health(request):
         
         health_data['status'] = overall_status
         
+        # Cache for 1 minute (60 seconds)
+        cache.set(cache_key, health_data, 60)
+        logger.info(f"System Health cached for user {user_id}")
+        
         return Response(health_data)
         
     except Exception as e:
+        from django.utils import timezone as tz
         logger.error(f"Error getting system health: {str(e)}")
         return Response({
             'status': 'error',
-            'timestamp': timezone.now().isoformat(),
+            'timestamp': tz.now().isoformat(),
             'error': 'Failed to get system health',
             'details': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

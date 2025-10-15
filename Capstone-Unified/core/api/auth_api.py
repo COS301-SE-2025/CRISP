@@ -6,6 +6,7 @@ Handles login, logout, token refresh, and user authentication
 import logging
 from django.contrib.auth import authenticate
 from django.utils import timezone
+from django.core.cache import cache
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -191,18 +192,31 @@ def logout(request):
 @permission_classes([IsAuthenticated])
 def profile(request):
     """
-    Get current user profile
+    Get current user profile - OPTIMIZED with caching
     
     GET /api/auth/profile/
     """
     try:
-        user = request.user
+        # Cache user profile for 5 minutes
+        cache_key = f"user_profile_{request.user.id}"
+        cached_profile = cache.get(cache_key)
+        
+        if cached_profile:
+            return Response(cached_profile, status=status.HTTP_200_OK)
+        
+        # Use select_related to avoid N+1 queries
+        user = CustomUser.objects.select_related('organization').get(id=request.user.id)
         serializer = UserSerializer(user)
         
-        return Response({
+        response_data = {
             'success': True,
             'user': serializer.data
-        }, status=status.HTTP_200_OK)
+        }
+        
+        # Cache for 5 minutes (300 seconds)
+        cache.set(cache_key, response_data, 300)
+        
+        return Response(response_data, status=status.HTTP_200_OK)
         
     except Exception as e:
         logger.error(f"Profile fetch error: {str(e)}")

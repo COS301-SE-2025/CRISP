@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'; // Add proper import for createRo
 import feather from 'feather-icons'; // Import feather icons
 import './crisp_help.css';
 import Construction from './construction.jsx'; // Ensure lowercase to match actual filename
-import vid from './assets/TEST.mp4';
+// Video removed for optimization - was 267MB
 
 function CrispHelp({ isOpen, onClose, onNavigate }) {
   const [activeTab, setActiveTab] = useState('getting-started');
@@ -387,22 +387,18 @@ function CrispHelp({ isOpen, onClose, onNavigate }) {
               </button>
             </div>
             <div className="video-container">
-              <video 
-                width="100%" 
-                height="100%" 
-                controls 
-                autoPlay
-                src={vid}
-                onError={(e) => console.error('Video load error:', e)}
-                ref={videoRef => {
-                  if (videoRef && !showVideoModal) {
-                    videoRef.pause();
-                  }
-                }}
-              >
-                <source src={vid} type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
+              <div style={{ 
+                padding: '60px 40px', 
+                textAlign: 'center', 
+                background: 'var(--light-blue)',
+                borderRadius: '8px'
+              }}>
+                <i data-feather="video" style={{ width: '48px', height: '48px', marginBottom: '20px' }}></i>
+                <h4 style={{ marginBottom: '10px' }}>Demo Video Coming Soon</h4>
+                <p style={{ color: 'var(--text-muted)' }}>
+                  Video demonstration will be available in the next update.
+                </p>
+              </div>
             </div>
           </div>
         </div>

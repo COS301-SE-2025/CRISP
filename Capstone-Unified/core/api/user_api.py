@@ -6,6 +6,7 @@ Handles user CRUD operations, invitations, and organization management
 import logging
 from django.db.models import Q
 from django.core.exceptions import ValidationError
+from django.core.cache import cache
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -43,6 +44,12 @@ def list_users(request):
         - is_active: filter by active status
     """
     try:
+        # Build cache key from query params
+        cache_key = f"users_list_{request.user.id}_{request.GET.urlencode()}"
+        cached_response = cache.get(cache_key)
+        if cached_response:
+            return Response(cached_response, status=status.HTTP_200_OK)
+        
         access_control = AccessControlService()
         
         # Check if user can list users
@@ -52,14 +59,14 @@ def list_users(request):
                 'message': 'Insufficient permissions to list users'
             }, status=status.HTTP_403_FORBIDDEN)
         
-        # Get base queryset based on user permissions
+        # Get base queryset based on user permissions - OPTIMIZED with select_related
         if request.user.role == 'BlueVisionAdmin':
             # BlueVision admins can see all users
-            queryset = CustomUser.objects.all()
+            queryset = CustomUser.objects.select_related('organization').all()
         else:
             # Other users can only see users in their accessible organizations
             accessible_orgs = access_control.get_accessible_organizations(request.user)
-            queryset = CustomUser.objects.filter(organization__in=accessible_orgs)
+            queryset = CustomUser.objects.select_related('organization').filter(organization__in=accessible_orgs)
         
         # Apply filters
         search = request.GET.get('search')
@@ -92,17 +99,23 @@ def list_users(request):
         
         if page is not None:
             serializer = UserSerializer(page, many=True)
-            return paginator.get_paginated_response({
+            response_data = {
                 'success': True,
                 'users': serializer.data
-            })
+            }
+            # Cache for 2 minutes
+            cache.set(cache_key, response_data, 120)
+            return paginator.get_paginated_response(response_data)
         
         serializer = UserSerializer(queryset, many=True)
-        return Response({
+        response_data = {
             'success': True,
             'users': serializer.data,
             'total_count': queryset.count()
-        }, status=status.HTTP_200_OK)
+        }
+        # Cache for 2 minutes
+        cache.set(cache_key, response_data, 120)
+        return Response(response_data, status=status.HTTP_200_OK)
         
     except Exception as e:
         logger.error(f"Error listing users: {str(e)}")

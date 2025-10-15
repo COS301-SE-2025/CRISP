@@ -145,6 +145,10 @@ class SOCIncident(models.Model):
             models.Index(fields=['status', 'priority']),
             models.Index(fields=['organization', 'status']),
             models.Index(fields=['assigned_to', 'status']),
+            # Performance optimization indexes
+            models.Index(fields=['organization', '-created_at'], name='soc_inc_org_created_idx'),
+            models.Index(fields=['organization', 'status', '-created_at'], name='soc_inc_org_status_created_idx'),
+            models.Index(fields=['category', 'severity'], name='soc_inc_cat_sev_idx'),
         ]
 
     def __str__(self):

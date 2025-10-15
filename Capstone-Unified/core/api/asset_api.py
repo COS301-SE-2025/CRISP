@@ -12,6 +12,7 @@ from rest_framework.pagination import PageNumberPagination
 from django.utils import timezone
 from django.db import transaction, IntegrityError
 from django.core.exceptions import ValidationError
+from django.core.cache import cache
 
 from core.models.models import AssetInventory, CustomAlert, Organization, Indicator
 from core.services.asset_alert_service import AssetBasedAlertService
@@ -540,11 +541,25 @@ def trigger_asset_correlation(request):
 @permission_classes([IsAuthenticated])
 def asset_alert_statistics(request):
     """
-    Get asset-based alert statistics for the organization.
+    Get asset-based alert statistics for the organization - OPTIMIZED with caching.
     """
     try:
+        # Build cache key
+        user_id = request.user.id
+        is_admin = request.user.is_superuser or request.user.role == 'BlueVisionAdmin'
+        org_id = request.user.organization.id if request.user.organization else 'none'
+        cache_key = f"asset_statistics_{user_id}_{org_id}_{is_admin}"
+        
+        # Check cache first (3 minute TTL for heavy aggregations)
+        cached_response = cache.get(cache_key)
+        if cached_response:
+            logger.info(f"Asset Statistics cache HIT for user {user_id}")
+            return Response(cached_response)
+        
+        logger.info(f"Asset Statistics cache MISS for user {user_id}, fetching from DB")
+        
         # Check if user is superuser or BlueVisionAdmin - they can see all organizations
-        if request.user.is_superuser or request.user.role == 'BlueVisionAdmin':
+        if is_admin:
             # Get statistics across all organizations
             organization = None
             asset_filter = AssetInventory.objects.all()
@@ -629,10 +644,16 @@ def asset_alert_statistics(request):
             'organization': org_display
         }
 
-        return Response({
+        response_data = {
             'success': True,
             'data': statistics
-        })
+        }
+        
+        # Cache for 3 minutes (180 seconds)
+        cache.set(cache_key, response_data, 180)
+        logger.info(f"Asset Statistics cached for user {user_id}")
+
+        return Response(response_data)
 
     except Exception as e:
         logger.error(f"Error in asset_alert_statistics: {str(e)}")

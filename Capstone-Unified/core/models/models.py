@@ -811,6 +811,12 @@ class Indicator(models.Model):
         ]
         ordering = ['-last_seen']
         db_table = 'indicators'
+        indexes = [
+            # Performance optimization indexes
+            models.Index(fields=['threat_feed', '-created_at'], name='indicator_feed_created_idx'),
+            models.Index(fields=['type', 'confidence'], name='indicator_type_conf_idx'),
+            models.Index(fields=['is_anonymized', '-last_seen'], name='indicator_anon_lastseen_idx'),
+        ]
 
 
 class TTPData(models.Model):

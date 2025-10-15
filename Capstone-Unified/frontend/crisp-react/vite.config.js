@@ -14,11 +14,48 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
+    // PERFORMANCE OPTIMIZATION: Code splitting and minification
     rollupOptions: {
       output: {
-        manualChunks: undefined,
+        manualChunks: {
+          // Separate vendor chunks for better caching
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-d3': ['d3'],
+          'vendor-three': ['three', 'ogl'],
+          'vendor-animations': ['gsap', 'framer-motion'],
+          'vendor-pdf': ['html2pdf.js'],
+          'vendor-charts': ['react-countup', 'react-intersection-observer'],
+          'vendor-icons': ['@fortawesome/fontawesome-free', 'feather-icons']
+        },
+        // Optimize chunk file names
+        chunkFileNames: 'assets/js/[name]-[hash].js',
+        entryFileNames: 'assets/js/[name]-[hash].js',
+        assetFileNames: 'assets/[ext]/[name]-[hash].[ext]'
       }
-    }
+    },
+    // Enable minification and tree-shaking
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,  // Remove console.logs in production
+        drop_debugger: true, // Remove debugger statements
+        pure_funcs: ['console.log', 'console.info', 'console.debug'], // Remove specific console methods
+        passes: 2 // Run compression twice for better results
+      },
+      mangle: {
+        safari10: true // Fix Safari 10 issues
+      }
+    },
+    // Chunk size warning
+    chunkSizeWarningLimit: 500, // Warn if chunk exceeds 500KB
+    // Enable source maps for production debugging (can disable for smaller builds)
+    sourcemap: false,
+    // Optimize asset inlining
+    assetsInlineLimit: 4096, // Inline assets smaller than 4KB
+    // Report compressed size
+    reportCompressedSize: true,
+    // CSS code splitting
+    cssCodeSplit: true
   },
   base: '/',
   // PERFORMANCE: Development optimizations

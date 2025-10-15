@@ -17,6 +17,7 @@ from django.db import transaction
 from django.db.models import Q, Count
 from django.core.exceptions import ValidationError
 from django.http import HttpResponse
+from django.core.cache import cache
 
 from soc.models import SOCIncident, SOCCase, SOCPlaybook, SOCIncidentActivity, SOCEvidence, SOCMetrics
 from core.models.models import Organization, Indicator, AssetInventory
@@ -35,7 +36,7 @@ class StandardResultsSetPagination(PageNumberPagination):
 @permission_classes([IsAuthenticated])
 def incidents_list(request):
     """
-    List all incidents or create new incident
+    List all incidents or create new incident - OPTIMIZED with caching
     """
     try:
         organization = request.user.organization
@@ -46,6 +47,21 @@ def incidents_list(request):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         if request.method == 'GET':
+            # Build cache key from user, org, and filters
+            user_id = request.user.id
+            org_id = organization.id if organization else 'none'
+            is_admin = request.user.is_superuser or request.user.role == 'BlueVisionAdmin'
+            query_params = request.GET.urlencode()
+            cache_key = f"soc_incidents_{user_id}_{org_id}_{is_admin}_{query_params}"[:250]
+            
+            # Check cache first (2 minute TTL for frequently changing data)
+            cached_response = cache.get(cache_key)
+            if cached_response:
+                logger.info(f"SOC Incidents cache HIT for user {user_id}")
+                return Response(cached_response)
+            
+            logger.info(f"SOC Incidents cache MISS for user {user_id}, fetching from DB")
+            
             # Get query parameters
             incident_status = request.GET.get('status')
             priority = request.GET.get('priority')
@@ -54,7 +70,7 @@ def incidents_list(request):
             search = request.GET.get('search')
             
             # Build queryset - superusers/BlueVisionAdmin can see all incidents
-            if request.user.is_superuser or request.user.role == 'BlueVisionAdmin':
+            if is_admin:
                 queryset = SOCIncident.objects.all()
             else:
                 queryset = SOCIncident.objects.filter(organization=organization)
@@ -75,8 +91,17 @@ def incidents_list(request):
                     Q(incident_id__icontains=search)
                 )
             
-            # Order by created date (newest first)
-            queryset = queryset.select_related('organization', 'assigned_to', 'created_by').order_by('-created_at')
+            # OPTIMIZED: Use select_related for ForeignKeys and annotate for counts to avoid N+1 queries
+            from django.db.models import Count
+            
+            queryset = queryset.select_related(
+                'organization', 'assigned_to', 'created_by'
+            ).prefetch_related(
+                'related_indicators', 'related_assets'
+            ).annotate(
+                related_indicators_count=Count('related_indicators', distinct=True),
+                related_assets_count=Count('related_assets', distinct=True)
+            ).order_by('-created_at')
             
             # Paginate results
             paginator = StandardResultsSetPagination()
@@ -106,16 +131,22 @@ def incidents_list(request):
                     'updated_at': incident.updated_at.isoformat(),
                     'is_overdue': incident.is_overdue,
                     'sla_deadline': incident.sla_deadline.isoformat() if incident.sla_deadline else None,
-                    'related_indicators_count': incident.related_indicators.count(),
-                    'related_assets_count': incident.related_assets.count(),
+                    'related_indicators_count': incident.related_indicators_count,
+                    'related_assets_count': incident.related_assets_count,
                     'source': incident.source,
                     'tags': incident.tags,
                 })
             
-            return paginator.get_paginated_response({
+            response_data = {
                 'success': True,
                 'data': incidents_data
-            })
+            }
+            
+            # Cache for 2 minutes (120 seconds)
+            cache.set(cache_key, response_data, 120)
+            logger.info(f"SOC Incidents cached for user {user_id}")
+            
+            return paginator.get_paginated_response(response_data)
         
         elif request.method == 'POST':
             # Create new incident
@@ -178,6 +209,12 @@ def incidents_list(request):
                     
                     logger.info(f"Created incident {incident.incident_id} for organization {organization.name}")
                     
+                    # PERFORMANCE: Invalidate dashboard cache after creating incident
+                    from django.core.cache import cache
+                    org_id = str(organization.id)
+                    cache.delete(f"soc_dashboard_{org_id}")
+                    cache.delete(f"soc_dashboard_all")  # For admin views
+                    
                     return Response({
                         'success': True,
                         'message': 'Incident created successfully',
@@ -219,12 +256,20 @@ def incident_detail(request, incident_id):
                 'message': 'User must belong to an organization'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Get incident
+        # Get incident with optimized related data loading
         try:
             if request.user.is_superuser or request.user.role == 'BlueVisionAdmin':
-                incident = SOCIncident.objects.get(id=incident_id)
+                incident = SOCIncident.objects.select_related(
+                    'organization', 'assigned_to', 'created_by'
+                ).prefetch_related(
+                    'related_indicators', 'related_assets', 'activities__user'
+                ).get(id=incident_id)
             else:
-                incident = SOCIncident.objects.get(id=incident_id, organization=organization)
+                incident = SOCIncident.objects.select_related(
+                    'organization', 'assigned_to', 'created_by'
+                ).prefetch_related(
+                    'related_indicators', 'related_assets', 'activities__user'
+                ).get(id=incident_id, organization=organization)
         except SOCIncident.DoesNotExist:
             return Response({
                 'success': False,
@@ -360,6 +405,13 @@ def incident_detail(request, incident_id):
                     
                     logger.info(f"Updated incident {incident.incident_id} by {request.user.username}")
                     
+                    # PERFORMANCE: Invalidate caches after updating incident
+                    from django.core.cache import cache
+                    org_id = str(incident.organization.id)
+                    cache.delete(f"soc_dashboard_{org_id}")
+                    cache.delete(f"soc_dashboard_all")
+                    cache.delete(f"incident_detail_{incident_id}")
+                    
                     return Response({
                         'success': True,
                         'message': 'Incident updated successfully'
@@ -406,8 +458,10 @@ def incident_detail(request, incident_id):
 @permission_classes([IsAuthenticated])
 def soc_dashboard(request):
     """
-    SOC Dashboard metrics and KPIs
+    SOC Dashboard metrics and KPIs - OPTIMIZED with caching
     """
+    from django.core.cache import cache
+    
     try:
         organization = request.user.organization
         if not organization and request.user.role != 'BlueVisionAdmin':
@@ -415,6 +469,14 @@ def soc_dashboard(request):
                 'success': False,
                 'message': 'User must belong to an organization'
             }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # PERFORMANCE: Check cache first
+        org_id = str(organization.id) if organization else 'all'
+        cache_key = f"soc_dashboard_{org_id}"
+        cached_data = cache.get(cache_key)
+        
+        if cached_data:
+            return Response(cached_data)
 
         # Build queryset based on user role
         if request.user.is_superuser or request.user.role == 'BlueVisionAdmin':
@@ -428,19 +490,30 @@ def soc_dashboard(request):
         week_ago = now - timedelta(days=7)
         month_ago = now - timedelta(days=30)
 
-        # Basic metrics
-        total_incidents = incidents_qs.count()
-        open_incidents = incidents_qs.filter(status__in=['new', 'assigned', 'in_progress']).count()
-        critical_incidents = incidents_qs.filter(priority='critical', status__in=['new', 'assigned', 'in_progress']).count()
-        overdue_incidents = incidents_qs.filter(sla_deadline__lt=now, status__in=['new', 'assigned', 'in_progress']).count()
+        # OPTIMIZED: Single aggregation query instead of multiple count() calls
+        from django.db.models import Count, Q, Case, When, IntegerField
         
-        # Recent activity
-        incidents_today = incidents_qs.filter(created_at__date=today).count()
-        incidents_week = incidents_qs.filter(created_at__gte=week_ago).count()
-        incidents_month = incidents_qs.filter(created_at__gte=month_ago).count()
+        metrics = incidents_qs.aggregate(
+            total_incidents=Count('id'),
+            open_incidents=Count('id', filter=Q(status__in=['new', 'assigned', 'in_progress'])),
+            critical_incidents=Count('id', filter=Q(priority='critical', status__in=['new', 'assigned', 'in_progress'])),
+            overdue_incidents=Count('id', filter=Q(sla_deadline__lt=now, status__in=['new', 'assigned', 'in_progress'])),
+            incidents_today=Count('id', filter=Q(created_at__date=today)),
+            incidents_week=Count('id', filter=Q(created_at__gte=week_ago)),
+            incidents_month=Count('id', filter=Q(created_at__gte=month_ago)),
+            resolved_today=Count('id', filter=Q(resolved_at__date=today)),
+            resolved_week=Count('id', filter=Q(resolved_at__gte=week_ago))
+        )
         
-        resolved_today = incidents_qs.filter(resolved_at__date=today).count()
-        resolved_week = incidents_qs.filter(resolved_at__gte=week_ago).count()
+        total_incidents = metrics['total_incidents']
+        open_incidents = metrics['open_incidents']
+        critical_incidents = metrics['critical_incidents']
+        overdue_incidents = metrics['overdue_incidents']
+        incidents_today = metrics['incidents_today']
+        incidents_week = metrics['incidents_week']
+        incidents_month = metrics['incidents_month']
+        resolved_today = metrics['resolved_today']
+        resolved_week = metrics['resolved_week']
 
         # Status breakdown
         status_breakdown = incidents_qs.values('status').annotate(count=Count('status')).order_by('status')
@@ -489,10 +562,15 @@ def soc_dashboard(request):
             'last_updated': now.isoformat()
         }
 
-        return Response({
+        response_data = {
             'success': True,
             'data': dashboard_data
-        })
+        }
+        
+        # PERFORMANCE: Cache the response for 5 minutes (300 seconds)
+        cache.set(cache_key, response_data, 300)
+        
+        return Response(response_data)
 
     except Exception as e:
         logger.error(f"Error in soc_dashboard: {str(e)}")
@@ -805,9 +883,23 @@ def threat_map(request):
 @permission_classes([IsAuthenticated])
 def system_health(request):
     """
-    Get system health metrics for SOC monitoring
+    Get system health metrics for SOC monitoring - OPTIMIZED with caching
     """
     try:
+        # Build cache key
+        user_id = request.user.id
+        is_admin = request.user.is_superuser or request.user.role == 'BlueVisionAdmin'
+        org_id = request.user.organization.id if request.user.organization else 'none'
+        cache_key = f"soc_system_health_{user_id}_{org_id}_{is_admin}"
+        
+        # Check cache first (1 minute TTL)
+        cached_response = cache.get(cache_key)
+        if cached_response:
+            logger.info(f"SOC System Health cache HIT for user {user_id}")
+            return Response(cached_response)
+        
+        logger.info(f"SOC System Health cache MISS for user {user_id}, fetching metrics")
+        
         import random
         
         # Get simulated system metrics
@@ -815,7 +907,7 @@ def system_health(request):
         memory_usage = random.randint(25, 75)
         
         # Count active SOC incidents
-        if request.user.is_superuser or request.user.role == 'BlueVisionAdmin':
+        if is_admin:
             active_alerts = SOCIncident.objects.filter(
                 status__in=['new', 'assigned', 'in_progress'],
                 priority__in=['high', 'critical']
@@ -847,10 +939,16 @@ def system_health(request):
             'last_updated': timezone.now().isoformat()
         }
         
-        return Response({
+        response_data = {
             'success': True,
             'data': health_data
-        })
+        }
+        
+        # Cache for 1 minute (60 seconds)
+        cache.set(cache_key, response_data, 60)
+        logger.info(f"SOC System Health cached for user {user_id}")
+        
+        return Response(response_data)
         
     except Exception as e:
         logger.error(f"Error in system_health: {str(e)}")
