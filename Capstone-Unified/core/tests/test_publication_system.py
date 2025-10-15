@@ -475,7 +475,7 @@ class TAXIIAuthenticationTest(TestCase):
         username = get_unique_username('auth_test')
         self.user = User.objects.create_user(
             username=username,
-            password='testpass123',
+            password=TEST_USER_PASSWORD,
             email=f'{username}@test.com',
             role='publisher'  # Assign a role
         )
@@ -519,7 +519,7 @@ class TAXIIAuthenticationTest(TestCase):
         other_username = get_unique_username('other_auth')
         other_user = User.objects.create_user(
             username=other_username,
-            password='testpass123',
+            password=TEST_USER_PASSWORD,
             email=f'{other_username}@test.com',
             role='publisher'  # Assign a role
         )
@@ -556,7 +556,7 @@ class PublicationWorkflowTest(TestCase):
         username = get_unique_username('workflow')
         self.user = User.objects.create_user(
             username=username,
-            password='testpass123',
+            password=TEST_USER_PASSWORD,
             email=f'{username}@test.com',
             role='publisher'  # Assign a role
         )
@@ -649,7 +649,7 @@ class PublicationErrorHandlingTest(TestCase):
         username = get_unique_username('error_test')
         self.user = User.objects.create_user(
             username=username,
-            password='testpass123',
+            password=TEST_USER_PASSWORD,
             email=f'{username}@test.com',
             role='publisher'  # Assign a role
         )

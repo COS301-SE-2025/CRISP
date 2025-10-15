@@ -18,6 +18,7 @@ from core.models.models import (
 )
 from core.patterns.strategy.enums import AnonymizationLevel
 from settings.utils import generate_bundle_from_collection
+from core.tests.test_config import TEST_USER_PASSWORD
 
 
 class FullWorkflowTestCase(TransactionTestCase):
