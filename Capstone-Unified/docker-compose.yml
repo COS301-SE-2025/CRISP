@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: crisp
       POSTGRES_USER: crisp_user
-      POSTGRES_PASSWORD: crisp_password
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-crisp_password}
       POSTGRES_HOST_AUTH_METHOD: md5
     command: [
       "postgres",
@@ -109,7 +109,7 @@ services:
       - .env
     environment:
       - DEBUG=True
-      - SECRET_KEY=2-yp3pr5_y-w1w9-3k-gib-jm-8-b6oitfi-094l-e4-test
+      - SECRET_KEY=${DJANGO_SECRET_KEY:-2-yp3pr5_y-w1w9-3k-gib-jm-8-b6oitfi-094l-e4-test}
       - DB_NAME=crisp_test
       - DB_HOST=db-test
       - REDIS_URL=redis://redis-test:6379/0
@@ -149,7 +149,7 @@ services:
     environment:
       POSTGRES_DB: crisp_test
       POSTGRES_USER: crisp_user
-      POSTGRES_PASSWORD: crisp_password
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-crisp_password}
       POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - postgres_test_data:/var/lib/postgresql/data

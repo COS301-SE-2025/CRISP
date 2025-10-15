@@ -89,9 +89,8 @@ case $choice in
         echo -e "${GREEN}🎉 CRISP is now running!${NC}"
         echo ""
         echo "Access your system at: http://localhost/"
-        echo "Default credentials:"
-        echo "  Username: admin"
-        echo "  Password: AdminPass123!"
+        echo "Default credentials will be displayed by the setup scripts."
+        echo "Please check the container logs for generated passwords if you did not set them in your environment."
         echo ""
         echo "To view logs: docker-compose -f production-docker-compose.yml logs -f"
         ;;

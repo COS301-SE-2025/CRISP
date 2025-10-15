@@ -287,10 +287,10 @@ Key features:
 ```yaml
 Environment Variables:
 - DJANGO_SETTINGS_MODULE: crisp_unified.settings
-- SECRET_KEY: test-secret-key-for-ci-cd-pipeline
+- SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
 - DB_NAME: crisp_test
 - DB_USER: postgres
-- DB_PASSWORD: postgres
+- DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
 - DB_HOST: localhost
 - DEBUG: False
 - EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend

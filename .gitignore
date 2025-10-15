@@ -75,6 +75,9 @@ nginx.conf
 nginx-ssl.conf
 setup-server.sh
 deploy-production.sh
+nginx-production.conf
+nginx-ssl-production.conf
+uwsgi.ini
 
 # Logs and data
 logs/

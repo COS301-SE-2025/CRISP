@@ -21,6 +21,7 @@ from core.tests.test_helpers import (
     get_unique_username, get_unique_org_name, get_unique_identifier,
     get_unique_email, get_unique_collection_alias
 )
+from core.tests.test_config import TEST_USER_PASSWORD
 
 
 class ThreatFeedRepositoryTestCase(TransactionTestCase):
@@ -41,8 +42,7 @@ class ThreatFeedRepositoryTestCase(TransactionTestCase):
         
         # Create test user for organization ownership
         self.user = User.objects.create_user(
-            username=get_unique_username('repo_test'),
-            password='testpass123',
+            password=TEST_USER_PASSWORD,
             email=get_unique_email('repo_test')
         )
         

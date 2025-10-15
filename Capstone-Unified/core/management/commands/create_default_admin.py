@@ -1,3 +1,5 @@
+import os
+import secrets
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
@@ -6,13 +8,24 @@ from core.models.models import Organization
 User = get_user_model()
 
 class Command(BaseCommand):
-    help = 'Create default admin user with predefined credentials for easy access'
+    help = 'Create or update the default admin user with a secure password.'
+
+    def _get_password(self):
+        """Get password from environment variable or generate a random one."""
+        password = os.getenv('DEFAULT_ADMIN_PASSWORD')
+        if password:
+            self.stdout.write(self.style.SUCCESS('Using password from DEFAULT_ADMIN_PASSWORD.'))
+            return password
+        
+        password = secrets.token_urlsafe(16)
+        self.stdout.write(self.style.WARNING('DEFAULT_ADMIN_PASSWORD not set. Generated a random password.'))
+        return password
 
     def handle(self, *args, **options):
         username = 'admin'
-        password = 'AdminPass123!'
+        password = self._get_password()
         email = 'admin@crisp.local'
-        
+
         try:
             # Create or get BlueVision ITM organization
             bluevision_org, org_created = Organization.objects.get_or_create(
@@ -27,10 +40,10 @@ class Command(BaseCommand):
                     'is_active': True
                 }
             )
-            
+
             if org_created:
                 self.stdout.write(
-                    self.style.SUCCESS(f'✓ Created BlueVision ITM organization')
+                    self.style.SUCCESS('✓ Created BlueVision ITM organization')
                 )
             
             # Check if user already exists
@@ -72,10 +85,11 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS('   DEFAULT ADMIN CREDENTIALS (Ready to Use)'))
             self.stdout.write(self.style.SUCCESS('='*60))
             self.stdout.write(f'   Username:     {username}')
-            self.stdout.write(f'   Password:     {password}')
+            self.stdout.write(self.style.SUCCESS(f'   Password:     {password}'))
             self.stdout.write(f'   Email:        {email}')
             self.stdout.write(f'   Organization: {bluevision_org.name}')
             self.stdout.write(f'   Role:         BlueVisionAdmin (Full System Access)')
+            self.stdout.write(self.style.WARNING('   Please save this password. It will not be shown again.'))
             self.stdout.write(self.style.SUCCESS('='*60 + '\n'))
 
         except IntegrityError as e:

@@ -7,6 +7,7 @@ import secrets
 import string
 from ..models import CustomUser, AuthenticationLog, Organization
 from ..validators import EmailValidator
+from core.tests.test_config import TEST_USER_PASSWORD
 
 
 class UserCreator(ABC):
@@ -407,7 +408,7 @@ try:
         def password(obj, create, extracted, **kwargs):
             if not create:
                 return
-            password = extracted or 'testpass123'
+            password = extracted or TEST_USER_PASSWORD
             obj.set_password(password)
             obj.save()
     
@@ -475,7 +476,7 @@ except ImportError:
             }
             defaults.update(kwargs)
             
-            password = defaults.pop('password', 'testpass123')
+            password = defaults.pop('password', TEST_USER_PASSWORD)
             user = User.objects.create_user(password=password, **defaults)
             return user
         
@@ -510,7 +511,7 @@ except ImportError:
             }
             defaults.update(kwargs)
             
-            password = defaults.pop('password', 'testpass123')
+            password = defaults.pop('password', TEST_USER_PASSWORD)
             user = User.objects.create_user(password=password, **defaults)
             return user
         

@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: crisp_production
       POSTGRES_USER: crisp_production
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-CrispProd2024!}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_HOST_AUTH_METHOD: md5
     command: [
       "postgres",
@@ -60,10 +60,10 @@ services:
     command: sh -c "python manage.py migrate && python manage.py create_default_admin && python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:8000 --workers 1 --threads 2 --timeout 600 --graceful-timeout 120 --max-requests 500 --max-requests-jitter 50 --worker-class sync settings.wsgi:application"
     environment:
       - DEBUG=False
-      - SECRET_KEY=${SECRET_KEY:-please-change-this-secret-key-in-production-to-something-very-secure-and-random}
+      - SECRET_KEY=${SECRET_KEY}
       - DB_NAME=crisp_production
       - DB_USER=crisp_production
-      - DB_PASSWORD=${DB_PASSWORD:-CrispProd2024!}
+      - DB_PASSWORD=${DB_PASSWORD}
       - DB_HOST=db
       - DB_PORT=5432
       - REDIS_URL=redis://redis:6379/0

@@ -3,6 +3,7 @@ Test utilities for proper test isolation
 """
 import uuid
 from django.contrib.auth import get_user_model
+from core.tests.test_config import TEST_USER_PASSWORD
 
 User = get_user_model()
 from core.models.models import Organization, Collection, STIXObject
@@ -22,7 +23,7 @@ class TestDataManager:
         user = User.objects.create_user(
             username=unique_name,
             email=f"{unique_name}@example.com",
-            password="testpass123"
+            password=TEST_USER_PASSWORD
         )
         self.created_objects.append(user)
         return user

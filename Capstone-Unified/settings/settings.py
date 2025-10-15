@@ -22,7 +22,15 @@ env_file = BASE_DIR / '.env'
 if env_file.exists():
     load_dotenv(env_file)
 
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-default-key-for-dev')
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
+
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
+
+if not SECRET_KEY and not DEBUG:
+    raise ValueError("No DJANGO_SECRET_KEY set for production environment!")
+if not SECRET_KEY and DEBUG:
+    SECRET_KEY = 'django-insecure-default-key-for-dev'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
@@ -229,7 +237,7 @@ EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() == 'true'
 EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False').lower() == 'true'
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 EMAIL_TIMEOUT = 30
 
 # Default email settings for CRISP notifications
@@ -241,7 +249,7 @@ TEST_EMAIL = os.getenv('TEST_EMAIL', 'test@crisp-system.org')
 
 # TAXII Client Settings
 TAXII_DEFAULT_USERNAME = os.getenv('OTX_API_KEY', '')
-TAXII_DEFAULT_PASSWORD = 'unused'  # OTX ignores the password field
+TAXII_DEFAULT_PASSWORD = os.getenv('TAXII_DEFAULT_PASSWORD', 'unused')  # OTX ignores the password field
 
 # OTX Configuration
 OTX_SETTINGS = {
@@ -253,7 +261,7 @@ OTX_SETTINGS = {
 }
 
 # VirusTotal Configuration
-VIRUSTOTAL_API_KEY = os.getenv('VIRUSTOTAL_API_KEY', '')
+VIRUSTOTAL_API_KEY = os.getenv('VIRUSTOTAL_API_KEY')
 VIRUSTOTAL_SETTINGS = {
     'API_KEY': VIRUSTOTAL_API_KEY,
     'ENABLED': os.getenv('VIRUSTOTAL_ENABLED', 'True').lower() == 'true',
@@ -438,4 +446,9 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
 SESSION_COOKIE_AGE = int(os.getenv('SESSION_COOKIE_AGE_SECONDS', '3600'))  # 1 hour
 
 # Trust Management Secret Key
-TRUST_MANAGEMENT_SECRET_KEY = os.getenv('TRUST_MANAGEMENT_SECRET_KEY', SECRET_KEY)
+TRUST_MANAGEMENT_SECRET_KEY = os.getenv('TRUST_MANAGEMENT_SECRET_KEY')
+if not TRUST_MANAGEMENT_SECRET_KEY:
+    if not DEBUG:
+        raise ValueError("No TRUST_MANAGEMENT_SECRET_KEY set for production environment!")
+    else:
+        TRUST_MANAGEMENT_SECRET_KEY = SECRET_KEY

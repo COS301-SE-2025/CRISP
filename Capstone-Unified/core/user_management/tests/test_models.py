@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from ..models import Organization, AuthenticationLog, UserSession
 from core.tests.test_data_fixtures import create_test_user, create_test_organization
+from core.tests.test_config import TEST_USER_PASSWORD, TEST_ADMIN_PASSWORD
 
 
 User = get_user_model()
@@ -25,7 +26,7 @@ class CustomUserModelTest(TestCase):
         user = User.objects.create_user(
             username='testuser',
             email='test@example.com',
-            password='testpass123',
+            password=TEST_USER_PASSWORD,
             organization=self.organization
         )
         
@@ -34,7 +35,7 @@ class CustomUserModelTest(TestCase):
         
         self.assertEqual(user.username, 'testuser')
         self.assertEqual(user.email, 'test@example.com')
-        self.assertTrue(user.check_password('testpass123'))
+        self.assertTrue(user.check_password(TEST_USER_PASSWORD))
         self.assertEqual(user.organization, self.organization)
 
     def test_create_superuser(self):
@@ -42,7 +43,7 @@ class CustomUserModelTest(TestCase):
         admin = User.objects.create_superuser(
             username='admin',
             email='admin@example.com',
-            password='adminpass123',
+            password=TEST_ADMIN_PASSWORD,
             organization=self.organization
         )
         self.assertTrue(admin.is_superuser)

@@ -6,6 +6,7 @@ from ..services.user_service import UserService
 from ..services.organization_service import OrganizationService
 from ..services.access_control_service import AccessControlService
 from core.tests.test_data_fixtures import create_test_user, create_test_organization
+from core.tests.test_config import TEST_USER_PASSWORD, TEST_ADMIN_PASSWORD
 
 User = get_user_model()
 
@@ -29,7 +30,7 @@ class UserServiceTest(TestCase):
         user_data = {
             'username': 'newuser@example.com',
             'email': 'newuser@example.com',
-            'password': 'testpass123',
+            'password': TEST_USER_PASSWORD,
             'first_name': 'New',
             'last_name': 'User',
             'role': 'viewer',
@@ -85,7 +86,7 @@ class OrganizationServiceTest(TestCase):
         primary_user_data = {
             'username': 'admin@neworg.com',
             'email': 'admin@neworg.com',
-            'password': 'adminpass123',
+            'password': TEST_ADMIN_PASSWORD,
             'first_name': 'Admin',
             'last_name': 'User'
         }
@@ -115,7 +116,7 @@ class OrganizationServiceTest(TestCase):
             primary_user_data = {
                 'username': 'admin@new.edu',
                 'email': 'admin@new.edu',
-                'password': 'AdminPass123!',
+                'password': TEST_ADMIN_PASSWORD,
                 'first_name': 'Admin',
                 'last_name': 'User'
             }
@@ -137,7 +138,7 @@ class OrganizationServiceTest(TestCase):
         user_data = {
             'username': 'primary_user',
             'email': 'primary@newcorp.com',
-            'password': 'aSecurePassword123!',
+            'password': TEST_ADMIN_PASSWORD,
             'first_name': 'Primary',
             'last_name': 'User'
         }

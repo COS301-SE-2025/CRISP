@@ -30,6 +30,7 @@ except ImportError:
 from core.patterns.strategy.context import AnonymizationContext
 from core.patterns.strategy.enums import AnonymizationLevel
 from crisp_unified.utils import publish_feed
+from core.tests.test_config import TEST_USER_PASSWORD
 
 try:
     from core.patterns.strategy.factory import AnonymizationStrategyFactory
@@ -79,7 +80,7 @@ class TAXIIEndpointsTest(TestCase):
         username = get_unique_username('publisher')
         self.user = User.objects.create_user(
             username=username,
-            password='testpass123',
+            password=TEST_USER_PASSWORD,
             email=f'{username}@test.com',
             role='publisher'  # Assign a role
         )
@@ -262,7 +263,7 @@ class FeedPublicationTest(TestCase):
         username = get_unique_username('feed_pub')
         self.user = User.objects.create_user(
             username=username,
-            password='testpass123',
+            password=TEST_USER_PASSWORD,
             email=f'{username}@test.com',
             role='publisher'  # Assign a role
         )

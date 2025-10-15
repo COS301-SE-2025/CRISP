@@ -152,6 +152,7 @@ ci_secrets/
 coverage/
 test-results/
 junit.xml
+core/tests/test_config.py
 
 # =============================================================================
 # OS GENERATED FILES

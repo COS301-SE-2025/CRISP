@@ -92,14 +92,14 @@ This will:
 - 🐳 Build and start all Docker containers
 - 🗄️ Set up database with migrations
 - 🎯 Deploy the Asset-Based Alert System (WOW Factor #1)
-- 👤 Create demo user: `demo_security_admin` / `demo123`
+- 👤 Create demo user: `demo_security_admin` / `<A securely generated password will be displayed on startup>`
 - 🏢 Set up "Demo University" with sample assets
 - 🚨 Generate demo alerts showing threat correlation
 - 🌐 Launch frontend at http://localhost:5173
 
 **Access the Asset-Based Alert System:**
 1. Go to http://localhost:5173
-2. Login with `demo_security_admin` / `demo123`
+2. Login with the generated credentials displayed in the console
 3. Navigate to **Management → Asset-Based Alerts**
 4. Explore the asset inventory and custom alerts!
 
@@ -186,13 +186,13 @@ sudo systemctl start postgresql
 sudo systemctl enable postgresql
 
 # Set password for postgres user
-sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'AdminPass123!';"
+sudo -u postgres psql -c "ALTER USER postgres PASSWORD '<your_secure_password>';"
 
 # Create database
 sudo -u postgres createdb crisp_unified
 
 # Test connection
-PGPASSWORD='AdminPass123!' psql -h localhost -U postgres -d crisp_unified -c "SELECT version();"
+PGPASSWORD='<your_secure_password>' psql -h localhost -U postgres -d crisp_unified -c "SELECT version();"
 ```
 
 #### Environment Configuration
@@ -201,7 +201,7 @@ Ensure your `.env` file contains:
 # Database
 DB_NAME=crisp_unified
 DB_USER=postgres
-DB_PASSWORD=AdminPass123!
+DB_PASSWORD=<your_secure_password>
 DB_HOST=localhost
 DB_PORT=5432
 
