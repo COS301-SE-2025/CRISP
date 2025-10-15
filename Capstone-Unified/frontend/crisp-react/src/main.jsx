@@ -12,7 +12,7 @@ import ResetPassword from "./components/ResetPassword.jsx";
 import SessionTimeout from "./components/enhanced/SessionTimeout.jsx";
 import { NotificationProvider, useNotifications } from "./components/enhanced/NotificationManager.jsx";
 import NotificationWatcher from "./components/enhanced/NotificationWatcher.jsx";
-import "./assets/index_ut.css";
+import "./index.css";
 import "./assets/trust-management.css";
 import "./assets/enhanced/notifications.css";
 

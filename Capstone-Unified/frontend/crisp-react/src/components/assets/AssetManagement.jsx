@@ -6,8 +6,38 @@ import NotificationToast from '../enhanced/NotificationToast';
 import ConfirmationModal from '../enhanced/ConfirmationModal';
 import { useNotifications } from '../enhanced/NotificationManager.jsx';
 import refreshManager from '../../utils/RefreshManager.js';
+import './AssetManagement.css';
 
+// Helper functions for standardized criticality colors - Blue/White theme
+const getCriticalityColor = (criticality) => {
+  switch (criticality?.toLowerCase()) {
+    case 'critical': return 'var(--danger)'; // Only critical uses red
+    case 'high': return 'var(--secondary-blue)';
+    case 'medium': return 'var(--info)';
+    case 'low': return 'var(--light-blue)';
+    default: return 'var(--medium-gray)';
+  }
+};
 
+const getCriticalityBgColor = (criticality) => {
+  switch (criticality?.toLowerCase()) {
+    case 'critical': return '#fef2f2';
+    case 'high': return '#dbeafe';
+    case 'medium': return '#e0f2fe';
+    case 'low': return 'var(--light-blue)';
+    default: return 'var(--light-gray)';
+  }
+};
+
+const getCriticalityTextColor = (criticality) => {
+  switch (criticality?.toLowerCase()) {
+    case 'critical': return 'var(--danger)';
+    case 'high': return 'var(--secondary-blue)';
+    case 'medium': return 'var(--info)';
+    case 'low': return 'var(--primary-blue)';
+    default: return 'var(--text-muted)';
+  }
+};
 
 const AssetInventoryTab = ({ assets, onAdd, onEdit, onDelete, onBulkUpload, loading }) => {
   return (
@@ -19,8 +49,8 @@ const AssetInventoryTab = ({ assets, onAdd, onEdit, onDelete, onBulkUpload, load
         marginBottom: '2rem'
       }}>
         <div>
-          <h3 style={{ margin: '0 0 0.5rem 0', color: '#333', fontSize: '1.125rem', fontWeight: '600' }}>Asset Inventory</h3>
-          <p style={{ margin: 0, color: '#666', fontSize: '0.875rem' }}>Manage and monitor your organization's digital assets</p>
+          <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-dark)', fontSize: '1.125rem', fontWeight: '600' }}>Asset Inventory</h3>
+          <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.875rem' }}>Manage and monitor your organization's digital assets</p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button
@@ -30,8 +60,8 @@ const AssetInventoryTab = ({ assets, onAdd, onEdit, onDelete, onBulkUpload, load
               alignItems: 'center',
               gap: '0.5rem',
               padding: '0.5rem 1rem',
-              backgroundColor: '#4CAF50',
-              color: 'white',
+              backgroundColor: 'var(--success)',
+              color: 'var(--white)',
               border: 'none',
               borderRadius: '4px',
               cursor: 'pointer',
@@ -51,8 +81,8 @@ const AssetInventoryTab = ({ assets, onAdd, onEdit, onDelete, onBulkUpload, load
               alignItems: 'center',
               gap: '0.5rem',
               padding: '0.5rem 1rem',
-              backgroundColor: '#2196F3',
-              color: 'white',
+              backgroundColor: 'var(--secondary-blue)',
+              color: 'var(--white)',
               border: 'none',
               borderRadius: '4px',
               cursor: 'pointer',
@@ -95,11 +125,9 @@ const AssetInventoryTab = ({ assets, onAdd, onEdit, onDelete, onBulkUpload, load
                         width: '8px',
                         height: '8px',
                         borderRadius: '50%',
-                        backgroundColor: asset.criticality === 'critical' ? '#f44336' :
-                                        asset.criticality === 'high' ? '#ff9800' :
-                                        asset.criticality === 'medium' ? '#ffeb3b' : '#4caf50'
+                        backgroundColor: getCriticalityColor(asset.criticality)
                       }}></div>
-                      <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: '#333' }}>
+                      <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: 'var(--text-dark)' }}>
                         {asset.name || 'Unnamed Asset'}
                       </h4>
                     </div>
@@ -110,8 +138,8 @@ const AssetInventoryTab = ({ assets, onAdd, onEdit, onDelete, onBulkUpload, load
                         fontSize: '0.75rem',
                         fontWeight: '500',
                         borderRadius: '4px',
-                        backgroundColor: '#e3f2fd',
-                        color: '#1976d2'
+                        backgroundColor: 'var(--light-blue)',
+                        color: 'var(--info)'
                       }}>
                         {asset.asset_type_display || asset.asset_type}
                       </span>
@@ -121,12 +149,8 @@ const AssetInventoryTab = ({ assets, onAdd, onEdit, onDelete, onBulkUpload, load
                         fontSize: '0.75rem',
                         fontWeight: '500',
                         borderRadius: '4px',
-                        backgroundColor: asset.criticality === 'critical' ? '#ffebee' :
-                                        asset.criticality === 'high' ? '#fff3e0' :
-                                        asset.criticality === 'medium' ? '#fffde7' : '#e8f5e8',
-                        color: asset.criticality === 'critical' ? '#c62828' :
-                               asset.criticality === 'high' ? '#ef6c00' :
-                               asset.criticality === 'medium' ? '#f57f17' : '#2e7d32'
+                        backgroundColor: getCriticalityBgColor(asset.criticality),
+                        color: getCriticalityTextColor(asset.criticality)
                       }}>
                         {asset.criticality === 'critical' && '🔴'}
                         {asset.criticality === 'high' && '🟠'}
@@ -136,14 +160,14 @@ const AssetInventoryTab = ({ assets, onAdd, onEdit, onDelete, onBulkUpload, load
                       </span>
                     </div>
                     <div style={{ marginBottom: '0.5rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#666', fontSize: '0.875rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
                         <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                         {asset.asset_value}
                       </div>
                       {asset.alert_enabled && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#4caf50', fontSize: '0.875rem', marginTop: '0.25rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--success)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
                           <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                           </svg>
@@ -152,7 +176,7 @@ const AssetInventoryTab = ({ assets, onAdd, onEdit, onDelete, onBulkUpload, load
                       )}
                     </div>
                     {asset.description && (
-                      <p style={{ margin: 0, fontSize: '0.875rem', color: '#666' }}>{asset.description}</p>
+                      <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-muted)' }}>{asset.description}</p>
                     )}
                   </div>
                 </div>
@@ -162,8 +186,8 @@ const AssetInventoryTab = ({ assets, onAdd, onEdit, onDelete, onBulkUpload, load
                     title="Edit asset"
                     style={{
                       padding: '0.5rem',
-                      backgroundColor: '#2196F3',
-                      color: 'white',
+                      backgroundColor: 'var(--secondary-blue)',
+                      color: 'var(--white)',
                       border: 'none',
                       borderRadius: '4px',
                       cursor: 'pointer',
@@ -186,8 +210,8 @@ const AssetInventoryTab = ({ assets, onAdd, onEdit, onDelete, onBulkUpload, load
                     title="Delete asset"
                     style={{
                       padding: '0.5rem',
-                      backgroundColor: '#f44336',
-                      color: 'white',
+                      backgroundColor: 'var(--danger)',
+                      color: 'var(--white)',
                       border: 'none',
                       borderRadius: '4px',
                       cursor: 'pointer',
@@ -216,11 +240,11 @@ const AssetInventoryTab = ({ assets, onAdd, onEdit, onDelete, onBulkUpload, load
               textAlign: 'center',
               gridColumn: '1 / -1'
             }}>
-              <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#9e9e9e', marginBottom: '1rem' }}>
+              <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
               </svg>
-              <h3 style={{ color: '#333', marginBottom: '0.5rem' }}>No assets found</h3>
-              <p style={{ color: '#666', marginBottom: '1.5rem' }}>Get started by adding your first asset to monitor</p>
+              <h3 style={{ color: 'var(--text-dark)', marginBottom: '0.5rem' }}>No assets found</h3>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>Get started by adding your first asset to monitor</p>
               <button
                 onClick={onAdd}
                 style={{
@@ -228,8 +252,8 @@ const AssetInventoryTab = ({ assets, onAdd, onEdit, onDelete, onBulkUpload, load
                   alignItems: 'center',
                   gap: '0.5rem',
                   padding: '0.75rem 1.5rem',
-                  backgroundColor: '#4CAF50',
-                  color: 'white',
+                  backgroundColor: 'var(--success)',
+                  color: 'var(--white)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer',
@@ -255,11 +279,11 @@ const CustomAlertsTab = ({ alerts, onView, onDelete, loading, refreshInterval })
     <div style={{ padding: '1rem 0' }}>
       <div style={{ marginBottom: '2rem' }}>
         <div>
-          <h3 style={{ margin: '0 0 0.5rem 0', color: '#333', fontSize: '1.125rem', fontWeight: '600' }}>Custom Asset Alerts</h3>
-          <p style={{ margin: 0, color: '#666', fontSize: '0.875rem' }}>
+          <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-dark)', fontSize: '1.125rem', fontWeight: '600' }}>Custom Asset Alerts</h3>
+          <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.875rem' }}>
             Smart alerts generated from IoC correlation with your assets
             {refreshInterval && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', marginLeft: '0.5rem', color: '#4caf50' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', marginLeft: '0.5rem', color: 'var(--success)' }}>
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
@@ -300,11 +324,9 @@ const CustomAlertsTab = ({ alerts, onView, onDelete, loading, refreshInterval })
                         width: '8px',
                         height: '8px',
                         borderRadius: '50%',
-                        backgroundColor: alert.severity === 'critical' ? '#f44336' :
-                                        alert.severity === 'high' ? '#ff9800' :
-                                        alert.severity === 'medium' ? '#ffeb3b' : '#4caf50'
+                        backgroundColor: getCriticalityColor(alert.severity)
                       }}></div>
-                      <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: '#333' }}>
+                      <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: 'var(--text-dark)' }}>
                         {alert.title || 'Unnamed Alert'}
                       </h4>
                     </div>
@@ -315,12 +337,8 @@ const CustomAlertsTab = ({ alerts, onView, onDelete, loading, refreshInterval })
                         fontSize: '0.75rem',
                         fontWeight: '500',
                         borderRadius: '4px',
-                        backgroundColor: alert.severity === 'critical' ? '#ffebee' :
-                                        alert.severity === 'high' ? '#fff3e0' :
-                                        alert.severity === 'medium' ? '#fffde7' : '#e8f5e8',
-                        color: alert.severity === 'critical' ? '#c62828' :
-                               alert.severity === 'high' ? '#ef6c00' :
-                               alert.severity === 'medium' ? '#f57f17' : '#2e7d32'
+                        backgroundColor: getCriticalityBgColor(alert.severity),
+                        color: getCriticalityTextColor(alert.severity)
                       }}>
                         {alert.severity === 'critical' && '🔴'}
                         {alert.severity === 'high' && '🟠'}
@@ -334,8 +352,8 @@ const CustomAlertsTab = ({ alerts, onView, onDelete, loading, refreshInterval })
                         fontSize: '0.75rem',
                         fontWeight: '500',
                         borderRadius: '4px',
-                        backgroundColor: '#e8f5e8',
-                        color: '#2e7d32'
+                        backgroundColor: 'var(--light-gray)',
+                        color: 'var(--text-muted)'
                       }}>
                         {alert.status_display || alert.status}
                       </span>
@@ -346,22 +364,22 @@ const CustomAlertsTab = ({ alerts, onView, onDelete, loading, refreshInterval })
                           fontSize: '0.75rem',
                           fontWeight: '500',
                           borderRadius: '4px',
-                          backgroundColor: '#e1f5fe',
-                          color: '#0277bd'
+                          backgroundColor: 'var(--light-blue)',
+                          color: 'var(--info)'
                         }}>
                           🎯 {Math.round(alert.confidence_score * 100)}% confidence
                         </span>
                       )}
                     </div>
                     <div style={{ marginBottom: '0.75rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#666', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
                         <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         {new Date(alert.detected_at).toLocaleString()}
                       </div>
                       {alert.matched_assets && alert.matched_assets.length > 0 && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#666', fontSize: '0.875rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
                           <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                           </svg>
@@ -370,7 +388,7 @@ const CustomAlertsTab = ({ alerts, onView, onDelete, loading, refreshInterval })
                       )}
                     </div>
                     {alert.description && (
-                      <p style={{ margin: 0, fontSize: '0.875rem', color: '#666', lineHeight: '1.4' }}>
+                      <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
                         {alert.description}
                       </p>
                     )}
@@ -389,8 +407,8 @@ const CustomAlertsTab = ({ alerts, onView, onDelete, loading, refreshInterval })
                     title="View alert details"
                     style={{
                       padding: '0.5rem',
-                      backgroundColor: '#2196F3',
-                      color: 'white',
+                      backgroundColor: 'var(--secondary-blue)',
+                      color: 'var(--white)',
                       border: 'none',
                       borderRadius: '4px',
                       cursor: 'pointer',
@@ -417,8 +435,8 @@ const CustomAlertsTab = ({ alerts, onView, onDelete, loading, refreshInterval })
                     title="Delete alert"
                     style={{
                       padding: '0.5rem',
-                      backgroundColor: '#f44336',
-                      color: 'white',
+                      backgroundColor: 'var(--danger)',
+                      color: 'var(--white)',
                       border: 'none',
                       borderRadius: '4px',
                       cursor: 'pointer',
@@ -447,11 +465,11 @@ const CustomAlertsTab = ({ alerts, onView, onDelete, loading, refreshInterval })
               textAlign: 'center',
               gridColumn: '1 / -1'
             }}>
-              <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#9e9e9e', marginBottom: '1rem' }}>
+              <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5-5-5h5v-5a7.5 7.5 0 00-15 0v5h5l-5 5-5-5h5V7.5a7.5 7.5 0 0115 0V17z" />
               </svg>
-              <h3 style={{ color: '#333', marginBottom: '0.5rem' }}>No alerts detected</h3>
-              <p style={{ color: '#666', margin: 0 }}>Your assets are currently secure. New alerts will appear here when threats are detected.</p>
+              <h3 style={{ color: 'var(--text-dark)', marginBottom: '0.5rem' }}>No alerts detected</h3>
+              <p style={{ color: 'var(--text-muted)', margin: 0 }}>Your assets are currently secure. New alerts will appear here when threats are detected.</p>
             </div>
           )}
         </div>
@@ -818,7 +836,7 @@ const AssetManagement = ({ active }) => {
   }
 
   if (error) {
-    return <div style={{ color: '#f44336', padding: '1rem' }}>{error}</div>;
+    return <div style={{ color: 'var(--danger)', padding: '1rem' }}>{error}</div>;
   }
 
   return (
@@ -826,8 +844,8 @@ const AssetManagement = ({ active }) => {
       {loading && <LoadingSpinner fullscreen={true} />}
 
       <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ marginBottom: '0.5rem', color: '#333' }}>Asset Management</h1>
-        <p style={{ color: '#666', margin: 0 }}>Manage and monitor your organization's digital assets and security alerts</p>
+        <h1 style={{ marginBottom: '0.5rem', color: 'var(--text-dark)' }}>Asset Management</h1>
+        <p style={{ color: 'var(--text-muted)', margin: 0 }}>Manage and monitor your organization's digital assets and security alerts</p>
       </div>
 
       {/* Statistics Cards */}
@@ -838,57 +856,57 @@ const AssetManagement = ({ active }) => {
         marginBottom: '2rem'
       }}>
         <div style={{
-          backgroundColor: 'white',
+          backgroundColor: 'var(--white)',
           padding: '1.5rem',
           borderRadius: '8px',
-          border: '1px solid #e0e0e0',
+          border: '1px solid var(--medium-gray)',
           textAlign: 'center'
         }}>
-          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#2196F3' }}>
+          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary-blue)' }}>
             {stats?.asset_statistics?.total_assets || assets.length}
           </div>
-          <div style={{ color: '#666', fontSize: '0.875rem' }}>Total Assets</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Total Assets</div>
         </div>
 
         <div style={{
-          backgroundColor: 'white',
+          backgroundColor: 'var(--white)',
           padding: '1.5rem',
           borderRadius: '8px',
-          border: '1px solid #e0e0e0',
+          border: '1px solid var(--medium-gray)',
           textAlign: 'center'
         }}>
-          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#FF9800' }}>
+          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--secondary-blue)' }}>
             {stats?.alert_statistics?.recent_alerts || alerts.length}
           </div>
-          <div style={{ color: '#666', fontSize: '0.875rem' }}>Active Alerts</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Active Alerts</div>
         </div>
 
         <div style={{
-          backgroundColor: 'white',
+          backgroundColor: 'var(--white)',
           padding: '1.5rem',
           borderRadius: '8px',
-          border: '1px solid #e0e0e0',
+          border: '1px solid var(--medium-gray)',
           textAlign: 'center'
         }}>
-          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4CAF50' }}>
+          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--info)' }}>
             {stats?.asset_statistics?.alert_coverage_percentage || 100}%
           </div>
-          <div style={{ color: '#666', fontSize: '0.875rem' }}>Coverage</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Coverage</div>
         </div>
 
         <div style={{
-          backgroundColor: 'white',
+          backgroundColor: 'var(--white)',
           padding: '1.5rem',
           borderRadius: '8px',
-          border: '1px solid #e0e0e0',
+          border: '1px solid var(--medium-gray)',
           textAlign: 'center'
         }}>
           <button
             onClick={handleTriggerCorrelation}
             disabled={loading}
             style={{
-              backgroundColor: '#9C27B0',
-              color: 'white',
+              backgroundColor: 'var(--accent-blue)',
+              color: 'var(--white)',
               border: 'none',
               borderRadius: '4px',
               padding: '0.5rem 1rem',
@@ -898,7 +916,7 @@ const AssetManagement = ({ active }) => {
           >
             {loading ? 'Processing...' : 'Trigger Correlation'}
           </button>
-          <div style={{ color: '#666', fontSize: '0.875rem', marginTop: '0.5rem' }}>Smart Analysis</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.5rem' }}>Smart Analysis</div>
         </div>
       </div>
 
@@ -956,8 +974,8 @@ const AssetManagement = ({ active }) => {
             border: '1px solid #ddd',
             borderRadius: '4px',
             minWidth: '200px',
-            backgroundColor: 'white',
-            color: '#333'
+            backgroundColor: 'var(--white)',
+            color: 'var(--text-dark)'
           }}
         />
 
@@ -967,10 +985,10 @@ const AssetManagement = ({ active }) => {
             onChange={(e) => setFilterType(e.target.value)}
             style={{
               padding: '0.5rem',
-              border: '1px solid #ddd',
+              border: '1px solid var(--medium-gray)',
               borderRadius: '4px',
-              backgroundColor: 'white',
-              color: '#333'
+              backgroundColor: 'var(--white)',
+              color: 'var(--text-dark)'
             }}
           >
             <option value="all">All Types</option>
@@ -985,10 +1003,10 @@ const AssetManagement = ({ active }) => {
             onChange={(e) => setFilterSeverity(e.target.value)}
             style={{
               padding: '0.5rem',
-              border: '1px solid #ddd',
+              border: '1px solid var(--medium-gray)',
               borderRadius: '4px',
-              backgroundColor: 'white',
-              color: '#333'
+              backgroundColor: 'var(--white)',
+              color: 'var(--text-dark)'
             }}
           >
             <option value="all">All Severities</option>
@@ -1005,8 +1023,8 @@ const AssetManagement = ({ active }) => {
               onClick={() => handleOpenAssetModal()}
               style={{
                 padding: '0.5rem 1rem',
-                backgroundColor: '#4CAF50',
-                color: 'white',
+                backgroundColor: 'var(--success)',
+                color: 'var(--white)',
                 border: 'none',
                 borderRadius: '4px',
                 cursor: 'pointer'
@@ -1018,8 +1036,8 @@ const AssetManagement = ({ active }) => {
               onClick={handleOpenBulkUploadModal}
               style={{
                 padding: '0.5rem 1rem',
-                backgroundColor: '#2196F3',
-                color: 'white',
+                backgroundColor: 'var(--secondary-blue)',
+                color: 'var(--white)',
                 border: 'none',
                 borderRadius: '4px',
                 cursor: 'pointer'
@@ -1276,10 +1294,10 @@ const AssetModal = ({ asset, onSave, onClose, errorMessage }) => {
                 alignItems: 'center',
                 gap: '0.75rem'
               }}>
-                <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#dc2626', flexShrink: 0 }}>
+                <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20" style={{ color: 'var(--danger)', flexShrink: 0 }}>
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
-                <span style={{ color: '#dc2626', fontWeight: '600', fontSize: '0.875rem' }}>{errorMessage}</span>
+                <span style={{ color: 'var(--danger)', fontWeight: '600', fontSize: '0.875rem' }}>{errorMessage}</span>
               </div>
             )}
 

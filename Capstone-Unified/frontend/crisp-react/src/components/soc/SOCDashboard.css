@@ -1,0 +1,91 @@
+/* CSS for SOCDashboard component */
+
+/* Priority Colors - Blue/White theme with red only for critical */
+.priority-critical {
+  background-color: var(--danger);
+  color: var(--white);
+}
+
+.priority-high {
+  background-color: var(--secondary-blue);
+  color: var(--white);
+}
+
+.priority-medium {
+  background-color: var(--info);
+  color: var(--white);
+}
+
+.priority-low {
+  background-color: var(--light-blue);
+  color: var(--primary-blue);
+}
+
+.priority-default {
+  background-color: var(--medium-gray);
+  color: var(--text-dark);
+}
+
+/* Status Colors - Blue/Gray theme */
+.status-new {
+  background-color: var(--secondary-blue);
+  color: var(--white);
+}
+
+.status-assigned {
+  background-color: var(--info);
+  color: var(--white);
+}
+
+.status-in_progress {
+  background-color: var(--accent-blue);
+  color: var(--white);
+}
+
+.status-resolved {
+  background-color: var(--medium-gray);
+  color: var(--text-dark);
+}
+
+.status-closed {
+  background-color: var(--light-gray);
+  color: var(--text-muted);
+}
+
+.status-default {
+  background-color: var(--medium-gray);
+  color: var(--text-dark);
+}
+
+/* MITRE Tactic Colors - Blue gradient theme based on severity */
+.tactic-critical {
+  background: linear-gradient(135deg, var(--danger), #c62828);
+}
+
+.tactic-high {
+  background: linear-gradient(135deg, var(--secondary-blue), var(--primary-blue));
+}
+
+.tactic-medium {
+  background: linear-gradient(135deg, var(--info), var(--accent-blue));
+}
+
+.tactic-low {
+  background: linear-gradient(135deg, var(--light-blue), #b3d9ff);
+}
+
+.tactic-default {
+  background: linear-gradient(135deg, var(--medium-gray), var(--light-gray));
+}
+
+/* Text color variants for inline use */
+.text-priority-critical { color: var(--danger); }
+.text-priority-high { color: var(--secondary-blue); }
+.text-priority-medium { color: var(--info); }
+.text-priority-low { color: var(--primary-blue); }
+
+.text-status-new { color: var(--secondary-blue); }
+.text-status-assigned { color: var(--info); }
+.text-status-in_progress { color: var(--accent-blue); }
+.text-status-resolved { color: var(--text-muted); }
+.text-status-closed { color: var(--text-muted); }

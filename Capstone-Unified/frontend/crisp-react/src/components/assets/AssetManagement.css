@@ -1,0 +1,48 @@
+/* CSS for AssetManagement component */
+
+/* Asset Criticality Colors - Blue/White theme with red only for critical */
+.criticality-critical {
+  background-color: var(--danger);
+  color: var(--white);
+}
+
+.criticality-high {
+  background-color: var(--secondary-blue);
+  color: var(--white);
+}
+
+.criticality-medium {
+  background-color: var(--info);
+  color: var(--white);
+}
+
+.criticality-low {
+  background-color: var(--light-blue);
+  color: var(--primary-blue);
+}
+
+.criticality-default {
+  background-color: var(--medium-gray);
+  color: var(--text-dark);
+}
+
+/* Criticality badge backgrounds - Light blue tints */
+.criticality-badge-critical {
+  background-color: #fef2f2;
+  color: var(--danger);
+}
+
+.criticality-badge-high {
+  background-color: #dbeafe;
+  color: var(--secondary-blue);
+}
+
+.criticality-badge-medium {
+  background-color: #e0f2fe;
+  color: var(--info);
+}
+
+.criticality-badge-low {
+  background-color: var(--light-blue);
+  color: var(--primary-blue);
+}

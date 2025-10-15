@@ -30,12 +30,6 @@ urlpatterns = [
     # TAXII endpoints
     path('taxii2/', include('core.taxii.urls')),
     
-    # Enhanced user management endpoints
-    path('api/user-management/', include('core.user_management.urls_ut')),
-    
-    # Enhanced trust management endpoints
-    path('api/trust-management/', include('core.trust_management.urls_ut')),
-    
     # Alert management endpoints
     path('api/alerts/', include('core.alerts.alerts_urls')),
     

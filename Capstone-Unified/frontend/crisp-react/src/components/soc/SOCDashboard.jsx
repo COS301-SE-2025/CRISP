@@ -4,6 +4,7 @@ import { useNotifications } from '../enhanced/NotificationManager.jsx';
 import SOCIncidentModal from './SOCIncidentModal.jsx';
 import SOCIncidentEditModal from './SOCIncidentEditModal.jsx';
 import BehaviorAnalyticsDashboard from './BehaviorAnalyticsDashboard.jsx';
+import './SOCDashboard.css';
 
 const SOCDashboard = ({ active, showPage }) => {
   const { showError, showInfo, showSuccess } = useNotifications();
@@ -192,23 +193,23 @@ const SOCDashboard = ({ active, showPage }) => {
     await fetchTechniqueDetails(technique.technique_id);
   };
 
-  const getTacticColor = (tactic, intensity = 1) => {
-    const colors = {
-      'initial-access': `rgba(255, 107, 107, ${intensity})`,
-      'execution': `rgba(78, 205, 196, ${intensity})`,
-      'persistence': `rgba(69, 183, 209, ${intensity})`,
-      'privilege-escalation': `rgba(150, 206, 180, ${intensity})`,
-      'defense-evasion': `rgba(254, 202, 87, ${intensity})`,
-      'credential-access': `rgba(255, 159, 243, ${intensity})`,
-      'discovery': `rgba(84, 160, 255, ${intensity})`,
-      'lateral-movement': `rgba(95, 39, 205, ${intensity})`,
-      'collection': `rgba(0, 210, 211, ${intensity})`,
-      'command-and-control': `rgba(255, 159, 67, ${intensity})`,
-      'exfiltration': `rgba(238, 90, 36, ${intensity})`,
-      'impact': `rgba(234, 32, 39, ${intensity})`,
-      'unknown': `rgba(108, 117, 125, ${intensity})`
-    };
-    return colors[tactic?.toLowerCase()] || colors['unknown'];
+  // Returns standardized color based on tactic severity/detection count
+  const getTacticColor = (tactic, detectionCount = 0) => {
+    // Map tactics to blue shades based on detection count, with red only for critical
+    if (detectionCount >= 10) return 'var(--danger)'; // Only critical uses red
+    if (detectionCount >= 5) return 'var(--secondary-blue)';
+    if (detectionCount >= 2) return 'var(--info)';
+    if (detectionCount >= 1) return 'var(--light-blue)';
+    return 'var(--medium-gray)';
+  };
+  
+  // Returns CSS class name for tactic styling
+  const getTacticClass = (detectionCount = 0) => {
+    if (detectionCount >= 10) return 'tactic-critical';
+    if (detectionCount >= 5) return 'tactic-high';
+    if (detectionCount >= 2) return 'tactic-medium';
+    if (detectionCount >= 1) return 'tactic-low';
+    return 'tactic-default';
   };
 
   const getFilteredTactics = () => {
@@ -299,24 +300,49 @@ const SOCDashboard = ({ active, showPage }) => {
     }
   };
 
+  // Returns standardized color variable for priority - Blue theme
   const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'critical': return '#dc3545';
-      case 'high': return '#fd7e14';
-      case 'medium': return '#ffc107';
-      case 'low': return '#28a745';
-      default: return '#6c757d';
+    switch (priority?.toLowerCase()) {
+      case 'critical': return 'var(--danger)'; // Only critical uses red
+      case 'high': return 'var(--secondary-blue)';
+      case 'medium': return 'var(--info)';
+      case 'low': return 'var(--light-blue)';
+      default: return 'var(--medium-gray)';
+    }
+  };
+  
+  // Returns CSS class name for priority styling
+  const getPriorityClass = (priority) => {
+    switch (priority?.toLowerCase()) {
+      case 'critical': return 'priority-critical';
+      case 'high': return 'priority-high';
+      case 'medium': return 'priority-medium';
+      case 'low': return 'priority-low';
+      default: return 'priority-default';
     }
   };
 
+  // Returns standardized color variable for status - Blue/Gray theme
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'new': return '#2563eb';
-      case 'assigned': return '#17a2b8';
-      case 'in_progress': return '#ffc107';
-      case 'resolved': return '#28a745';
-      case 'closed': return '#6c757d';
-      default: return '#6c757d';
+    switch (status?.toLowerCase()) {
+      case 'new': return 'var(--secondary-blue)';
+      case 'assigned': return 'var(--info)';
+      case 'in_progress': return 'var(--accent-blue)';
+      case 'resolved': return 'var(--medium-gray)';
+      case 'closed': return 'var(--light-gray)';
+      default: return 'var(--medium-gray)';
+    }
+  };
+  
+  // Returns CSS class name for status styling
+  const getStatusClass = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'new': return 'status-new';
+      case 'assigned': return 'status-assigned';
+      case 'in_progress': return 'status-in_progress';
+      case 'resolved': return 'status-resolved';
+      case 'closed': return 'status-closed';
+      default: return 'status-default';
     }
   };
 
@@ -801,9 +827,9 @@ const SOCDashboard = ({ active, showPage }) => {
     return (
       <div style={{ padding: '2rem', textAlign: 'center' }}>
         <div style={{
-          backgroundColor: '#fff3cd',
-          color: '#856404',
-          border: '1px solid #ffeaa7',
+          backgroundColor: 'var(--light-blue)',
+          color: 'var(--text-dark)',
+          border: '1px solid var(--secondary-blue)',
           borderRadius: '4px',
           padding: '1rem',
           display: 'flex',
@@ -811,7 +837,7 @@ const SOCDashboard = ({ active, showPage }) => {
           alignItems: 'center',
           gap: '0.5rem'
         }}>
-          <i className="fas fa-lock" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}></i>
+          <i className="fas fa-lock" style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'var(--primary-blue)' }}></i>
           <strong>Access Restricted</strong>
           <p style={{ margin: '0.5rem 0 0 0' }}>SOC features are only available to BlueVision administrators.</p>
         </div>
@@ -832,12 +858,12 @@ const SOCDashboard = ({ active, showPage }) => {
         <div style={{
           width: '40px',
           height: '40px',
-          border: '4px solid #f3f3f3',
-          borderTop: '4px solid #2563eb',
+          border: '4px solid var(--medium-gray)',
+          borderTop: '4px solid var(--secondary-blue)',
           borderRadius: '50%',
           animation: 'spin 1s linear infinite'
         }}></div>
-        <span style={{ color: '#64748b', fontSize: '1rem' }}>Loading SOC Dashboard...</span>
+        <span style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>Loading SOC Dashboard...</span>
         <style>
           {`
             @keyframes spin {
@@ -854,9 +880,9 @@ const SOCDashboard = ({ active, showPage }) => {
     return (
       <div style={{ padding: '2rem' }}>
         <div style={{
-          backgroundColor: '#f8d7da',
-          color: '#721c24',
-          border: '1px solid #f5c6cb',
+          backgroundColor: 'var(--light-blue)',
+          color: 'var(--text-dark)',
+          border: '1px solid var(--danger)',
           borderRadius: '4px',
           padding: '1rem',
           display: 'flex',
@@ -872,8 +898,8 @@ const SOCDashboard = ({ active, showPage }) => {
             onClick={fetchDashboardData}
             style={{
               backgroundColor: 'transparent',
-              color: '#dc3545',
-              border: '1px solid #dc3545',
+              color: 'var(--danger)',
+              border: '1px solid var(--danger)',
               borderRadius: '4px',
               padding: '0.375rem 0.75rem',
               fontSize: '0.875rem',
@@ -891,7 +917,7 @@ const SOCDashboard = ({ active, showPage }) => {
   if (!dashboardData) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <p style={{ color: '#64748b', fontSize: '1rem' }}>No SOC data available</p>
+        <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>No SOC data available</p>
       </div>
     );
   }
@@ -903,7 +929,7 @@ const SOCDashboard = ({ active, showPage }) => {
       <div style={{ 
         display: 'flex', 
         gap: '0.5rem', 
-        borderBottom: '2px solid #cbd5e1',
+        borderBottom: '2px solid var(--medium-gray)',
         flexWrap: 'wrap'
       }}>
         {[
@@ -920,26 +946,26 @@ const SOCDashboard = ({ active, showPage }) => {
             style={{
               padding: '0.75rem 1.5rem',
               border: 'none',
-              background: activeTab === tab.key ? '#2563eb' : 'white',
-              color: activeTab === tab.key ? 'white' : '#64748b',
+              background: activeTab === tab.key ? 'var(--primary-blue)' : 'var(--white)',
+              color: activeTab === tab.key ? 'var(--white)' : 'var(--text-muted)',
               fontWeight: '500',
               borderRadius: '8px 8px 0 0',
               cursor: 'pointer',
               fontSize: '0.875rem',
               transition: 'all 0.3s ease',
-              borderBottom: activeTab === tab.key ? '2px solid #2563eb' : '2px solid transparent',
+              borderBottom: activeTab === tab.key ? '2px solid var(--primary-blue)' : '2px solid transparent',
               marginBottom: '-2px'
             }}
             onMouseEnter={(e) => {
               if (activeTab !== tab.key) {
-                e.target.style.backgroundColor = '#f8f9fa';
-                e.target.style.color = '#2563eb';
+                e.target.style.backgroundColor = 'var(--light-gray)';
+                e.target.style.color = 'var(--primary-blue)';
               }
             }}
             onMouseLeave={(e) => {
               if (activeTab !== tab.key) {
-                e.target.style.backgroundColor = 'white';
-                e.target.style.color = '#64748b';
+                e.target.style.backgroundColor = 'var(--white)';
+                e.target.style.color = 'var(--text-muted)';
               }
             }}
           >
@@ -953,14 +979,14 @@ const SOCDashboard = ({ active, showPage }) => {
 
 
   return (
-    <div style={{ padding: '2rem', fontFamily: 'Arial, sans-serif', position: 'relative', backgroundColor: '#ffffff', minHeight: '100vh' }}>
+    <div style={{ padding: '2rem', fontFamily: 'Arial, sans-serif', position: 'relative', backgroundColor: 'var(--white)', minHeight: '100vh' }}>
       {/* Page Header */}
       <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ marginBottom: '0.5rem', color: '#1e3a8a', fontSize: '2rem', fontWeight: '600' }}>
-          <i className="fas fa-shield-alt" style={{ color: '#2563eb', marginRight: '0.5rem' }}></i>
+        <h1 style={{ marginBottom: '0.5rem', color: 'var(--primary-blue)', fontSize: '2rem', fontWeight: '600' }}>
+          <i className="fas fa-shield-alt" style={{ color: 'var(--secondary-blue)', marginRight: '0.5rem' }}></i>
           Security Operations Center
         </h1>
-        <p style={{ color: '#64748b', fontSize: '1rem', margin: '0' }}>Real-time security monitoring and incident management</p>
+        <p style={{ color: 'var(--text-muted)', fontSize: '1rem', margin: '0' }}>Real-time security monitoring and incident management</p>
       </div>
 
       {/* Action Bar */}
@@ -973,7 +999,7 @@ const SOCDashboard = ({ active, showPage }) => {
         gap: '1rem'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ fontSize: '0.875rem', color: '#64748b' }}>
+          <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
             <i className="fas fa-sync-alt" style={{ marginRight: '0.5rem' }}></i>
             Last updated: {new Date(dashboardData?.last_updated || Date.now()).toLocaleTimeString()}
           </div>
@@ -982,8 +1008,8 @@ const SOCDashboard = ({ active, showPage }) => {
           onClick={initializeSOCDashboard}
           style={{
             padding: '0.5rem 1rem',
-            backgroundColor: '#2563eb',
-            color: 'white',
+            backgroundColor: 'var(--secondary-blue)',
+            color: 'var(--white)',
             border: 'none',
             borderRadius: '4px',
             cursor: 'pointer',
@@ -1008,25 +1034,25 @@ const SOCDashboard = ({ active, showPage }) => {
           {/* Critical Alerts Banner */}
           {criticalAlerts.length > 0 && (
             <div style={{ 
-              backgroundColor: '#f8d7da', 
-              color: '#721c24', 
-              border: '1px solid #f5c6cb', 
-              borderLeft: '5px solid #dc3545',
+              backgroundColor: 'var(--light-blue)', 
+              color: 'var(--text-dark)', 
+              border: '1px solid var(--danger)', 
+              borderLeft: '5px solid var(--danger)',
               borderRadius: '4px',
               padding: '1rem',
               marginBottom: '2rem'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <div>
-                  <i className="fas fa-exclamation-triangle" style={{ fontSize: '2rem', color: '#dc3545' }}></i>
+                  <i className="fas fa-exclamation-triangle" style={{ fontSize: '2rem', color: 'var(--danger)' }}></i>
                 </div>
                 <div style={{ flex: '1' }}>
-                  <h5 style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: '#721c24' }}>Critical Security Alerts</h5>
+                  <h5 style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: 'var(--danger)' }}>Critical Security Alerts</h5>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '0.5rem' }}>
                     {criticalAlerts.slice(0, 2).map((alert, index) => (
                       <div key={index} style={{ marginBottom: '0.5rem' }}>
-                        <strong style={{ color: '#721c24' }}>{alert.title}</strong>
-                        <div style={{ fontSize: '0.875rem', color: '#856404' }}>{alert.description}</div>
+                        <strong style={{ color: 'var(--danger)' }}>{alert.title}</strong>
+                        <div style={{ fontSize: '0.875rem', color: 'var(--text-dark)' }}>{alert.description}</div>
                       </div>
                     ))}
                   </div>
@@ -1036,8 +1062,8 @@ const SOCDashboard = ({ active, showPage }) => {
                     onClick={() => setActiveTab('alerts')}
                     style={{
                       backgroundColor: 'transparent',
-                      color: '#dc3545',
-                      border: '1px solid #dc3545',
+                      color: 'var(--danger)',
+                      border: '1px solid var(--danger)',
                       borderRadius: '4px',
                       padding: '0.375rem 0.75rem',
                       fontSize: '0.875rem',
@@ -1060,7 +1086,7 @@ const SOCDashboard = ({ active, showPage }) => {
             marginBottom: '2rem' 
           }}>
             <div style={{
-              background: '#2563eb',
+              background: 'var(--primary-blue)',
               color: 'white',
               padding: '1.5rem',
               borderRadius: '8px',
@@ -1079,7 +1105,7 @@ const SOCDashboard = ({ active, showPage }) => {
             </div>
             
             <div style={{
-              background: '#2563eb',
+              background: 'var(--primary-blue)',
               color: 'white',
               padding: '1.5rem',
               borderRadius: '8px',
@@ -1098,7 +1124,7 @@ const SOCDashboard = ({ active, showPage }) => {
             </div>
             
             <div style={{
-              background: '#2563eb',
+              background: 'var(--primary-blue)',
               color: 'white',
               padding: '1.5rem',
               borderRadius: '8px',
@@ -1117,7 +1143,7 @@ const SOCDashboard = ({ active, showPage }) => {
             </div>
             
             <div style={{
-              background: '#2563eb',
+              background: 'var(--primary-blue)',
               color: 'white',
               padding: '1.5rem',
               borderRadius: '8px',
@@ -1144,7 +1170,7 @@ const SOCDashboard = ({ active, showPage }) => {
           }}>
             <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
               <div style={{ 
-                background: '#2563eb', 
+                background: 'var(--primary-blue)', 
                 color: 'white', 
                 padding: '1rem' 
               }}>
@@ -1154,24 +1180,24 @@ const SOCDashboard = ({ active, showPage }) => {
                 </h3>
               </div>
               <div style={{ padding: '1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', backgroundColor: '#2563eb', borderRadius: '4px', marginBottom: '1rem' }}>
-                  <span style={{ color: 'white' }}>Today:</span>
-                  <strong style={{ color: 'white' }}>{metrics.incidents_today || 0} created</strong>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', backgroundColor: 'var(--light-blue)', borderRadius: '4px', marginBottom: '1rem' }}>
+                  <span style={{ color: 'var(--text-dark)' }}>Today:</span>
+                  <strong style={{ color: 'var(--primary-blue)' }}>{metrics.incidents_today || 0} created</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', marginBottom: '1rem' }}>
-                  <span style={{ color: 'black' }}>This Week:</span>
-                  <strong style={{ color: 'black' }}>{metrics.incidents_week || 0} created</strong>
+                  <span style={{ color: 'var(--text-dark)' }}>This Week:</span>
+                  <strong style={{ color: 'var(--text-dark)' }}>{metrics.incidents_week || 0} created</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', backgroundColor: '#2563eb', borderRadius: '4px', marginBottom: '1rem' }}>
-                  <span style={{ color: 'white' }}>This Month:</span>
-                  <strong style={{ color: 'white' }}>{metrics.incidents_month || 0} created</strong>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', backgroundColor: 'var(--light-blue)', borderRadius: '4px', marginBottom: '1rem' }}>
+                  <span style={{ color: 'var(--text-dark)' }}>This Month:</span>
+                  <strong style={{ color: 'var(--primary-blue)' }}>{metrics.incidents_month || 0} created</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', backgroundColor: '#2563eb', borderRadius: '4px', marginBottom: '1rem' }}>
-                  <span style={{ color: 'white' }}>Resolved This Week:</span>
-                  <strong style={{ color: 'white' }}>{metrics.resolved_week || 0}</strong>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', backgroundColor: 'var(--light-blue)', borderRadius: '4px', marginBottom: '1rem' }}>
+                  <span style={{ color: 'var(--text-dark)' }}>Resolved This Week:</span>
+                  <strong style={{ color: 'var(--primary-blue)' }}>{metrics.resolved_week || 0}</strong>
                 </div>
-                <div style={{ paddingTop: '1rem', borderTop: '1px solid #dee2e6' }}>
-                  <div style={{ fontSize: '0.875rem', textAlign: 'center', color: '#64748b' }}>
+                <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--medium-gray)' }}>
+                  <div style={{ fontSize: '0.875rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                     Resolution Rate: {(metrics.resolved_week || 0) && (metrics.incidents_week || 0) ? 
                       Math.round(((metrics.resolved_week || 0) / (metrics.incidents_week || 0)) * 100) : 0}%
                   </div>
@@ -1190,7 +1216,7 @@ const SOCDashboard = ({ active, showPage }) => {
             {/* Status Breakdown */}
             <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
               <div style={{ 
-                background: '#2563eb', 
+                background: 'var(--primary-blue)', 
                 color: 'white', 
                 padding: '1rem' 
               }}>
@@ -1220,13 +1246,13 @@ const SOCDashboard = ({ active, showPage }) => {
                           }}>
                             {status.replace('_', ' ')}
                           </span>
-                          <span style={{ fontSize: '0.875rem', color: '#64748b' }}>{percentage}%</span>
+                          <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{percentage}%</span>
                         </span>
                         <strong style={{ color: getStatusColor(status), fontSize: '1.125rem' }}>{count}</strong>
                       </div>
                       <div style={{ 
                         height: '6px', 
-                        backgroundColor: '#2563eb', 
+                        backgroundColor: 'var(--light-gray)', 
                         borderRadius: '3px', 
                         overflow: 'hidden' 
                       }}>
@@ -1247,7 +1273,7 @@ const SOCDashboard = ({ active, showPage }) => {
             {/* Priority Breakdown */}
             <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
               <div style={{ 
-                background: '#2563eb', 
+                background: 'var(--primary-blue)', 
                 color: 'white', 
                 padding: '1rem' 
               }}>
@@ -1280,16 +1306,16 @@ const SOCDashboard = ({ active, showPage }) => {
                           }}>
                             {priority}
                           </span>
-                          <span style={{ fontSize: '0.875rem', color: '#64748b' }}>{riskLevel}</span>
+                          <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{riskLevel}</span>
                         </span>
                         <div style={{ textAlign: 'right' }}>
                           <strong style={{ color: getPriorityColor(priority), fontSize: '1.125rem' }}>{count}</strong>
-                          <div style={{ fontSize: '0.875rem', color: 'white' }}>{percentage}%</div>
+                          <div style={{ fontSize: '0.875rem', color: 'var(--text-dark)' }}>{percentage}%</div>
                         </div>
                       </div>
                       <div style={{ 
                         height: '8px', 
-                        backgroundColor: '#2563eb', 
+                        backgroundColor: 'var(--light-gray)', 
                         borderRadius: '4px', 
                         overflow: 'hidden' 
                       }}>
@@ -1316,10 +1342,10 @@ const SOCDashboard = ({ active, showPage }) => {
           {/* Enhanced Threat Intelligence Summary */}
           <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
             <div style={{ 
-              background: '#2563eb', 
+              background: 'var(--primary-blue)', 
               color: 'white', 
               padding: '1rem', 
-              borderBottom: '1px solid #dee2e6' 
+              borderBottom: '1px solid var(--medium-gray)' 
             }}>
               <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600' }}>
                 <i className="fas fa-globe" style={{ marginRight: '0.5rem' }}></i>
@@ -1331,41 +1357,41 @@ const SOCDashboard = ({ active, showPage }) => {
                 <>
                   {/* Enhanced Metrics Grid */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#2563eb', borderRadius: '6px' }}>
-                      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>
+                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: 'var(--light-blue)', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary-blue)', marginBottom: '0.5rem' }}>
                         {threatIntelligence.iocs_count || 0}
                       </div>
-                      <div style={{ fontSize: '0.875rem', color: 'white' }}>Total IOCs</div>
+                      <div style={{ fontSize: '0.875rem', color: 'var(--text-dark)' }}>Total IOCs</div>
                     </div>
-                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#2563eb', borderRadius: '6px' }}>
-                      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>
+                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: 'var(--light-blue)', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary-blue)', marginBottom: '0.5rem' }}>
                         {threatIntelligence.high_confidence_iocs || 0}
                       </div>
-                      <div style={{ fontSize: '0.875rem', color: 'white' }}>High Confidence</div>
+                      <div style={{ fontSize: '0.875rem', color: 'var(--text-dark)' }}>High Confidence</div>
                     </div>
-                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#2563eb', borderRadius: '6px' }}>
-                      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>
+                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: 'var(--light-blue)', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary-blue)', marginBottom: '0.5rem' }}>
                         {threatIntelligence.feeds_active || 0}
                       </div>
-                      <div style={{ fontSize: '0.875rem', color: 'white' }}>Active Feeds</div>
+                      <div style={{ fontSize: '0.875rem', color: 'var(--text-dark)' }}>Active Feeds</div>
                     </div>
-                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#2563eb', borderRadius: '6px' }}>
-                      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>
+                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: 'var(--light-blue)', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary-blue)', marginBottom: '0.5rem' }}>
                         {threatIntelligence.recent_iocs_24h || 0}
                       </div>
-                      <div style={{ fontSize: '0.875rem', color: 'white' }}>Last 24h</div>
+                      <div style={{ fontSize: '0.875rem', color: 'var(--text-dark)' }}>Last 24h</div>
                     </div>
                   </div>
 
                   {/* IOC Trend Analysis */}
                   {threatIntelligence.ioc_trend && (
-                    <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#eff6ff', borderRadius: '6px' }}>
-                      <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: '600', color: '#3b82f6' }}>IOC Trends</h4>
+                    <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: 'var(--light-blue)', borderRadius: '6px' }}>
+                      <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: '600', color: 'var(--primary-blue)' }}>IOC Trends</h4>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                         <span style={{
-                          backgroundColor: threatIntelligence.ioc_trend.direction === 'increasing' ? '#dc3545' : 
-                                         threatIntelligence.ioc_trend.direction === 'decreasing' ? '#28a745' : '#6c757d',
-                          color: 'white',
+                          backgroundColor: threatIntelligence.ioc_trend.direction === 'increasing' ? 'var(--danger)' : 
+                                         threatIntelligence.ioc_trend.direction === 'decreasing' ? 'var(--medium-gray)' : 'var(--light-gray)',
+                          color: threatIntelligence.ioc_trend.direction === 'increasing' ? 'white' : 'var(--text-dark)',
                           padding: '0.25rem 0.75rem',
                           borderRadius: '12px',
                           fontSize: '0.75rem',
@@ -1384,26 +1410,26 @@ const SOCDashboard = ({ active, showPage }) => {
                   {/* IOC Types Breakdown */}
                   {threatIntelligence.ioc_types_breakdown && (
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <h4 style={{ margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: '600', color: '#3b82f6' }}>IOC Types</h4>
+                      <h4 style={{ margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: '600', color: 'var(--primary-blue)' }}>IOC Types</h4>
                       {threatIntelligence.ioc_types_breakdown.slice(0, 5).map((type, index) => (
                         <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                           <span style={{ fontSize: '0.875rem', textTransform: 'capitalize' }}>{type.type.replace('_', ' ')}</span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>{type.count}</span>
-                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>({type.percentage}%)</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>({type.percentage}%)</span>
                           </div>
                         </div>
                       ))}
                     </div>
                   )}
 
-                  <div style={{ borderTop: '1px solid #dee2e6', paddingTop: '1rem' }}>
+                  <div style={{ borderTop: '1px solid var(--medium-gray)', paddingTop: '1rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <div style={{ fontSize: '0.875rem', color: 'white' }}>Threat Level</div>
                         <span style={{
-                          backgroundColor: threatIntelligence.threat_level === 'High' ? '#dc3545' : 
-                                         threatIntelligence.threat_level === 'Medium' ? '#ffc107' : '#28a745',
+                          backgroundColor: threatIntelligence.threat_level === 'High' ? 'var(--danger)' : 
+                                         threatIntelligence.threat_level === 'Medium' ? 'var(--info)' : 'var(--medium-gray)',
                           color: 'white',
                           padding: '0.25rem 0.75rem',
                           borderRadius: '12px',
@@ -1412,9 +1438,9 @@ const SOCDashboard = ({ active, showPage }) => {
                         }}>{threatIntelligence.threat_level}</span>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.875rem', color: 'white' }}>Confidence</div>
+                        <div style={{ fontSize: '0.875rem', color: 'var(--text-dark)' }}>Confidence</div>
                         <span style={{
-                          backgroundColor: '#28a745',
+                          backgroundColor: 'var(--secondary-blue)',
                           color: 'white',
                           padding: '0.25rem 0.75rem',
                           borderRadius: '12px',
@@ -1426,8 +1452,8 @@ const SOCDashboard = ({ active, showPage }) => {
                   </div>
                 </>
               ) : (
-                <div style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>
-                  <i className="fas fa-satellite-dish" style={{ fontSize: '3rem', marginBottom: '1rem', color: '#dee2e6' }}></i>
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                  <i className="fas fa-satellite-dish" style={{ fontSize: '3rem', marginBottom: '1rem', color: 'var(--medium-gray)' }}></i>
                   <p>Loading threat intelligence...</p>
                 </div>
               )}
@@ -1437,10 +1463,10 @@ const SOCDashboard = ({ active, showPage }) => {
           {/* Recent Critical IOCs */}
           <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
             <div style={{ 
-              background: '#2563eb', 
+              background: 'var(--primary-blue)', 
               color: 'white', 
               padding: '1rem', 
-              borderBottom: '1px solid #dee2e6' 
+              borderBottom: '1px solid var(--medium-gray)' 
             }}>
               <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600' }}>
                 <i className="fas fa-exclamation-triangle" style={{ marginRight: '0.5rem' }}></i>
@@ -1453,16 +1479,16 @@ const SOCDashboard = ({ active, showPage }) => {
                   {threatIntelligence.recent_critical_iocs.map((ioc, index) => (
                     <div key={index} style={{ 
                       padding: '1rem', 
-                      backgroundColor: '#2563eb', 
+                      backgroundColor: 'var(--primary-blue)', 
                       borderRadius: '6px', 
                       marginBottom: '1rem',
-                      border: '1px solid #e9ecef'
+                      border: '1px solid var(--medium-gray)'
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                         <div style={{ flex: 1 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
                             <span style={{
-                              backgroundColor: '#2563eb',
+                              backgroundColor: 'var(--primary-blue)',
                               color: 'white',
                               padding: '0.125rem 0.5rem',
                               borderRadius: '8px',
@@ -1471,7 +1497,7 @@ const SOCDashboard = ({ active, showPage }) => {
                               textTransform: 'uppercase'
                             }}>{ioc.type}</span>
                             <span style={{
-                              backgroundColor: ioc.confidence >= 90 ? '#28a745' : ioc.confidence >= 70 ? '#ffc107' : '#dc3545',
+                              backgroundColor: ioc.confidence >= 90 ? 'var(--medium-gray)' : ioc.confidence >= 70 ? 'var(--info)' : 'var(--danger)',
                               color: 'white',
                               padding: '0.125rem 0.5rem',
                               borderRadius: '8px',
@@ -1487,15 +1513,15 @@ const SOCDashboard = ({ active, showPage }) => {
                           </div>
                         </div>
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: '#999' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                         {new Date(ioc.created_at).toLocaleString()}
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>
-                  <i className="fas fa-shield-check" style={{ fontSize: '3rem', marginBottom: '1rem', color: '#28a745' }}></i>
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                  <i className="fas fa-shield-check" style={{ fontSize: '3rem', marginBottom: '1rem', color: 'var(--medium-gray)' }}></i>
                   <p>No critical IOCs detected recently</p>
                 </div>
               )}
@@ -1504,7 +1530,7 @@ const SOCDashboard = ({ active, showPage }) => {
 
           {/* Top Threats */}
           <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-            <div style={{ backgroundColor: '#2563eb', padding: '1rem', borderBottom: '1px solid #dee2e6' }}>
+            <div style={{ backgroundColor: 'var(--primary-blue)', padding: '1rem', borderBottom: '1px solid var(--medium-gray)' }}>
               <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600', color: 'white' }}>
                 <i className="fas fa-shield-virus" style={{ marginRight: '0.5rem', color: 'white' }}></i>
                 Trending Threats
@@ -1518,10 +1544,10 @@ const SOCDashboard = ({ active, showPage }) => {
                     justifyContent: 'space-between', 
                     alignItems: 'center', 
                     padding: '1rem', 
-                    backgroundColor: '#2563eb', 
+                    backgroundColor: 'var(--primary-blue)', 
                     borderRadius: '6px', 
                     marginBottom: '1rem',
-                    border: '1px solid #e9ecef'
+                    border: '1px solid var(--medium-gray)'
                   }}>
                     <div>
                       <div style={{ fontWeight: '600', fontSize: '1rem', marginBottom: '0.25rem' }}>{threat.name}</div>
@@ -1529,7 +1555,7 @@ const SOCDashboard = ({ active, showPage }) => {
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <span style={{
-                        backgroundColor: threat.trend === 'increasing' ? '#dc3545' : '#28a745',
+                        backgroundColor: threat.trend === 'increasing' ? 'var(--danger)' : 'var(--medium-gray)',
                         color: 'white',
                         padding: '0.25rem 0.75rem',
                         borderRadius: '12px',
@@ -1546,10 +1572,10 @@ const SOCDashboard = ({ active, showPage }) => {
                   justifyContent: 'space-between', 
                   alignItems: 'center', 
                   padding: '1rem', 
-                  backgroundColor: '#eff6ff', 
+                  backgroundColor: 'var(--light-blue)', 
                   borderRadius: '6px', 
                   marginBottom: '1rem',
-                  border: '1px solid #e9ecef'
+                  border: '1px solid var(--medium-gray)'
                 }}>
                   <div>
                     <div style={{ fontWeight: '600', fontSize: '1rem', marginBottom: '0.25rem' }}>{threat.name}</div>
@@ -1557,19 +1583,19 @@ const SOCDashboard = ({ active, showPage }) => {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <span style={{
-                      backgroundColor: '#dc3545',
+                      backgroundColor: 'var(--danger)',
                       color: 'white',
                       padding: '0.25rem 0.75rem',
                       borderRadius: '12px',
                       fontSize: '0.75rem',
                       fontWeight: '600'
                     }}>{threat.severity}</span>
-                    <div style={{ fontSize: '0.875rem', color: '#64748b', marginTop: '0.25rem' }}>{threat.incidents} incidents</div>
+                    <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>{threat.incidents} incidents</div>
                   </div>
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>
-                  <i className="fas fa-shield-alt" style={{ fontSize: '3rem', marginBottom: '1rem', color: '#dee2e6' }}></i>
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                  <i className="fas fa-shield-alt" style={{ fontSize: '3rem', marginBottom: '1rem', color: 'var(--medium-gray)' }}></i>
                   <p>No threat intelligence data available</p>
                 </div>
               )}
@@ -1579,7 +1605,7 @@ const SOCDashboard = ({ active, showPage }) => {
           {/* Feed Status */}
           {threatIntelligence && threatIntelligence.feed_status && (
             <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-              <div style={{ backgroundColor: '#2563eb', padding: '1rem', borderBottom: '1px solid #dee2e6' }}>
+              <div style={{ backgroundColor: 'var(--primary-blue)', padding: '1rem', borderBottom: '1px solid var(--medium-gray)' }}>
                 <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600', color: 'white' }}>
                   <i className="fas fa-rss" style={{ marginRight: '0.5rem', color: 'white' }}></i>
                   Threat Feed Status
@@ -1592,10 +1618,10 @@ const SOCDashboard = ({ active, showPage }) => {
                     justifyContent: 'space-between', 
                     alignItems: 'center', 
                     padding: '0.75rem', 
-                    backgroundColor: '#87ceeb', 
+                    backgroundColor: 'var(--light-blue)', 
                     borderRadius: '6px', 
                     marginBottom: '0.75rem',
-                    border: '1px solid #e9ecef'
+                    border: '1px solid var(--medium-gray)'
                   }}>
                     <div>
                       <div style={{ fontWeight: '600', fontSize: '0.875rem', marginBottom: '0.25rem' }}>{feed.name}</div>
@@ -1605,8 +1631,8 @@ const SOCDashboard = ({ active, showPage }) => {
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <span style={{
-                        backgroundColor: feed.status === 'success' ? '#28a745' : 
-                                       feed.status === 'processing' ? '#ffc107' : '#dc3545',
+                        backgroundColor: feed.status === 'success' ? 'var(--medium-gray)' : 
+                                       feed.status === 'processing' ? 'var(--info)' : 'var(--danger)',
                         color: 'white',
                         padding: '0.25rem 0.5rem',
                         borderRadius: '8px',
@@ -1615,7 +1641,7 @@ const SOCDashboard = ({ active, showPage }) => {
                         textTransform: 'uppercase'
                       }}>{feed.status}</span>
                       {feed.last_update && (
-                        <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.25rem' }}>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
                           {new Date(feed.last_update).toLocaleDateString()}
                         </div>
                       )}
@@ -1633,7 +1659,7 @@ const SOCDashboard = ({ active, showPage }) => {
           {/* IOC Alerts Overview */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
             <div style={{
-              background: '#dc3545',
+              background: 'var(--danger)',
               color: 'white',
               padding: '1.5rem',
               borderRadius: '8px',
@@ -1650,7 +1676,7 @@ const SOCDashboard = ({ active, showPage }) => {
             </div>
             
             <div style={{
-              background: '#ffc107',
+              background: 'var(--info)',
               color: 'white',
               padding: '1.5rem',
               borderRadius: '8px',
@@ -1667,7 +1693,7 @@ const SOCDashboard = ({ active, showPage }) => {
             </div>
             
             <div style={{
-              background: '#2563eb',
+              background: 'var(--primary-blue)',
               color: 'white',
               padding: '1.5rem',
               borderRadius: '8px',
@@ -1687,10 +1713,10 @@ const SOCDashboard = ({ active, showPage }) => {
           {/* Live IOC Alerts */}
           <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden', marginBottom: '2rem' }}>
             <div style={{ 
-              background: '#dc3545', 
+              background: 'var(--danger)', 
               color: 'white', 
               padding: '1rem', 
-              borderBottom: '1px solid #dee2e6' 
+              borderBottom: '1px solid var(--medium-gray)' 
             }}>
               <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600' }}>
                 <i className="fas fa-exclamation-triangle" style={{ marginRight: '0.5rem' }}></i>
@@ -1703,28 +1729,28 @@ const SOCDashboard = ({ active, showPage }) => {
                   {liveIOCAlerts.map((alert, index) => (
                     <div key={index} style={{ 
                       padding: '1.5rem', 
-                      backgroundColor: '#2563eb', 
+                      backgroundColor: 'var(--primary-blue)', 
                       borderRadius: '8px', 
-                      border: '1px solid #e9ecef',
-                      borderLeft: `5px solid ${alert.severity === 'critical' ? '#dc3545' : 
-                                                alert.severity === 'high' ? '#fd7e14' : 
-                                                alert.severity === 'medium' ? '#ffc107' : '#28a745'}`
+                      border: '1px solid var(--medium-gray)',
+                      borderLeft: `5px solid ${alert.severity === 'critical' ? 'var(--danger)' : 
+                                                alert.severity === 'high' ? 'var(--secondary-blue)' : 
+                                                alert.severity === 'medium' ? 'var(--info)' : 'var(--medium-gray)'}`
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                         <div style={{ flex: 1 }}>
-                          <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1.125rem', fontWeight: '600', color: '#333' }}>
+                          <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1.125rem', fontWeight: '600', color: 'var(--text-dark)' }}>
                             {alert.title}
                           </h4>
-                          <p style={{ margin: '0 0 1rem 0', color: '#64748b', fontSize: '0.875rem' }}>
+                          <p style={{ margin: '0 0 1rem 0', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
                             {alert.description}
                           </p>
                           
                           {/* Alert Details */}
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
                             <span style={{
-                              backgroundColor: alert.severity === 'critical' ? '#dc3545' : 
-                                             alert.severity === 'high' ? '#fd7e14' : 
-                                             alert.severity === 'medium' ? '#ffc107' : '#28a745',
+                              backgroundColor: alert.severity === 'critical' ? 'var(--danger)' : 
+                                             alert.severity === 'high' ? 'var(--secondary-blue)' : 
+                                             alert.severity === 'medium' ? 'var(--info)' : 'var(--medium-gray)',
                               color: 'white',
                               padding: '0.25rem 0.75rem',
                               borderRadius: '12px',
@@ -1735,7 +1761,7 @@ const SOCDashboard = ({ active, showPage }) => {
                               {alert.severity}
                             </span>
                             <span style={{
-                              backgroundColor: '#2563eb',
+                              backgroundColor: 'var(--primary-blue)',
                               color: 'white',
                               padding: '0.25rem 0.75rem',
                               borderRadius: '12px',
@@ -1746,7 +1772,7 @@ const SOCDashboard = ({ active, showPage }) => {
                             </span>
                             {alert.organization && (
                               <span style={{
-                                backgroundColor: '#6c757d',
+                                backgroundColor: 'var(--text-muted)',
                                 color: 'white',
                                 padding: '0.25rem 0.75rem',
                                 borderRadius: '12px',
@@ -1761,25 +1787,25 @@ const SOCDashboard = ({ active, showPage }) => {
                           {/* Related IOCs */}
                           {alert.related_iocs && alert.related_iocs.length > 0 && (
                             <div style={{ marginBottom: '1rem' }}>
-                              <h5 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', fontWeight: '600', color: '#495057' }}>
+                              <h5 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-dark)' }}>
                                 Related IOCs:
                               </h5>
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                                 {alert.related_iocs.map((ioc, iocIndex) => (
                                   <div key={iocIndex} style={{
                                     backgroundColor: 'white',
-                                    border: '1px solid #dee2e6',
+                                    border: '1px solid var(--medium-gray)',
                                     borderRadius: '6px',
                                     padding: '0.5rem',
                                     fontSize: '0.75rem'
                                   }}>
-                                    <div style={{ fontWeight: '600', color: '#2563eb', marginBottom: '0.25rem' }}>
+                                    <div style={{ fontWeight: '600', color: 'var(--primary-blue)', marginBottom: '0.25rem' }}>
                                       {ioc.type.toUpperCase()}
                                     </div>
                                     <div style={{ fontFamily: 'monospace', fontSize: '0.7rem', marginBottom: '0.25rem' }}>
                                       {ioc.value}
                                     </div>
-                                    <div style={{ color: '#64748b' }}>
+                                    <div style={{ color: 'var(--text-muted)' }}>
                                       Confidence: {ioc.confidence}%
                                     </div>
                                   </div>
@@ -1791,14 +1817,14 @@ const SOCDashboard = ({ active, showPage }) => {
                           {/* Matched Assets */}
                           {alert.matched_assets && alert.matched_assets.length > 0 && (
                             <div style={{ marginBottom: '1rem' }}>
-                              <h5 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', fontWeight: '600', color: '#495057' }}>
+                              <h5 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-dark)' }}>
                                 Affected Assets:
                               </h5>
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                                 {alert.matched_assets.map((asset, assetIndex) => (
                                   <span key={assetIndex} style={{
-                                    backgroundColor: asset.criticality === 'critical' ? '#dc3545' : 
-                                                   asset.criticality === 'high' ? '#fd7e14' : '#28a745',
+                                    backgroundColor: asset.criticality === 'critical' ? 'var(--danger)' : 
+                                                   asset.criticality === 'high' ? 'var(--secondary-blue)' : 'var(--medium-gray)',
                                     color: 'white',
                                     padding: '0.25rem 0.75rem',
                                     borderRadius: '12px',
@@ -1816,7 +1842,7 @@ const SOCDashboard = ({ active, showPage }) => {
                         <div style={{ textAlign: 'right', marginLeft: '1rem' }}>
                           {alert.is_acknowledged ? (
                             <span style={{
-                              backgroundColor: '#28a745',
+                              backgroundColor: 'var(--medium-gray)',
                               color: 'white',
                               padding: '0.5rem 1rem',
                               borderRadius: '6px',
@@ -1828,8 +1854,8 @@ const SOCDashboard = ({ active, showPage }) => {
                             </span>
                           ) : (
                             <button style={{
-                              backgroundColor: '#ffc107',
-                              color: '#212529',
+                              backgroundColor: 'var(--info)',
+                              color: 'var(--text-dark)',
                               border: 'none',
                               padding: '0.5rem 1rem',
                               borderRadius: '6px',
@@ -1844,16 +1870,16 @@ const SOCDashboard = ({ active, showPage }) => {
                         </div>
                       </div>
                       
-                      <div style={{ fontSize: '0.75rem', color: '#999', borderTop: '1px solid #dee2e6', paddingTop: '0.5rem' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', borderTop: '1px solid var(--medium-gray)', paddingTop: '0.5rem' }}>
                         Created: {new Date(alert.created_at).toLocaleString()}
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', color: '#64748b', padding: '3rem' }}>
-                  <i className="fas fa-shield-check" style={{ fontSize: '4rem', marginBottom: '1rem', color: '#28a745' }}></i>
-                  <h4 style={{ margin: '0 0 0.5rem 0', color: '#28a745' }}>No Active IOC Alerts</h4>
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '3rem' }}>
+                  <i className="fas fa-shield-check" style={{ fontSize: '4rem', marginBottom: '1rem', color: 'var(--medium-gray)' }}></i>
+                  <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--medium-gray)' }}>No Active IOC Alerts</h4>
                   <p style={{ margin: '0' }}>All IOC monitoring systems are clear</p>
                 </div>
               )}
@@ -1864,10 +1890,10 @@ const SOCDashboard = ({ active, showPage }) => {
           {iocCorrelation && (
             <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
               <div style={{ 
-                background: '#2563eb', 
+                background: 'var(--primary-blue)', 
                 color: 'white', 
                 padding: '1rem', 
-                borderBottom: '1px solid #dee2e6' 
+                borderBottom: '1px solid var(--medium-gray)' 
               }}>
                 <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600' }}>
                   <i className="fas fa-project-diagram" style={{ marginRight: '0.5rem' }}></i>
@@ -1877,19 +1903,19 @@ const SOCDashboard = ({ active, showPage }) => {
               <div style={{ padding: '1.5rem' }}>
                 {/* Correlation Statistics */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#2563eb', borderRadius: '6px' }}>
+                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: 'var(--primary-blue)', borderRadius: '6px' }}>
                     <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>
                       {iocCorrelation.statistics.total_incidents}
                     </div>
                     <div style={{ fontSize: '0.875rem', color: 'white' }}>Total Incidents</div>
                   </div>
-                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#2563eb', borderRadius: '6px' }}>
+                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: 'var(--primary-blue)', borderRadius: '6px' }}>
                     <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>
                       {iocCorrelation.statistics.incidents_with_iocs}
                     </div>
                     <div style={{ fontSize: '0.875rem', color: 'white' }}>With IOCs</div>
                   </div>
-                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#2563eb', borderRadius: '6px' }}>
+                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: 'var(--primary-blue)', borderRadius: '6px' }}>
                     <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>
                       {iocCorrelation.statistics.correlation_rate}%
                     </div>
@@ -1905,9 +1931,9 @@ const SOCDashboard = ({ active, showPage }) => {
                       {iocCorrelation.statistics.top_ioc_types.map((type, index) => (
                         <div key={index} style={{ 
                           padding: '1rem', 
-                          backgroundColor: '#2563eb', 
+                          backgroundColor: 'var(--primary-blue)', 
                           borderRadius: '6px', 
-                          border: '1px solid #e9ecef' 
+                          border: '1px solid var(--medium-gray)' 
                         }}>
                           <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>
                             {type.count}
@@ -1941,7 +1967,7 @@ const SOCDashboard = ({ active, showPage }) => {
             marginBottom: '1.5rem'
           }}>
             <div style={{ 
-              background: '#2563eb', 
+              background: 'var(--primary-blue)', 
               color: 'white', 
               padding: '1rem' 
             }}>
@@ -1959,7 +1985,7 @@ const SOCDashboard = ({ active, showPage }) => {
                     left: '12px',
                     top: '50%',
                     transform: 'translateY(-50%)',
-                    color: '#6c757d',
+                    color: 'var(--text-muted)',
                     zIndex: 1
                   }}></i>
                   <input
@@ -1970,17 +1996,17 @@ const SOCDashboard = ({ active, showPage }) => {
                     style={{
                       width: '100%',
                       padding: '12px 40px 12px 40px',
-                      border: '2px solid #dee2e6',
+                      border: '2px solid var(--medium-gray)',
                       borderRadius: '25px',
                       fontSize: '14px',
                       transition: 'all 0.2s ease'
                     }}
                     onFocus={(e) => {
-                      e.target.style.borderColor = '#2563eb';
+                      e.target.style.borderColor = 'var(--primary-blue)';
                       e.target.style.boxShadow = '0 0 0 3px rgba(0, 123, 255, 0.1)';
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = '#dee2e6';
+                      e.target.style.borderColor = 'var(--medium-gray)';
                       e.target.style.boxShadow = 'none';
                     }}
                   />
@@ -1994,19 +2020,19 @@ const SOCDashboard = ({ active, showPage }) => {
                         transform: 'translateY(-50%)',
                         background: 'none',
                         border: 'none',
-                        color: '#6c757d',
+                        color: 'var(--text-muted)',
                         cursor: 'pointer',
                         padding: '4px',
                         borderRadius: '50%',
                         transition: 'all 0.2s ease'
                       }}
                       onMouseEnter={(e) => {
-                        e.target.style.background = '#e9ecef';
-                        e.target.style.color = '#495057';
+                        e.target.style.background = 'var(--medium-gray)';
+                        e.target.style.color = 'var(--text-dark)';
                       }}
                       onMouseLeave={(e) => {
                         e.target.style.background = 'none';
-                        e.target.style.color = '#6c757d';
+                        e.target.style.color = 'var(--text-muted)';
                       }}
                     >
                       <i className="fas fa-times"></i>
@@ -2021,7 +2047,7 @@ const SOCDashboard = ({ active, showPage }) => {
                     onChange={(e) => setFilterBySeverity(e.target.value)}
                     style={{
                       padding: '8px 12px',
-                      border: '1px solid #dee2e6',
+                      border: '1px solid var(--medium-gray)',
                       borderRadius: '6px',
                       background: 'white',
                       cursor: 'pointer',
@@ -2039,7 +2065,7 @@ const SOCDashboard = ({ active, showPage }) => {
                     onChange={(e) => setSortBy(e.target.value)}
                     style={{
                       padding: '8px 12px',
-                      border: '1px solid #dee2e6',
+                      border: '1px solid var(--medium-gray)',
                       borderRadius: '6px',
                       background: 'white',
                       cursor: 'pointer',
@@ -2051,14 +2077,14 @@ const SOCDashboard = ({ active, showPage }) => {
                     <option value="technique_count">Sort by Techniques</option>
                   </select>
                   
-                  <div style={{ display: 'flex', border: '1px solid #dee2e6', borderRadius: '6px', overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', border: '1px solid var(--medium-gray)', borderRadius: '6px', overflow: 'hidden' }}>
                     <button 
                       onClick={() => setViewMode('grid')}
                       style={{
                         padding: '8px 12px',
                         border: 'none',
-                        background: viewMode === 'grid' ? '#2563eb' : 'white',
-                        color: viewMode === 'grid' ? 'white' : '#64748b',
+                        background: viewMode === 'grid' ? 'var(--primary-blue)' : 'white',
+                        color: viewMode === 'grid' ? 'white' : 'var(--text-muted)',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease'
                       }}
@@ -2071,8 +2097,8 @@ const SOCDashboard = ({ active, showPage }) => {
                       style={{
                         padding: '8px 12px',
                         border: 'none',
-                        background: viewMode === 'list' ? '#2563eb' : 'white',
-                        color: viewMode === 'list' ? 'white' : '#64748b',
+                        background: viewMode === 'list' ? 'var(--primary-blue)' : 'white',
+                        color: viewMode === 'list' ? 'white' : 'var(--text-muted)',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease'
                       }}
@@ -2086,10 +2112,10 @@ const SOCDashboard = ({ active, showPage }) => {
                     onClick={() => setAnimationEnabled(!animationEnabled)}
                     style={{
                       padding: '8px 12px',
-                      border: '1px solid #dee2e6',
+                      border: '1px solid var(--medium-gray)',
                       borderRadius: '6px',
-                      background: animationEnabled ? '#2563eb' : 'white',
-                      color: animationEnabled ? 'white' : '#64748b',
+                      background: animationEnabled ? 'var(--primary-blue)' : 'white',
+                      color: animationEnabled ? 'white' : 'var(--text-muted)',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease'
                     }}
@@ -2105,10 +2131,10 @@ const SOCDashboard = ({ active, showPage }) => {
           {/* Interactive MITRE Matrix */}
           <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
             <div style={{ 
-              background: '#2563eb', 
+              background: 'var(--primary-blue)', 
               color: 'white', 
               padding: '1rem', 
-              borderBottom: '1px solid #dee2e6' 
+              borderBottom: '1px solid var(--medium-gray)' 
             }}>
               <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600' }}>
                 <i className="fas fa-shield-alt" style={{ marginRight: '0.5rem' }}></i>
@@ -2129,19 +2155,19 @@ const SOCDashboard = ({ active, showPage }) => {
                       onMouseEnter={() => setHoveredTactic(tactic.name)}
                       onMouseLeave={() => setHoveredTactic(null)}
                       style={{ 
-                        border: '2px solid #dee2e6',
+                        border: '2px solid var(--medium-gray)',
                         borderRadius: '12px', 
                         padding: '1.5rem',
-                        backgroundColor: 'white',
+                        backgroundColor: 'var(--white)',
                         boxShadow: hoveredTactic === tactic.name ? '0 8px 25px rgba(0, 123, 255, 0.2)' : '0 2px 8px rgba(0,0,0,0.1)',
                         cursor: 'pointer',
                         transition: 'all 0.3s ease',
                         transform: hoveredTactic === tactic.name && animationEnabled ? 'translateY(-5px)' : 'translateY(0)',
-                        borderColor: selectedTactic === tactic.name ? '#2563eb' : '#dee2e6'
+                        borderColor: selectedTactic === tactic.name ? 'var(--secondary-blue)' : 'var(--medium-gray)'
                       }}
                     >
                       <div style={{ 
-                        background: `linear-gradient(135deg, ${getTacticColor(tactic.name, 0.8)}, ${getTacticColor(tactic.name, 1)})`,
+                        background: `linear-gradient(135deg, ${getTacticColor(tactic.name, tactic.detection_count)}, ${getTacticColor(tactic.name, tactic.detection_count)})`,
                         padding: '1rem',
                         borderRadius: '8px',
                         marginBottom: '1rem',
@@ -2173,7 +2199,7 @@ const SOCDashboard = ({ active, showPage }) => {
                       
                       <p style={{ 
                         fontSize: '0.875rem', 
-                        color: '#64748b', 
+                        color: 'var(--text-muted)', 
                         marginBottom: '1rem', 
                         lineHeight: '1.4',
                         display: '-webkit-box',
@@ -2189,7 +2215,7 @@ const SOCDashboard = ({ active, showPage }) => {
                         <h6 style={{ 
                           margin: '0 0 0.5rem 0', 
                           fontSize: '0.8rem', 
-                          color: '#64748b', 
+                          color: 'var(--text-muted)', 
                           textTransform: 'uppercase', 
                           letterSpacing: '0.5px' 
                         }}>
@@ -2204,8 +2230,8 @@ const SOCDashboard = ({ active, showPage }) => {
                             return (
                               <div key={i} style={{
                                 padding: '0.5rem',
-                                backgroundColor: hasDetection ? '#fff3cd' : '#f8f9fa',
-                                border: `1px solid ${hasDetection ? '#ffeaa7' : '#dee2e6'}`,
+                                backgroundColor: hasDetection ? 'var(--light-blue)' : 'var(--light-gray)',
+                                border: `1px solid ${hasDetection ? 'var(--light-blue)' : 'var(--medium-gray)'}`,
                                 borderRadius: '4px',
                                 position: 'relative'
                               }}>
@@ -2214,7 +2240,7 @@ const SOCDashboard = ({ active, showPage }) => {
                                     fontSize: '0.75rem', 
                                     fontFamily: 'monospace', 
                                     fontWeight: 'bold',
-                                    color: hasDetection ? '#856404' : '#495057'
+                                    color: hasDetection ? 'var(--text-dark)' : 'var(--text-dark)'
                                   }}>
                                     {techniqueId}
                                   </span>
@@ -2223,12 +2249,12 @@ const SOCDashboard = ({ active, showPage }) => {
                                       <div style={{
                                         width: '6px',
                                         height: '6px',
-                                        backgroundColor: detectionCount > 5 ? '#dc3545' : detectionCount > 2 ? '#ffc107' : '#28a745',
+                                        backgroundColor: detectionCount > 5 ? 'var(--danger)' : detectionCount > 2 ? 'var(--info)' : 'var(--medium-gray)',
                                         borderRadius: '50%'
                                       }}></div>
                                       <span style={{ 
                                         fontSize: '0.7rem', 
-                                        color: '#856404',
+                                        color: 'var(--text-dark)',
                                         fontWeight: 'bold'
                                       }}>
                                         {detectionCount}
@@ -2238,7 +2264,7 @@ const SOCDashboard = ({ active, showPage }) => {
                                 </div>
                                 <div style={{ 
                                   fontSize: '0.7rem', 
-                                  color: hasDetection ? '#856404' : '#6c757d',
+                                  color: hasDetection ? 'var(--text-dark)' : 'var(--text-muted)',
                                   marginTop: '0.25rem',
                                   lineHeight: '1.2'
                                 }}>
@@ -2250,7 +2276,7 @@ const SOCDashboard = ({ active, showPage }) => {
                                     top: '2px',
                                     right: '2px',
                                     fontSize: '0.6rem',
-                                    color: '#dc3545'
+                                    color: 'var(--danger)'
                                   }}>
                                     <i className="fas fa-exclamation-triangle"></i>
                                   </div>
@@ -2264,7 +2290,7 @@ const SOCDashboard = ({ active, showPage }) => {
                             textAlign: 'center', 
                             marginTop: '0.5rem',
                             fontSize: '0.75rem',
-                            color: '#64748b'
+                            color: 'var(--text-muted)'
                           }}>
                             +{(tactic.technique_count || 0) - 4} more techniques available
                           </div>
@@ -2274,7 +2300,7 @@ const SOCDashboard = ({ active, showPage }) => {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                           <span style={{
-                            backgroundColor: '#2563eb',
+                            backgroundColor: 'var(--primary-blue)',
                             color: 'white',
                             padding: '0.25rem 0.75rem',
                             borderRadius: '12px',
@@ -2284,8 +2310,8 @@ const SOCDashboard = ({ active, showPage }) => {
                             {tactic.technique_count || 0} techniques
                           </span>
                           <span style={{
-                            backgroundColor: (tactic.detection_count || 0) > 5 ? '#dc3545' : 
-                                           (tactic.detection_count || 0) > 3 ? '#ffc107' : '#28a745',
+                            backgroundColor: (tactic.detection_count || 0) > 5 ? 'var(--danger)' : 
+                                           (tactic.detection_count || 0) > 3 ? 'var(--info)' : 'var(--medium-gray)',
                             color: 'white',
                             padding: '0.25rem 0.75rem',
                             borderRadius: '12px',
@@ -2297,7 +2323,7 @@ const SOCDashboard = ({ active, showPage }) => {
                         </div>
                         
                         {selectedTactic === tactic.name && (
-                          <div style={{ fontSize: '0.875rem', color: '#2563eb', fontWeight: '600' }}>
+                          <div style={{ fontSize: '0.875rem', color: 'var(--primary-blue)', fontWeight: '600' }}>
                             <i className="fas fa-chevron-up"></i> Click to collapse
                           </div>
                         )}
@@ -2307,18 +2333,18 @@ const SOCDashboard = ({ active, showPage }) => {
                         <div style={{ 
                           marginTop: '1rem', 
                           padding: '1.5rem', 
-                          backgroundColor: '#eff6ff', 
+                          backgroundColor: 'var(--light-blue)', 
                           borderRadius: '8px',
-                          borderTop: '3px solid #2563eb'
+                          borderTop: '3px solid var(--primary-blue)'
                         }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                            <h5 style={{ margin: '0', color: '#333', fontSize: '1.1rem' }}>
-                              <i className="fas fa-search-plus" style={{ marginRight: '0.5rem', color: '#2563eb' }}></i>
+                            <h5 style={{ margin: '0', color: 'var(--text-dark)', fontSize: '1.1rem' }}>
+                              <i className="fas fa-search-plus" style={{ marginRight: '0.5rem', color: 'var(--primary-blue)' }}></i>
                               Detection Analysis
                             </h5>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                               <span style={{ 
-                                backgroundColor: '#28a745', 
+                                backgroundColor: 'var(--medium-gray)', 
                                 color: 'white', 
                                 padding: '0.25rem 0.5rem', 
                                 borderRadius: '4px', 
@@ -2327,7 +2353,7 @@ const SOCDashboard = ({ active, showPage }) => {
                                 ACTIVE
                               </span>
                               <span style={{ 
-                                backgroundColor: '#2563eb', 
+                                backgroundColor: 'var(--primary-blue)', 
                                 color: 'white', 
                                 padding: '0.25rem 0.5rem', 
                                 borderRadius: '4px', 
@@ -2344,13 +2370,13 @@ const SOCDashboard = ({ active, showPage }) => {
                               backgroundColor: 'white', 
                               padding: '1rem', 
                               borderRadius: '6px', 
-                              border: '1px solid #dee2e6',
+                              border: '1px solid var(--medium-gray)',
                               textAlign: 'center'
                             }}>
-                              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#dc3545', marginBottom: '0.25rem' }}>
+                              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--danger)', marginBottom: '0.25rem' }}>
                                 {Math.floor((tactic.detection_count || 0) * 0.3)}
                               </div>
-                              <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                                 Critical Alerts
                               </div>
                             </div>
@@ -2358,13 +2384,13 @@ const SOCDashboard = ({ active, showPage }) => {
                               backgroundColor: 'white', 
                               padding: '1rem', 
                               borderRadius: '6px', 
-                              border: '1px solid #dee2e6',
+                              border: '1px solid var(--medium-gray)',
                               textAlign: 'center'
                             }}>
-                              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ffc107', marginBottom: '0.25rem' }}>
+                              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--info)', marginBottom: '0.25rem' }}>
                                 {Math.floor((tactic.detection_count || 0) * 0.5)}
                               </div>
-                              <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                                 Medium Alerts
                               </div>
                             </div>
@@ -2372,13 +2398,13 @@ const SOCDashboard = ({ active, showPage }) => {
                               backgroundColor: 'white', 
                               padding: '1rem', 
                               borderRadius: '6px', 
-                              border: '1px solid #dee2e6',
+                              border: '1px solid var(--medium-gray)',
                               textAlign: 'center'
                             }}>
-                              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#28a745', marginBottom: '0.25rem' }}>
+                              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--medium-gray)', marginBottom: '0.25rem' }}>
                                 {Math.floor((tactic.detection_count || 0) * 0.2)}
                               </div>
-                              <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                                 Low Alerts
                               </div>
                             </div>
@@ -2386,13 +2412,13 @@ const SOCDashboard = ({ active, showPage }) => {
                               backgroundColor: 'white', 
                               padding: '1rem', 
                               borderRadius: '6px', 
-                              border: '1px solid #dee2e6',
+                              border: '1px solid var(--medium-gray)',
                               textAlign: 'center'
                             }}>
-                              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#17a2b8', marginBottom: '0.25rem' }}>
+                              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--info)', marginBottom: '0.25rem' }}>
                                 {Math.floor((tactic.detection_count || 0) / 10) || 1}
                               </div>
-                              <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                                 Assets Affected
                               </div>
                             </div>
@@ -2400,32 +2426,32 @@ const SOCDashboard = ({ active, showPage }) => {
 
                           {/* Detection Sources */}
                           <div style={{ marginBottom: '1rem' }}>
-                            <h6 style={{ margin: '0 0 0.75rem 0', color: '#333', fontSize: '0.9rem' }}>
-                              <i className="fas fa-radar" style={{ marginRight: '0.5rem', color: '#64748b' }}></i>
+                            <h6 style={{ margin: '0 0 0.75rem 0', color: 'var(--text-dark)', fontSize: '0.9rem' }}>
+                              <i className="fas fa-radar" style={{ marginRight: '0.5rem', color: 'var(--text-muted)' }}></i>
                               Detection Sources
                             </h6>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem', backgroundColor: 'white', borderRadius: '4px', border: '1px solid #dee2e6' }}>
-                                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Network Monitoring</span>
-                                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#2563eb' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem', backgroundColor: 'white', borderRadius: '4px', border: '1px solid var(--medium-gray)' }}>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Network Monitoring</span>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--primary-blue)' }}>
                                   {Math.floor((tactic.detection_count || 0) * 0.4)}
                                 </span>
                               </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem', backgroundColor: 'white', borderRadius: '4px', border: '1px solid #dee2e6' }}>
-                                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Endpoint Security</span>
-                                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#2563eb' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem', backgroundColor: 'white', borderRadius: '4px', border: '1px solid var(--medium-gray)' }}>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Endpoint Security</span>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--primary-blue)' }}>
                                   {Math.floor((tactic.detection_count || 0) * 0.3)}
                                 </span>
                               </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem', backgroundColor: 'white', borderRadius: '4px', border: '1px solid #dee2e6' }}>
-                                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Threat Intelligence</span>
-                                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#2563eb' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem', backgroundColor: 'white', borderRadius: '4px', border: '1px solid var(--medium-gray)' }}>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Threat Intelligence</span>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--primary-blue)' }}>
                                   {Math.floor((tactic.detection_count || 0) * 0.2)}
                                 </span>
                               </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem', backgroundColor: 'white', borderRadius: '4px', border: '1px solid #dee2e6' }}>
-                                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Manual Analysis</span>
-                                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#2563eb' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem', backgroundColor: 'white', borderRadius: '4px', border: '1px solid var(--medium-gray)' }}>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Manual Analysis</span>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--primary-blue)' }}>
                                   {Math.floor((tactic.detection_count || 0) * 0.1)}
                                 </span>
                               </div>
@@ -2433,13 +2459,13 @@ const SOCDashboard = ({ active, showPage }) => {
                           </div>
 
                           <div style={{ 
-                            borderTop: '1px solid #dee2e6', 
+                            borderTop: '1px solid var(--medium-gray)', 
                             paddingTop: '1rem', 
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center'
                           }}>
-                            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                               <i className="fas fa-info-circle" style={{ marginRight: '0.5rem' }}></i>
                               Click techniques for MITRE ATT&CK details
                             </div>
@@ -2451,7 +2477,7 @@ const SOCDashboard = ({ active, showPage }) => {
                                 setShowDetectionModal(true);
                               }}
                               style={{
-                                backgroundColor: '#2563eb',
+                                backgroundColor: 'var(--primary-blue)',
                                 color: 'white',
                                 border: 'none',
                                 padding: '0.5rem 1rem',
@@ -2465,11 +2491,11 @@ const SOCDashboard = ({ active, showPage }) => {
                                 transition: 'all 0.2s ease'
                               }}
                               onMouseEnter={(e) => {
-                                e.target.style.backgroundColor = '#0056b3';
+                                e.target.style.backgroundColor = 'var(--primary-blue)';
                                 e.target.style.transform = 'translateY(-1px)';
                               }}
                               onMouseLeave={(e) => {
-                                e.target.style.backgroundColor = '#2563eb';
+                                e.target.style.backgroundColor = 'var(--primary-blue)';
                                 e.target.style.transform = 'translateY(0)';
                               }}
                             >
@@ -2490,17 +2516,17 @@ const SOCDashboard = ({ active, showPage }) => {
                   ))}
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', color: '#64748b', padding: '3rem' }}>
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '3rem' }}>
                   {searchTerm || filterBySeverity !== 'all' ? (
                     <>
-                      <i className="fas fa-search" style={{ fontSize: '3rem', marginBottom: '1rem', color: '#dee2e6' }}></i>
-                      <h4 style={{ margin: '0 0 0.5rem 0', color: '#64748b' }}>No tactics match your filters</h4>
+                      <i className="fas fa-search" style={{ fontSize: '3rem', marginBottom: '1rem', color: 'var(--medium-gray)' }}></i>
+                      <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-muted)' }}>No tactics match your filters</h4>
                       <p style={{ margin: '0' }}>Try adjusting your search term or detection level filter</p>
                     </>
                   ) : (
                     <>
-                      <i className="fas fa-crosshairs" style={{ fontSize: '3rem', marginBottom: '1rem', color: '#dee2e6' }}></i>
-                      <h4 style={{ margin: '0 0 0.5rem 0', color: '#64748b' }}>No MITRE ATT&CK data available</h4>
+                      <i className="fas fa-crosshairs" style={{ fontSize: '3rem', marginBottom: '1rem', color: 'var(--medium-gray)' }}></i>
+                      <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-muted)' }}>No MITRE ATT&CK data available</h4>
                       <p style={{ margin: '0' }}>Connect threat intelligence feeds to populate this view</p>
                     </>
                   )}
@@ -2519,13 +2545,13 @@ const SOCDashboard = ({ active, showPage }) => {
       {activeTab === 'alerts' && (
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-            <div style={{ backgroundColor: '#eff6ff', padding: '1rem', borderBottom: '1px solid #dee2e6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ backgroundColor: 'var(--light-blue)', padding: '1rem', borderBottom: '1px solid var(--medium-gray)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <h3 style={{ margin: '0', fontSize: '1.125rem', fontWeight: '600', color: 'black' }}>
                 <i className="fas fa-bell" style={{ marginRight: '0.5rem', color: 'yellow' }}></i>
                 Live Security Alerts
               </h3>
               <span style={{
-                backgroundColor: '#dc3545',
+                backgroundColor: 'var(--danger)',
                 color: 'white',
                 padding: '0.25rem 0.75rem',
                 borderRadius: '12px',
@@ -2542,17 +2568,17 @@ const SOCDashboard = ({ active, showPage }) => {
                       justifyContent: 'space-between', 
                       alignItems: 'center',
                       padding: '1rem',
-                      backgroundColor: '#eff6ff',
+                      backgroundColor: 'var(--light-blue)',
                       borderRadius: '6px',
-                      border: '1px solid #e9ecef'
+                      border: '1px solid var(--medium-gray)'
                     }}>
                       <div style={{ flex: 1 }}>
                         <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: '600' }}>{alert.title}</h4>
-                        <p style={{ margin: '0 0 0.5rem 0', color: '#64748b', fontSize: '0.875rem' }}>{alert.description}</p>
-                        <div style={{ fontSize: '0.75rem', color: '#999' }}>{new Date(alert.timestamp).toLocaleString()}</div>
+                        <p style={{ margin: '0 0 0.5rem 0', color: 'var(--text-muted)', fontSize: '0.875rem' }}>{alert.description}</p>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(alert.timestamp).toLocaleString()}</div>
                       </div>
                       <span style={{
-                        backgroundColor: alert.priority === 'critical' ? '#dc3545' : alert.priority === 'high' ? '#ffc107' : '#17a2b8',
+                        backgroundColor: alert.priority === 'critical' ? 'var(--danger)' : alert.priority === 'high' ? 'var(--info)' : 'var(--info)',
                         color: 'white',
                         padding: '0.25rem 0.75rem',
                         borderRadius: '12px',
@@ -2566,8 +2592,8 @@ const SOCDashboard = ({ active, showPage }) => {
                   ))}
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>
-                  <i className="fas fa-shield-check" style={{ fontSize: '3rem', marginBottom: '1rem', color: '#28a745' }}></i>
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                  <i className="fas fa-shield-check" style={{ fontSize: '3rem', marginBottom: '1rem', color: 'var(--medium-gray)' }}></i>
                   <p>No active alerts - All systems secure</p>
                 </div>
               )}
@@ -2577,7 +2603,7 @@ const SOCDashboard = ({ active, showPage }) => {
           {/* Recent Incidents */}
           <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden', marginTop: '2rem' }}>
             <div style={{ 
-              background: '#2563eb', 
+              background: 'var(--primary-blue)', 
               color: 'white', 
               padding: '1rem',
               display: 'flex',
@@ -2680,23 +2706,23 @@ const SOCDashboard = ({ active, showPage }) => {
             </div>
             <div>
               {recent_incidents && recent_incidents.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
-                  <i className="fas fa-shield-check" style={{ fontSize: '3rem', marginBottom: '1rem', color: '#28a745' }}></i>
-                  <h4 style={{ margin: '0 0 0.5rem 0', color: '#28a745' }}>No Recent Incidents</h4>
+                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                  <i className="fas fa-shield-check" style={{ fontSize: '3rem', marginBottom: '1rem', color: 'var(--medium-gray)' }}></i>
+                  <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--medium-gray)' }}>No Recent Incidents</h4>
                   <p style={{ margin: '0' }}>All systems are operating normally</p>
                 </div>
               ) : recent_incidents && recent_incidents.length > 0 ? (
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
                     <thead>
-                      <tr style={{ backgroundColor: '#eff6ff' }}>
-                        <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>ID</th>
-                        <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>Title</th>
-                        <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>Priority</th>
-                        <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>Status</th>
-                        <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>Created</th>
-                        <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>SLA Status</th>
-                        <th style={{ padding: '1rem', textAlign: 'center', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>Actions</th>
+                      <tr style={{ backgroundColor: 'var(--light-blue)' }}>
+                        <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid var(--medium-gray)', fontWeight: '600' }}>ID</th>
+                        <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid var(--medium-gray)', fontWeight: '600' }}>Title</th>
+                        <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid var(--medium-gray)', fontWeight: '600' }}>Priority</th>
+                        <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid var(--medium-gray)', fontWeight: '600' }}>Status</th>
+                        <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid var(--medium-gray)', fontWeight: '600' }}>Created</th>
+                        <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid var(--medium-gray)', fontWeight: '600' }}>SLA Status</th>
+                        <th style={{ padding: '1rem', textAlign: 'center', borderBottom: '2px solid var(--medium-gray)', fontWeight: '600' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2705,14 +2731,14 @@ const SOCDashboard = ({ active, showPage }) => {
                           key={incident.id}
                           style={{ 
                             cursor: 'pointer',
-                            background: index % 2 === 0 ? '#fafafa' : 'white'
+                            background: index % 2 === 0 ? 'var(--light-gray)' : 'white'
                           }}
-                          onMouseEnter={(e) => e.target.closest('tr').style.background = '#e3f2fd'}
-                          onMouseLeave={(e) => e.target.closest('tr').style.background = index % 2 === 0 ? '#fafafa' : 'white'}
+                          onMouseEnter={(e) => e.target.closest('tr').style.background = 'var(--light-blue)'}
+                          onMouseLeave={(e) => e.target.closest('tr').style.background = index % 2 === 0 ? 'var(--light-gray)' : 'white'}
                         >
                           <td style={{ padding: '12px' }}>
                             <code style={{ 
-                              background: '#f8f9fa', 
+                              background: 'var(--light-gray)', 
                               padding: '4px 8px', 
                               borderRadius: '4px',
                               fontSize: '0.8rem'
@@ -2770,13 +2796,13 @@ const SOCDashboard = ({ active, showPage }) => {
                           <td style={{ padding: '12px' }}>
                             <div style={{ fontSize: '0.875rem' }}>
                               <div>{new Date(incident.created_at).toLocaleDateString()}</div>
-                              <div style={{ color: '#64748b', fontSize: '0.75rem' }}>{new Date(incident.created_at).toLocaleTimeString()}</div>
+                              <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{new Date(incident.created_at).toLocaleTimeString()}</div>
                             </div>
                           </td>
                           <td style={{ padding: '12px' }}>
                             {incident.is_overdue ? (
                               <span style={{ 
-                                backgroundColor: '#dc3545',
+                                backgroundColor: 'var(--danger)',
                                 color: 'white',
                                 padding: '6px 10px',
                                 borderRadius: '12px',
@@ -2788,7 +2814,7 @@ const SOCDashboard = ({ active, showPage }) => {
                               </span>
                             ) : (
                               <span style={{ 
-                                backgroundColor: '#28a745',
+                                backgroundColor: 'var(--medium-gray)',
                                 color: 'white',
                                 padding: '6px 10px',
                                 borderRadius: '12px',
@@ -2808,7 +2834,7 @@ const SOCDashboard = ({ active, showPage }) => {
                                   handleEditIncident(incident);
                                 }}
                                 style={{
-                                  backgroundColor: '#2563eb',
+                                  backgroundColor: 'var(--primary-blue)',
                                   color: 'white',
                                   border: 'none',
                                   padding: '0.375rem 0.75rem',
@@ -2832,7 +2858,7 @@ const SOCDashboard = ({ active, showPage }) => {
                                   }}
                                   disabled={resolvingIncidentId === incident.id}
                                   style={{
-                                    backgroundColor: resolvingIncidentId === incident.id ? '#6c757d' : '#28a745',
+                                    backgroundColor: resolvingIncidentId === incident.id ? 'var(--text-muted)' : 'var(--medium-gray)',
                                     color: 'white',
                                     border: 'none',
                                     padding: '0.375rem 0.75rem',
@@ -2872,7 +2898,7 @@ const SOCDashboard = ({ active, showPage }) => {
                                 }}
                                 disabled={deletingIncidentId === incident.id}
                                 style={{
-                                  backgroundColor: deletingIncidentId === incident.id ? '#6c757d' : '#dc3545',
+                                  backgroundColor: deletingIncidentId === incident.id ? 'var(--text-muted)' : 'var(--danger)',
                                   color: 'white',
                                   border: 'none',
                                   padding: '0.375rem 0.75rem',
@@ -2912,8 +2938,8 @@ const SOCDashboard = ({ active, showPage }) => {
                   </table>
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
-                  <i className="fas fa-spinner fa-spin" style={{ fontSize: '3rem', marginBottom: '1rem', color: '#dee2e6' }}></i>
+                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                  <i className="fas fa-spinner fa-spin" style={{ fontSize: '3rem', marginBottom: '1rem', color: 'var(--medium-gray)' }}></i>
                   <p>Loading incidents...</p>
                 </div>
               )}
@@ -2976,8 +3002,8 @@ const SOCDashboard = ({ active, showPage }) => {
               justifyContent: 'space-between',
               alignItems: 'flex-start',
               padding: '25px',
-              borderBottom: '1px solid #dee2e6',
-              background: '#2563eb',
+              borderBottom: '1px solid var(--medium-gray)',
+              background: 'var(--primary-blue)',
               color: 'white',
               borderRadius: '12px 12px 0 0'
             }}>
@@ -3023,18 +3049,18 @@ const SOCDashboard = ({ active, showPage }) => {
                   flexDirection: 'column',
                   alignItems: 'center',
                   padding: '15px',
-                  background: '#f8f9fa',
+                  background: 'var(--light-gray)',
                   borderRadius: '8px',
-                  border: '1px solid #dee2e6'
+                  border: '1px solid var(--medium-gray)'
                 }}>
                   <span style={{
                     fontSize: '12px',
-                    color: '#6c757d',
+                    color: 'var(--text-muted)',
                     textTransform: 'uppercase',
                     fontWeight: '600',
                     marginBottom: '5px'
                   }}>Detections</span>
-                  <span style={{ fontSize: '18px', fontWeight: '700', color: '#333' }}>
+                  <span style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-dark)' }}>
                     {selectedTechnique.detection_count || 0}
                   </span>
                 </div>
@@ -3043,18 +3069,18 @@ const SOCDashboard = ({ active, showPage }) => {
                   flexDirection: 'column',
                   alignItems: 'center',
                   padding: '15px',
-                  background: '#f8f9fa',
+                  background: 'var(--light-gray)',
                   borderRadius: '8px',
-                  border: '1px solid #dee2e6'
+                  border: '1px solid var(--medium-gray)'
                 }}>
                   <span style={{
                     fontSize: '12px',
-                    color: '#6c757d',
+                    color: 'var(--text-muted)',
                     textTransform: 'uppercase',
                     fontWeight: '600',
                     marginBottom: '5px'
                   }}>Tactic</span>
-                  <span style={{ fontSize: '18px', fontWeight: '700', color: '#333' }}>
+                  <span style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-dark)' }}>
                     {selectedTechnique.tactic || 'Unknown'}
                   </span>
                 </div>
@@ -3063,13 +3089,13 @@ const SOCDashboard = ({ active, showPage }) => {
                   flexDirection: 'column',
                   alignItems: 'center',
                   padding: '15px',
-                  background: '#f8f9fa',
+                  background: 'var(--light-gray)',
                   borderRadius: '8px',
-                  border: '1px solid #dee2e6'
+                  border: '1px solid var(--medium-gray)'
                 }}>
                   <span style={{
                     fontSize: '12px',
-                    color: '#6c757d',
+                    color: 'var(--text-muted)',
                     textTransform: 'uppercase',
                     fontWeight: '600',
                     marginBottom: '5px'
@@ -3077,8 +3103,8 @@ const SOCDashboard = ({ active, showPage }) => {
                   <span style={{
                     fontSize: '18px',
                     fontWeight: '700',
-                    color: (selectedTechnique.detection_count || 0) > 5 ? '#dc3545' : 
-                           (selectedTechnique.detection_count || 0) > 3 ? '#ffc107' : '#28a745'
+                    color: (selectedTechnique.detection_count || 0) > 5 ? 'var(--danger)' : 
+                           (selectedTechnique.detection_count || 0) > 3 ? 'var(--info)' : 'var(--medium-gray)'
                   }}>
                     {(selectedTechnique.detection_count || 0) > 5 ? 'High' : 
                      (selectedTechnique.detection_count || 0) > 3 ? 'Medium' : 'Low'}
@@ -3088,24 +3114,24 @@ const SOCDashboard = ({ active, showPage }) => {
               
               {techniqueDetails[selectedTechnique.technique_id] && (
                 <div>
-                  <h4 style={{ margin: '20px 0 10px 0', color: '#333', borderBottom: '2px solid #e9ecef', paddingBottom: '5px' }}>
+                  <h4 style={{ margin: '20px 0 10px 0', color: 'var(--text-dark)', borderBottom: '2px solid var(--medium-gray)', paddingBottom: '5px' }}>
                     Description
                   </h4>
-                  <p style={{ color: '#64748b', lineHeight: '1.6' }}>
+                  <p style={{ color: 'var(--text-muted)', lineHeight: '1.6' }}>
                     {techniqueDetails[selectedTechnique.technique_id].description || 'No description available.'}
                   </p>
                   
                   {techniqueDetails[selectedTechnique.technique_id].platforms && (
                     <div style={{ margin: '20px 0' }}>
-                      <h4 style={{ margin: '0 0 10px 0', color: '#333' }}>Platforms</h4>
+                      <h4 style={{ margin: '0 0 10px 0', color: 'var(--text-dark)' }}>Platforms</h4>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                         {techniqueDetails[selectedTechnique.technique_id].platforms.map((platform, i) => (
                           <span key={i} style={{
-                            background: '#e9ecef',
+                            background: 'var(--medium-gray)',
                             padding: '4px 8px',
                             borderRadius: '4px',
                             fontSize: '12px',
-                            color: '#495057'
+                            color: 'var(--text-dark)'
                           }}>
                             {platform}
                           </span>
@@ -3116,10 +3142,10 @@ const SOCDashboard = ({ active, showPage }) => {
                   
                   {techniqueDetails[selectedTechnique.technique_id].data_sources && (
                     <div style={{ margin: '20px 0' }}>
-                      <h4 style={{ margin: '0 0 10px 0', color: '#333' }}>Data Sources</h4>
+                      <h4 style={{ margin: '0 0 10px 0', color: 'var(--text-dark)' }}>Data Sources</h4>
                       <ul style={{ margin: '10px 0 0 20px', padding: '0' }}>
                         {techniqueDetails[selectedTechnique.technique_id].data_sources.map((source, i) => (
-                          <li key={i} style={{ margin: '5px 0', color: '#6c757d' }}>{source}</li>
+                          <li key={i} style={{ margin: '5px 0', color: 'var(--text-muted)' }}>{source}</li>
                         ))}
                       </ul>
                     </div>
@@ -3133,12 +3159,12 @@ const SOCDashboard = ({ active, showPage }) => {
                 justifyContent: 'flex-end',
                 marginTop: '25px',
                 paddingTop: '20px',
-                borderTop: '1px solid #dee2e6'
+                borderTop: '1px solid var(--medium-gray)'
               }}>
                 <button 
                   onClick={() => window.open(`https://attack.mitre.org/techniques/${selectedTechnique.technique_id}/`, '_blank')}
                   style={{
-                    backgroundColor: '#2563eb',
+                    backgroundColor: 'var(--primary-blue)',
                     color: 'white',
                     border: 'none',
                     padding: '10px 20px',
@@ -3151,8 +3177,8 @@ const SOCDashboard = ({ active, showPage }) => {
                     alignItems: 'center',
                     gap: '8px'
                   }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = '#0056b3'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = '#2563eb'}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--primary-blue)'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--primary-blue)'}
                 >
                   <i className="fas fa-external-link-alt"></i>
                   View on MITRE
@@ -3161,8 +3187,8 @@ const SOCDashboard = ({ active, showPage }) => {
                   onClick={() => setShowTechniqueModal(false)}
                   style={{
                     backgroundColor: 'transparent',
-                    border: '1px solid #dee2e6',
-                    color: '#495057',
+                    border: '1px solid var(--medium-gray)',
+                    color: 'var(--text-dark)',
                     padding: '10px 20px',
                     borderRadius: '6px',
                     cursor: 'pointer',
@@ -3170,7 +3196,7 @@ const SOCDashboard = ({ active, showPage }) => {
                     fontWeight: '500',
                     transition: 'all 0.2s'
                   }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--light-gray)'}
                   onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                 >
                   Close
@@ -3207,7 +3233,7 @@ const SOCDashboard = ({ active, showPage }) => {
           }}>
             {/* Modal Header */}
             <div style={{
-              background: `linear-gradient(135deg, ${getTacticColor(selectedTacticForModal.name, 0.8)}, ${getTacticColor(selectedTacticForModal.name, 1)})`,
+              background: `linear-gradient(135deg, ${getTacticColor(selectedTacticForModal.name, selectedTacticForModal.detection_count)}, ${getTacticColor(selectedTacticForModal.name, selectedTacticForModal.detection_count)})`,
               color: 'white',
               padding: '1.5rem',
               display: 'flex',
@@ -3312,11 +3338,11 @@ const DetectionModalContent = ({
   if (loadingDetections) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <div style={{ marginBottom: '1rem', fontSize: '1.1rem', color: '#2563eb' }}>
+        <div style={{ marginBottom: '1rem', fontSize: '1.1rem', color: 'var(--primary-blue)' }}>
           <i className="fas fa-spinner fa-spin" style={{ marginRight: '0.5rem' }}></i>
           Loading Real Detection Data...
         </div>
-        <div style={{ color: '#64748b' }}>
+        <div style={{ color: 'var(--text-muted)' }}>
           Fetching live IOC alerts, asset information, and SOC incidents from your security infrastructure.
         </div>
       </div>
@@ -3338,44 +3364,44 @@ const DetectionModalContent = ({
   return (
     <>
                     {/* Summary Stats */}
-                    <div style={{ padding: '1.5rem', backgroundColor: '#eff6ff', borderBottom: '1px solid #dee2e6' }}>
+                    <div style={{ padding: '1.5rem', backgroundColor: 'var(--light-blue)', borderBottom: '1px solid var(--medium-gray)' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
-                        <div style={{ backgroundColor: 'white', padding: '1rem', borderRadius: '8px', textAlign: 'center', border: '1px solid #dee2e6' }}>
-                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#dc3545', marginBottom: '0.25rem' }}>
+                        <div style={{ backgroundColor: 'white', padding: '1rem', borderRadius: '8px', textAlign: 'center', border: '1px solid var(--medium-gray)' }}>
+                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--danger)', marginBottom: '0.25rem' }}>
                             {severityCounts.critical || 0}
                           </div>
-                          <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Critical</div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Critical</div>
                         </div>
-                        <div style={{ backgroundColor: 'white', padding: '1rem', borderRadius: '8px', textAlign: 'center', border: '1px solid #dee2e6' }}>
-                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fd7e14', marginBottom: '0.25rem' }}>
+                        <div style={{ backgroundColor: 'white', padding: '1rem', borderRadius: '8px', textAlign: 'center', border: '1px solid var(--medium-gray)' }}>
+                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--secondary-blue)', marginBottom: '0.25rem' }}>
                             {severityCounts.high || 0}
                           </div>
-                          <div style={{ fontSize: '0.8rem', color: '#64748b' }}>High</div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>High</div>
                         </div>
-                        <div style={{ backgroundColor: 'white', padding: '1rem', borderRadius: '8px', textAlign: 'center', border: '1px solid #dee2e6' }}>
-                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ffc107', marginBottom: '0.25rem' }}>
+                        <div style={{ backgroundColor: 'white', padding: '1rem', borderRadius: '8px', textAlign: 'center', border: '1px solid var(--medium-gray)' }}>
+                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--info)', marginBottom: '0.25rem' }}>
                             {severityCounts.medium || 0}
                           </div>
-                          <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Medium</div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Medium</div>
                         </div>
-                        <div style={{ backgroundColor: 'white', padding: '1rem', borderRadius: '8px', textAlign: 'center', border: '1px solid #dee2e6' }}>
-                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#28a745', marginBottom: '0.25rem' }}>
+                        <div style={{ backgroundColor: 'white', padding: '1rem', borderRadius: '8px', textAlign: 'center', border: '1px solid var(--medium-gray)' }}>
+                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--medium-gray)', marginBottom: '0.25rem' }}>
                             {severityCounts.low || 0}
                           </div>
-                          <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Low</div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Low</div>
                         </div>
-                        <div style={{ backgroundColor: 'white', padding: '1rem', borderRadius: '8px', textAlign: 'center', border: '1px solid #dee2e6' }}>
-                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#17a2b8', marginBottom: '0.25rem' }}>
+                        <div style={{ backgroundColor: 'white', padding: '1rem', borderRadius: '8px', textAlign: 'center', border: '1px solid var(--medium-gray)' }}>
+                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--info)', marginBottom: '0.25rem' }}>
                             {allDetections.length}
                           </div>
-                          <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Total</div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Total</div>
                         </div>
                       </div>
 
                       {/* Filter Controls */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.9rem', fontWeight: '500', color: '#333' }}>Filter by severity:</span>
+                          <span style={{ fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-dark)' }}>Filter by severity:</span>
                           <select 
                             value={detectionFilter} 
                             onChange={(e) => {
@@ -3384,7 +3410,7 @@ const DetectionModalContent = ({
                             }}
                             style={{
                               padding: '0.375rem 0.75rem',
-                              border: '1px solid #ced4da',
+                              border: '1px solid var(--medium-gray)',
                               borderRadius: '4px',
                               backgroundColor: 'white',
                               fontSize: '0.875rem'
@@ -3397,7 +3423,7 @@ const DetectionModalContent = ({
                             <option value="low">Low ({severityCounts.low || 0})</option>
                           </select>
                         </div>
-                        <div style={{ fontSize: '0.9rem', color: '#64748b' }}>
+                        <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
                           Showing {filteredDetections.length} of {allDetections.length} detections
                         </div>
                       </div>
@@ -3405,10 +3431,10 @@ const DetectionModalContent = ({
 
                     {/* Detection List */}
                     <div style={{ padding: '1.5rem' }}>
-                      <h4 style={{ margin: '0 0 1rem 0', color: '#333', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <i className="fas fa-list" style={{ color: '#2563eb' }}></i>
+                      <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-dark)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <i className="fas fa-list" style={{ color: 'var(--primary-blue)' }}></i>
                         All Detections 
-                        <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'normal' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>
                           (Page {detectionPage} of {totalPages})
                         </span>
                       </h4>
@@ -3420,7 +3446,7 @@ const DetectionModalContent = ({
                               padding: '1rem',
                               backgroundColor: 'white',
                               borderRadius: '8px',
-                              border: '1px solid #dee2e6',
+                              border: '1px solid var(--medium-gray)',
                               boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
                             }}>
                               <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '1rem', alignItems: 'center' }}>
@@ -3431,49 +3457,49 @@ const DetectionModalContent = ({
                                       width: '12px',
                                       height: '12px',
                                       borderRadius: '50%',
-                                      backgroundColor: detection.severity === 'critical' ? '#dc3545' : 
-                                                     detection.severity === 'high' ? '#fd7e14' :
-                                                     detection.severity === 'medium' ? '#ffc107' : '#28a745'
+                                      backgroundColor: detection.severity === 'critical' ? 'var(--danger)' : 
+                                                     detection.severity === 'high' ? 'var(--secondary-blue)' :
+                                                     detection.severity === 'medium' ? 'var(--info)' : 'var(--medium-gray)'
                                     }}></div>
-                                    <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#333', fontSize: '0.9rem' }}>
+                                    <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: 'var(--text-dark)', fontSize: '0.9rem' }}>
                                       {detection.fileName}
                                     </span>
                                     <span style={{ 
                                       fontSize: '0.75rem', 
                                       fontWeight: 'bold',
-                                      color: detection.severity === 'critical' ? '#dc3545' : 
-                                             detection.severity === 'high' ? '#fd7e14' :
-                                             detection.severity === 'medium' ? '#ffc107' : '#28a745',
+                                      color: detection.severity === 'critical' ? 'var(--danger)' : 
+                                             detection.severity === 'high' ? 'var(--secondary-blue)' :
+                                             detection.severity === 'medium' ? 'var(--info)' : 'var(--medium-gray)',
                                       textTransform: 'uppercase',
-                                      backgroundColor: detection.severity === 'critical' ? '#f8d7da' : 
-                                                     detection.severity === 'high' ? '#fff3cd' :
-                                                     detection.severity === 'medium' ? '#fff3cd' : '#d4edda',
+                                      backgroundColor: detection.severity === 'critical' ? 'var(--light-blue)' : 
+                                                     detection.severity === 'high' ? 'var(--light-blue)' :
+                                                     detection.severity === 'medium' ? 'var(--light-blue)' : 'var(--light-gray)',
                                       padding: '0.25rem 0.5rem',
                                       borderRadius: '12px'
                                     }}>
                                       {detection.severity}
                                     </span>
                                   </div>
-                                  <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.5rem' }}>
+                                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
                                     <strong>Hash:</strong> {detection.fileHash} • <strong>Source:</strong> {detection.source}
                                   </div>
-                                  <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.5rem' }}>
+                                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
                                     <strong>Technique:</strong> {detection.technique.id} - {detection.technique.name}
                                   </div>
-                                  <div style={{ fontSize: '0.8rem', color: '#999' }}>
+                                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                                     {detection.description}
                                   </div>
                                 </div>
 
                                 {/* Asset & User Info */}
                                 <div style={{ textAlign: 'center', minWidth: '120px' }}>
-                                  <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.25rem' }}>
+                                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
                                     <strong>Asset:</strong>
                                   </div>
-                                  <div style={{ fontSize: '0.85rem', color: '#333', fontFamily: 'monospace', marginBottom: '0.5rem' }}>
+                                  <div style={{ fontSize: '0.85rem', color: 'var(--text-dark)', fontFamily: 'monospace', marginBottom: '0.5rem' }}>
                                     {detection.assetName}
                                   </div>
-                                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                                     User: {detection.userName}
                                   </div>
                                 </div>
@@ -3481,9 +3507,9 @@ const DetectionModalContent = ({
                                 {/* Time & Action */}
                                 <div style={{ textAlign: 'right', minWidth: '140px' }}>
                                   <div style={{
-                                    backgroundColor: detection.action === 'Quarantined' ? '#dc3545' : 
-                                                   detection.action === 'Blocked' ? '#fd7e14' :
-                                                   detection.action === 'Cleaned' ? '#28a745' : '#17a2b8',
+                                    backgroundColor: detection.action === 'Quarantined' ? 'var(--danger)' : 
+                                                   detection.action === 'Blocked' ? 'var(--secondary-blue)' :
+                                                   detection.action === 'Cleaned' ? 'var(--medium-gray)' : 'var(--info)',
                                     color: 'white',
                                     padding: '0.25rem 0.5rem',
                                     borderRadius: '12px',
@@ -3494,13 +3520,13 @@ const DetectionModalContent = ({
                                   }}>
                                     {detection.action}
                                   </div>
-                                  <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.25rem' }}>
+                                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
                                     {detection.detectionTime.toLocaleDateString()}
                                   </div>
-                                  <div style={{ fontSize: '0.75rem', color: '#999' }}>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                                     {detection.detectionTime.toLocaleTimeString()}
                                   </div>
-                                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
                                     Confidence: {detection.confidence}%
                                   </div>
                                 </div>
@@ -3509,8 +3535,8 @@ const DetectionModalContent = ({
                           ))}
                         </div>
                       ) : (
-                        <div style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>
-                          <i className="fas fa-search" style={{ fontSize: '2rem', marginBottom: '1rem', color: '#dee2e6' }}></i>
+                        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                          <i className="fas fa-search" style={{ fontSize: '2rem', marginBottom: '1rem', color: 'var(--medium-gray)' }}></i>
                           <p>No detections found with the current filter.</p>
                         </div>
                       )}
@@ -3524,14 +3550,14 @@ const DetectionModalContent = ({
                           gap: '0.5rem',
                           marginTop: '1.5rem',
                           paddingTop: '1rem',
-                          borderTop: '1px solid #dee2e6'
+                          borderTop: '1px solid var(--medium-gray)'
                         }}>
                           <button
                             onClick={() => setDetectionPage(Math.max(1, detectionPage - 1))}
                             disabled={detectionPage === 1}
                             style={{
-                              backgroundColor: detectionPage === 1 ? '#f8f9fa' : '#2563eb',
-                              color: detectionPage === 1 ? '#6c757d' : 'white',
+                              backgroundColor: detectionPage === 1 ? 'var(--light-gray)' : 'var(--primary-blue)',
+                              color: detectionPage === 1 ? 'var(--text-muted)' : 'white',
                               border: 'none',
                               padding: '0.5rem 0.75rem',
                               borderRadius: '4px',
@@ -3542,7 +3568,7 @@ const DetectionModalContent = ({
                             Previous
                           </button>
                           
-                          <span style={{ fontSize: '0.9rem', color: '#64748b', margin: '0 1rem' }}>
+                          <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', margin: '0 1rem' }}>
                             Page {detectionPage} of {totalPages}
                           </span>
                           
@@ -3550,8 +3576,8 @@ const DetectionModalContent = ({
                             onClick={() => setDetectionPage(Math.min(totalPages, detectionPage + 1))}
                             disabled={detectionPage === totalPages}
                             style={{
-                              backgroundColor: detectionPage === totalPages ? '#f8f9fa' : '#2563eb',
-                              color: detectionPage === totalPages ? '#6c757d' : 'white',
+                              backgroundColor: detectionPage === totalPages ? 'var(--light-gray)' : 'var(--primary-blue)',
+                              color: detectionPage === totalPages ? 'var(--text-muted)' : 'white',
                               border: 'none',
                               padding: '0.5rem 0.75rem',
                               borderRadius: '4px',
@@ -3567,10 +3593,10 @@ const DetectionModalContent = ({
 
                     {/* Affected Assets Section */}
                     <div style={{ marginTop: '2rem' }}>
-                      <h4 style={{ margin: '0 0 1rem 0', color: '#333', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <i className="fas fa-server" style={{ color: '#2563eb' }}></i>
+                      <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-dark)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <i className="fas fa-server" style={{ color: 'var(--primary-blue)' }}></i>
                         Affected Assets 
-                        <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'normal' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>
                           ({getAffectedAssets(filteredDetections).length} unique assets)
                         </span>
                       </h4>
@@ -3586,7 +3612,7 @@ const DetectionModalContent = ({
                               padding: '1rem',
                               backgroundColor: 'white',
                               borderRadius: '8px',
-                              border: '1px solid #dee2e6',
+                              border: '1px solid var(--medium-gray)',
                               boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
                             }}>
                               {/* Asset Header */}
@@ -3596,18 +3622,18 @@ const DetectionModalContent = ({
                                     width: '12px',
                                     height: '12px',
                                     borderRadius: '50%',
-                                    backgroundColor: highestSeverity === 'critical' ? '#dc3545' : 
-                                                   highestSeverity === 'high' ? '#fd7e14' :
-                                                   highestSeverity === 'medium' ? '#ffc107' : '#28a745'
+                                    backgroundColor: highestSeverity === 'critical' ? 'var(--danger)' : 
+                                                   highestSeverity === 'high' ? 'var(--secondary-blue)' :
+                                                   highestSeverity === 'medium' ? 'var(--info)' : 'var(--medium-gray)'
                                   }}></div>
-                                  <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#333', fontSize: '0.95rem' }}>
+                                  <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: 'var(--text-dark)', fontSize: '0.95rem' }}>
                                     {asset.name}
                                   </span>
                                 </div>
                                 <div style={{
-                                  backgroundColor: highestSeverity === 'critical' ? '#dc3545' : 
-                                                 highestSeverity === 'high' ? '#fd7e14' :
-                                                 highestSeverity === 'medium' ? '#ffc107' : '#28a745',
+                                  backgroundColor: highestSeverity === 'critical' ? 'var(--danger)' : 
+                                                 highestSeverity === 'high' ? 'var(--secondary-blue)' :
+                                                 highestSeverity === 'medium' ? 'var(--info)' : 'var(--medium-gray)',
                                   color: 'white',
                                   padding: '0.25rem 0.5rem',
                                   borderRadius: '12px',
@@ -3621,31 +3647,31 @@ const DetectionModalContent = ({
                               {/* Asset Details */}
                               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem 1rem', fontSize: '0.85rem' }}>
                                 <div>
-                                  <span style={{ color: '#64748b', fontWeight: '500' }}>Type:</span>
-                                  <span style={{ marginLeft: '0.5rem', color: '#333' }}>{asset.type}</span>
+                                  <span style={{ color: 'var(--text-muted)', fontWeight: '500' }}>Type:</span>
+                                  <span style={{ marginLeft: '0.5rem', color: 'var(--text-dark)' }}>{asset.type}</span>
                                 </div>
                                 <div>
-                                  <span style={{ color: '#64748b', fontWeight: '500' }}>Group:</span>
-                                  <span style={{ marginLeft: '0.5rem', color: '#333' }}>{asset.group}</span>
+                                  <span style={{ color: 'var(--text-muted)', fontWeight: '500' }}>Group:</span>
+                                  <span style={{ marginLeft: '0.5rem', color: 'var(--text-dark)' }}>{asset.group}</span>
                                 </div>
                                 <div>
-                                  <span style={{ color: '#64748b', fontWeight: '500' }}>OS:</span>
-                                  <span style={{ marginLeft: '0.5rem', color: '#333' }}>{asset.os}</span>
+                                  <span style={{ color: 'var(--text-muted)', fontWeight: '500' }}>OS:</span>
+                                  <span style={{ marginLeft: '0.5rem', color: 'var(--text-dark)' }}>{asset.os}</span>
                                 </div>
                                 <div>
-                                  <span style={{ color: '#64748b', fontWeight: '500' }}>Location:</span>
-                                  <span style={{ marginLeft: '0.5rem', color: '#333' }}>{asset.location}</span>
+                                  <span style={{ color: 'var(--text-muted)', fontWeight: '500' }}>Location:</span>
+                                  <span style={{ marginLeft: '0.5rem', color: 'var(--text-dark)' }}>{asset.location}</span>
                                 </div>
                                 <div>
-                                  <span style={{ color: '#64748b', fontWeight: '500' }}>IP:</span>
-                                  <span style={{ marginLeft: '0.5rem', color: '#333', fontFamily: 'monospace' }}>{asset.ipAddress}</span>
+                                  <span style={{ color: 'var(--text-muted)', fontWeight: '500' }}>IP:</span>
+                                  <span style={{ marginLeft: '0.5rem', color: 'var(--text-dark)', fontFamily: 'monospace' }}>{asset.ipAddress}</span>
                                 </div>
                                 <div>
-                                  <span style={{ color: '#64748b', fontWeight: '500' }}>Risk:</span>
+                                  <span style={{ color: 'var(--text-muted)', fontWeight: '500' }}>Risk:</span>
                                   <span style={{ 
                                     marginLeft: '0.5rem', 
-                                    color: asset.riskLevel === 'High' ? '#dc3545' : 
-                                           asset.riskLevel === 'Medium' ? '#ffc107' : '#28a745',
+                                    color: asset.riskLevel === 'High' ? 'var(--danger)' : 
+                                           asset.riskLevel === 'Medium' ? 'var(--info)' : 'var(--medium-gray)',
                                     fontWeight: '600'
                                   }}>
                                     {asset.riskLevel}
@@ -3654,9 +3680,9 @@ const DetectionModalContent = ({
                               </div>
 
                               {/* Severities and Techniques */}
-                              <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid #f0f0f0' }}>
+                              <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--light-gray)' }}>
                                 <div style={{ marginBottom: '0.5rem' }}>
-                                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>Severities detected:</span>
+                                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '500' }}>Severities detected:</span>
                                   <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.25rem' }}>
                                     {Array.from(asset.severities).map(severity => (
                                       <span key={severity} style={{
@@ -3665,12 +3691,12 @@ const DetectionModalContent = ({
                                         borderRadius: '8px',
                                         textTransform: 'uppercase',
                                         fontWeight: 'bold',
-                                        backgroundColor: severity === 'critical' ? '#f8d7da' : 
-                                                       severity === 'high' ? '#fff3cd' :
-                                                       severity === 'medium' ? '#fff3cd' : '#d4edda',
-                                        color: severity === 'critical' ? '#721c24' : 
-                                               severity === 'high' ? '#856404' :
-                                               severity === 'medium' ? '#856404' : '#155724'
+                                        backgroundColor: severity === 'critical' ? 'var(--light-blue)' : 
+                                                       severity === 'high' ? 'var(--light-blue)' :
+                                                       severity === 'medium' ? 'var(--light-blue)' : 'var(--light-gray)',
+                                        color: severity === 'critical' ? 'var(--danger)' : 
+                                               severity === 'high' ? 'var(--text-dark)' :
+                                               severity === 'medium' ? 'var(--text-dark)' : 'var(--text-dark)'
                                       }}>
                                         {severity}
                                       </span>
@@ -3679,7 +3705,7 @@ const DetectionModalContent = ({
                                 </div>
                                 
                                 <div>
-                                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>
+                                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '500' }}>
                                     Techniques: {asset.techniques.size} unique
                                   </span>
                                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.25rem' }}>
@@ -3688,8 +3714,8 @@ const DetectionModalContent = ({
                                         fontSize: '0.7rem',
                                         padding: '0.15rem 0.4rem',
                                         borderRadius: '8px',
-                                        backgroundColor: '#e9ecef',
-                                        color: '#495057',
+                                        backgroundColor: 'var(--medium-gray)',
+                                        color: 'var(--text-dark)',
                                         fontFamily: 'monospace'
                                       }}>
                                         {techniqueId}
@@ -3700,7 +3726,7 @@ const DetectionModalContent = ({
                                         fontSize: '0.7rem',
                                         padding: '0.15rem 0.4rem',
                                         borderRadius: '8px',
-                                        backgroundColor: '#2563eb',
+                                        backgroundColor: 'var(--primary-blue)',
                                         color: 'white'
                                       }}>
                                         +{asset.techniques.size - 4} more
@@ -3714,9 +3740,9 @@ const DetectionModalContent = ({
                               <div style={{ 
                                 marginTop: '0.75rem', 
                                 paddingTop: '0.75rem', 
-                                borderTop: '1px solid #f0f0f0',
+                                borderTop: '1px solid var(--light-gray)',
                                 fontSize: '0.75rem',
-                                color: '#64748b'
+                                color: 'var(--text-muted)'
                               }}>
                                 <div>First detected: {asset.firstDetection.toLocaleDateString()} {asset.firstDetection.toLocaleTimeString()}</div>
                                 <div>Latest detection: {asset.lastDetection.toLocaleDateString()} {asset.lastDetection.toLocaleTimeString()}</div>
@@ -3727,8 +3753,8 @@ const DetectionModalContent = ({
                       </div>
                       
                       {getAffectedAssets(filteredDetections).length === 0 && (
-                        <div style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>
-                          <i className="fas fa-server" style={{ fontSize: '2rem', marginBottom: '1rem', color: '#dee2e6' }}></i>
+                        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                          <i className="fas fa-server" style={{ fontSize: '2rem', marginBottom: '1rem', color: 'var(--medium-gray)' }}></i>
                           <p>No assets affected with the current filter.</p>
                         </div>
                       )}
@@ -3737,13 +3763,13 @@ const DetectionModalContent = ({
                     {/* Action Buttons */}
                     <div style={{ 
                       padding: '1rem 1.5rem',
-                      backgroundColor: '#eff6ff',
-                      borderTop: '1px solid #dee2e6',
+                      backgroundColor: 'var(--light-blue)',
+                      borderTop: '1px solid var(--medium-gray)',
                       display: 'flex', 
                       justifyContent: 'space-between', 
                       alignItems: 'center'
                     }}>
-                      <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                         <i className="fas fa-clock" style={{ marginRight: '0.5rem' }}></i>
                         Data updated in real-time • Last refresh: {new Date().toLocaleTimeString()}
                       </div>
@@ -3752,7 +3778,7 @@ const DetectionModalContent = ({
                           onClick={() => handleExportData('csv')}
                           disabled={exportingData}
                           style={{
-                            backgroundColor: exportingData ? '#6c757d' : '#28a745',
+                            backgroundColor: exportingData ? 'var(--text-muted)' : 'var(--medium-gray)',
                             color: 'white',
                             border: 'none',
                             padding: '0.5rem 1rem',
@@ -3787,7 +3813,7 @@ const DetectionModalContent = ({
                           onClick={() => handleExportData('json')}
                           disabled={exportingData}
                           style={{
-                            backgroundColor: exportingData ? '#6c757d' : '#17a2b8',
+                            backgroundColor: exportingData ? 'var(--text-muted)' : 'var(--info)',
                             color: 'white',
                             border: 'none',
                             padding: '0.5rem 1rem',
@@ -3805,7 +3831,7 @@ const DetectionModalContent = ({
                         <button
                           onClick={() => setShowDetectionModal(false)}
                           style={{
-                            backgroundColor: '#6c757d',
+                            backgroundColor: 'var(--text-muted)',
                             color: 'white',
                             border: 'none',
                             padding: '0.5rem 1rem',
