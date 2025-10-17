@@ -16,6 +16,7 @@ const IndicatorTable = () => {
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [selectedIndicators, setSelectedIndicators] = useState(new Set());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [lastSyncCheck, setLastSyncCheck] = useState(null);
   const itemsPerPage = 20;
@@ -319,6 +320,7 @@ const IndicatorTable = () => {
   };
 
   const confirmBulkDelete = async () => {
+    setDeleting(true);
     try {
       const selectedIds = Array.from(selectedIndicators);
       
@@ -353,6 +355,8 @@ const IndicatorTable = () => {
     } catch (error) {
       console.error('Error during bulk delete:', error);
       showError('Delete Error', `Error deleting indicators: ${error.message}`);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -772,24 +776,45 @@ const IndicatorTable = () => {
               <i className="fas fa-exclamation-triangle" style={{color: '#dc3545', marginLeft: '10px'}}></i>
             </div>
             <div className="modal-body">
-              <p>Are you sure you want to delete <strong>{selectedIndicators.size}</strong> selected indicator{selectedIndicators.size !== 1 ? 's' : ''}?</p>
-              <p style={{color: '#dc3545', fontSize: '14px', marginTop: '10px'}}>
-                <i className="fas fa-warning"></i> This action cannot be undone.
-              </p>
+              {deleting ? (
+                <div style={{textAlign: 'center', padding: '20px'}}>
+                  <i className="fas fa-spinner fa-spin" style={{fontSize: '32px', color: '#007bff', marginBottom: '15px'}}></i>
+                  <p style={{fontSize: '16px', margin: '10px 0'}}>Deleting {selectedIndicators.size} indicator{selectedIndicators.size !== 1 ? 's' : ''}...</p>
+                  <p style={{color: '#6c757d', fontSize: '14px'}}>Please wait, this may take a moment.</p>
+                </div>
+              ) : (
+                <>
+                  <p>Are you sure you want to delete <strong>{selectedIndicators.size}</strong> selected indicator{selectedIndicators.size !== 1 ? 's' : ''}?</p>
+                  <p style={{color: '#dc3545', fontSize: '14px', marginTop: '10px'}}>
+                    <i className="fas fa-warning"></i> This action cannot be undone.
+                  </p>
+                </>
+              )}
             </div>
             <div className="modal-actions">
               <button 
                 className="btn btn-outline"
                 onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
               >
                 Cancel
               </button>
               <button 
                 className="btn btn-danger"
                 onClick={confirmBulkDelete}
+                disabled={deleting}
               >
-                <i className="fas fa-trash"></i>
-                Delete {selectedIndicators.size} Indicator{selectedIndicators.size !== 1 ? 's' : ''}
+                {deleting ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin"></i>
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-trash"></i>
+                    Delete {selectedIndicators.size} Indicator{selectedIndicators.size !== 1 ? 's' : ''}
+                  </>
+                )}
               </button>
             </div>
           </div>

@@ -7202,6 +7202,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
         message={confirmModalConfig.message}
         confirmText={confirmModalConfig.confirmText}
         variant={confirmModalConfig.variant}
+        isLoading={loading}
       />
     </section>
   );

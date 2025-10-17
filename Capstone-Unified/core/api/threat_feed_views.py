@@ -19,7 +19,6 @@ from django.views.decorators.http import require_http_methods
 from django.core.cache import cache
 from rest_framework.permissions import AllowAny
 from rest_framework.views import exception_handler
-from django.core.cache import cache
 from celery.result import AsyncResult
 
 from core.models.models import ThreatFeed, SystemActivity
@@ -173,7 +172,6 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
             task_id = request.data.get('task_id')  # Optional task ID to cancel
 
             # Set cancellation flag in cache
-            from django.core.cache import cache
             cancel_key = f"cancel_consumption_{feed.id}"
             cache.set(cancel_key, {'mode': mode, 'timestamp': timezone.now().isoformat()}, timeout=3600)
 
@@ -349,7 +347,6 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
                             logger.info(f"Starting VirusTotal background sync for {feed.name}")
                             
                             # Check for cancellation before starting
-                            from django.core.cache import cache
                             cancel_key = f"cancel_consumption_{feed.id}"
                             
                             if cache.get(cancel_key):
@@ -502,7 +499,6 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
                     # Check Redis availability first
                     redis_available = False
                     try:
-                        from django.core.cache import cache
                         cache.get('redis_test')  # Test Redis connection
                         redis_available = True
                     except Exception as redis_error:
@@ -632,7 +628,6 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
                         logger.info(f"Added feed consumption to batch notification service: {feed.name} (+{indicator_count} indicators)")
 
                         # Trigger frontend auto-refresh for feed consumption
-                        from django.core.cache import cache
                         from django.utils import timezone
                         refresh_timestamp = timezone.now().isoformat()
                         cache.set('indicators_updated', refresh_timestamp, timeout=300)
@@ -666,7 +661,6 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
     def check_refresh_triggers(self, request):
         """Check for cache-based refresh triggers from backend notifications"""
         try:
-            from django.core.cache import cache
 
             triggers = []
 
@@ -783,7 +777,6 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
     def task_status(self, request, task_id=None):
         """Get the status of a specific Celery task."""
         try:
-            from django.core.cache import cache
             
             # Check cache for task status
             cache_key = f"task_status_{task_id}"
@@ -826,7 +819,6 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
     def cancel_task(self, request, task_id=None):
         """Cancel a specific Celery task by ID."""
         try:
-            from django.core.cache import cache
             from settings.celery import app as celery_app
             from celery.result import AsyncResult
 
@@ -986,7 +978,6 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
         try:
             feed = get_object_or_404(ThreatFeed, pk=pk)
 
-            from django.core.cache import cache
             from django.utils import timezone
 
             # Check if feed is actually capable of being paused
@@ -1077,7 +1068,6 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
                 return Response(error_details, status=status.HTTP_400_BAD_REQUEST)
             
             from core.tasks.taxii_tasks import consume_feed_task
-            from django.core.cache import cache
             
             # Clear any pause flags
             pause_key = f"pause_consumption_{feed.id}"
@@ -1116,7 +1106,6 @@ class ThreatFeedViewSet(viewsets.ModelViewSet):
         try:
             feed = get_object_or_404(ThreatFeed, pk=pk)
             
-            from django.core.cache import cache
             
             # Check for pause flags
             pause_key = f"pause_consumption_{feed.id}"
@@ -1573,7 +1562,6 @@ def indicators_list(request):
             )
 
             # Trigger frontend auto-refresh for new indicator
-            from django.core.cache import cache
             cache.set('indicators_updated', timezone.now().isoformat(), timeout=300)
             logger.info("🔄 Triggered frontend indicator refresh after manual indicator creation")
             
@@ -2005,7 +1993,6 @@ def indicators_bulk_import(request):
             )
 
             # Trigger frontend auto-refresh for bulk imported indicators
-            from django.core.cache import cache
             from django.utils import timezone
             cache.set('indicators_updated', timezone.now().isoformat(), timeout=300)
             logger.info(f"🔄 Triggered frontend indicator refresh after bulk import of {len(created_indicators)} indicators")

@@ -10,15 +10,21 @@ const ConfirmationModal = ({
   cancelText = 'Cancel',
   confirmButtonClass = 'confirm-btn',
   isDestructive = false,
-  actionType = 'default' // 'activate', 'deactivate', 'delete', 'default'
+  actionType = 'default', // 'activate', 'deactivate', 'delete', 'default'
+  isLoading = false // Add loading state support
 }) => {
 
   const handleConfirm = () => {
+    if (isLoading) return; // Prevent action if already loading
     onConfirm();
-    onClose();
+    // Don't auto-close if loading, let the parent handle closing after operation completes
+    if (!isLoading) {
+      onClose();
+    }
   };
 
   const handleCancel = () => {
+    if (isLoading) return; // Prevent closing if loading
     onClose();
   };
 
@@ -70,27 +76,45 @@ const ConfirmationModal = ({
             className="confirmation-modal-close" 
             onClick={handleCancel}
             aria-label="Close"
+            disabled={isLoading}
           >
             ×
           </button>
         </div>
         
         <div className="confirmation-modal-body">
-          <p>{message}</p>
+          {isLoading ? (
+            <div style={{textAlign: 'center', padding: '20px'}}>
+              <i className="fas fa-spinner fa-spin" style={{fontSize: '32px', color: '#007bff', marginBottom: '15px'}}></i>
+              <p style={{fontSize: '16px', margin: '10px 0'}}>Processing...</p>
+              <p style={{color: '#6c757d', fontSize: '14px'}}>Please wait, this may take a moment.</p>
+            </div>
+          ) : (
+            <p>{message}</p>
+          )}
         </div>
         
         <div className="confirmation-modal-footer">
           <button 
             className="btn btn-secondary" 
             onClick={handleCancel}
+            disabled={isLoading}
           >
             {cancelText}
           </button>
           <button 
             className={getButtonClass()}
             onClick={handleConfirm}
+            disabled={isLoading}
           >
-            {confirmText}
+            {isLoading ? (
+              <>
+                <i className="fas fa-spinner fa-spin" style={{marginRight: '8px'}}></i>
+                Processing...
+              </>
+            ) : (
+              confirmText
+            )}
           </button>
         </div>
       </div>
