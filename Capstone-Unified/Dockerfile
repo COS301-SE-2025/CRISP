@@ -16,9 +16,11 @@ COPY frontend/crisp-react/package*.json ./
 RUN npm ci --only=production=false
 # Copy all frontend source code
 COPY frontend/crisp-react/ ./
-# Add build argument to bust cache when needed
+# Add build arguments
 ARG BUILD_DATE
+ARG VITE_API_BASE_URL=http://data-defenders.co.za
 ENV BUILD_DATE=${BUILD_DATE}
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 # Build the React application
 RUN npm run build
 
