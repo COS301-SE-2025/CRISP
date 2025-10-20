@@ -1,3 +1,4 @@
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import logoImage from '../assets/BlueV2.png';
@@ -30,7 +31,7 @@ const ResetPassword = () => {
 
   const validateToken = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/v1/auth/validate-reset-token/', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/validate-reset-token/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -112,7 +113,7 @@ const ResetPassword = () => {
     setMessage('');
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/auth/reset-password/', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/reset-password/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

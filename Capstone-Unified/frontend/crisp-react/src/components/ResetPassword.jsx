@@ -3,6 +3,8 @@ import { useSearchParams, Link } from 'react-router-dom';
 import logoImage from '../assets/BlueV.png';
 import './ResetPassword.css';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
 function ResetPassword() {
   const [searchParams] = useSearchParams();
   const [password, setPassword] = useState('');
@@ -83,7 +85,7 @@ function ResetPassword() {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/reset-password/', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/reset-password/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

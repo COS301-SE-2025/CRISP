@@ -3,6 +3,8 @@
  * Prevents excessive server calls while ensuring real-time updates
  */
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
 class RefreshManager {
   constructor() {
     this.subscribers = new Map();
@@ -75,7 +77,7 @@ class RefreshManager {
       }
 
       // Import the API function dynamically to avoid circular dependencies
-      const response = await fetch('http://localhost:8000/api/threat-feeds/check_refresh_triggers/', {
+      const response = await fetch(`${API_BASE_URL}/api/threat-feeds/check_refresh_triggers/`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

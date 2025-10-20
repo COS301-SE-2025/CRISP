@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import ReportDetailModal from './ReportDetailModal';
 import { useNotification } from '../ui/NotificationManager';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
 // Extract CSS styles outside component to prevent recreation on every render
 const REPORT_STYLES = `
   :root {
@@ -620,7 +622,7 @@ const Reports = ({ active = true }) => {
       }
 
       // Fetch persistent reports from database
-      const response = await fetch('http://localhost:8000/api/reports/', {
+      const response = await fetch(`${API_BASE_URL}/api/reports/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -783,7 +785,7 @@ const Reports = ({ active = true }) => {
       }
 
 
-      const response = await fetch(`http://localhost:8000${endpoint}`, {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -885,7 +887,7 @@ const Reports = ({ active = true }) => {
       }
 
       // Make API call with persist=True by adding query parameter
-      const response = await fetch(`http://localhost:8000${endpoint}?persist=true`, {
+      const response = await fetch(`${API_BASE_URL}${endpoint}?persist=true`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -1005,7 +1007,7 @@ const Reports = ({ active = true }) => {
       if (reportToDelete.isSaved && !reportToDelete.isTemporary) {
         const token = localStorage.getItem('crisp_auth_token');
         if (token) {
-          const response = await fetch(`http://localhost:8000/api/reports/${reportToDelete.id}/delete/`, {
+          const response = await fetch(`${API_BASE_URL}/api/reports/${reportToDelete.id}/delete/`, {
             method: 'DELETE',
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -1049,7 +1051,7 @@ const Reports = ({ active = true }) => {
         throw new Error('Authentication required');
       }
 
-      const response = await fetch(`http://localhost:8000${endpoint}`, {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

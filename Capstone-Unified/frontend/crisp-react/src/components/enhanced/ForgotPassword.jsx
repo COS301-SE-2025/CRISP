@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import logoImage from '../../assets/BlueV.png';
 import './ForgotPassword.css';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -30,7 +32,7 @@ const ForgotPassword = () => {
     setMessage('');
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/forgot-password/', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -27,7 +27,7 @@ except ImportError:
     from tqdm import tqdm
 
 from core.models.models import (
-    Organization, ThreatFeed, Collection, Feed, SystemActivity, UserProfile
+    Organization, ThreatFeed, Collection, Feed, SystemActivity
 )
 from core.user_management.models.user_models import CustomUser, UserSession
 from core.user_management.models.invitation_models import UserInvitation
@@ -153,7 +153,6 @@ class Command(BaseCommand):
             ("Trust Relationships", lambda: self._safe_delete(TrustRelationship) if TrustRelationship else None),
             ("Trust Groups", lambda: self._safe_delete(TrustGroup) if TrustGroup else None),
             ("User Sessions", lambda: self._safe_delete(UserSession)),
-            ("User Profiles", lambda: self._safe_delete(UserProfile)),
             ("User Invitations", lambda: self._safe_delete(UserInvitation)),
             ("Threat Feeds", lambda: self._safe_delete(ThreatFeed)),
             ("Collections", lambda: self._safe_delete(Collection)),

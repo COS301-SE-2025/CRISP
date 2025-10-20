@@ -87,12 +87,14 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_BASE_URL=http://localhost:8000
     volumes:
       - ./frontend/crisp-react/src:/app/src
       - ./frontend/crisp-react/public:/app/public
       - ./frontend/crisp-react/index.html:/app/index.html
       - ./frontend/crisp-react/vite.config.js:/app/vite.config.js
+      - ./frontend/crisp-react/.env:/app/.env
+      - ./frontend/crisp-react/.env.development:/app/.env.development
     depends_on:
       - backend
     networks:

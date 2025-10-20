@@ -1,3 +1,4 @@
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 import React, { useState, useEffect } from 'react';
 
 const UserManagement = () => {
@@ -19,7 +20,7 @@ const UserManagement = () => {
       console.log('Using token:', token ? 'Token found' : 'No token');
       console.log('Available localStorage keys:', Object.keys(localStorage));
       
-      const response = await fetch('http://localhost:8000/api/users/', {
+      const response = await fetch(`${API_BASE_URL}/api/users/`, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${token}` : '',

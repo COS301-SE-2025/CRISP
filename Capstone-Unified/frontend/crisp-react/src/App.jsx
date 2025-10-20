@@ -153,7 +153,7 @@ class ThreatFeedsErrorBoundary extends React.Component {
 }
 
 // API Configuration
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 // Simple cache for API responses to prevent duplicate requests
 const apiCache = new Map();
@@ -253,7 +253,7 @@ function AppWithNotifications({ user, onLogout, isAdmin }) {
     try {
       // Bypass cache for task status checks by making direct fetch call
       const token = localStorage.getItem('access_token') || localStorage.getItem('crisp_auth_token');
-      const response = await fetch(`http://localhost:8000/api/threat-feeds/task-status/${taskId}/`, {
+      const response = await fetch(`${API_BASE_URL}/api/threat-feeds/task-status/${taskId}/`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -5529,7 +5529,7 @@ function IoCManagement({ active, lastUpdate, onRefresh, navigationState, setNavi
       
       for (const indicatorId of indicatorIds) {
         try {
-          const response = await fetch(`http://localhost:8000/api/indicators/${indicatorId}/`, {
+          const response = await fetch(`${API_BASE_URL}/api/indicators/${indicatorId}/`, {
             method: 'DELETE',
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('access_token')}`,

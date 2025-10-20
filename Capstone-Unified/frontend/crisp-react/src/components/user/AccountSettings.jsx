@@ -1,3 +1,4 @@
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 import React, { useState, useEffect } from 'react';
 
 const ChangePasswordModal = ({ isOpen, onClose, onPasswordChanged }) => {
@@ -26,7 +27,7 @@ const ChangePasswordModal = ({ isOpen, onClose, onPasswordChanged }) => {
 
     try {
       const token = localStorage.getItem('crisp_auth_token');
-      const response = await fetch('http://localhost:8000/api/auth/change-password/', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/change-password/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -269,7 +270,7 @@ const AccountSettings = ({ active }) => {
     try {
       setLoading(true);
       const token = localStorage.getItem('crisp_auth_token');
-      const response = await fetch('http://localhost:8000/api/auth/profile/', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/profile/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -297,7 +298,7 @@ const AccountSettings = ({ active }) => {
   const handleSave = async () => {
     try {
       const token = localStorage.getItem('crisp_auth_token');
-      const response = await fetch('http://localhost:8000/api/auth/profile/update/', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/profile/update/`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

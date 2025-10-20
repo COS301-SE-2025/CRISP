@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import './ChangePassword.css';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
 function ChangePassword({ isOpen, onClose, onPasswordChanged }) {
   const [username, setUsername] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
@@ -22,7 +24,7 @@ function ChangePassword({ isOpen, onClose, onPasswordChanged }) {
 
     try {
       // Make API call to change password
-      const response = await fetch('http://localhost:8000/api/auth/change-password/', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/change-password/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

@@ -80,3 +80,5 @@ deploy-production.sh
 logs/
 *.log
 data/
+
+data_defenders

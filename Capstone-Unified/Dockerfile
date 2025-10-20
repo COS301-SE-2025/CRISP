@@ -59,6 +59,9 @@ EXPOSE 8000
 
 # Production backend with static files
 FROM backend AS production
+# Copy frontend build to staticfiles directly (bypass collectstatic for frontend)
+COPY --from=frontend-builder /app/frontend/dist /app/staticfiles/react
+# Also copy to static for collectstatic to process Django's own static files
 COPY --from=frontend-builder /app/frontend/dist /app/static/react
 RUN python manage.py collectstatic --noinput
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120", "settings.wsgi:application"]
