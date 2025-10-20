@@ -9,7 +9,8 @@
 
 1. **Set PostgreSQL password**
 ```bash
-sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'AdminPass123!';"
+# Replace 'your_secure_password' with a strong password
+sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'your_secure_password';"
 ```
 
 2. **Create database**
@@ -19,12 +20,23 @@ sudo -u postgres psql -c "CREATE DATABASE crisp_trust_db;"
 
 3. **Test connection**
 ```bash
-PGPASSWORD='AdminPass123!' psql -h localhost -U postgres -d crisp_trust_db -c "SELECT version();"
+# Use the password you set in step 1
+PGPASSWORD='your_secure_password' psql -h localhost -U postgres -d crisp_trust_db -c "SELECT version();"
 ```
 
 ## Django Setup
 
-4. **Install dependencies**
+4. **Configure environment variables**
+```bash
+# Copy the example environment file
+cp .env.example .env
+
+# Edit .env with your settings
+# Update DB_PASSWORD to match the password from step 1
+nano .env
+```
+
+5. **Install dependencies**
 ```bash
 pip3 install -r requirements.txt
 ```
@@ -49,12 +61,20 @@ python3 manage.py runserver
 - Main App: http://127.0.0.1:8000/
 
 ## Environment Variables
-Ensure `.env` file exists with:
+Create `.env` file from template:
+```bash
+cp .env.example .env
 ```
+
+Edit `.env` with your settings:
+```bash
 DB_NAME=crisp_trust_db
 DB_USER=postgres
-DB_PASSWORD=AdminPass123!
+DB_PASSWORD=your_secure_password  # Use the password from step 1
 DB_HOST=localhost
 DB_PORT=5432
 DEBUG=True
+DJANGO_SECRET_KEY=your-generated-secret-key  # Generate with: python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())'
 ```
+
+⚠️ **Never commit `.env` to git - it's already in .gitignore**

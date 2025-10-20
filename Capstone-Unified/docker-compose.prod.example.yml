@@ -1,0 +1,105 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: crisp_production
+      POSTGRES_USER: crisp_production
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}  # Set in .env file
+      POSTGRES_HOST_AUTH_METHOD: md5
+    command: [
+      "postgres",
+      "-c", "fsync=on",
+      "-c", "synchronous_commit=on",
+      "-c", "full_page_writes=on",
+      "-c", "max_wal_size=1GB",
+      "-c", "checkpoint_completion_target=0.9",
+      "-c", "wal_buffers=16MB",
+      "-c", "shared_buffers=256MB",
+      "-c", "max_connections=100"
+    ]
+    volumes:
+      - postgres_production_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crisp_production -d crisp_production"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - crisp-production
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_production_data:/data
+    restart: unless-stopped
+    networks:
+      - crisp-production
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # CRISP Production Application with test data
+  app:
+    image: datadefenders/crisp-dev:latest
+    command: sh -c "python manage.py migrate && python manage.py setup_base_users && python manage.py populate_database --no-input && python manage.py cleanup_feeds --force && python manage.py setup_virustotal_feed --with-samples && python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:8000 --workers 2 --threads 4 --timeout 300 --max-requests 1000 --max-requests-jitter 50 settings.wsgi:application"
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=${DJANGO_SECRET_KEY}  # Set in .env file
+      - DB_NAME=crisp_production
+      - DB_USER=crisp_production
+      - DB_PASSWORD=${POSTGRES_PASSWORD}  # Set in .env file
+      - DB_HOST=db
+      - DB_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-data-defenders.co.za,www.data-defenders.co.za,localhost,app}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-https://data-defenders.co.za,https://www.data-defenders.co.za}
+      - POPULATE_TEST_DATA=true
+    volumes:
+      - ./logs:/app/logs
+      - ./media:/app/media
+      - ./backups:/app/backups
+      - static_volume:/app/staticfiles
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - crisp-production
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx-production.conf:/etc/nginx/nginx.conf:ro
+      - static_volume:/usr/share/nginx/html/static:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - app
+    restart: unless-stopped
+    networks:
+      - crisp-production
+
+volumes:
+  postgres_production_data:
+    driver: local
+  redis_production_data:
+    driver: local
+  static_volume:
+    driver: local
+
+networks:
+  crisp-production:
+    driver: bridge

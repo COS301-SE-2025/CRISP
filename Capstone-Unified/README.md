@@ -185,34 +185,46 @@ sudo apt install postgresql postgresql-contrib
 sudo systemctl start postgresql
 sudo systemctl enable postgresql
 
-# Set password for postgres user
-sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'AdminPass123!';"
+# Set password for postgres user (use a strong password)
+sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'your_secure_password';"
 
 # Create database
 sudo -u postgres createdb crisp_unified
 
-# Test connection
-PGPASSWORD='AdminPass123!' psql -h localhost -U postgres -d crisp_unified -c "SELECT version();"
+# Test connection (use the password you set above)
+PGPASSWORD='your_secure_password' psql -h localhost -U postgres -d crisp_unified -c "SELECT version();"
 ```
 
 #### Environment Configuration
-Ensure your `.env` file contains:
+Create `.env` from the template:
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your settings:
 ```bash
 # Database
 DB_NAME=crisp_unified
 DB_USER=postgres
-DB_PASSWORD=AdminPass123!
+DB_PASSWORD=your_secure_password  # Match the password from above
 DB_HOST=localhost
 DB_PORT=5432
 
 # Django
 DEBUG=True
-SECRET_KEY=(your-secret-key)
+SECRET_KEY=(generate-with-python-command-below)
 ALLOWED_HOSTS=localhost,127.0.0.1
 
 # Email (for testing)
 EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
 ```
+
+Generate a secure SECRET_KEY:
+```bash
+python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())'
+```
+
+⚠️ **IMPORTANT:** Never commit `.env` to git!
 
 ### Backend Dependencies
 ```bash

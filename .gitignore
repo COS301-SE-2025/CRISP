@@ -69,12 +69,19 @@ staticfiles/
 secrets/
 .secrets
 
-# Production deployment files (keep templates only)
+# Production deployment files (keep .example templates only)
 docker-compose.production.yml
+docker-compose.prod.yml
 nginx.conf
 nginx-ssl.conf
+nginx-production.conf
 setup-server.sh
 deploy-production.sh
+.env.production
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # Logs and data
 logs/
