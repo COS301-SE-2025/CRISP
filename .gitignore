@@ -69,6 +69,15 @@ staticfiles/
 secrets/
 .secrets
 
+# SSH Keys - NEVER COMMIT THESE
+data_defenders
+data_defenders.pub
+*.ppk
+id_rsa*
+id_ed25519*
+id_dsa*
+id_ecdsa*
+
 # Production deployment files (keep templates only)
 docker-compose.production.yml
 nginx.conf
