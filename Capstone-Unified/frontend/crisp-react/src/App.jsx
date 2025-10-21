@@ -1186,22 +1186,22 @@ function Dashboard({ active, showPage, user }) {
   // Dashboard stats are refreshed via RefreshManager subscription above
   // No separate interval needed to avoid conflicts
 
-  // Auto-refresh system health every 5 minutes - only if user is authenticated
+  // Auto-refresh system health every second for real-time monitoring
   useEffect(() => {
     if (!active) return;
     
     const token = localStorage.getItem('crisp_auth_token');
     if (!token) return;
     
-    // DISABLED FOR PERFORMANCE - Use RefreshManager instead
-    // const interval = setInterval(() => {
-    //   const currentToken = localStorage.getItem('crisp_auth_token');
-    //   if (currentToken) {
-    //     fetchSystemHealth();
-    //   }
-    // }, 5 * 60 * 1000);
+    // Real-time update interval (1 second)
+    const interval = setInterval(() => {
+      const currentToken = localStorage.getItem('crisp_auth_token');
+      if (currentToken) {
+        fetchSystemHealth();
+      }
+    }, 1000); // Update every second
 
-    // return () => clearInterval(interval);
+    return () => clearInterval(interval);
   }, [active]);
   
   const fetchDashboardData = async () => {
