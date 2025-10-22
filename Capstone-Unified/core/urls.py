@@ -209,12 +209,24 @@ behavior_analytics_urlpatterns = [
     path('logs/download/', behavior_analytics_api.download_system_logs, name='download_system_logs'),
 ]
 
+# Trust Management URLs (for frontend API compatibility)
+trust_management_urlpatterns = [
+    path('groups/', trust_api.trust_groups, name='trust_management_groups'),
+    path('groups/<uuid:group_id>/', trust_api.trust_group_detail, name='trust_management_group_detail'),
+    path('groups/<uuid:group_id>/join/', trust_api.join_trust_group, name='trust_management_join_group'),
+    path('groups/<uuid:group_id>/add_organization/', trust_api.add_organization_to_trust_group, name='trust_management_add_organization'),
+    path('groups/<uuid:group_id>/remove_organization/<uuid:organization_id>/', trust_api.remove_organization_from_trust_group, name='trust_management_remove_organization'),
+    path('groups/<uuid:group_id>/members/', trust_api.trust_group_members, name='trust_management_group_members'),
+    path('metrics/', trust_api.trust_metrics, name='trust_management_metrics'),
+]
+
 # Main URL patterns
 urlpatterns = [
     path('', status_view, name='core-status'),
     path('auth/', include(auth_urlpatterns)),
     path('users/', include(user_urlpatterns)),
     path('trust/', include(trust_urlpatterns)),
+    path('trust-management/', include(trust_management_urlpatterns)), # Trust Management URLs (frontend compatibility)
     path('organizations/', include(organization_urlpatterns)),
     path('ttps/', include(ttp_urlpatterns)), # TTP URLs
     path('reports/', include(reports_urlpatterns)), # Reports URLs

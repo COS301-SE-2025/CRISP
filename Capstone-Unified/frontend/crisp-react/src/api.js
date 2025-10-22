@@ -665,6 +665,20 @@ export const addOrganizationToTrustGroup = async (groupId, organizationId) => {
   return await response.json();
 };
 
+export const removeOrganizationFromTrustGroup = async (groupId, organizationId) => {
+  const response = await fetch(`${API_BASE_URL}/api/trust-management/groups/${groupId}/remove_organization/${organizationId}/`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to remove organization from trust group');
+  }
+
+  return await response.json();
+};
+
 export const getTrustGroupMembers = async (groupId) => {
   const response = await fetch(`${API_BASE_URL}/api/trust-management/groups/${groupId}/members/`, {
     method: 'GET',

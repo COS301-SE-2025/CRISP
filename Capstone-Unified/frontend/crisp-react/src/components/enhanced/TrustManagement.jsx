@@ -259,7 +259,8 @@ function TrustManagement({ active, initialTab = null }) {
 
       setTrustData({
         relationships: extractedRelationships,
-        groups: Array.isArray(groupsResponse.results?.data) ? groupsResponse.results.data :
+        groups: Array.isArray(groupsResponse.groups) ? groupsResponse.groups :
+                Array.isArray(groupsResponse.results?.data) ? groupsResponse.results.data :
                 Array.isArray(groupsResponse.results?.community_trusts) ? groupsResponse.results.community_trusts :
                 (groupsResponse.results?.success && Array.isArray(groupsResponse.results?.data)) ? groupsResponse.results.data :
                 Array.isArray(groupsResponse.community_trusts) ? groupsResponse.community_trusts :
@@ -293,6 +294,29 @@ function TrustManagement({ active, initialTab = null }) {
       setError('Failed to load trust data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRemoveOrganization = async (groupId, organizationId) => {
+    try {
+      setMembersLoading(true);
+      await api.removeOrganizationFromTrustGroup(groupId, organizationId);
+      
+      // Refresh the members list
+      const response = await api.getTrustGroupMembers(groupId);
+      if (response.success) {
+        setGroupMembers(response.data.members || []);
+      }
+      
+      setSuccess('Organization removed from group successfully');
+      setTimeout(() => setSuccess(null), 5000);
+      
+    } catch (error) {
+      console.error('Error removing organization from group:', error);
+      setError(`Failed to remove organization: ${error.message || error}`);
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setMembersLoading(false);
     }
   };
 
@@ -611,6 +635,7 @@ function TrustManagement({ active, initialTab = null }) {
           closeModal();
           console.log('🔄 UPDATE SUCCESS: Clearing trust cache and refreshing data...');
           api.clearCacheForEndpoint('/api/trust/');
+          api.clearCacheForEndpoint('/api/trust-management/');
           await fetchTrustData(true);
           
         } catch (error) {
@@ -2108,7 +2133,7 @@ function TrustManagement({ active, initialTab = null }) {
                           {member.approved_by && <span> • Approved by: {member.approved_by}</span>}
                         </div>
                       </div>
-                      <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <span style={{
                           padding: '0.25rem 0.5rem',
                           borderRadius: '4px',
@@ -2120,6 +2145,26 @@ function TrustManagement({ active, initialTab = null }) {
                         }}>
                           {member.membership_type}
                         </span>
+                        <button
+                          onClick={() => handleRemoveOrganization(selectedGroup.id, member.id)}
+                          style={{
+                            padding: '0.25rem 0.5rem',
+                            backgroundColor: '#dc3545',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem'
+                          }}
+                          onMouseEnter={(e) => e.target.style.backgroundColor = '#c82333'}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = '#dc3545'}
+                          title="Remove organization from group"
+                        >
+                          🗑️ Remove
+                        </button>
                       </div>
                     </div>
                   </div>

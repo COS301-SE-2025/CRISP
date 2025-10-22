@@ -12,7 +12,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from core.models.models import TrustRelationship, Organization, TrustLevel
-from core.trust_management.models import TrustGroup
+from core.trust_management.models import TrustGroup, TrustGroupMembership
 from core.user_management.models import CustomUser
 from core.services.trust_service import TrustService
 from core.services.access_control_service import AccessControlService
@@ -602,4 +602,433 @@ def list_trust_levels(request):
         return Response({
             'success': False,
             'message': 'Failed to list trust levels'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def trust_groups(request):
+    """List trust groups or create a new trust group"""
+    if request.method == 'GET':
+        try:
+            groups = TrustGroup.objects.filter(is_active=True)
+            serializer = TrustGroupSerializer(groups, many=True)
+            return Response({
+                'success': True,
+                'groups': serializer.data,
+                'count': groups.count()
+            })
+        except Exception as e:
+            logger.error(f"Error listing trust groups: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Failed to list trust groups'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    elif request.method == 'POST':
+        try:
+            data = request.data
+            required_fields = ['name', 'description']
+            
+            for field in required_fields:
+                if field not in data:
+                    return Response({
+                        'success': False,
+                        'message': f'Missing required field: {field}'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Create the trust group
+            group = TrustGroup.objects.create(
+                name=data['name'],
+                description=data['description'],
+                created_by=request.user.organization.name if request.user.organization else str(request.user.id),
+                is_active=True
+            )
+            
+            # Add creator's organization as a member
+            if request.user.organization:
+                TrustGroupMembership.objects.create(
+                    trust_group=group,
+                    organization=request.user.organization,
+                    membership_type='administrator',
+                    is_active=True
+                )
+            
+            serializer = TrustGroupSerializer(group)
+            return Response({
+                'success': True,
+                'group': serializer.data,
+                'message': 'Trust group created successfully'
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            logger.error(f"Error creating trust group: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Failed to create trust group'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def trust_group_detail(request, group_id):
+    """Get, update, or delete a specific trust group"""
+    try:
+        group = TrustGroup.objects.get(id=group_id, is_active=True)
+    except TrustGroup.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'Trust group not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    if request.method == 'GET':
+        serializer = TrustGroupSerializer(group)
+        return Response({
+            'success': True,
+            'group': serializer.data
+        })
+    
+    elif request.method == 'PUT':
+        try:
+            # Check if user has permission to update (admin or staff)
+            user_is_admin = False
+            if request.user.organization:
+                user_is_admin = group.group_memberships.filter(
+                    organization=request.user.organization,
+                    membership_type='administrator',
+                    is_active=True
+                ).exists()
+            
+            if not user_is_admin and not request.user.is_staff:
+                return Response({
+                    'success': False,
+                    'message': 'Permission denied'
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            data = request.data
+            if 'name' in data:
+                group.name = data['name']
+            if 'description' in data:
+                group.description = data['description']
+            
+            group.save()
+            
+            serializer = TrustGroupSerializer(group)
+            return Response({
+                'success': True,
+                'group': serializer.data,
+                'message': 'Trust group updated successfully'
+            })
+            
+        except Exception as e:
+            logger.error(f"Error updating trust group: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Failed to update trust group'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    elif request.method == 'DELETE':
+        try:
+            # Check if user has permission to delete (admin or staff)
+            user_is_admin = False
+            if request.user.organization:
+                user_is_admin = group.group_memberships.filter(
+                    organization=request.user.organization,
+                    membership_type='administrator',
+                    is_active=True
+                ).exists()
+            
+            if not user_is_admin and not request.user.is_staff:
+                return Response({
+                    'success': False,
+                    'message': 'Permission denied'
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            group.is_active = False
+            group.save()
+            
+            return Response({
+                'success': True,
+                'message': 'Trust group deleted successfully'
+            })
+            
+        except Exception as e:
+            logger.error(f"Error deleting trust group: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Failed to delete trust group'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def join_trust_group(request, group_id):
+    """Join a trust group"""
+    try:
+        group = TrustGroup.objects.get(id=group_id, is_active=True)
+        
+        if not request.user.organization:
+            return Response({
+                'success': False,
+                'message': 'User must be associated with an organization'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if organization is already a member
+        existing_membership = group.group_memberships.filter(
+            organization=request.user.organization,
+            is_active=True
+        ).exists()
+        
+        if existing_membership:
+            return Response({
+                'success': False,
+                'message': 'Organization is already a member of this group'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Create membership
+        TrustGroupMembership.objects.create(
+            trust_group=group,
+            organization=request.user.organization,
+            membership_type='member',
+            is_active=True
+        )
+        
+        return Response({
+            'success': True,
+            'message': 'Successfully joined trust group'
+        })
+        
+    except TrustGroup.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'Trust group not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error joining trust group: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to join trust group'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def trust_group_members(request, group_id):
+    """Get members of a trust group"""
+    try:
+        group = TrustGroup.objects.get(id=group_id, is_active=True)
+        memberships = group.group_memberships.filter(is_active=True).select_related('organization')
+        members = [membership.organization for membership in memberships]
+        
+        from core.serializers.organization_serializer import OrganizationSerializer
+        serializer = OrganizationSerializer(members, many=True)
+        
+        return Response({
+            'success': True,
+            'data': {
+                'members': serializer.data,
+                'count': len(members)
+            }
+        })
+        
+    except TrustGroup.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'Trust group not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error getting trust group members: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to get trust group members'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def trust_metrics(request):
+    """Get trust metrics"""
+    try:
+        # Basic trust metrics
+        total_relationships = TrustRelationship.objects.filter(is_active=True).count()
+        total_groups = TrustGroup.objects.filter(is_active=True).count()
+        user_org_relationships = TrustRelationship.objects.filter(
+            source_organization=request.user.organization,
+            is_active=True
+        ).count() if request.user.organization else 0
+        
+        return Response({
+            'success': True,
+            'metrics': {
+                'total_relationships': total_relationships,
+                'total_groups': total_groups,
+                'user_organization_relationships': user_org_relationships,
+                'trust_levels': TrustLevel.objects.filter(is_active=True).count()
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting trust metrics: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to get trust metrics'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_organization_to_trust_group(request, group_id):
+    """Add an organization to a trust group"""
+    try:
+        group = TrustGroup.objects.get(id=group_id, is_active=True)
+        
+        # Check if user has permission (admin or staff)
+        user_is_admin = False
+        if request.user.organization:
+            user_is_admin = group.group_memberships.filter(
+                organization=request.user.organization,
+                membership_type='administrator',
+                is_active=True
+            ).exists()
+        
+        if not user_is_admin and not request.user.is_staff:
+            return Response({
+                'success': False,
+                'message': 'Permission denied'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        data = request.data
+        logger.info(f"Add organization request data: {data}")
+        organization_id = data.get('organization_id')
+        
+        if not organization_id:
+            logger.warning(f"Missing organization_id in request data: {data}")
+            return Response({
+                'success': False,
+                'message': 'organization_id is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            organization = Organization.objects.get(id=organization_id)
+        except Organization.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Organization not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if organization is already a member
+        existing_membership = group.group_memberships.filter(
+            organization=organization,
+            is_active=True
+        ).exists()
+        
+        if existing_membership:
+            return Response({
+                'success': False,
+                'message': 'Organization is already a member of this group'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Create membership
+        membership_type = data.get('membership_type', 'member')
+        if membership_type not in ['member', 'administrator', 'moderator']:
+            membership_type = 'member'
+        
+        TrustGroupMembership.objects.create(
+            trust_group=group,
+            organization=organization,
+            membership_type=membership_type,
+            is_active=True
+        )
+        
+        return Response({
+            'success': True,
+            'message': f'Organization {organization.name} added to trust group successfully'
+        }, status=status.HTTP_201_CREATED)
+        
+    except TrustGroup.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'Trust group not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error adding organization to trust group: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to add organization to trust group'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def remove_organization_from_trust_group(request, group_id, organization_id):
+    """Remove an organization from a trust group"""
+    try:
+        group = TrustGroup.objects.get(id=group_id, is_active=True)
+        
+        # Check if user has permission (admin or staff)
+        user_is_admin = False
+        if request.user.organization:
+            user_is_admin = group.group_memberships.filter(
+                organization=request.user.organization,
+                membership_type='administrator',
+                is_active=True
+            ).exists()
+        
+        if not user_is_admin and not request.user.is_staff:
+            return Response({
+                'success': False,
+                'message': 'Permission denied'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            organization = Organization.objects.get(id=organization_id)
+        except Organization.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Organization not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Find and deactivate membership
+        membership = group.group_memberships.filter(
+            organization=organization,
+            is_active=True
+        ).first()
+        
+        if not membership:
+            return Response({
+                'success': False,
+                'message': 'Organization is not a member of this group'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Prevent removing the last administrator
+        admin_count = group.group_memberships.filter(
+            membership_type='administrator',
+            is_active=True
+        ).count()
+        
+        if membership.membership_type == 'administrator' and admin_count <= 1:
+            return Response({
+                'success': False,
+                'message': 'Cannot remove the last administrator from the group'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Deactivate membership
+        membership.is_active = False
+        membership.save()
+        
+        return Response({
+            'success': True,
+            'message': f'Organization {organization.name} removed from trust group successfully'
+        })
+        
+    except TrustGroup.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'Trust group not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error removing organization from trust group: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to remove organization from trust group'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
