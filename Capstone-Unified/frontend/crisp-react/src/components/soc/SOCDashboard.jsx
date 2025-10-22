@@ -1426,7 +1426,7 @@ const SOCDashboard = ({ active, showPage }) => {
                   <div style={{ borderTop: '1px solid var(--medium-gray)', paddingTop: '1rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
-                        <div style={{ fontSize: '0.875rem', color: 'white' }}>Threat Level</div>
+                        <div style={{ fontSize: '0.875rem', color: 'black' }}>Threat Level</div>
                         <span style={{
                           backgroundColor: threatIntelligence.threat_level === 'High' ? 'var(--danger)' : 
                                          threatIntelligence.threat_level === 'Medium' ? 'var(--info)' : 'var(--medium-gray)',
@@ -1625,7 +1625,7 @@ const SOCDashboard = ({ active, showPage }) => {
                   }}>
                     <div>
                       <div style={{ fontWeight: '600', fontSize: '0.875rem', marginBottom: '0.25rem' }}>{feed.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'white' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'black' }}>
                         {feed.indicator_count} indicators
                       </div>
                     </div>
@@ -1633,7 +1633,7 @@ const SOCDashboard = ({ active, showPage }) => {
                       <span style={{
                         backgroundColor: feed.status === 'success' ? 'var(--medium-gray)' : 
                                        feed.status === 'processing' ? 'var(--info)' : 'var(--danger)',
-                        color: 'white',
+                        color: 'black',
                         padding: '0.25rem 0.5rem',
                         borderRadius: '8px',
                         fontSize: '0.7rem',

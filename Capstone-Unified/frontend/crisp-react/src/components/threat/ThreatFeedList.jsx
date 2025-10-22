@@ -710,7 +710,7 @@ const ThreatFeedList = () => {
         .stat-number {
           font-size: 18px;
           font-weight: 600;
-          color: #333;
+          color: #000;
         }
 
         .stat-label {
