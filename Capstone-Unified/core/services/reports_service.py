@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 from django.db.models import Q, Count, Avg, Max, Min
 from django.utils import timezone
-from core.models.models import Organization, Indicator, TTPData, TrustRelationship, ThreatFeed, Report
+from core.models.models import Organization, Indicator, TTPData, TrustRelationship, ThreatFeed, Report, IndicatorSharingRelationship
 from .access_control_service import AccessControlService
 from .trust_service import TrustService
 
@@ -345,51 +345,135 @@ class ReportsService:
         return list(queryset)
     
     def _get_sector_indicators(self, org_ids: List[str], start_date: datetime, end_date: datetime) -> List[Indicator]:
-        """Get IoC indicators from all active threat feeds (not limited to organization-owned feeds)."""
+        """
+        Get IoC indicators accessible to sector organizations through trust relationships.
+
+        This method implements trust-based filtering where sector reports include:
+        1. Indicators from threat feeds owned by sector organizations
+        2. Indicators from threat feeds owned by trusted partner organizations
+        3. Indicators explicitly shared via IndicatorSharingRelationship
+
+        This ensures reports show sector-specific threat intelligence based on
+        the organization's trust network, reflecting real-world information sharing.
+        """
         try:
-            # Get all active threat feeds (including external feeds like AlienVault)
-            # This ensures we include indicators from external sources that benefit all organizations
-            threat_feeds = ThreatFeed.objects.filter(
+            from django.db.models import Q
+
+            # Build trust network - start with sector organizations
+            trusted_org_ids = set(org_ids)
+
+            # Add organizations connected via active trust relationships
+            # This creates a "trust circle" where organizations share threat intelligence
+            trust_relationships = TrustRelationship.objects.filter(
+                Q(source_organization_id__in=org_ids) | Q(target_organization_id__in=org_ids),
+                status='active',
                 is_active=True
+            ).select_related('source_organization', 'target_organization')
+
+            for trust_rel in trust_relationships:
+                # Add both source and target organizations (bidirectional trust)
+                trusted_org_ids.add(str(trust_rel.source_organization_id))
+                trusted_org_ids.add(str(trust_rel.target_organization_id))
+
+            logger.info(f"Sector trust network: {len(org_ids)} base orgs expanded to {len(trusted_org_ids)} trusted orgs")
+
+            # Get threat feeds from organizations within the trust network
+            threat_feeds = ThreatFeed.objects.filter(
+                is_active=True,
+                owner_id__in=trusted_org_ids  # Only feeds from trusted organizations
             )
 
             feed_ids = [str(tf.id) for tf in threat_feeds]
+            logger.info(f"Found {len(feed_ids)} threat feeds in trust network")
 
-            # Get indicators from these feeds within date range
+            # Get indicators from trust-accessible feeds within date range
             indicators = Indicator.objects.filter(
                 threat_feed_id__in=feed_ids,
                 created_at__gte=start_date,
                 created_at__lte=end_date
-            ).select_related('threat_feed')
+            ).select_related('threat_feed', 'threat_feed__owner')
 
-            return list(indicators)
-            
+            # Also include indicators explicitly shared with sector organizations
+            # This handles cases where specific IoCs are shared outside normal trust relationships
+            shared_indicator_ids = IndicatorSharingRelationship.objects.filter(
+                target_organization_id__in=org_ids,
+                is_active=True
+            ).values_list('indicator_id', flat=True)
+
+            if shared_indicator_ids:
+                shared_indicators = Indicator.objects.filter(
+                    id__in=shared_indicator_ids,
+                    created_at__gte=start_date,
+                    created_at__lte=end_date
+                ).select_related('threat_feed', 'threat_feed__owner')
+
+                # Combine and deduplicate using union
+                all_indicators = list(indicators.union(shared_indicators))
+                logger.info(f"Found {len(all_indicators)} indicators ({len(indicators)} from feeds + {len(shared_indicators)} explicitly shared)")
+            else:
+                all_indicators = list(indicators)
+                logger.info(f"Found {len(all_indicators)} indicators from trust network feeds")
+
+            return all_indicators
+
         except Exception as e:
-            logger.error(f"Error fetching sector indicators: {str(e)}")
+            logger.error(f"Error fetching sector indicators: {str(e)}", exc_info=True)
             return []
     
     def _get_sector_ttps(self, org_ids: List[str], start_date: datetime, end_date: datetime) -> List[TTPData]:
-        """Get TTP data from all active threat feeds (not limited to organization-owned feeds)."""
+        """
+        Get TTP data accessible to sector organizations through trust relationships.
+
+        This method implements trust-based filtering where sector reports include:
+        1. TTPs from threat feeds owned by sector organizations
+        2. TTPs from threat feeds owned by trusted partner organizations
+
+        This ensures reports show sector-specific attack techniques based on
+        the organization's trust network, reflecting real-world information sharing.
+        """
         try:
-            # Get all active threat feeds (including external feeds like AlienVault)
-            # This ensures we include TTPs from external sources that benefit all organizations
-            threat_feeds = ThreatFeed.objects.filter(
+            from django.db.models import Q
+
+            # Build trust network - start with sector organizations
+            trusted_org_ids = set(org_ids)
+
+            # Add organizations connected via active trust relationships
+            # This creates a "trust circle" where organizations share threat intelligence
+            trust_relationships = TrustRelationship.objects.filter(
+                Q(source_organization_id__in=org_ids) | Q(target_organization_id__in=org_ids),
+                status='active',
                 is_active=True
+            ).select_related('source_organization', 'target_organization')
+
+            for trust_rel in trust_relationships:
+                # Add both source and target organizations (bidirectional trust)
+                trusted_org_ids.add(str(trust_rel.source_organization_id))
+                trusted_org_ids.add(str(trust_rel.target_organization_id))
+
+            logger.info(f"Sector trust network for TTPs: {len(trusted_org_ids)} trusted organizations")
+
+            # Get threat feeds from organizations within the trust network
+            threat_feeds = ThreatFeed.objects.filter(
+                is_active=True,
+                owner_id__in=trusted_org_ids  # Only feeds from trusted organizations
             )
 
             feed_ids = [str(tf.id) for tf in threat_feeds]
+            logger.info(f"Found {len(feed_ids)} threat feeds in trust network for TTPs")
 
-            # Get TTPs from these feeds within date range
+            # Get TTPs from trust-accessible feeds within date range
             ttps = TTPData.objects.filter(
                 threat_feed_id__in=feed_ids,
                 created_at__gte=start_date,
                 created_at__lte=end_date
-            ).select_related('threat_feed')
+            ).select_related('threat_feed', 'threat_feed__owner')
+
+            logger.info(f"Found {len(ttps)} TTPs from trust network feeds")
 
             return list(ttps)
-            
+
         except Exception as e:
-            logger.error(f"Error fetching sector TTPs: {str(e)}")
+            logger.error(f"Error fetching sector TTPs: {str(e)}", exc_info=True)
             return []
     
     def _analyze_trust_relationships(self, organizations: List[Organization]) -> Dict[str, Any]:
@@ -552,11 +636,10 @@ class ReportsService:
         return description
     
     def _calculate_report_views(self) -> int:
-        """Calculate/mock report view count."""
-        # For now, return a realistic mock value
-        # In production, this would track actual view counts
-        import random
-        return random.randint(50, 300)
+        """Calculate report view count."""
+        # View count is tracked on the Report model instance
+        # This returns 0 for new reports and will be updated when viewed
+        return 0
 
     def _extract_target_organization(self, threat_feed_name: str) -> str:
         """Extract target organization from threat feed name."""
