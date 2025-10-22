@@ -14,8 +14,8 @@ echo "Setting up base users..."
 python manage.py setup_base_users
 
 if [ "$POPULATE_TEST_DATA" = "true" ]; then
-    echo "Populating test data..."
-    python manage.py populate_database --no-input
+    echo "Populating test data (preserving existing data)..."
+    python manage.py populate_database --no-input --preserve-existing
 fi
 
 echo "Cleaning up invalid feeds..."

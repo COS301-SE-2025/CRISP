@@ -83,6 +83,11 @@ class Command(BaseCommand):
             action='store_true',
             help='Run without user confirmation',
         )
+        parser.add_argument(
+            '--preserve-existing',
+            action='store_true',
+            help='Skip clearing existing data (preserve user-created trust relationships)',
+        )
 
     def handle(self, *args, **options):
         start_time = time.time()
@@ -115,17 +120,26 @@ class Command(BaseCommand):
         
         try:
             # Run all phases with progress tracking
-            phases = [
-                ("Phase 1/9: Clearing Data", self.clear_existing_data),
-                ("Phase 2/9: Trust Levels", self.create_trust_levels),
-                ("Phase 3/9: Organizations", self.create_organizations),
-                ("Phase 4/9: Super Admins", self.create_super_admin_users),
-                ("Phase 5/9: Users", self.create_users),
-                ("Phase 6/9: Trust Relationships", self.create_trust_relationships),
-                ("Phase 7/9: Trust Groups", self.create_trust_groups),
-                ("Phase 8/9: User Sessions", self.create_user_sessions),
-                ("Phase 9/9: Threat Feeds", self.create_threat_feeds),
-            ]
+            phases = []
+            
+            # Conditionally add clearing phase
+            if not options['preserve_existing']:
+                phases.append(("Phase 1/9: Clearing Data", self.clear_existing_data))
+                phase_offset = 1
+            else:
+                phase_offset = 0
+                self.stdout.write("🛡️  PRESERVING EXISTING DATA - Skipping clear phase")
+            
+            phases.extend([
+                (f"Phase {1+phase_offset}/9: Trust Levels", self.create_trust_levels),
+                (f"Phase {2+phase_offset}/9: Organizations", self.create_organizations),
+                (f"Phase {3+phase_offset}/9: Super Admins", self.create_super_admin_users),
+                (f"Phase {4+phase_offset}/9: Users", self.create_users),
+                (f"Phase {5+phase_offset}/9: Trust Relationships", self.create_trust_relationships),
+                (f"Phase {6+phase_offset}/9: Trust Groups", self.create_trust_groups),
+                (f"Phase {7+phase_offset}/9: User Sessions", self.create_user_sessions),
+                (f"Phase {8+phase_offset}/9: Threat Feeds", self.create_threat_feeds),
+            ])
             
             self.stdout.write(f"\nExecuting {len(phases)} phases...")
             
