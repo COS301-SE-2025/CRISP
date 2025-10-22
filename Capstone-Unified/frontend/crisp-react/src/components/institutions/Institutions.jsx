@@ -8,6 +8,10 @@ const Institutions = ({ active, api, showPage, user }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedOrg, setSelectedOrg] = useState(null);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [groupModalMode, setGroupModalMode] = useState('view'); // 'view' or 'edit'
+  const [editFormData, setEditFormData] = useState({});
+  const [saving, setSaving] = useState(false);
   const [activeView, setActiveView] = useState('overview');
   
   // D3 chart refs
@@ -30,6 +34,20 @@ const Institutions = ({ active, api, showPage, user }) => {
       createCharts();
     }
   }, [organizations, trustRelationships, activeView, loading]);
+
+  // Handle body scroll lock when modal is open
+  useEffect(() => {
+    if (selectedGroup || selectedOrg) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    // Cleanup function to reset scroll when component unmounts
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [selectedGroup, selectedOrg]);
 
   const fetchData = async () => {
     try {
@@ -450,6 +468,60 @@ const Institutions = ({ active, api, showPage, user }) => {
 
     g.append('g')
       .call(d3.axisLeft(yScale));
+  };
+
+  const handleViewGroup = (group) => {
+    setSelectedGroup(group);
+    setGroupModalMode('view');
+    setEditFormData({});
+  };
+
+  const handleEditGroup = (group) => {
+    setSelectedGroup(group);
+    setGroupModalMode('edit');
+    setEditFormData({
+      name: group.name || '',
+      description: group.description || '',
+      group_type: group.group_type || ''
+    });
+  };
+
+  const handleSaveGroup = async () => {
+    if (!selectedGroup) return;
+    
+    try {
+      setSaving(true);
+      
+      // Call API to update group
+      const response = await api.updateTrustGroup(selectedGroup.id, editFormData);
+      
+      if (response.success) {
+        // Update the group in the list
+        setTrustGroups(prev => prev.map(group => 
+          group.id === selectedGroup.id 
+            ? { ...group, ...editFormData }
+            : group
+        ));
+        
+        // Update selected group
+        setSelectedGroup({ ...selectedGroup, ...editFormData });
+        setGroupModalMode('view');
+        
+        // Show success message (you could add a toast notification here)
+        console.log('Group updated successfully');
+      } else {
+        console.error('Failed to update group:', response.message);
+      }
+    } catch (error) {
+      console.error('Error updating group:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setGroupModalMode('view');
+    setEditFormData({});
   };
 
   if (!active) return null;
@@ -1134,10 +1206,18 @@ const Institutions = ({ active, api, showPage, user }) => {
                   )}
                   
                   <div style={{display: 'flex', gap: '0.5rem', marginTop: '1rem'}}>
-                    <button className="btn btn-sm btn-outline" style={{flex: 1}}>
+                    <button 
+                      className="btn btn-sm btn-outline" 
+                      style={{flex: 1}}
+                      onClick={() => handleViewGroup(group)}
+                    >
                       <i className="fas fa-eye"></i> View Details
                     </button>
-                    <button className="btn btn-sm btn-outline" style={{flex: 1}}>
+                    <button 
+                      className="btn btn-sm btn-outline" 
+                      style={{flex: 1}}
+                      onClick={() => handleEditGroup(group)}
+                    >
                       <i className="fas fa-edit"></i> Edit
                     </button>
                   </div>
@@ -1210,11 +1290,365 @@ const Institutions = ({ active, api, showPage, user }) => {
         </div>
       )}
 
+      {selectedGroup && (
+        <div className="modal-overlay">
+          <div className="modal large">
+            <div className="modal-header">
+              <h3>{selectedGroup.name}</h3>
+              <button 
+                className="close-btn"
+                onClick={() => setSelectedGroup(null)}
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="org-detail-grid">
+                <div className="detail-section">
+                  <h4>Group Information</h4>
+                  {groupModalMode === 'view' ? (
+                    <>
+                      <div className="detail-row">
+                        <label>Name:</label>
+                        <span>{selectedGroup.name}</span>
+                      </div>
+                      <div className="detail-row">
+                        <label>Description:</label>
+                        <span>{selectedGroup.description || 'No description provided'}</span>
+                      </div>
+                      <div className="detail-row">
+                        <label>Group Type:</label>
+                        <span>{selectedGroup.group_type || 'Not specified'}</span>
+                      </div>
+                      <div className="detail-row">
+                        <label>Default Trust Level:</label>
+                        <span>{selectedGroup.default_trust_level?.name || selectedGroup.default_trust_level || 'Not set'}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="detail-row">
+                        <label>Name:</label>
+                        <input
+                          type="text"
+                          value={editFormData.name || ''}
+                          onChange={(e) => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
+                          className="form-input"
+                          placeholder="Enter group name"
+                        />
+                      </div>
+                      <div className="detail-row">
+                        <label>Description:</label>
+                        <textarea
+                          value={editFormData.description || ''}
+                          onChange={(e) => setEditFormData(prev => ({ ...prev, description: e.target.value }))}
+                          className="form-textarea"
+                          placeholder="Enter group description"
+                          rows={3}
+                        />
+                      </div>
+                      <div className="detail-row">
+                        <label>Group Type:</label>
+                        <select
+                          value={editFormData.group_type || ''}
+                          onChange={(e) => setEditFormData(prev => ({ ...prev, group_type: e.target.value }))}
+                          className="form-select"
+                        >
+                          <option value="">Select type</option>
+                          <option value="community">Community</option>
+                          <option value="sector">Sector</option>
+                          <option value="regional">Regional</option>
+                          <option value="project">Project</option>
+                          <option value="department">Department</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+                </div>
+                
+                <div className="detail-section">
+                  <h4>Statistics</h4>
+                  <div className="detail-row">
+                    <label>Member Count:</label>
+                    <span>{selectedGroup.member_count || 0}</span>
+                  </div>
+                  <div className="detail-row">
+                    <label>Organization Count:</label>
+                    <span>{selectedGroup.organization_count || 0}</span>
+                  </div>
+                  <div className="detail-row">
+                    <label>Status:</label>
+                    <span className={`status-badge ${selectedGroup.is_active ? 'active' : 'inactive'}`}>
+                      {selectedGroup.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  <div className="detail-row">
+                    <label>Created:</label>
+                    <span>{selectedGroup.created_at ? new Date(selectedGroup.created_at).toLocaleDateString() : 'Unknown'}</span>
+                  </div>
+                </div>
+              </div>
+              
+              {selectedGroup.members && selectedGroup.members.length > 0 && (
+                <div className="detail-section">
+                  <h4>Members</h4>
+                  <div className="members-list">
+                    {selectedGroup.members.map((member, index) => (
+                      <div key={index} className="member-item">
+                        <span className="member-name">{member.name || member.organization?.name || 'Unknown'}</span>
+                        <span className="member-type">{member.membership_type || 'Member'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              {groupModalMode === 'edit' ? (
+                <>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={handleCancelEdit}
+                    disabled={saving}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleSaveGroup}
+                    disabled={saving}
+                  >
+                    {saving ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => setSelectedGroup(null)}
+                  >
+                    Close
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => setGroupModalMode('edit')}
+                  >
+                    Edit Group
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <style jsx>{`
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+    
+    .modal {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      width: 100%;
+      max-width: 600px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    .modal.large {
+      max-width: 800px;
+    }
+    
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    
+    .modal-header h3 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      color: #6b7280;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+    
+    .close-btn:hover {
+      background-color: #f3f4f6;
+      color: #374151;
+    }
+    
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+      min-height: 0;
+    }
+    
+    .modal-footer {
+      padding: 20px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    
+    .org-detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .detail-section {
+      background: #f9fafb;
+      padding: 1rem;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .detail-section h4 {
+      margin: 0 0 1rem 0;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #374151;
+    }
+    
+    .detail-row {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 1rem;
+    }
+    
+    .detail-row label {
+      font-weight: 500;
+      color: #6b7280;
+      margin-bottom: 0.25rem;
+      font-size: 0.875rem;
+    }
+    
+    .detail-row span {
+      color: #374151;
+      font-size: 0.875rem;
+    }
+    
+    .status-badge {
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+    
+    .status-badge.active {
+      background-color: #dcfce7;
+      color: #166534;
+    }
+    
+    .status-badge.inactive {
+      background-color: #fee2e2;
+      color: #dc2626;
+    }
+    
     .table-responsive {
       width: 100%;
       min-width: 0;
       height: 100%;
+    }
+    
+    .members-list {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 0.5rem;
+    }
+    
+    .member-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem;
+      border-bottom: 1px solid #f0f0f0;
+      margin-bottom: 0.25rem;
+    }
+    
+    .member-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+    
+    .member-name {
+      font-weight: 500;
+      color: #333;
+    }
+    
+    .member-type {
+      padding: 0.25rem 0.5rem;
+      background-color: #f8f9fa;
+      color: #6c757d;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      text-transform: capitalize;
+    }
+    
+    .form-input,
+    .form-textarea,
+    .form-select {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      background-color: white;
+      transition: border-color 0.2s;
+    }
+    
+    .form-input:focus,
+    .form-textarea:focus,
+    .form-select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .form-textarea {
+      resize: vertical;
+      min-height: 60px;
     }
   `}</style>
     </section>
