@@ -1,6 +1,6 @@
-# 🔐 CRISP Trust Management Platform
+# CRISP
 
-## 📋 Table of Contents
+## Table of Contents
 - [Overview](#overview)
 - [Project Structure](#project-structure)
 - [Prerequisites](#prerequisites)
@@ -13,23 +13,23 @@
 - [Docker Deployment](#docker-deployment)
 - [Troubleshooting](#troubleshooting)
 
-## 📖 Overview
+## Overview
 
-CRISP (Cyber Risk Intelligence Sharing Platform) is a comprehensive trust management system for threat intelligence sharing. Built with Django (backend) and React (frontend), it provides organizations with secure, trust-based information sharing capabilities.
+CRISP (Cyber Risk Intelligence Sharing Platform) is a trust management system for threat intelligence sharing. Built with Django (backend) and React (frontend), it provides organizations with secure, trust-based information sharing capabilities.
 
 ### Key Features
-- 🛡️ Trust-based access control
-- 📊 Threat intelligence feeds
-- 🔄 TAXII/STIX integration
-- 👥 Multi-organization support
-- 📈 Analytics and reporting
-- 🔒 Advanced security controls
-- 🎯 **Asset-Based Alert System (WOW Factor #1)**
+- Trust-based access control
+- Threat intelligence feeds
+- TAXII/STIX integration
+- Multi-organization support
+- Analytics and reporting
+- Advanced security controls
+-  **Asset-Based Alert System (WOW Factor #1)**
   - Custom threat correlation with client infrastructure
   - Multi-channel alert delivery (email, SMS, Slack, webhooks)
   - Asset criticality-based prioritization
   - Real-time IoC correlation
-- 🧠 **User Behavior Analytics (WOW Factor #2)**
+-  **User Behavior Analytics (WOW Factor #2)**
   - Statistical anomaly detection for suspicious user activities
   - Behavioral baseline learning and pattern recognition
   - Real-time activity monitoring and session tracking
@@ -37,7 +37,7 @@ CRISP (Cyber Risk Intelligence Sharing Platform) is a comprehensive trust manage
   - Advanced threat hunting capabilities
   - Optional ML-enhanced detection with scikit-learn
 
-## 🗂️ Project Structure
+##  Project Structure
 
 ```
 Capstone-Unified/
@@ -59,7 +59,7 @@ Capstone-Unified/
 └── *.sh                          # Setup/testing scripts
 ```
 
-## ✅ Prerequisites
+##  Prerequisites
 
 ### Required Software
 - **Python 3.10+** with pip
@@ -67,14 +67,10 @@ Capstone-Unified/
 - **Node.js 18+** with npm
 - **Git**
 
-### System Requirements
-- **RAM**: 8GB minimum, 16GB recommended
-- **Storage**: 10GB free space
-- **OS**: Linux (Ubuntu 20.04+), macOS, or Windows with WSL2
 
-## 🚀 Quick Start
+##  Quick Start
 
-### 🎯 One-Click Deployment with Asset-Based Alert System
+###  One-Click Deployment with Asset-Based Alert System
 
 **Want to see the complete Asset-Based Alert System in action?** Use our one-click deployment:
 
@@ -89,13 +85,13 @@ chmod +x run-crisp-with-asset-alerts.sh
 ```
 
 This will:
-- 🐳 Build and start all Docker containers
-- 🗄️ Set up database with migrations
-- 🎯 Deploy the Asset-Based Alert System (WOW Factor #1)
-- 👤 Create demo user: `demo_security_admin` / `<A securely generated password will be displayed on startup>`
-- 🏢 Set up "Demo University" with sample assets
-- 🚨 Generate demo alerts showing threat correlation
-- 🌐 Launch frontend at http://localhost:5173
+-  Build and start all Docker containers
+-  Set up database with migrations
+-  Deploy the Asset-Based Alert System (WOW Factor #1)
+-  Create demo user: `demo_security_admin` / `<A securely generated password will be displayed on startup>`
+-  Set up "Demo University" with sample assets
+-  Generate demo alerts showing threat correlation
+-  Launch frontend at http://localhost:5173
 
 **Access the Asset-Based Alert System:**
 1. Go to http://localhost:5173
@@ -105,7 +101,7 @@ This will:
 
 ---
 
-### 🛠️ Manual Setup (Alternative)
+###  Manual Setup (Alternative)
 
 ### 1. Clone and Navigate
 ```bash
@@ -169,7 +165,7 @@ npm run dev
 - **Backend API**: http://localhost:8000/api/v1/
 - **Django Admin**: http://localhost:8000/admin/
 
-## 🔧 Detailed Setup
+##  Detailed Setup
 
 ### Database Configuration
 
@@ -234,7 +230,7 @@ npm install
 npx playwright install
 ```
 
-## 🗄️ Database Population
+##  Database Population
 
 ### Core Population Script
 The main database population command creates a comprehensive test environment:
@@ -283,7 +279,7 @@ python manage.py populate_ttp_data
 python manage.py init_trust_levels
 ```
 
-## 🧪 Testing
+##  Testing
 
 ### Quick Tests
 ```bash
@@ -353,7 +349,7 @@ npm run test:e2e          # E2E only
 python manage.py cleanup_test_data
 ```
 
-## 🛠️ Development
+##  Development
 
 ### Development Servers
 ```bash
@@ -395,7 +391,7 @@ python manage.py startapp myapp
 python manage.py check
 ```
 
-## 🔒 Security Testing
+##  Security Testing
 
 ### Quick Security Scan
 ```bash
@@ -422,7 +418,7 @@ python manage.py check
 - **Nikto** - Web server scanner
 - **Hydra** - Authentication brute force testing
 
-## 🐳 Docker Deployment
+##  Docker Deployment
 
 ### Quick Docker Start
 ```bash
@@ -448,7 +444,7 @@ docker-compose exec web bash
 docker-compose down
 ```
 
-## 🚨 Troubleshooting
+##  Troubleshooting
 
 ### Common Issues
 
@@ -524,7 +520,7 @@ python manage.py runserver
 export LOG_LEVEL=DEBUG
 ```
 
-## 📚 Additional Resources
+##  Additional Resources
 
 ### Documentation Files
 - `SETUP.md` - Basic setup instructions
@@ -548,7 +544,7 @@ For issues and questions:
 
 ---
 
-## 🎯 Quick Commands Reference
+##  Quick Commands Reference
 
 ```bash
 # Complete setup from scratch
@@ -569,5 +565,3 @@ python manage.py runserver & cd crisp-react && npm run dev
 # Reset everything
 ./reset_db.sh && python manage.py migrate && python manage.py populate_database
 ```
-
-**Happy developing! 🚀**
